@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useReducer, useState } from "react";
 
-import { Box, Flex, Label, Input, Heading, Button, ThemeProvider, ThemeUICSSObject } from "theme-ui";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Input,
+  Label,
+  Switch,
+  Textarea,
+  ThemeProvider,
+  ThemeUICSSObject
+} from "theme-ui";
 
 import {
   VictoryAxis,
@@ -68,18 +79,27 @@ const defaultPremiumPct = 20;
 const defaultNaturalRatePct = 10;
 const defaultBond = 100;
 
+const defaultFPremiumPct = "k => 20";
+const defaultFNaturalRatePct = "k => 10";
+
 const App = () => {
   const [polRatioInitInput, setPolRatioInitInput] = useState(`${defaultPolRatioInit}`);
   const [premiumPctInput, setPremiumPctInput] = useState(`${defaultPremiumPct}`);
+  const [fPremiumPctInput, setFPremiumPctInput] = useState(`${defaultFPremiumPct}`);
   const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
+  const [fNaturalRatePctInput, setFNaturalRatePctInput] = useState(`${defaultFNaturalRatePct}`);
   const [bondInput, setBondInput] = useState(`${defaultBond}`);
+  const [useFunctions, setUseFunctions] = useState(false);
   const [revertDummy, revert] = useReducer(() => ({}), {});
 
   useEffect(() => {
     setPolRatioInitInput(`${defaultPolRatioInit}`);
     setPremiumPctInput(`${defaultPremiumPct}`);
+    setFPremiumPctInput(`${defaultFPremiumPct}`);
     setNaturalRatePctInput(`${defaultNaturalRatePct}`);
+    setFNaturalRatePctInput(`${defaultFNaturalRatePct}`);
     setBondInput(`${defaultBond}`);
+    setUseFunctions(false);
   }, [revertDummy]);
 
   const polRatioInit = Number(polRatioInitInput);
@@ -87,14 +107,39 @@ const App = () => {
   const premiumPct = Number(premiumPctInput);
   const bond = Number(bondInput);
 
+  const yieldSeries = useMemo(() => {
+    if (useFunctions) {
+      try {
+        // eslint-disable-next-line no-new-func
+        const f = new Function("k", `"use strict"; return ${fNaturalRatePctInput};`)();
+
+        return range.map(x => ({
+          x,
+          y: Math.pow(1 + f(x) / 100, 1 / range[range.length - 1])
+        }));
+      } catch {}
+    } else {
+      if (!isNaN(naturalRatePct)) {
+        const y = Math.pow(1 + naturalRatePct / 100, 1 / range[range.length - 1]);
+
+        return range.map(x => ({ x, y }));
+      }
+    }
+  }, [useFunctions, naturalRatePct, fNaturalRatePctInput]);
+
   const polRatioSeries = useMemo(() => {
-    if (isNaN(polRatioInit) || isNaN(naturalRatePct)) {
+    if (isNaN(polRatioInit) || !yieldSeries) {
       return undefined;
     }
 
-    const base = Math.pow(1 + naturalRatePct / 100, 1 / range[range.length - 1]);
-    return range.map(x => ({ x, y: polRatioInit * Math.pow(base, x) }));
-  }, [polRatioInit, naturalRatePct]);
+    let y = polRatioInit;
+
+    return yieldSeries.map(({ x, y: yieldPerStep }) => {
+      const ret = { x, y };
+      y *= yieldPerStep;
+      return ret;
+    });
+  }, [polRatioInit, yieldSeries]);
 
   const accruedSeries = useMemo(() => {
     if (isNaN(bond) || bond <= 0) {
@@ -127,8 +172,23 @@ const App = () => {
     }));
   }, [bond, polRatioSeries, accruedSeries]);
 
+  const premiumPctSeries = useMemo(() => {
+    if (useFunctions) {
+      try {
+        // eslint-disable-next-line no-new-func
+        const f = new Function("k", `"use strict"; return ${fPremiumPctInput};`)();
+
+        return range.map(x => ({ x, y: f(x) }));
+      } catch {}
+    } else {
+      if (!isNaN(premiumPct)) {
+        return range.map(x => ({ x, y: premiumPct }));
+      }
+    }
+  }, [useFunctions, premiumPct, fPremiumPctInput]);
+
   const irrInSeries = useMemo(() => {
-    if (isNaN(bond) || isNaN(premiumPct) || !polRatioSeries || !cappedSeries) {
+    if (isNaN(bond) || !premiumPctSeries || !polRatioSeries || !cappedSeries) {
       return undefined;
     }
 
@@ -136,15 +196,15 @@ const App = () => {
       x,
       y: xirr(range[range.length - 1], [
         { time: 0, value: -bond },
-        { time: x, value: capped * polRatioSeries[i].y * (1 + premiumPct / 100) }
+        { time: x, value: capped * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100) }
       ])
     }));
-  }, [bond, premiumPct, polRatioSeries, cappedSeries]);
+  }, [bond, premiumPctSeries, polRatioSeries, cappedSeries]);
 
   const irrUpSeries = useMemo(() => {
     if (
       isNaN(bond) ||
-      isNaN(premiumPct) ||
+      !premiumPctSeries ||
       !polRatioSeries ||
       !accruedSeries ||
       !totalDepositUpSeries
@@ -157,18 +217,18 @@ const App = () => {
       y: xirr(range[range.length - 1], [
         { time: 0, value: -bond },
         { time: x, value: -(totalDepositUpSeries[i].y - bond) },
-        { time: x, value: accruedSToken * polRatioSeries[i].y * (1 + premiumPct / 100) }
+        { time: x, value: accruedSToken * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100) }
       ])
     }));
-  }, [bond, premiumPct, polRatioSeries, accruedSeries, totalDepositUpSeries]);
+  }, [bond, premiumPctSeries, polRatioSeries, accruedSeries, totalDepositUpSeries]);
 
   const maxAccrued = accruedSeries?.reduce((a, b) => Math.max(Math.abs(b.y), a), 0.1) ?? 0.1;
-  const maxChickenIn =
+  const maxTotalDepositUp =
     totalDepositUpSeries?.reduce((a, b) => Math.max(Math.abs(b.y), a), 0.1) ?? 0.1;
   const maxXirrIn = irrInSeries?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
   const maxXirrUp = irrUpSeries?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
 
-  const scale = Math.max(maxAccrued, maxChickenIn) / Math.max(maxXirrIn, maxXirrUp);
+  const scale = Math.max(maxAccrued, maxTotalDepositUp) / Math.max(maxXirrIn, maxXirrUp);
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
   const scaledIrrIn = irrInSeries
@@ -193,7 +253,7 @@ const App = () => {
             </Button>
           </Flex>
 
-          <Box sx={{ m: 2 }}>
+          <Flex sx={{ flexDirection: "column", alignItems: "stretch", m: 2 }}>
             <Heading as="h4">System</Heading>
             <Box sx={groupStyle}>
               <Label>Initial POL Ratio</Label>
@@ -216,25 +276,61 @@ const App = () => {
               />
             </Box>
 
-            <Heading as="h4">Market</Heading>
+            <Flex sx={{ alignItems: "center", justifyContent: "space-between" }}>
+              <Heading as="h4">Market</Heading>
+              <Box
+                sx={{
+                  span: {
+                    fontSize: 1,
+                    fontWeight: "bold",
+                    lineHeight: 1
+                  }
+                }}
+              >
+                <Switch
+                  label="𝑓(𝑘)"
+                  checked={useFunctions}
+                  onChange={() => setUseFunctions(!useFunctions)}
+                />
+              </Box>
+            </Flex>
+
             <Box sx={groupStyle}>
               <Label>TOKEN Natural Rate [%]</Label>
-              <Input
-                sx={isNaN(naturalRatePct) ? { bg: "pink" } : {}}
-                type="number"
-                value={naturalRatePctInput}
-                onChange={e => setNaturalRatePctInput(e.target.value)}
-              />
+              {useFunctions ? (
+                <Textarea
+                  sx={!yieldSeries ? { bg: "pink" } : {}}
+                  value={fNaturalRatePctInput}
+                  rows={5}
+                  onChange={e => setFNaturalRatePctInput(e.target.value)}
+                />
+              ) : (
+                <Input
+                  sx={isNaN(naturalRatePct) ? { bg: "pink" } : {}}
+                  type="number"
+                  value={naturalRatePctInput}
+                  onChange={e => setNaturalRatePctInput(e.target.value)}
+                />
+              )}
 
               <Label sx={{ mt: 3 }}>sTOKEN Premium [%]</Label>
-              <Input
-                sx={isNaN(premiumPct) ? { bg: "pink" } : {}}
-                type="number"
-                value={premiumPctInput}
-                onChange={e => setPremiumPctInput(e.target.value)}
-              />
+              {useFunctions ? (
+                <Textarea
+                  sx={!premiumPctSeries ? { bg: "pink" } : {}}
+                  value={fPremiumPctInput}
+                  rows={5}
+                  onChange={e => setFPremiumPctInput(e.target.value)}
+                />
+              ) : (
+                <Input
+                  sx={isNaN(premiumPct) ? { bg: "pink" } : {}}
+                  type="number"
+                  value={premiumPctInput}
+                  onChange={e => setPremiumPctInput(e.target.value)}
+                />
+              )}
             </Box>
-          </Box>
+          </Flex>
         </Box>
 
         <VictoryChart
@@ -264,7 +360,7 @@ const App = () => {
         >
           <VictoryLegend
             x={645}
-            y={242 - 5 * 14}
+            y={140}
             colorScale={colorScale}
             data={[
               { name: "Accrued [sTOKEN]" },

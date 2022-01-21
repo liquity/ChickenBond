@@ -116,6 +116,20 @@ const theme: Theme = {
 
   shadows: ["0", "0px 4px 8px rgba(41, 49, 71, 0.1)", "0px 8px 16px rgba(41, 49, 71, 0.1)"],
 
+  forms: {
+    switch: {
+      mr: 1,
+
+      width: "28px",
+      height: "16px",
+
+      "& > div": {
+        width: "12px",
+        height: "12px"
+      }
+    }
+  },
+
   buttons: {
     primary: {
       ...button,
