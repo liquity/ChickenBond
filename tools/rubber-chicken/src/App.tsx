@@ -1,0 +1,310 @@
+import { useEffect, useMemo, useReducer, useState } from "react";
+
+import { Box, Flex, Label, Input, Heading, Button, ThemeProvider, ThemeUICSSObject } from "theme-ui";
+
+import {
+  VictoryAxis,
+  VictoryChart,
+  VictoryGroup,
+  VictoryLegend,
+  VictoryLine,
+  VictoryTheme,
+  VictoryTooltip,
+  VictoryTooltipProps,
+  VictoryVoronoiContainer
+} from "victory";
+
+import { xirr } from "./utils/xirr";
+import theme from "./theme";
+
+const numSamples = 201;
+const range = [...Array(numSamples).keys()];
+
+const groupStyle: ThemeUICSSObject = {
+  mt: 2,
+  mb: 4
+};
+
+const colorScale = [
+  "#45B29D",
+  "#EFC94C",
+  "#E27A3F",
+  "#4F7DA1",
+  "#334D5C"
+  // "#DF5A49",
+  // "#DF948A",
+  // "#55DBC1",
+  // "#EFDA97",
+  // "#E2A37F",
+];
+
+const lineStyle = (color = "#cccccc") => ({
+  labels: { fill: color },
+  data: { stroke: color }
+});
+
+const [accruedStyle, cappedStyle, chickenInStyle, irrInStyle, irrUpStyle] = colorScale.map(color =>
+  lineStyle(color)
+);
+
+const Tooltip = ({ datum, text, style, ...props }: VictoryTooltipProps) => (
+  <VictoryTooltip
+    {...props}
+    datum={datum}
+    text={[`k = ${(datum as any)._x}`, ...(text as [])]}
+    style={[{ fontWeight: 600 }, ...(style as [])]}
+    pointerLength={1}
+    cornerRadius={3}
+    flyoutStyle={{
+      stroke: "#293147",
+      strokeOpacity: 0.5,
+      fill: "white"
+    }}
+  />
+);
+
+const defaultPolRatioInit = 3;
+const defaultPremiumPct = 20;
+const defaultNaturalRatePct = 10;
+const defaultBond = 100;
+
+const App = () => {
+  const [polRatioInitInput, setPolRatioInitInput] = useState(`${defaultPolRatioInit}`);
+  const [premiumPctInput, setPremiumPctInput] = useState(`${defaultPremiumPct}`);
+  const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
+  const [bondInput, setBondInput] = useState(`${defaultBond}`);
+  const [revertDummy, revert] = useReducer(() => ({}), {});
+
+  useEffect(() => {
+    setPolRatioInitInput(`${defaultPolRatioInit}`);
+    setPremiumPctInput(`${defaultPremiumPct}`);
+    setNaturalRatePctInput(`${defaultNaturalRatePct}`);
+    setBondInput(`${defaultBond}`);
+  }, [revertDummy]);
+
+  const polRatioInit = Number(polRatioInitInput);
+  const naturalRatePct = Number(naturalRatePctInput);
+  const premiumPct = Number(premiumPctInput);
+  const bond = Number(bondInput);
+
+  const polRatioSeries = useMemo(() => {
+    if (isNaN(polRatioInit) || isNaN(naturalRatePct)) {
+      return undefined;
+    }
+
+    const base = Math.pow(1 + naturalRatePct / 100, 1 / range[range.length - 1]);
+    return range.map(x => ({ x, y: polRatioInit * Math.pow(base, x) }));
+  }, [polRatioInit, naturalRatePct]);
+
+  const accruedSeries = useMemo(() => {
+    if (isNaN(bond) || bond <= 0) {
+      return undefined;
+    }
+
+    const accruedPerStep = bond / range[range.length - 1];
+    return range.map(x => ({ x, y: accruedPerStep * x }));
+  }, [bond]);
+
+  const cappedSeries = useMemo(() => {
+    if (isNaN(bond) || !polRatioSeries || !accruedSeries) {
+      return undefined;
+    }
+
+    return accruedSeries.map(({ x, y: accrued }, i) => ({
+      x,
+      y: Math.min(accrued, bond / polRatioSeries[i].y)
+    }));
+  }, [bond, polRatioSeries, accruedSeries]);
+
+  const totalDepositUpSeries = useMemo(() => {
+    if (isNaN(bond) || !polRatioSeries || !accruedSeries) {
+      return undefined;
+    }
+
+    return accruedSeries.map(({ x, y: accrued }, i) => ({
+      x,
+      y: bond / accrued < polRatioSeries[i].y ? accrued * polRatioSeries[i].y : bond
+    }));
+  }, [bond, polRatioSeries, accruedSeries]);
+
+  const irrInSeries = useMemo(() => {
+    if (isNaN(bond) || isNaN(premiumPct) || !polRatioSeries || !cappedSeries) {
+      return undefined;
+    }
+
+    return cappedSeries.map(({ x, y: capped }, i) => ({
+      x,
+      y: xirr(range[range.length - 1], [
+        { time: 0, value: -bond },
+        { time: x, value: capped * polRatioSeries[i].y * (1 + premiumPct / 100) }
+      ])
+    }));
+  }, [bond, premiumPct, polRatioSeries, cappedSeries]);
+
+  const irrUpSeries = useMemo(() => {
+    if (
+      isNaN(bond) ||
+      isNaN(premiumPct) ||
+      !polRatioSeries ||
+      !accruedSeries ||
+      !totalDepositUpSeries
+    ) {
+      return undefined;
+    }
+
+    return accruedSeries.map(({ x, y: accruedSToken }, i) => ({
+      x,
+      y: xirr(range[range.length - 1], [
+        { time: 0, value: -bond },
+        { time: x, value: -(totalDepositUpSeries[i].y - bond) },
+        { time: x, value: accruedSToken * polRatioSeries[i].y * (1 + premiumPct / 100) }
+      ])
+    }));
+  }, [bond, premiumPct, polRatioSeries, accruedSeries, totalDepositUpSeries]);
+
+  const maxAccrued = accruedSeries?.reduce((a, b) => Math.max(Math.abs(b.y), a), 0.1) ?? 0.1;
+  const maxChickenIn =
+    totalDepositUpSeries?.reduce((a, b) => Math.max(Math.abs(b.y), a), 0.1) ?? 0.1;
+  const maxXirrIn = irrInSeries?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
+  const maxXirrUp = irrUpSeries?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
+
+  const scale = Math.max(maxAccrued, maxChickenIn) / Math.max(maxXirrIn, maxXirrUp);
+  const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
+
+  const scaledIrrIn = irrInSeries
+    ?.filter((irr): irr is { x: number; y: number } => irr.y != null && irr.y >= -0.25)
+    .map(({ x, y }) => ({ x, y: y * scale }));
+
+  const scaledIrrUp = irrUpSeries
+    ?.filter((irr): irr is { x: number; y: number } => irr.y != null && irr.y >= -0.25)
+    .map(({ x, y }) => ({ x, y: y * scale }));
+
+  return (
+    <ThemeProvider theme={theme}>
+      <Heading as="h1">🐔 Crazy Chicken Investment Calculator</Heading>
+
+      <Flex sx={{ alignItems: "flex-start", p: 3 }}>
+        <Box sx={{ width: "300px" }}>
+          <Flex sx={{ alignItems: "center", mb: 3 }}>
+            <Heading>🎛️ Knobs</Heading>
+
+            <Button variant="text" onClick={revert}>
+              ⟲ Reset all
+            </Button>
+          </Flex>
+
+          <Box sx={{ m: 2 }}>
+            <Heading as="h4">System</Heading>
+            <Box sx={groupStyle}>
+              <Label>Initial POL Ratio</Label>
+              <Input
+                sx={isNaN(polRatioInit) ? { bg: "pink" } : {}}
+                type="number"
+                value={polRatioInitInput}
+                onChange={e => setPolRatioInitInput(e.target.value)}
+              />
+            </Box>
+
+            <Heading as="h4">Chicken Bond</Heading>
+            <Box sx={groupStyle}>
+              <Label>Bonded [TOKEN]</Label>
+              <Input
+                sx={isNaN(bond) ? { bg: "pink" } : {}}
+                type="number"
+                value={bondInput}
+                onChange={e => setBondInput(e.target.value)}
+              />
+            </Box>
+
+            <Heading as="h4">Market</Heading>
+            <Box sx={groupStyle}>
+              <Label>TOKEN Natural Rate [%]</Label>
+              <Input
+                sx={isNaN(naturalRatePct) ? { bg: "pink" } : {}}
+                type="number"
+                value={naturalRatePctInput}
+                onChange={e => setNaturalRatePctInput(e.target.value)}
+              />
+
+              <Label sx={{ mt: 3 }}>sTOKEN Premium [%]</Label>
+              <Input
+                sx={isNaN(premiumPct) ? { bg: "pink" } : {}}
+                type="number"
+                value={premiumPctInput}
+                onChange={e => setPremiumPctInput(e.target.value)}
+              />
+            </Box>
+          </Box>
+        </Box>
+
+        <VictoryChart
+          theme={VictoryTheme.material}
+          width={800}
+          height={500}
+          domainPadding={{ y: 1 }}
+          padding={{
+            top: 20,
+            bottom: 45,
+            left: 55,
+            right: 220
+          }}
+          containerComponent={
+            <VictoryVoronoiContainer
+              voronoiDimension="x"
+              labels={({ datum }) =>
+                `${datum.childName}: ${
+                  datum.childName === "IRR (In)" || datum.childName === "IRR (Up)"
+                    ? percent(datum._y)
+                    : Math.round(datum._y * 100) / 100
+                }`
+              }
+              labelComponent={<Tooltip centerOffset={{ y: -56 }} />}
+            />
+          }
+        >
+          <VictoryLegend
+            x={645}
+            y={242 - 5 * 14}
+            colorScale={colorScale}
+            data={[
+              { name: "Accrued [sTOKEN]" },
+              { name: "Capped [sTOKEN]" },
+              { name: "T. Deposit (Up) [TOKEN]" },
+              { name: "IRR (In)" },
+              { name: "IRR (Up)" }
+            ]}
+          />
+
+          <VictoryAxis />
+          <VictoryAxis dependentAxis />
+          <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
+
+          {(accruedSeries || cappedSeries || totalDepositUpSeries || scaledIrrIn || scaledIrrUp) && (
+            <VictoryGroup>
+              {accruedSeries && (
+                <VictoryLine name="Accrued [sTOKEN]" data={accruedSeries} style={accruedStyle} />
+              )}
+
+              {cappedSeries && (
+                <VictoryLine name="Capped [sTOKEN]" data={cappedSeries} style={cappedStyle} />
+              )}
+
+              {totalDepositUpSeries && (
+                <VictoryLine
+                  name="T. Deposit (Up) [TOKEN]"
+                  data={totalDepositUpSeries}
+                  style={chickenInStyle}
+                />
+              )}
+
+              {scaledIrrIn && <VictoryLine name="IRR (In)" data={scaledIrrIn} style={irrInStyle} />}
+              {scaledIrrUp && <VictoryLine name="IRR (Up)" data={scaledIrrUp} style={irrUpStyle} />}
+            </VictoryGroup>
+          )}
+        </VictoryChart>
+      </Flex>
+    </ThemeProvider>
+  );
+};
+
+export default App;
