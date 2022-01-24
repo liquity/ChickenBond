@@ -79,6 +79,7 @@ const defaultPremiumPct = 20;
 const defaultNaturalRatePct = 10;
 const defaultBond = 100;
 
+const defaultFCurve = `k => (k / ${range[range.length - 1]})`;
 const defaultFPremiumPct = "k => 20";
 const defaultFNaturalRatePct = "k => 10";
 
@@ -89,6 +90,7 @@ const App = () => {
   const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
   const [fNaturalRatePctInput, setFNaturalRatePctInput] = useState(`${defaultFNaturalRatePct}`);
   const [bondInput, setBondInput] = useState(`${defaultBond}`);
+  const [fCurveInput, setFCurveInput] = useState(`${defaultFCurve}`);
   const [useFunctions, setUseFunctions] = useState(false);
   const [revertDummy, revert] = useReducer(() => ({}), {});
 
@@ -99,6 +101,7 @@ const App = () => {
     setNaturalRatePctInput(`${defaultNaturalRatePct}`);
     setFNaturalRatePctInput(`${defaultFNaturalRatePct}`);
     setBondInput(`${defaultBond}`);
+    setFCurveInput(`${defaultFCurve}`);
     setUseFunctions(false);
   }, [revertDummy]);
 
@@ -141,14 +144,22 @@ const App = () => {
     });
   }, [polRatioInit, yieldSeries]);
 
+  const curveSeries = useMemo(() => {
+    try {
+      // eslint-disable-next-line no-new-func
+      const f = new Function("k", `"use strict"; return ${fCurveInput};`)();
+
+      return range.map(x => ({ x, y: f(x) }));
+    } catch {}
+  }, [fCurveInput]);
+
   const accruedSeries = useMemo(() => {
-    if (isNaN(bond) || bond <= 0) {
+    if (isNaN(bond) || !curveSeries) {
       return undefined;
     }
 
-    const accruedPerStep = bond / range[range.length - 1];
-    return range.map(x => ({ x, y: accruedPerStep * x }));
-  }, [bond]);
+    return curveSeries.map(({ x, y: curve }) => ({ x, y: bond * curve }));
+  }, [bond, curveSeries]);
 
   const cappedSeries = useMemo(() => {
     if (isNaN(bond) || !polRatioSeries || !accruedSeries) {
@@ -258,8 +269,9 @@ const App = () => {
             <Box sx={groupStyle}>
               <Label>Initial POL Ratio</Label>
               <Input
-                sx={isNaN(polRatioInit) ? { bg: "pink" } : {}}
                 type="number"
+                min={0}
+                step={0.1}
                 value={polRatioInitInput}
                 onChange={e => setPolRatioInitInput(e.target.value)}
               />
@@ -269,10 +281,17 @@ const App = () => {
             <Box sx={groupStyle}>
               <Label>Bonded [TOKEN]</Label>
               <Input
-                sx={isNaN(bond) ? { bg: "pink" } : {}}
                 type="number"
+                min={0}
                 value={bondInput}
                 onChange={e => setBondInput(e.target.value)}
+              />
+
+              <Label sx={{ mt: 3 }}>Curve</Label>
+              <Textarea
+                sx={!curveSeries ? { bg: "pink" } : {}}
+                value={fCurveInput}
+                onChange={e => setFCurveInput(e.target.value)}
               />
             </Box>
 
@@ -306,7 +325,6 @@ const App = () => {
                 />
               ) : (
                 <Input
-                  sx={isNaN(naturalRatePct) ? { bg: "pink" } : {}}
                   type="number"
                   value={naturalRatePctInput}
                   onChange={e => setNaturalRatePctInput(e.target.value)}
@@ -323,7 +341,6 @@ const App = () => {
                 />
               ) : (
                 <Input
-                  sx={isNaN(premiumPct) ? { bg: "pink" } : {}}
                   type="number"
                   value={premiumPctInput}
                   onChange={e => setPremiumPctInput(e.target.value)}
