@@ -25,11 +25,7 @@ import {
   VictoryVoronoiContainer
 } from "victory";
 
-import { xirr } from "./utils/xirr";
 import theme from "./theme";
-
-const numSamples = 201;
-const range = [...Array(numSamples).keys()];
 
 const groupStyle: ThemeUICSSObject = {
   mt: 2,
@@ -54,7 +50,7 @@ const lineStyle = (color = "#cccccc") => ({
   data: { stroke: color }
 });
 
-const [accruedStyle, cappedStyle, chickenInStyle, irrInStyle, irrUpStyle] = colorScale.map(color =>
+const [accruedStyle, cappedStyle, chickenInStyle, arrInStyle, arrUpStyle] = colorScale.map(color =>
   lineStyle(color)
 );
 
@@ -73,6 +69,12 @@ const Tooltip = ({ datum, text, style, ...props }: VictoryTooltipProps) => (
     }}
   />
 );
+
+const seriesMax = (series?: Array<{ x: number; y: number | null }>) =>
+  series?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
+
+const numSamples = 201;
+const range = [...Array(numSamples).keys()];
 
 const defaultPolRatioInit = 3;
 const defaultPremiumPct = 20;
@@ -198,55 +200,57 @@ const App = () => {
     }
   }, [useFunctions, premiumPct, fPremiumPctInput]);
 
-  const irrInSeries = useMemo(() => {
-    if (isNaN(bond) || !premiumPctSeries || !polRatioSeries || !cappedSeries) {
+  const arrInSeries = useMemo(() => {
+    if (isNaN(bond) || !curveSeries || !polRatioSeries || !premiumPctSeries) {
       return undefined;
     }
 
-    return cappedSeries.map(({ x, y: capped }, i) => ({
+    return curveSeries.map(({ x, y: curve }, i) => ({
       x,
-      y: xirr(range[range.length - 1], [
-        { time: 0, value: -bond },
-        { time: x, value: capped * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100) }
-      ])
+      y:
+        x !== 0
+          ? Math.pow(
+              curve * polRatioSeries[i].y < 1
+                ? curve * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100)
+                : 1 + premiumPctSeries[i].y / 100,
+              range[range.length - 1] / x
+            ) - 1
+          : null
     }));
-  }, [bond, premiumPctSeries, polRatioSeries, cappedSeries]);
+  }, [bond, curveSeries, polRatioSeries, premiumPctSeries]);
 
-  const irrUpSeries = useMemo(() => {
-    if (
-      isNaN(bond) ||
-      !premiumPctSeries ||
-      !polRatioSeries ||
-      !accruedSeries ||
-      !totalDepositUpSeries
-    ) {
+  const arrUpSeries = useMemo(() => {
+    if (isNaN(bond) || !curveSeries || !polRatioSeries || !premiumPctSeries) {
       return undefined;
     }
 
-    return accruedSeries.map(({ x, y: accruedSToken }, i) => ({
+    return curveSeries.map(({ x, y: curve }, i) => ({
       x,
-      y: xirr(range[range.length - 1], [
-        { time: 0, value: -bond },
-        { time: x, value: -(totalDepositUpSeries[i].y - bond) },
-        { time: x, value: accruedSToken * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100) }
-      ])
+      y:
+        x !== 0
+          ? Math.pow(
+              curve * polRatioSeries[i].y < 1
+                ? curve * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100)
+                : 1 + curve * polRatioSeries[i].y * (premiumPctSeries[i].y / 100),
+              range[range.length - 1] / x
+            ) - 1
+          : null
     }));
-  }, [bond, premiumPctSeries, polRatioSeries, accruedSeries, totalDepositUpSeries]);
+  }, [bond, curveSeries, polRatioSeries, premiumPctSeries]);
 
-  const maxAccrued = accruedSeries?.reduce((a, b) => Math.max(Math.abs(b.y), a), 0.1) ?? 0.1;
-  const maxTotalDepositUp =
-    totalDepositUpSeries?.reduce((a, b) => Math.max(Math.abs(b.y), a), 0.1) ?? 0.1;
-  const maxXirrIn = irrInSeries?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
-  const maxXirrUp = irrUpSeries?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
+  const maxAccrued = seriesMax(accruedSeries);
+  const maxTotalDepositUp = seriesMax(totalDepositUpSeries);
+  const maxXirrIn = seriesMax(arrInSeries);
+  const maxXirrUp = seriesMax(arrUpSeries);
 
   const scale = Math.max(maxAccrued, maxTotalDepositUp) / Math.max(maxXirrIn, maxXirrUp);
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
-  const scaledIrrIn = irrInSeries
+  const scaledArrIn = arrInSeries
     ?.filter((irr): irr is { x: number; y: number } => irr.y != null && irr.y >= -0.25)
     .map(({ x, y }) => ({ x, y: y * scale }));
 
-  const scaledIrrUp = irrUpSeries
+  const scaledArrUp = arrUpSeries
     ?.filter((irr): irr is { x: number; y: number } => irr.y != null && irr.y >= -0.25)
     .map(({ x, y }) => ({ x, y: y * scale }));
 
@@ -366,7 +370,7 @@ const App = () => {
               voronoiDimension="x"
               labels={({ datum }) =>
                 `${datum.childName}: ${
-                  datum.childName === "IRR (In)" || datum.childName === "IRR (Up)"
+                  datum.childName === "ARR (In)" || datum.childName === "ARR (Up)"
                     ? percent(datum._y)
                     : Math.round(datum._y * 100) / 100
                 }`
@@ -383,8 +387,8 @@ const App = () => {
               { name: "Accrued [sTOKEN]" },
               { name: "Capped [sTOKEN]" },
               { name: "T. Deposit (Up) [TOKEN]" },
-              { name: "IRR (In)" },
-              { name: "IRR (Up)" }
+              { name: "ARR (In)" },
+              { name: "ARR (Up)" }
             ]}
           />
 
@@ -392,7 +396,7 @@ const App = () => {
           <VictoryAxis dependentAxis />
           <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
 
-          {(accruedSeries || cappedSeries || totalDepositUpSeries || scaledIrrIn || scaledIrrUp) && (
+          {(accruedSeries || cappedSeries || totalDepositUpSeries || scaledArrIn || scaledArrUp) && (
             <VictoryGroup>
               {accruedSeries && (
                 <VictoryLine name="Accrued [sTOKEN]" data={accruedSeries} style={accruedStyle} />
@@ -410,8 +414,8 @@ const App = () => {
                 />
               )}
 
-              {scaledIrrIn && <VictoryLine name="IRR (In)" data={scaledIrrIn} style={irrInStyle} />}
-              {scaledIrrUp && <VictoryLine name="IRR (Up)" data={scaledIrrUp} style={irrUpStyle} />}
+              {scaledArrIn && <VictoryLine name="ARR (In)" data={scaledArrIn} style={arrInStyle} />}
+              {scaledArrUp && <VictoryLine name="ARR (Up)" data={scaledArrUp} style={arrUpStyle} />}
             </VictoryGroup>
           )}
         </VictoryChart>
