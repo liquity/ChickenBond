@@ -50,7 +50,7 @@ const lineStyle = (color = "#cccccc") => ({
   data: { stroke: color }
 });
 
-const [accruedStyle, cappedStyle, chickenInStyle, arrInStyle, arrUpStyle] = colorScale.map(color =>
+const [accruedStyle, cappedStyle, topUpStyle, arrInStyle, arrUpStyle] = colorScale.map(color =>
   lineStyle(color)
 );
 
@@ -77,7 +77,8 @@ const numSamples = 201;
 const range = [...Array(numSamples).keys()];
 
 const defaultPolRatioInit = 3;
-const defaultPremiumPct = 20;
+const defaultTollPct = 20;
+const defaultPremiumPct = 45;
 const defaultNaturalRatePct = 10;
 const defaultBond = 100;
 
@@ -87,6 +88,7 @@ const defaultFNaturalRatePct = "k => 10";
 
 const App = () => {
   const [polRatioInitInput, setPolRatioInitInput] = useState(`${defaultPolRatioInit}`);
+  const [tollPctInput, setTollPctInput] = useState(`${defaultTollPct}`);
   const [premiumPctInput, setPremiumPctInput] = useState(`${defaultPremiumPct}`);
   const [fPremiumPctInput, setFPremiumPctInput] = useState(`${defaultFPremiumPct}`);
   const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
@@ -98,6 +100,7 @@ const App = () => {
 
   useEffect(() => {
     setPolRatioInitInput(`${defaultPolRatioInit}`);
+    setTollPctInput(`${defaultTollPct}`);
     setPremiumPctInput(`${defaultPremiumPct}`);
     setFPremiumPctInput(`${defaultFPremiumPct}`);
     setNaturalRatePctInput(`${defaultNaturalRatePct}`);
@@ -111,6 +114,7 @@ const App = () => {
   const naturalRatePct = Number(naturalRatePctInput);
   const premiumPct = Number(premiumPctInput);
   const bond = Number(bondInput);
+  const tollPct = Number(tollPctInput);
 
   const yieldSeries = useMemo(() => {
     if (useFunctions) {
@@ -164,26 +168,26 @@ const App = () => {
   }, [bond, curveSeries]);
 
   const cappedSeries = useMemo(() => {
-    if (isNaN(bond) || !polRatioSeries || !accruedSeries) {
+    if (isNaN(bond) || isNaN(tollPct) || !polRatioSeries || !accruedSeries) {
       return undefined;
     }
 
     return accruedSeries.map(({ x, y: accrued }, i) => ({
       x,
-      y: Math.min(accrued, bond / polRatioSeries[i].y)
+      y: Math.min(accrued, ((1 - tollPct / 100) * bond) / polRatioSeries[i].y)
     }));
-  }, [bond, polRatioSeries, accruedSeries]);
+  }, [bond, tollPct, polRatioSeries, accruedSeries]);
 
-  const totalDepositUpSeries = useMemo(() => {
-    if (isNaN(bond) || !polRatioSeries || !accruedSeries) {
+  const topUpSeries = useMemo(() => {
+    if (isNaN(bond) || isNaN(tollPct) || !polRatioSeries || !accruedSeries || !cappedSeries) {
       return undefined;
     }
 
     return accruedSeries.map(({ x, y: accrued }, i) => ({
       x,
-      y: bond / accrued < polRatioSeries[i].y ? accrued * polRatioSeries[i].y : bond
+      y: Math.max(((accrued - cappedSeries[i].y) * polRatioSeries[i].y) / (1 - tollPct / 100), 0)
     }));
-  }, [bond, polRatioSeries, accruedSeries]);
+  }, [bond, tollPct, polRatioSeries, accruedSeries, cappedSeries]);
 
   const premiumPctSeries = useMemo(() => {
     if (useFunctions) {
@@ -201,49 +205,47 @@ const App = () => {
   }, [useFunctions, premiumPct, fPremiumPctInput]);
 
   const arrInSeries = useMemo(() => {
-    if (isNaN(bond) || !curveSeries || !polRatioSeries || !premiumPctSeries) {
+    if (isNaN(bond) || !cappedSeries || !polRatioSeries || !premiumPctSeries) {
       return undefined;
     }
 
-    return curveSeries.map(({ x, y: curve }, i) => ({
+    return cappedSeries.map(({ x, y: capped }, i) => ({
       x,
       y:
         x !== 0
           ? Math.pow(
-              curve * polRatioSeries[i].y < 1
-                ? curve * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100)
-                : 1 + premiumPctSeries[i].y / 100,
+              (capped * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100)) / bond,
               range[range.length - 1] / x
             ) - 1
           : null
     }));
-  }, [bond, curveSeries, polRatioSeries, premiumPctSeries]);
+  }, [bond, cappedSeries, polRatioSeries, premiumPctSeries]);
 
   const arrUpSeries = useMemo(() => {
-    if (isNaN(bond) || !curveSeries || !polRatioSeries || !premiumPctSeries) {
+    if (isNaN(bond) || !accruedSeries || !topUpSeries || !polRatioSeries || !premiumPctSeries) {
       return undefined;
     }
 
-    return curveSeries.map(({ x, y: curve }, i) => ({
+    return accruedSeries.map(({ x, y: accrued }, i) => ({
       x,
       y:
         x !== 0
           ? Math.pow(
-              curve * polRatioSeries[i].y < 1
-                ? curve * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100)
-                : 1 + curve * polRatioSeries[i].y * (premiumPctSeries[i].y / 100),
+              (accrued * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100) -
+                topUpSeries[i].y) /
+                bond,
               range[range.length - 1] / x
             ) - 1
           : null
     }));
-  }, [bond, curveSeries, polRatioSeries, premiumPctSeries]);
+  }, [bond, accruedSeries, topUpSeries, polRatioSeries, premiumPctSeries]);
 
   const maxAccrued = seriesMax(accruedSeries);
-  const maxTotalDepositUp = seriesMax(totalDepositUpSeries);
-  const maxXirrIn = seriesMax(arrInSeries);
-  const maxXirrUp = seriesMax(arrUpSeries);
+  const maxTopUp = seriesMax(topUpSeries);
+  const maxArrIn = seriesMax(arrInSeries);
+  const maxArrUp = seriesMax(arrUpSeries);
 
-  const scale = Math.max(maxAccrued, maxTotalDepositUp) / Math.max(maxXirrIn, maxXirrUp);
+  const scale = Math.max(maxAccrued, maxTopUp) / Math.max(maxArrIn, maxArrUp);
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
   const scaledArrIn = arrInSeries
@@ -278,6 +280,15 @@ const App = () => {
                 step={0.1}
                 value={polRatioInitInput}
                 onChange={e => setPolRatioInitInput(e.target.value)}
+              />
+
+              <Label sx={{ mt: 3 }}>Toll [%]</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={tollPctInput}
+                onChange={e => setTollPctInput(e.target.value)}
               />
             </Box>
 
@@ -354,71 +365,73 @@ const App = () => {
           </Flex>
         </Box>
 
-        <VictoryChart
-          theme={VictoryTheme.material}
-          width={800}
-          height={500}
-          domainPadding={{ y: 1 }}
-          padding={{
-            top: 20,
-            bottom: 45,
-            left: 55,
-            right: 220
-          }}
-          containerComponent={
-            <VictoryVoronoiContainer
-              voronoiDimension="x"
-              labels={({ datum }) =>
-                `${datum.childName}: ${
-                  datum.childName === "ARR (In)" || datum.childName === "ARR (Up)"
-                    ? percent(datum._y)
-                    : Math.round(datum._y * 100) / 100
-                }`
-              }
-              labelComponent={<Tooltip centerOffset={{ y: -56 }} />}
+        <Box sx={{ flexGrow: 1, mt: 4 }}>
+          <VictoryChart
+            theme={VictoryTheme.material}
+            width={800}
+            height={500}
+            domainPadding={{ y: 1 }}
+            padding={{
+              top: 20,
+              bottom: 45,
+              left: 55,
+              right: 220
+            }}
+            containerComponent={
+              <VictoryVoronoiContainer
+                voronoiDimension="x"
+                labels={({ datum }) =>
+                  `${datum.childName}: ${
+                    datum.childName === "ARR (In)" || datum.childName === "ARR (Up)"
+                      ? percent(datum._y)
+                      : Math.round(datum._y * 100) / 100
+                  }`
+                }
+                labelComponent={<Tooltip centerOffset={{ y: -56 }} />}
+              />
+            }
+          >
+            <VictoryLegend
+              x={645}
+              y={140}
+              colorScale={colorScale}
+              data={[
+                { name: "Accrued [sTOKEN]" },
+                { name: "Capped [sTOKEN]" },
+                { name: "Top-up [TOKEN]" },
+                { name: "ARR (In)" },
+                { name: "ARR (Up)" }
+              ]}
             />
-          }
-        >
-          <VictoryLegend
-            x={645}
-            y={140}
-            colorScale={colorScale}
-            data={[
-              { name: "Accrued [sTOKEN]" },
-              { name: "Capped [sTOKEN]" },
-              { name: "T. Deposit (Up) [TOKEN]" },
-              { name: "ARR (In)" },
-              { name: "ARR (Up)" }
-            ]}
-          />
 
-          <VictoryAxis />
-          <VictoryAxis dependentAxis />
-          <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
+            <VictoryAxis />
+            <VictoryAxis dependentAxis />
+            <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
 
-          {(accruedSeries || cappedSeries || totalDepositUpSeries || scaledArrIn || scaledArrUp) && (
-            <VictoryGroup>
-              {accruedSeries && (
-                <VictoryLine name="Accrued [sTOKEN]" data={accruedSeries} style={accruedStyle} />
-              )}
+            {(accruedSeries || cappedSeries || topUpSeries || scaledArrIn || scaledArrUp) && (
+              <VictoryGroup>
+                {accruedSeries && (
+                  <VictoryLine name="Accrued [sTOKEN]" data={accruedSeries} style={accruedStyle} />
+                )}
 
-              {cappedSeries && (
-                <VictoryLine name="Capped [sTOKEN]" data={cappedSeries} style={cappedStyle} />
-              )}
+                {cappedSeries && (
+                  <VictoryLine name="Capped [sTOKEN]" data={cappedSeries} style={cappedStyle} />
+                )}
 
-              {totalDepositUpSeries && (
-                <VictoryLine
-                  name="T. Deposit (Up) [TOKEN]"
-                  data={totalDepositUpSeries}
-                  style={chickenInStyle}
-                />
-              )}
+                {topUpSeries && (
+                  <VictoryLine name="Top-up (Up) [TOKEN]" data={topUpSeries} style={topUpStyle} />
+                )}
 
-              {scaledArrIn && <VictoryLine name="ARR (In)" data={scaledArrIn} style={arrInStyle} />}
-              {scaledArrUp && <VictoryLine name="ARR (Up)" data={scaledArrUp} style={arrUpStyle} />}
-            </VictoryGroup>
-          )}
-        </VictoryChart>
+                {scaledArrIn && (
+                  <VictoryLine name="ARR (In)" data={scaledArrIn} style={arrInStyle} />
+                )}
+                {scaledArrUp && (
+                  <VictoryLine name="ARR (Up)" data={scaledArrUp} style={arrUpStyle} />
+                )}
+              </VictoryGroup>
+            )}
+          </VictoryChart>
+        </Box>
       </Flex>
     </ThemeProvider>
   );
