@@ -334,11 +334,19 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
         "stacked_x": [],
         "amount": [],
     })
+
+    # sort chicks array for plotting
+    chicks.sort(key = lambda c: c.account)
+
     for chick in chicks:
+        chick_name = chick.account
+        if chick.rebonder:
+            chick_name = chick.account.replace('chick', 'rebnd')
+
         new_data = new_data.append(
             {
                 "x": "COLL",
-                "stacked_x": chick.account,
+                "stacked_x": chick_name,
                 "amount": chicken.coll_token.balance_of(chick.account),
             },
             ignore_index=True
@@ -346,7 +354,7 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
         new_data = new_data.append(
             {
                 "x": "TOKEN",
-                "stacked_x": chick.account,
+                "stacked_x": chick_name,
                 "amount": chicken.token.balance_of(chick.account),
             },
             ignore_index=True
@@ -354,7 +362,7 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
         new_data = new_data.append(
             {
                 "x": "Bonded TOKEN",
-                "stacked_x": chick.account,
+                "stacked_x": chick_name,
                 "amount": chick.bond_amount,
             },
             ignore_index=True
@@ -362,7 +370,7 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
         new_data = new_data.append(
             {
                 "x": "sTOKEN",
-                "stacked_x": chick.account,
+                "stacked_x": chick_name,
                 "amount": chicken.stoken.balance_of(chick.account) * stoken_price,
             },
             ignore_index=True

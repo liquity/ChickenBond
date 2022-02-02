@@ -42,6 +42,8 @@ def main(tester):
     print('  ------------------------------------------------------\n')
     log_state(chicken, chicks)
 
+    tester.init(chicks)
+
     for iteration in range(ITERATIONS):
         print(f"\n\033[31m  --> Iteration {iteration}")
         print("  -------------------\033[0m\n")
@@ -119,3 +121,4 @@ if __name__ == "__main__":
     main(TesterIssuanceBondsAMM_1())
     main(TesterIssuanceBondsAMM_2())
     main(TesterIssuanceBondsAMM_3())
+    main(TesterRebonding())          # Approach 2 + Rebonding
