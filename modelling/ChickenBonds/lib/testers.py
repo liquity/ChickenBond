@@ -19,11 +19,19 @@ class TesterInterface():
 
         return
 
+    def init(self, chicks):
+        pass
     def prefixes_getter(self):
         pass
     def get_stoken_spot_price(self, chicken):
         pass
     def get_natural_rate(self, natural_rate, iteration):
+        pass
+    def get_stoken_apr_spot(self, chicken):
+        pass
+    def get_stoken_apr_twap(self, chicken, data, iteration):
+        pass
+    def get_stoken_apr(self, chicken, data, iteration):
         pass
     def get_pol_ratio_no_amm(self, chicken):
         pass
@@ -54,7 +62,7 @@ class TesterBase(TesterInterface):
     def prefixes_getter(self):
         return self.plot_prefix, self.plot_file_description
 
-    # TODO: iteration them
+    # TODO: index them
     def get_bonded_chicks(self, chicks):
         return list(filter(lambda chick: chick.bond_amount > 0, chicks))
 
@@ -66,6 +74,11 @@ class TesterBase(TesterInterface):
 
     def get_chicks_with_stoken(self, chicken, chicks, threshold=0):
         return list(filter(lambda chick: chicken.stoken.balance_of(chick.account) > threshold, chicks))
+
+    def get_bond_cap(self, effective_bond_amount, pol_ratio):
+        if pol_ratio == 0:
+            return 999999999
+        return effective_bond_amount / pol_ratio
 
     def get_natural_rate(self, previous_natural_rate, iteration):
         np.random.seed(2021*iteration)
@@ -205,71 +218,81 @@ class TesterIssuanceBonds(TesterBase):
             total_bonded_amount = total_bonded_amount + amount
         return total_bonded_amount
 
-    def get_claimable_stoken(self, chick, iteration, pol_ratio, stoken_price):
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
+        bond_cap = self.get_bond_cap(chick.bond_amount, pol_ratio)
         claimable_stoken = min(
             chick.bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time),
-            chick.bond_amount / pol_ratio
+            bond_cap
         )
 
-        return claimable_stoken
+        return claimable_stoken, bond_cap, claimable_stoken, 0, 0
 
-    def chicken_in_out(self, chicken, chicks, data, iteration):
-        np.random.seed(2023*iteration)
-        np.random.shuffle(chicks)
-        # chicken in
+    def chicken_in_one(self, chicken, chick, data, iteration):
+        assert iteration >= chick.bond_time
+        pol_ratio = self.get_pol_ratio(chicken)
+        assert pol_ratio == 0 or pol_ratio >= 1
+        if pol_ratio == 0:
+            pol_ratio = 1
+        mintable_amount, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount = \
+            self.get_claimable_stoken(chicken, chick, iteration, pol_ratio)
+        stoken_price = self.get_stoken_price(chicken, data, iteration)
+        profit = claimable_stoken * stoken_price - chick.bond_amount
+        target_profit = chick.bond_target_profit * chick.bond_amount
+        if profit <= target_profit:
+            """
+            print("\n---")
+            print(f"POL ratio: {pol_ratio:,.2f}")
+            print(chick)
+            print(f"bond:          {chick.bond_amount:,.2f}")
+            print(f"target profit: {chick.bond_target_profit:.3%}")
+            print(f"target profit: {target_profit:,.2f}")
+            print(f"claimable:     {claimable_stoken:,.2f}")
+            print(f"sTOKEN price:  {stoken_price:,.2f}")
+            print(f"profit:        {profit:,.2f}")
+            """
+            return 0, 0, 0, 0
+        # chicken up?
+        if np.random.random() < self.chicken_up_probability:
+            #print(f"\n-- Chicken up!")
+            top_up_amount = min(chicken.token.balance_of(chick.account), chick.bond_amount)
+            chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
+            mintable_amount = mintable_amount * (1 + top_up_amount / chick.bond_amount)
+            claimable_stoken = claimable_stoken * (1 + top_up_amount / chick.bond_amount)
+            chick.bond_amount = chick.bond_amount + top_up_amount
+
+        foregone_amount = chick.bond_amount - mintable_amount
+        """
+        print("\n---")
+        print(f"POL ratio: {pol_ratio:,.2f}")
+        print(chick)
+        print(f"mintable:      {mintable_amount:,.2f}")
+        print(f"claimable:     {claimable_stoken:,.2f}")
+        print(f"foregone:      {foregone_amount:,.2f}")
+        print(f"stoken_price:  {stoken_price:,.2f}")
+        print(f"bond:          {chick.bond_amount:,.2f}")
+        print(f"target profit: {chick.bond_target_profit:.3%}")
+        print(f"target profit: {target_profit:,.2f}")
+        print(f"profit:        {profit:,.2f}")
+        """
+
+        chicken.chicken_in(chick, claimable_stoken)
+
+        return claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount
+
+    def chicken_in(self, chicken, chicks, data, iteration):
         total_chicken_in_amount = 0
         total_chicken_in_foregone = 0
         bonded_chicks = self.get_bonded_chicks(chicks)
         #print(f"-- Chicken in")
         #print(f"Bonds: {len(bonded_chicks)}")
         for chick in bonded_chicks:
-            assert iteration >= chick.bond_time
-            pol_ratio = self.get_pol_ratio(chicken)
-            assert pol_ratio == 0 or pol_ratio >= 1
-            if pol_ratio == 0:
-                pol_ratio = 1
-            stoken_price = self.get_stoken_price(chicken, data, iteration)
-            current_claimable_stoken = self.get_claimable_stoken(chick, iteration, pol_ratio, stoken_price)
-            profit = current_claimable_stoken * stoken_price - chick.bond_amount
-            target_profit = chick.bond_target_profit * chick.bond_amount
-            if profit <= target_profit:
-                """
-                print("\n---")
-                print(f"POL ratio: {pol_ratio:,.3%}")
-                print(chick)
-                print(f"bond:          {chick.bond_amount:,.2f}")
-                print(f"target profit: {chick.bond_target_profit:.3%}")
-                print(f"target profit: {target_profit:,.2f}")
-                print(f"claimable:     {current_claimable_stoken:,.2f}")
-                print(f"sTOKEN price:  {stoken_price:,.2f}")
-                print(f"profit:        {profit:,.2f}")
-                """
-                continue
-            # chicken up?
-            if np.random.random() < self.chicken_up_probability:
-                #print(f"\n-- Chicken up!")
-                top_up_amount = min(chicken.token.balance_of(chick.account), chick.bond_amount)
-                chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
-                current_claimable_stoken = current_claimable_stoken * (1 + top_up_amount / chick.bond_amount)
-                chick.bond_amount = chick.bond_amount + top_up_amount
-            """
-            print("\n---")
-            print(f"POL ratio: {pol_ratio:.3%}")
-            print(chick)
-            print(f"claimable:     {current_claimable_stoken:,.2f}")
-            print(f"foregone:      {chick.bond_amount - current_claimable_stoken:,.2f}")
-            print(f"stoken_price:  {stoken_price:,.2f}")
-            print(f"bond:          {chick.bond_amount:,.2f}")
-            print(f"target profit: {chick.bond_target_profit:.3%}")
-            print(f"target profit: {target_profit:,.2f}")
-            print(f"profit:        {profit:,.2f}")
-            """
+            claimable_stoken, foregone_amount, _, _ = self.chicken_in_one(chicken, chick, data, iteration)
+            total_chicken_in_amount = total_chicken_in_amount + claimable_stoken
+            total_chicken_in_foregone = total_chicken_in_foregone + foregone_amount
 
-            total_chicken_in_amount = total_chicken_in_amount + current_claimable_stoken
-            total_chicken_in_foregone = total_chicken_in_foregone + chick.bond_amount - current_claimable_stoken
-            chicken.chicken_in(chick, current_claimable_stoken)
+        return total_chicken_in_amount, total_chicken_in_foregone
 
-        # chicken out
+    def chicken_out(self, chicken, chicks):
         total_chicken_out_amount = 0
         bonded_chicks = self.get_bonded_chicks(chicks)
         #print(f"-- Chicken out")
@@ -281,14 +304,25 @@ class TesterIssuanceBonds(TesterBase):
             """
             print("\n---")
             print(chick)
-            print(f"claimable:     {current_claimable_stoken:,.2f}")
+            print(f"claimable:     {claimable_stoken:,.2f}")
             print(f"bond:          {chick.bond_amount:,.2f}")
             """
 
             chicken.chicken_out(chick)
 
-        return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount
+        return total_chicken_out_amount
 
+    def chicken_in_out(self, chicken, chicks, data, iteration):
+        np.random.seed(2023*iteration)
+        np.random.shuffle(chicks)
+
+        # chicken in
+        total_chicken_in_amount, total_chicken_in_foregone = self.chicken_in(chicken, chicks, data, iteration)
+
+        # chicken out
+        total_chicken_out_amount = self.chicken_out(chicken, chicks)
+
+        return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount
 
 class TesterIssuanceBondsAMM_1(TesterIssuanceBonds):
     def __init__(self):
@@ -332,53 +366,79 @@ class TesterIssuanceBondsAMM_1(TesterIssuanceBonds):
     def get_reserve_ratio(self, chicken):
         return self.get_reserve_ratio_with_amm(chicken)
 
-    def get_chicken_in_liquidity_token_amount(self, total_chicken_in_foregone, stoken_spot_price):
-        liquidity_token_amount = min(
-            total_chicken_in_foregone * self.chicken_in_amm_share,
-            stoken_spot_price * total_chicken_in_foregone / (stoken_spot_price + 1),
+    def get_chicken_in_amm_token_amount(self, foregone_amount, stoken_spot_price):
+        amm_token_amount = min(
+            foregone_amount * self.chicken_in_amm_share,
+            stoken_spot_price * foregone_amount / (stoken_spot_price + 1),
         )
+        #print(f"t1: {foregone_amount * self.chicken_in_amm_share:,.2f}")
+        #print(f"t2: {stoken_spot_price * foregone_amount / (stoken_spot_price + 1):,.2f}")
 
-        # TODO!!
-        #liquidity_token_amount = liquidity_token_amount / 2
+        return amm_token_amount
 
-        return liquidity_token_amount
+    def get_amm_amounts(self, chicken, foregone_amount):
+        stoken_spot_price = self.get_stoken_spot_price(chicken)
+        if foregone_amount <= 0 or stoken_spot_price <= 0:
+            return
 
-    def get_claimable_stoken(self, chick, iteration, pol_ratio, stoken_price):
+        amm_token_amount = self.get_chicken_in_amm_token_amount(foregone_amount, stoken_spot_price)
+
+        if chicken.amm.token_A_balance() > 0:
+            amm_stoken_amount = chicken.amm.get_B_amount_for_liquidity(amm_token_amount)
+        else:
+            amm_stoken_amount = amm_token_amount / stoken_spot_price
+            assert amm_stoken_amount <= amm_token_amount
+            assert amm_stoken_amount <= foregone_amount - amm_token_amount
+
+        """
+        print("- Divert to AMM")
+        print(f"foregone:   {foregone_amount:,.2f}")
+        print(f"price:      {stoken_spot_price:,.2f}")
+        print(f"token:      {amm_token_amount:,.2f}")
+        print(f"stoken:     {amm_stoken_amount:,.2f}")
+        print("")
+        """
+
+        return amm_token_amount, amm_stoken_amount
+
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
         effective_bond_amount = chick.bond_amount * (1 - self.chicken_in_amm_share)
+        bond_cap = self.get_bond_cap(effective_bond_amount, pol_ratio)
         claimable_stoken = min(
             effective_bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time),
-            effective_bond_amount / pol_ratio
+            bond_cap
         )
 
-        return claimable_stoken
+        foregone_amount = chick.bond_amount - claimable_stoken
+        amm_token_amount, amm_stoken_amount = get_amm_amounts(chicken, foregone_amount)
 
-    def chicken_in_out(self, chicken, chicks, data, iteration):
-        total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount = super().chicken_in_out(chicken, chicks, data, iteration)
+        return claimable_stoken, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount
 
-        # Redirect part of bond to AMM
-        stoken_spot_price = self.get_stoken_spot_price(chicken)
-        if total_chicken_in_foregone > 0 and stoken_spot_price > 0:
-            liquidity_token_amount = self.get_chicken_in_liquidity_token_amount(total_chicken_in_foregone, stoken_spot_price)
+    def divert_to_amm(self, chicken, token_amount, stoken_amount):
+        chicken.stoken.mint(chicken.pol_account, stoken_amount)
+        token_amount =  token_amount * 0.9999 # to avoid rounding issues
+        chicken.amm.add_liquidity(chicken.pol_account, token_amount, stoken_amount)
 
-            if chicken.amm.token_A_balance() > 0:
-                liquidity_stoken_amount = chicken.amm.get_B_amount_for_liquidity(liquidity_token_amount)
-            else:
-                liquidity_stoken_amount = liquidity_token_amount / stoken_spot_price
-            assert liquidity_stoken_amount <= liquidity_token_amount
-            assert liquidity_stoken_amount <= total_chicken_in_foregone - liquidity_token_amount
+        return
 
+    def chicken_in(self, chicken, chicks, data, iteration):
+        total_chicken_in_amount = 0
+        total_chicken_in_foregone = 0
+        bonded_chicks = self.get_bonded_chicks(chicks)
+        #print(f"-- Chicken in")
+        #print(f"Bonds: {len(bonded_chicks)}")
+        for chick in bonded_chicks:
+            claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount = \
+                self.chicken_in_one(chicken, chick, data, iteration)
 
-            """
-            print(f"chicken in: {total_chicken_in_amount:,.2f}")
-            print(f"foregone:   {total_chicken_in_foregone:,.2f}")
-            print(f"price:      {stoken_spot_price:,.2f}")
-            print(f"token:      {liquidity_token_amount:,.2f}")
-            print(f"stoken:     {liquidity_stoken_amount:,.2f}")
-            """
-            chicken.stoken.mint(chicken.pol_account, liquidity_stoken_amount)
-            chicken.amm.add_liquidity(chicken.pol_account, liquidity_token_amount, liquidity_stoken_amount)
+            # Redirect part of bond to AMM
+            if amm_token_amount > 0:
+                self.divert_to_amm(chicken, amm_token_amount, amm_stoken_amount)
 
-        return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount
+            total_chicken_in_amount = total_chicken_in_amount + claimable_stoken
+            total_chicken_in_foregone = total_chicken_in_foregone + foregone_amount
+
+        return total_chicken_in_amount, total_chicken_in_foregone
 
     def adjust_liquidity(self, chicken, chicks, amm_average_apr, iteration):
         return
@@ -525,8 +585,12 @@ class TesterIssuanceBondsAMM_1(TesterIssuanceBonds):
             )
             stoken_redemption_amount = token_swap_amount / pol_ratio
             remaining_amount = stoken_redemption_amount
+            if remaining_amount == 0:
+                return
             #for chick in self.get_chicks_with_stoken(chicken, chicks, threshold=pol_ratio * 10):
             for chick in self.get_chicks_with_stoken(chicken, chicks, threshold=10):
+                #print(f"bal: {chicken.stoken.balance_of(chick.account):,.2f}")
+                #print(f"rem: {remaining_amount:,.2f}")
                 chick_redemption_amount = min(
                     remaining_amount,
                     chicken.stoken.balance_of(chick.account)
@@ -554,16 +618,47 @@ class TesterIssuanceBondsAMM_2(TesterIssuanceBondsAMM_1):
     def get_reserve_ratio(self, chicken):
         return self.get_reserve_ratio_no_amm(chicken)
 
-    def get_claimable_stoken(self, chick, iteration, pol_ratio, stoken_price):
-        effective_bond_amount = chick.bond_amount * (1 - self.chicken_in_amm_share)
-        claimable_stoken = min(
+    """
+    As AMM is out of redemption / backing ratio, we first remove AMM token toll
+    With that, along with the backing ratio, we get the total amount of sTOKEN to be minted
+    From that amount we subtract the sTOKEN toll, so that the sTOKEN total supply will remain
+    and therefore the backing ratio too.
+    """
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
+        token_toll = chick.bond_amount * self.chicken_in_amm_share
+        effective_bond_amount = chick.bond_amount - token_toll
+        bond_cap = self.get_bond_cap(effective_bond_amount, pol_ratio)
+        mintable_amount = min(
+            # TODO: should we use here total or effective bond amount?
             effective_bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time),
-            effective_bond_amount / pol_ratio
+            bond_cap
         )
-        # subtract to be minted sTOKEN
-        claimable_stoken = claimable_stoken - chick.bond_amount * self.chicken_in_amm_share / stoken_price
 
-        return claimable_stoken
+        # subtract to be minted sTOKEN
+        stoken_price = self.get_stoken_spot_price(chicken)
+        stoken_toll = token_toll / stoken_price
+
+        # Note: stoken_toll > mintable_token iff pol_ratio / stoken_price > (1 - chicken_in_amm_share) / chicken_in_amm_share
+        # In particular if stoken_price > pol_ratio && chicken_in_amm_share < 0.5, it won’t hold
+        claimable_stoken = max(mintable_amount - stoken_toll, 0)
+        """
+        print("\n\n")
+        print(f"POL ratio: {pol_ratio:,.2f}")
+        print(chick)
+        print(f"Bond:              {chick.bond_amount:,.2f}")
+        print(f"Effective bond:    {effective_bond_amount:,.2f}")
+        print(f"TOKEN toll:        {token_toll:,.2f}")
+        print(f"sTOKEN price:      {stoken_price:,.2f}")
+        print(f"sTOKEN toll:       {stoken_toll:,.2f}")
+        print(f"Cap:               {bond_cap:,.2f}")
+        print(f"Mintable pre cap:  {effective_bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time):,.2f}")
+        print(f"Mintable:          {mintable_amount:,.2f}")
+        print(f"Claimable:         {claimable_stoken:,.2f}")
+        print(f"r/p:               {pol_ratio / stoken_price:,.2f}")
+        print(f"(1-s)/s:           {(1 - self.chicken_in_amm_share) / self.chicken_in_amm_share:,.2f}")
+        """
+
+        return mintable_amount, bond_cap, claimable_stoken, token_toll, stoken_toll
 
     # Only POL, without AMM
     def redeem(self, chicken, chick, stoken_amount, pol_ratio):
@@ -621,14 +716,15 @@ class TesterIssuanceBondsAMM_3(TesterIssuanceBondsAMM_1):
     def get_reserve_ratio(self, chicken):
         return self.get_reserve_ratio_no_amm(chicken)
 
-    def get_claimable_stoken(self, chick, iteration, pol_ratio, stoken_price):
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
         effective_bond_amount = chick.bond_amount * (1 - self.chicken_in_amm_share)
+        bond_cap = self.get_bond_cap(effective_bond_amount, pol_ratio)
         claimable_stoken = min(
             effective_bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time),
-            effective_bond_amount / pol_ratio
+            bond_cap
         )
 
-        return claimable_stoken
+        return claimable_stoken, bond_cap, claimable_stoken, 0, 0
 
     # First POL, then AMM
     def redeem(self, chicken, chick, stoken_amount, pol_ratio):
@@ -701,3 +797,138 @@ class TesterIssuanceBondsAMM_4(TesterIssuanceBondsAMM_1):
         self.name = "Bonds with AMM model - partially backed"
         self.plot_prefix = '0_4'
         self.plot_file_description = 'bonds_amm_4'
+
+class TesterRebonding(TesterIssuanceBondsAMM_2):
+    def __init__(self):
+        super().__init__()
+        self.name = "Bonds with AMM model - approach 2 - with Rebonding"
+        self.plot_prefix = '0_5'
+        self.plot_file_description = 'bonds_amm_2_rebonding'
+        return
+
+    def init(self, chicks):
+        BONDERS = 20 # TODO
+        for i in range(BONDERS):
+            chicks[i].rebonder = True
+
+        return
+
+    def get_bonded_chicks(self, chicks):
+        return list(filter(lambda chick: chick.bond_amount > 0 and not chick.rebonder, chicks))
+
+    def get_rebonders(self, chicks):
+        return list(filter(lambda chick: chick.bond_amount > 0 and chick.rebonder, chicks))
+
+    def rebond(self, chicken, chicks, data, iteration):
+        # If AMM price is lower than redemption price, rebonding is not profitable
+        if self.get_stoken_spot_price(chicken) <= self.get_pol_ratio(chicken):
+            return 0, 0, 0, 0
+        total_chicken_in_amount = 0
+        total_chicken_in_foregone = 0
+        total_rebonded = 0
+        rebonders = self.get_rebonders(chicks)
+        #print(f"\n\n-- Rebond")
+        #print(f"Rebonds: {len(rebonders)}")
+        for chick in rebonders:
+            """
+            print("\n \033[31mBalances before\033[0m")
+            print(f" - {chicken.token.symbol} balance: {chicken.token.balance_of(chick.account):,.2f}")
+            print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
+            print(f" - {chicken.stoken.symbol} balance: {chicken.stoken.balance_of(chick.account):,.2f}")
+            """
+
+            assert iteration >= chick.bond_time
+            pol_ratio = self.get_pol_ratio(chicken)
+            assert pol_ratio == 0 or pol_ratio >= 1
+            if pol_ratio == 0:
+                pol_ratio = 1
+            # If AMM price is lower than redemption price, rebonding is not profitable
+            if self.get_stoken_spot_price(chicken) <= pol_ratio:
+                continue
+            mintable_amount, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount = \
+                self.get_claimable_stoken(chicken, chick, iteration, pol_ratio)
+            # If not profitable (If the value obtained from sTOKEN is not greater than the bond)
+            if claimable_stoken * self.get_stoken_spot_price(chicken) < chick.bond_amount:
+                continue
+            # if the cap is not reached yet
+            if mintable_amount < bond_cap:
+                """
+                print("\n---")
+                print(" - Rebond: Cap not reached yet")
+                print(f"POL ratio: {pol_ratio:,.2f}")
+                print(chick)
+                print(f"bond:          {chick.bond_amount:,.2f}")
+                print(f"claimable:     {claimable_stoken:,.2f}")
+                print(f"cap:           {bond_cap:,.2f}")
+                print(f"mintable:      {mintable_amount:,.2f}")
+                """
+                continue
+
+            # chicken up?
+            if np.random.random() < self.chicken_up_probability:
+                #print(f"\n-- Chicken up!")
+                top_up_amount = min(chicken.token.balance_of(chick.account), chick.bond_amount)
+                chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
+                claimable_stoken = claimable_stoken * (1 + top_up_amount / chick.bond_amount)
+                chick.bond_amount = chick.bond_amount + top_up_amount
+
+            foregone_amount = chick.bond_amount - claimable_stoken
+            """
+            print("\n---")
+            print(f"POL ratio: {pol_ratio:,.2f}")
+            print(chick)
+            print(f"mintable:      {mintable_amount:,.2f}")
+            print(f"claimable:     {claimable_stoken:,.2f}")
+            print(f"foregone:      {foregone_amount:,.2f}")
+            print(f"bond:          {chick.bond_amount:,.2f}")
+            print(f"cap:           {bond_cap:,.2f}")
+            """
+
+            total_chicken_in_amount = total_chicken_in_amount + claimable_stoken
+            total_chicken_in_foregone = total_chicken_in_foregone + foregone_amount
+            chicken.chicken_in(chick, claimable_stoken)
+
+            # Redirect part of bond to AMM
+            self.divert_to_amm(chicken, amm_token_amount, amm_stoken_amount)
+
+            # rebond
+            # sell sTOKEN in the AMM
+            stoken_swap_amount = min(
+                chicken.amm.get_input_B_for_max_slippage(self.max_slippage, 0, 0),
+                claimable_stoken,
+            )
+            bought_token_amount = chicken.amm.swap_B_for_A(chick.account, stoken_swap_amount)
+            # bond again
+            chicken.bond(chick, bought_token_amount, 0, iteration)
+            total_rebonded = total_rebonded + bought_token_amount
+
+            """
+            print(f"Sold sTOKEN:  {stoken_swap_amount:,.2f}")
+            print(f"Bought TOKEN: {bought_token_amount:,.2f}")
+            print("\n \033[32mBalances after\033[0m")
+            print(f" - {chicken.token.symbol} balance: {chicken.token.balance_of(chick.account):,.2f}")
+            print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
+            print(f" - {chicken.stoken.symbol} balance: {chicken.stoken.balance_of(chick.account):,.2f}")
+            """
+
+        total_chicken_out_amount = 0
+
+        return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount, total_rebonded
+
+    def chicken_in_out(self, chicken, chicks, data, iteration):
+        np.random.seed(2023*iteration)
+        np.random.shuffle(chicks)
+
+        # chicken in
+        total_chicken_in_amount, total_chicken_in_foregone = self.chicken_in(chicken, chicks, data, iteration)
+
+        # rebond
+        _, rebond_foregone, _, total_rebonded = self.rebond(chicken, chicks, data, iteration)
+        #if total_rebonded > 0:
+        #    exit(1)
+        total_chicken_in_foregone = total_chicken_in_foregone + rebond_foregone
+
+        # chicken out
+        total_chicken_out_amount = self.chicken_out(chicken, chicks)
+
+        return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount

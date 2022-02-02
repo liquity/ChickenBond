@@ -21,21 +21,25 @@ def log_system(chicken, token, stoken):
     print(f"")
     return
 
-def log_user_balances(chicken, user, tokens):
-    print(f"User {user.account}:")
-    for token in tokens:
-        print(f" - {token.symbol} balance: {token.balance_of(user.account):,.2f}")
-    print(f" - Total balance: {reduce(lambda total, token: total + token.balance_of(user.account), tokens, 0.0):,.2f}")
-
+def log_chick_balances(chicken, chick):
+    token_bal = chicken.token.balance_of(chick.account)
+    stoken_bal = chicken.stoken.balance_of(chick.account)
+    stoken_value = chicken.stoken.balance_of(chick.account) * chicken.amm.get_token_B_price()
+    print(f"User {chick.account}:")
+    print(f" - {chicken.token.symbol} balance: {token_bal:,.2f}")
+    print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
+    print(f" - {chicken.stoken.symbol} balance: {stoken_bal:,.2f}")
+    print(f" - {chicken.stoken.symbol} value:   {stoken_value:,.2f}")
+    print(f" - Total value: {token_bal + chick.bond_amount + stoken_value:,.2f}")
     print("")
     return
 
-def log_users(chicken, users, tokens):
-    for user in users:
-        log_user_balances(chicken, user, tokens)
+def log_chicks(chicken, chicks, tokens):
+    for chick in chicks:
+        log_chick_balances(chicken, chick)
     return
 
 def log_state(chicken, chicks):
     log_system(chicken, chicken.token, chicken.stoken)
-    #log_users(chicken, chicks, [chicken.token, chicken.stoken])
+    #log_chicks(chicken, chicks)
     return
