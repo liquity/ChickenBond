@@ -7,6 +7,7 @@ import {
   Heading,
   Input,
   Label,
+  Select,
   Switch,
   Textarea,
   ThemeProvider,
@@ -76,8 +77,24 @@ const seriesMax = (series?: Array<{ x: number; y: number | null }>) =>
 const numSamples = 201;
 const range = [...Array(numSamples).keys()];
 
+const tollBasisOptions = new Map([
+  ["initial" as const, "Initial bond"],
+  ["toppedUp" as const, "Topped-up bond"]
+]);
+
+type TollBasis = typeof tollBasisOptions extends Map<infer T, unknown> ? T : never;
+
+const checkTollBasis = (value: string): TollBasis => {
+  if (!(tollBasisOptions as Map<string, never>).has(value)) {
+    throw new Error(`wrong TollBasis value "${value}"`);
+  }
+
+  return value as TollBasis;
+};
+
 const defaultPolRatioInit = 3;
 const defaultTollPct = 20;
+const defaultTollBasis = "initial";
 const defaultPremiumPct = 45;
 const defaultNaturalRatePct = 10;
 const defaultBond = 100;
@@ -89,6 +106,7 @@ const defaultFNaturalRatePct = "k => 10";
 const App = () => {
   const [polRatioInitInput, setPolRatioInitInput] = useState(`${defaultPolRatioInit}`);
   const [tollPctInput, setTollPctInput] = useState(`${defaultTollPct}`);
+  const [tollBasis, setTollBasis] = useState<TollBasis>(`${defaultTollBasis}`);
   const [premiumPctInput, setPremiumPctInput] = useState(`${defaultPremiumPct}`);
   const [fPremiumPctInput, setFPremiumPctInput] = useState(`${defaultFPremiumPct}`);
   const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
@@ -185,9 +203,13 @@ const App = () => {
 
     return accruedSeries.map(({ x, y: accrued }, i) => ({
       x,
-      y: Math.max(((accrued - cappedSeries[i].y) * polRatioSeries[i].y) / (1 - tollPct / 100), 0)
+      y: Math.max(
+        ((accrued - cappedSeries[i].y) * polRatioSeries[i].y) /
+          (1 - (tollBasis === "toppedUp" ? tollPct / 100 : 0)),
+        0
+      )
     }));
-  }, [bond, tollPct, polRatioSeries, accruedSeries, cappedSeries]);
+  }, [bond, tollPct, tollBasis, polRatioSeries, accruedSeries, cappedSeries]);
 
   const premiumPctSeries = useMemo(() => {
     if (useFunctions) {
@@ -290,6 +312,15 @@ const App = () => {
                 value={tollPctInput}
                 onChange={e => setTollPctInput(e.target.value)}
               />
+
+              <Label sx={{ mt: 3 }}>Toll Basis</Label>
+              <Select value={tollBasis} onChange={e => setTollBasis(checkTollBasis(e.target.value))}>
+                {[...tollBasisOptions].map(([key, description]) => (
+                  <option key={key} value={key}>
+                    {description}
+                  </option>
+                ))}
+              </Select>
             </Box>
 
             <Heading as="h4">Chicken Bond</Heading>
