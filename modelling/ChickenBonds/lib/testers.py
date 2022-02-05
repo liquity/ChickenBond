@@ -17,6 +17,11 @@ class TesterInterface():
         self.plot_prefix = ''
         self.plot_file_description = ''
 
+        self.chicken_in_counter = 0
+        self.chicken_up_counter = 0
+        self.chicken_out_counter = 0
+        self.chicken_up_locked = 0
+
         return
 
     def init(self, chicks):
@@ -126,9 +131,8 @@ class TesterIssuanceBonds(TesterBase):
         self.external_yield = EXTERNAL_YIELD
 
         self.bond_mint_ratio = BOND_STOKEN_ISSUANCE_RATE
-        self.bond_probability = 0.3
-        self.bond_amount = INITIAL_AMOUNT / 10
-
+        self.bond_probability = 0.05 #previously 0.3
+        self.bond_amount = int(INITIAL_AMOUNT / np.random.randint(10, 100, 1)) #previously 10
         self.chicken_in_gamma_shape = CHICKEN_IN_GAMMA_SHAPE
         self.chicken_in_gamma_scale = CHICKEN_IN_GAMMA_SCALE
         self.chicken_out_probability = CHICKEN_OUT_PROBABILITY
@@ -142,10 +146,30 @@ class TesterIssuanceBonds(TesterBase):
             # TODO: price!!
             return self.initial_price
 
-        base_amount = chicken.reserve_token_balance()
-        #print(f"reserve:       {base_amount:,.2f}")
-        #print(f"sTOKEN supply: {stoken_supply:,.2f}")
-        return base_amount / stoken_supply
+        # ToDo: Is this correct? The sLQTY base_amount is only depending on the POL account,
+        #       but not on the total reserves?!
+
+        # ToDo: This defines the price floor.
+        base_amount = chicken.pol_token_balance()
+
+
+        # ToDo: Now we add the interest of an perpetual contract of the COOP account.
+        #       Does it make sense to break it down to a daily premium?
+        premium = (chicken.coop_token_balance() * EXTERNAL_YIELD)**(1/TIME_UNITS_PER_YEAR)
+
+        # mu = (base_amount/stoken_supply) * 0.1
+        # sigma = mu * 0.1
+        # premium = np.random.normal(mu, sigma, 1)
+        # premium = np.random.randn()
+
+        # base_amount = chicken.pol_token_balance() + chicken.coop_token_balance()
+        # premium = 0
+
+        return (base_amount / stoken_supply) + premium
+
+
+ #       base_amount = chicken.reserve_token_balance()
+ #        return base_amount / stoken_supply
 
     def get_stoken_twap(self, data, iteration):
         if iteration <= self.twap_period:
@@ -190,7 +214,11 @@ class TesterIssuanceBonds(TesterBase):
 
     def distribute_yield(self, chicken, chicks, iteration):
         base_amount = chicken.reserve_token_balance()
-        generated_yield = base_amount * self.external_yield / TIME_UNITS_PER_YEAR
+
+        # ToDO: Compounded Interest Rest! -> Test if works properly.
+        generated_yield = base_amount * ((1+self.external_yield)**(1/TIME_UNITS_PER_YEAR) - 1)
+        # generated_yield = base_amount * (self.external_yield / TIME_UNITS_PER_YEAR)
+
         chicken.token.mint(chicken.pol_account, generated_yield)
         return
 
@@ -224,105 +252,402 @@ class TesterIssuanceBonds(TesterBase):
             chick.bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time),
             bond_cap
         )
-
+        # ToDO: Why is claimable stoken returned twice?
         return claimable_stoken, bond_cap, claimable_stoken, 0, 0
 
-    def chicken_in_one(self, chicken, chick, data, iteration):
-        assert iteration >= chick.bond_time
+    def get_accumulated_stoken(self, chick, iteration):
+        """
+        :param chicken:
+        :param chick:
+        :param iteration:
+        :param pol_ratio:
+        :return:
+        """
+
+        return chick.bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time)
+
+    def update_chicken(self, chicken, chicks, data, iteration):
+        """ Update the state of each user. Users may:
+            - chicken-out
+            - chicken-in
+            - chicken-up
+        with predefined probabilities.
+
+        :param chicken: The resources
+        :param chicks: All users
+        :param data: Logging data
+        :param iteration: The iteration step
+        """
+
+        np.random.seed(2023 * iteration)
+        np.random.shuffle(chicks)
+
+        total_chicken_in_amount = 0
+        total_chicken_out_amount = 0
+        total_chicken_in_foregone = 0
+        total_chicken_up_amount = 0
+        bonded_chicks = self.get_bonded_chicks(chicks)
+        print(f"Bonded Chicks: {len(bonded_chicks)}")
+
+        for chick in bonded_chicks:
+
+            assert iteration >= chick.bond_time
+            pol_ratio = self.get_pol_ratio(chicken)
+            assert pol_ratio == 0 or pol_ratio >= 1
+            if pol_ratio == 0:
+                pol_ratio = 1
+
+            # -------------------------------
+            # Chicken-out
+
+            # Check if chicken-out conditions are met and eventually chicken-out
+            total_chicken_out_amount += self.chicken_out(chicken, chick, iteration, data)
+
+            # -------------------------------
+            # Chicken-in
+
+            # Check if chicken-out conditions are met and eventually chicken-out
+            new_chicken_in_amount, new_chicken_in_forgone = \
+                self.chicken_in(chicken, chick, iteration, data)
+            total_chicken_in_amount += new_chicken_in_amount
+            total_chicken_in_foregone += new_chicken_in_forgone
+
+            # -------------------------------
+            # Chicken-up
+
+            # Check if chicken-out conditions are met and eventually chicken-out
+            total_chicken_up_amount += self.chicken_up(chicken, chick, iteration, data)
+
+    def chicken_in(self, chicken, chick, iteration, data):
+        """ User may chicken-in if the have already exceeded the break-even
+        point of their investment and not yet exceeded the bonding cap.
+
+        :param chicken: The resources.
+        :param chick: The user
+        :param iteration: The iteration step
+        :param data: Logging data
+        :return: Amount of new claimable sLQTY and foregone amount.
+        """
+
         pol_ratio = self.get_pol_ratio(chicken)
-        assert pol_ratio == 0 or pol_ratio >= 1
-        if pol_ratio == 0:
-            pol_ratio = 1
         mintable_amount, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount = \
             self.get_claimable_stoken(chicken, chick, iteration, pol_ratio)
-        stoken_price = self.get_stoken_price(chicken, data, iteration)
+
+        # use actual stoken price instead of weighted average
+        # stoken_price = self.get_stoken_price(chicken, data, iteration)
+        stoken_price = self.get_stoken_spot_price(chicken)
         profit = claimable_stoken * stoken_price - chick.bond_amount
         target_profit = chick.bond_target_profit * chick.bond_amount
-        if profit <= target_profit:
-            """
-            print("\n---")
-            print(f"POL ratio: {pol_ratio:,.2f}")
-            print(chick)
-            print(f"bond:          {chick.bond_amount:,.2f}")
-            print(f"target profit: {chick.bond_target_profit:.3%}")
-            print(f"target profit: {target_profit:,.2f}")
-            print(f"claimable:     {claimable_stoken:,.2f}")
-            print(f"sTOKEN price:  {stoken_price:,.2f}")
-            print(f"profit:        {profit:,.2f}")
-            """
-            return 0, 0, 0, 0
-        # chicken up?
-        if np.random.random() < self.chicken_up_probability:
-            #print(f"\n-- Chicken up!")
-            top_up_amount = min(chicken.token.balance_of(chick.account), chick.bond_amount)
-            chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
-            mintable_amount = mintable_amount * (1 + top_up_amount / chick.bond_amount)
-            claimable_stoken = claimable_stoken * (1 + top_up_amount / chick.bond_amount)
-            chick.bond_amount = chick.bond_amount + top_up_amount
 
-        foregone_amount = chick.bond_amount - mintable_amount
-        """
-        print("\n---")
-        print(f"POL ratio: {pol_ratio:,.2f}")
-        print(chick)
-        print(f"mintable:      {mintable_amount:,.2f}")
-        print(f"claimable:     {claimable_stoken:,.2f}")
-        print(f"foregone:      {foregone_amount:,.2f}")
-        print(f"stoken_price:  {stoken_price:,.2f}")
-        print(f"bond:          {chick.bond_amount:,.2f}")
-        print(f"target profit: {chick.bond_target_profit:.3%}")
-        print(f"target profit: {target_profit:,.2f}")
-        print(f"profit:        {profit:,.2f}")
-        """
+        max_claimable_stoken = self.get_accumulated_stoken(chick, iteration)
+        # If the user reached the sLQTY cap, certainly chicken-up.
 
+        # if max_claimable_stoken > bond_cap or profit <= target_profit:
+        if max_claimable_stoken > bond_cap or profit <= 0:
+        #     if iteration>500:
+        #         a=1
+            # If the chicks profit are below their target_profit,
+            # do neither chicken-in nor chicken-up.
+            return 0, 0
+
+        foregone_amount = chick.bond_amount - mintable_amount * stoken_price
         chicken.chicken_in(chick, claimable_stoken)
+        self.chicken_in_counter += 1
+        # print("CHICKEN IN!")
+        import time
+        # time.sleep(2)
 
-        return claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount
+        return claimable_stoken, foregone_amount
 
-    def chicken_in(self, chicken, chicks, data, iteration):
-        total_chicken_in_amount = 0
-        total_chicken_in_foregone = 0
-        bonded_chicks = self.get_bonded_chicks(chicks)
-        #print(f"-- Chicken in")
-        #print(f"Bonds: {len(bonded_chicks)}")
-        for chick in bonded_chicks:
-            claimable_stoken, foregone_amount, _, _ = self.chicken_in_one(chicken, chick, data, iteration)
-            total_chicken_in_amount = total_chicken_in_amount + claimable_stoken
-            total_chicken_in_foregone = total_chicken_in_foregone + foregone_amount
+    def chicken_out(self, chicken, chick, iteration, data):
+        """ Chicken  out defines leaving users. User are only allowed to leave if
+        the break-even point of the investment is not reached with a predefined
+        probability.
 
-        return total_chicken_in_amount, total_chicken_in_foregone
+        :param chicken: Resources
+        :param chick: All users
+        :param iteration:
+        :param data:
+        :return: Total outgoing amount.
+        """
 
-    def chicken_out(self, chicken, chicks):
         total_chicken_out_amount = 0
-        bonded_chicks = self.get_bonded_chicks(chicks)
-        #print(f"-- Chicken out")
-        #print(f"Bonds: {len(bonded_chicks)}")
-        for chick in bonded_chicks:
-            if np.random.binomial(1, self.chicken_out_probability) == 0:
-                continue
-            total_chicken_out_amount = total_chicken_out_amount + chick.bond_amount
-            """
-            print("\n---")
-            print(chick)
-            print(f"claimable:     {claimable_stoken:,.2f}")
-            print(f"bond:          {chick.bond_amount:,.2f}")
-            """
 
+        # use actual stoken price instead of weighted average
+        # stoken_price = self.get_stoken_price(chicken, data, iteration)
+        stoken_price = self.get_stoken_spot_price(chicken)
+        max_claimable_stoken = self.get_accumulated_stoken(chick, iteration)
+        profit = max_claimable_stoken * stoken_price - chick.bond_amount
+
+        # if break even is not reached and chicken-out proba (10%) is fulfilled
+        if profit <= 0 and np.random.binomial(1, self.chicken_out_probability) == 1:
             chicken.chicken_out(chick)
+            total_chicken_out_amount += chick.bond_amount
+            self.chicken_out_counter += 1
 
         return total_chicken_out_amount
 
-    def chicken_in_out(self, chicken, chicks, data, iteration):
-        np.random.seed(2023*iteration)
-        np.random.shuffle(chicks)
+    def chicken_up(self, chicken, chick, iteration, data):
+        """ Chicken-ups are users enabling the access to additional sLQTY tokens.
+        User are only allowed to chicken-up if they exceeded the bonding cap and
+        only by the outstanding amount of sLQTY tokens.
 
-        # chicken in
-        total_chicken_in_amount, total_chicken_in_foregone = self.chicken_in(chicken, chicks, data, iteration)
+        :param chicken: The reserve pool object.
+        :param chick: The user
+        :param iteration: The actual period
+        :return: The new claimable and mint-able stoken amount
+        """
 
-        # chicken out
-        total_chicken_out_amount = self.chicken_out(chicken, chicks)
+        # use actual stoken price instead of weighted average
+        # stoken_price = self.get_stoken_price(chicken, data, iteration)
+        stoken_price = self.get_stoken_spot_price(chicken)
+        max_claimable_stoken = self.get_accumulated_stoken(chick, iteration)
 
-        return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount
+        pol_ratio = self.get_pol_ratio(chicken)
+        bond_cap = self.get_bond_cap(chick.bond_amount, pol_ratio)
+
+        # Check if the sLQTY cap is exceeded
+        if max_claimable_stoken <= bond_cap:
+            return 0
+
+        # calculate the maximum amount of LQTY to chicken-up
+        top_up_amount = min((max_claimable_stoken - bond_cap) * stoken_price,
+                            chicken.token.balance_of(chick.account))
+
+        # Calculate the claimable_amount as the minimum of max_claimable_amount and
+        # the actual top_up_amount. If a chick is not able to chick_up to the total
+        # max_claimable_stoken_amount.
+        claimable_amount = min(max_claimable_stoken,
+                               bond_cap + (top_up_amount / stoken_price))
+
+        # Check if chicken-up is profitable
+        # Profit = (ALL claimable sLQTY * Price) - (Initial investment + additional investment)
+        profit = (claimable_amount * stoken_price) - (chick.bond_amount + top_up_amount)
+        target_profit = chick.bond_target_profit * (chick.bond_amount + top_up_amount)
+
+
+        # if profit <= target_profit:
+        #     self.chicken_up_locked += 1
+        if profit <= 0 or np.random.binomial(1, 1-CHICKEN_UP_PROBABILITY, 1):
+            return 0
+
+        # Transfer the assets first to the COOP account, which is then transferred
+        # to the POL account in chicken.chicken_in()
+        # chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
+        chicken.chicken_in(chick, claimable_amount)
+        self.chicken_up_counter += 1
+        # print("CHICKEN UP!")
+        import time
+        # time.sleep(2)
+
+        return claimable_amount
+
+    #
+    # def chicken_in_one(self, chicken, chick, data, iteration):
+    #     """
+    #
+    #     :param chicken:
+    #     :param chick:
+    #     :param data:
+    #     :param iteration:
+    #     :return:
+    #     """
+    #
+    #     assert iteration >= chick.bond_time
+    #     pol_ratio = self.get_pol_ratio(chicken)
+    #     assert pol_ratio == 0 or pol_ratio >= 1
+    #     if pol_ratio == 0:
+    #         pol_ratio = 1
+    #     mintable_amount, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount = \
+    #         self.get_claimable_stoken(chicken, chick, iteration, pol_ratio)
+    #     stoken_price = self.get_stoken_price(chicken, data, iteration)
+    #     profit = claimable_stoken * stoken_price - chick.bond_amount
+    #     target_profit = chick.bond_target_profit * chick.bond_amount
+    #
+    #     # alternatively use profit > 0
+    #     if profit <= target_profit:
+    #         # If the chicks profit are below their target_profit,
+    #         # do neither chicken-in nor chicken-up.
+    #         return 0, 0, 0, 0
+    #
+    #     # ToDO: - Chicken-up only if the cap is reached
+    #     #       - Chicken-up only up to the maximum sLQTY claimable
+    #     if self.get_accumulated_stoken(chick, iteration) > bond_cap:
+    #         claimable_stoken, mintable_amount = \
+    #             self.chicken_up(chicken, chick, bond_cap, iteration)
+    #
+    #
+    #     #if np.random.random() < self.chicken_up_probability:
+    #     #    # print(f"\n-- Chicken up!")
+    #     #    top_up_amount = min(chicken.token.balance_of(chick.account), chick.bond_amount)
+    #     #    chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
+    #     #    mintable_amount = mintable_amount * (1 + top_up_amount / chick.bond_amount)
+    #
+    #         # ToDo: Is this correct? The claimable tokens do not increase immediately.
+    #     #    claimable_stoken = claimable_stoken * (1 + top_up_amount / chick.bond_amount)
+    #     #    chick.bond_amount = chick.bond_amount + top_up_amount
+    #
+    #     foregone_amount = chick.bond_amount - mintable_amount
+    #
+    #     chicken.chicken_in(chick, claimable_stoken)
+    #
+    #     return claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount
+    #
+    # def chicken_up(self, chicken, chick, bond_cap, iteration):
+    #     """
+    #     :param chicken: The reserve pool object.
+    #     :param chick: The user
+    #     :param bond_cap: The maximum claimable stoken amount before chicken-up
+    #     :param iteration: The actual period
+    #     :return: The new claimable and mintable stoken amount
+    #     """
+    #     max_claimable_stoken = self.get_accumulated_stoken(chick, iteration)
+    #
+    #     # calculate the maximum amount of LQTY to chicken-up
+    #     top_up_amount = min((max_claimable_stoken - bond_cap) * self.get_stoken_spot_price(chicken),
+    #                         chicken.token.balance_of(chick.account))
+    #
+    #     # Transfer the assets first to the COOP account, which is then transfered
+    #     # to the POL account in chicken.chicken_in()
+    #     chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
+    #
+    #     # Calculate the claimable_amount as the minimum of max_claimable_amount and
+    #     # the actual top_up_amount. If a chick is not able to chick_up to the total
+    #     # max_claimable_stoken_amount.
+    #     claimable_amount = min(max_claimable_stoken,
+    #                            bond_cap + (top_up_amount/self.get_stoken_spot_price(chicken)))
+    #
+    #     mintable_amount = claimable_amount
+    #
+    #     return claimable_amount, mintable_amount
+
+    #     total_chicken_in_amount = 0
+    #     total_chicken_in_foregone = 0
+    #     bonded_chicks = self.get_bonded_chicks(chicks)
+    #     # print(f"-- Chicken in")
+    #     # print(f"Bonds: {len(bonded_chicks)}")
+    #     for chick in bonded_chicks:
+    #
+
+    #         claimable_stoken, foregone_amount, _, _ = self.chicken_in_one(chicken, chick, data, iteration)
+    #         total_chicken_in_amount = total_chicken_in_amount + claimable_stoken
+    #         total_chicken_in_foregone = total_chicken_in_foregone + foregone_amount
+    #
+    #     return total_chicken_in_amount, total_chicken_in_foregone
+    #
+    # def chicken_in_one(self, chicken, chick, data, iteration):
+    #     assert iteration >= chick.bond_time
+    #     pol_ratio = self.get_pol_ratio(chicken)
+    #     assert pol_ratio == 0 or pol_ratio >= 1
+    #     if pol_ratio == 0:
+    #         pol_ratio = 1
+    #     mintable_amount, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount = \
+    #         self.get_claimable_stoken(chicken, chick, iteration, pol_ratio)
+    #     stoken_price = self.get_stoken_price(chicken, data, iteration)
+    #     profit = claimable_stoken * stoken_price - chick.bond_amount
+    #     target_profit = chick.bond_target_profit * chick.bond_amount
+    #     if profit <= target_profit:
+    #         """
+    #         print("\n---")
+    #         print(f"POL ratio: {pol_ratio:,.2f}")
+    #         print(chick)
+    #         print(f"bond:          {chick.bond_amount:,.2f}")
+    #         print(f"target profit: {chick.bond_target_profit:.3%}")
+    #         print(f"target profit: {target_profit:,.2f}")
+    #         print(f"claimable:     {claimable_stoken:,.2f}")
+    #         print(f"sTOKEN price:  {stoken_price:,.2f}")
+    #         print(f"profit:        {profit:,.2f}")
+    #         """
+    #         return 0, 0, 0, 0
+    #     # chicken up?
+    #
+    #     # ToDo: Would it be more realistic of only chicks 'chicken-up' who are
+    #     #       OVER the sLQTY CAP certainly chicken-up (or increasingly over time)?
+    #
+    #     # ToDo: In the whitepaper is written chicken-ups are only possible for chicks at or over the cap.
+    #
+    #     # ToDo: Chicken-ups should only be ex-post, but never ex-ante. A chicken would never
+    #     #       chicken-up before:
+    #     #           - the cap is reached (looses claim on additional sLQTY)
+    #     #           - before the sLQTY is accumulated. A chicken would only pay to unlock the already
+    #     #             accumulated sLQTY, but not before.
+    #     #           - Chicken-ups do only increase the maximum possible sLQTY, but do not increase the
+    #     #             current claimable sLQTY at this point in time.
+    #     #           - A chick would only chicken-up so much to reach all of its claimable tokens, but no more.
+    #
+    #     if np.random.random() < self.chicken_up_probability:
+    #         #print(f"\n-- Chicken up!")
+    #         top_up_amount = min(chicken.token.balance_of(chick.account), chick.bond_amount)
+    #         chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
+    #         mintable_amount = mintable_amount * (1 + top_up_amount / chick.bond_amount)
+    #
+    #         # ToDo: Is this correct? The claimable tokens do not increase immediately.
+    #         claimable_stoken = claimable_stoken * (1 + top_up_amount / chick.bond_amount)
+    #         chick.bond_amount = chick.bond_amount + top_up_amount
+    #
+    #     foregone_amount = chick.bond_amount - mintable_amount
+    #     """
+    #     print("\n---")
+    #     print(f"POL ratio: {pol_ratio:,.2f}")
+    #     print(chick)
+    #     print(f"mintable:      {mintable_amount:,.2f}")
+    #     print(f"claimable:     {claimable_stoken:,.2f}")
+    #     print(f"foregone:      {foregone_amount:,.2f}")
+    #     print(f"stoken_price:  {stoken_price:,.2f}")
+    #     print(f"bond:          {chick.bond_amount:,.2f}")
+    #     print(f"target profit: {chick.bond_target_profit:.3%}")
+    #     print(f"target profit: {target_profit:,.2f}")
+    #     print(f"profit:        {profit:,.2f}")
+    #     """
+    #
+    #     chicken.chicken_in(chick, claimable_stoken)
+    #
+    #     return claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount
+    #
+    # def chicken_in(self, chicken, chicks, data, iteration):
+    #     total_chicken_in_amount = 0
+    #     total_chicken_in_foregone = 0
+    #     bonded_chicks = self.get_bonded_chicks(chicks)
+    #     #print(f"-- Chicken in")
+    #     #print(f"Bonds: {len(bonded_chicks)}")
+    #     for chick in bonded_chicks:
+    #         claimable_stoken, foregone_amount, _, _ = self.chicken_in_one(chicken, chick, data, iteration)
+    #         total_chicken_in_amount = total_chicken_in_amount + claimable_stoken
+    #         total_chicken_in_foregone = total_chicken_in_foregone + foregone_amount
+    #
+    #     return total_chicken_in_amount, total_chicken_in_foregone
+    #
+    # def chicken_out(self, chicken, chicks):
+    #     total_chicken_out_amount = 0
+    #     bonded_chicks = self.get_bonded_chicks(chicks)
+    #     #print(f"-- Chicken out")
+    #     #print(f"Bonds: {len(bonded_chicks)}")
+    #     for chick in bonded_chicks:
+    #         if np.random.binomial(1, self.chicken_out_probability) == 0:
+    #             continue
+    #         total_chicken_out_amount = total_chicken_out_amount + chick.bond_amount
+    #         """
+    #         print("\n---")
+    #         print(chick)
+    #         print(f"claimable:     {claimable_stoken:,.2f}")
+    #         print(f"bond:          {chick.bond_amount:,.2f}")
+    #         """
+    #
+    #         chicken.chicken_out(chick)
+    #
+    #     return total_chicken_out_amount
+    #
+    # def chicken_in_out(self, chicken, chicks, data, iteration):
+    #     np.random.seed(2023*iteration)
+    #     np.random.shuffle(chicks)
+    #
+    #     # chicken in
+    #     total_chicken_in_amount, total_chicken_in_foregone = self.chicken_in(chicken, chicks, data, iteration)
+    #
+    #     # chicken out
+    #     total_chicken_out_amount = self.chicken_out(chicken, chicks)
+    #
+    #     return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount
 
 class TesterIssuanceBondsAMM_1(TesterIssuanceBonds):
     def __init__(self):

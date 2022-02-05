@@ -2,7 +2,7 @@ import os
 import numpy as np
 
 from lib.constants import *
-from lib.erc_token import *
+from lib import *
 from lib.chicken import *
 from lib.utils import *
 from lib.state import *
@@ -62,7 +62,12 @@ def main(tester):
         tester.bond(chicken, chicks, iteration)
 
         # Users chicken in and out
-        tester.chicken_in_out(chicken, chicks, data, iteration)
+        tester.update_chicken(chicken, chicks, data, iteration)
+        print("Out:", tester.chicken_out_counter)
+        print("In:", tester.chicken_in_counter)
+        print("Up:", tester.chicken_up_counter)
+        print("Locked:", tester.chicken_up_locked)
+        tester.chicken_up_locked = 0
 
         # Provide and withdraw liqudity to/from AMM
         tester.adjust_liquidity(chicken, chicks, chicken.amm_average_apr, iteration)
@@ -98,6 +103,7 @@ def main(tester):
 
     log_state(chicken, chicks)
 
+
     #print(data)
     #"""
     plot_charts(
@@ -118,7 +124,7 @@ def main(tester):
 
 if __name__ == "__main__":
     main(TesterIssuanceBonds())
-    main(TesterIssuanceBondsAMM_1())
-    main(TesterIssuanceBondsAMM_2())
-    main(TesterIssuanceBondsAMM_3())
-    main(TesterRebonding())          # Approach 2 + Rebonding
+    # main(TesterIssuanceBondsAMM_1())
+    # main(TesterIssuanceBondsAMM_2())
+    # main(TesterIssuanceBondsAMM_3())
+    # main(TesterRebonding())          # Approach 2 + Rebonding
