@@ -37,9 +37,13 @@ class TesterInterface():
         pass
     def get_pol_ratio_with_amm(self, chicken):
         pass
+    def get_pol_ratio(self, chicken):
+        pass
     def get_reserve_ratio_no_amm(self, chicken):
         pass
     def get_reserve_ratio_with_amm(self, chicken):
+        pass
+    def get_reserve_ratio(self, chicken):
         pass
     def distribute_yield(self, chicken, chicks, iteration):
         pass
@@ -227,8 +231,13 @@ class TesterIssuanceBonds(TesterBase):
 
         return claimable_stoken, bond_cap, claimable_stoken, 0, 0
 
+    # TODO
+    def is_bootstrap_chicken_in(self, chick, iteration):
+        return iteration == 30 and chick.bond_time == 0
     def chicken_in_one(self, chicken, chick, data, iteration):
         assert iteration >= chick.bond_time
+        if iteration == chick.bond_time:
+            return 0, 0, 0, 0
         pol_ratio = self.get_pol_ratio(chicken)
         assert pol_ratio == 0 or pol_ratio >= 1
         if pol_ratio == 0:
@@ -238,7 +247,7 @@ class TesterIssuanceBonds(TesterBase):
         stoken_price = self.get_stoken_price(chicken, data, iteration)
         profit = claimable_stoken * stoken_price - chick.bond_amount
         target_profit = chick.bond_target_profit * chick.bond_amount
-        if profit <= target_profit:
+        if profit <= target_profit and not self.is_bootstrap_chicken_in(chick, iteration):
             """
             print("\n---")
             print(f"POL ratio: {pol_ratio:,.2f}")
@@ -410,7 +419,7 @@ class TesterIssuanceBondsAMM_1(TesterIssuanceBonds):
         )
 
         foregone_amount = chick.bond_amount - claimable_stoken
-        amm_token_amount, amm_stoken_amount = get_amm_amounts(chicken, foregone_amount)
+        amm_token_amount, amm_stoken_amount = self.get_amm_amounts(chicken, foregone_amount)
 
         return claimable_stoken, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount
 
@@ -838,6 +847,8 @@ class TesterRebonding(TesterIssuanceBondsAMM_2):
             """
 
             assert iteration >= chick.bond_time
+            if iteration == chick.bond_time:
+                return 0, 0, 0, 0
             pol_ratio = self.get_pol_ratio(chicken)
             assert pol_ratio == 0 or pol_ratio >= 1
             if pol_ratio == 0:
@@ -932,3 +943,108 @@ class TesterRebonding(TesterIssuanceBondsAMM_2):
         total_chicken_out_amount = self.chicken_out(chicken, chicks)
 
         return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount
+
+###     ---------- Dynamic Toll ----------     ###
+# TODO
+# https://www.desmos.com/calculator/6ze6tloxk3
+def get_amm_toll_red(iteration, num, den):
+    return min(CHICKEN_IN_AMM_MAX_SHARE, max(0, 1 - 2 * pol_ratio / stoken_spot_price))
+def get_amm_toll_blue(iteration, num, den):
+    return min(CHICKEN_IN_AMM_MAX_SHARE, max(0, 1 - pol_ratio / stoken_spot_price))
+def get_amm_toll_green(iteration, num, den):
+    return min(CHICKEN_IN_AMM_MAX_SHARE, max(0, 1 - (pol_ratio / stoken_spot_price)**(1/6)))
+def get_amm_toll_purple(iteration, num, den):
+    slope = 0.2
+    return min(CHICKEN_IN_AMM_MAX_SHARE, slope * num / den - slope)
+def get_amm_toll(iteration, num, den):
+    if den == 1:
+        return CHICKEN_IN_AMM_SHARE
+    return get_amm_toll_purple(iteration, num, den)
+
+class TesterIssuanceBondsAMMDynamicTollMarket_2(TesterIssuanceBondsAMM_2):
+    def __init__(self):
+        super().__init__()
+        self.name = "Bonds with AMM model - redeem against POL - market price dynamic toll"
+        self.plot_prefix = '0_6'
+        self.plot_file_description = 'bonds_amm_dynamic_toll_2'
+        self.price_max_value = 300
+        return
+
+    """
+    """
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
+        stoken_spot_price = self.get_stoken_spot_price(chicken)
+        self.chicken_in_amm_share = get_amm_toll(iteration, stoken_spot_price, pol_ratio)
+        #print(f"toll: {self.chicken_in_amm_share:.3%}")
+        return super().get_claimable_stoken(chicken, chick, iteration, pol_ratio)
+
+class TesterRebondingDynamicTollMarket(TesterRebonding):
+    def __init__(self):
+        super().__init__()
+        self.name = "Bonds with AMM model - approach 2 - with Rebonding and market price dynamic toll"
+        self.plot_prefix = '0_7'
+        self.plot_file_description = 'bonds_amm_2_rebonding_dynamic_toll'
+        self.price_max_value = 300
+        return
+
+    """
+    """
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
+        stoken_spot_price = self.get_stoken_spot_price(chicken)
+        self.chicken_in_amm_share = get_amm_toll(iteration, stoken_spot_price, pol_ratio)
+        #print(f"toll: {self.chicken_in_amm_share:.3%}")
+        return super().get_claimable_stoken(chicken, chick, iteration, pol_ratio)
+
+class TesterIssuanceBondsAMMDynamicTollFair_2(TesterIssuanceBondsAMM_2):
+    def __init__(self):
+        super().__init__()
+        self.name = "Bonds with AMM model - redeem against POL - fair price dynamic toll"
+        self.plot_prefix = '0_6'
+        self.plot_file_description = 'bonds_amm_dynamic_toll_2'
+        self.price_max_value = 300
+        return
+
+    """
+    """
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
+        reserve_ratio = self.get_reserve_ratio(chicken)
+        self.chicken_in_amm_share = get_amm_toll(iteration, reserve_ratio, pol_ratio)
+        #print(f"toll: {self.chicken_in_amm_share:.3%}")
+        return super().get_claimable_stoken(chicken, chick, iteration, pol_ratio)
+
+class TesterRebondingDynamicTollFair(TesterRebonding):
+    def __init__(self):
+        super().__init__()
+        self.name = "Bonds with AMM model - approach 2 - with Rebonding and fair price dynamic toll"
+        self.plot_prefix = '0_7'
+        self.plot_file_description = 'bonds_amm_2_rebonding_dynamic_toll'
+        self.price_max_value = 300
+        return
+
+    """
+    """
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
+        reserve_ratio = self.get_reserve_ratio(chicken)
+        self.chicken_in_amm_share = get_amm_toll(iteration, reserve_ratio, pol_ratio)
+        #print(f"toll: {self.chicken_in_amm_share:.3%}")
+        return super().get_claimable_stoken(chicken, chick, iteration, pol_ratio)
+
+
+class TesterIssuanceBondsAMMNetGainToll_2(TesterIssuanceBondsAMM_2):
+    def __init__(self):
+        super().__init__()
+        self.name = "Bonds with AMM model - redeem against POL - toll on net gain"
+        self.plot_prefix = '0_8'
+        self.plot_file_description = 'bonds_amm_net_gain_toll_2'
+        self.price_max_value = 150
+        return
+
+    """
+    """
+    def get_claimable_stoken(self, chicken, chick, iteration, pol_ratio):
+        reserve_ratio = self.get_reserve_ratio(chicken)
+        current_ratio = 1 / (self.bond_mint_ratio * (iteration - chick.bond_time))
+        effective_pol_ratio = max(pol_ratio, current_ratio)
+        self.chicken_in_amm_share = 1 - (pol_ratio / reserve_ratio *((reserve_ratio/pol_ratio-1)*(1-CHICKEN_IN_AMM_MAX_SHARE)+1))
+        #print(f"toll: {self.chicken_in_amm_share:.3%}")
+        return super().get_claimable_stoken(chicken, chick, iteration, pol_ratio)

@@ -16,6 +16,8 @@ class Chicken():
         self.amm_iteration_apr = 0.0
         self.amm_average_apr = 0.0
 
+        self.toll = 0.0
+
         #self.outstanding_debt = 0.0
 
         return

@@ -14,6 +14,7 @@ def log_system(chicken, token, stoken):
     if stoken.total_supply > 0:
         print(f" - POL ratio     (| no AMM): {(pol_bal + amm_value) / stoken.total_supply:,.2f}   |   {pol_bal / stoken.total_supply:,.2f}")
         print(f" - Reserve ratio (| no AMM): {(coop_bal + pol_bal + amm_value) / stoken.total_supply:,.2f}   |   {(coop_bal + pol_bal) / stoken.total_supply:,.2f}")
+    print(f" - Toll: {chicken.toll:.2%}")
     print(f"")
     print(f"AMM pool:")
     print(f"{chicken.amm}")

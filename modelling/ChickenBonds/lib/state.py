@@ -32,4 +32,5 @@ def state_to_row(
         "redemption_price": tester.get_pol_ratio(chicken),
         "reserve_ratio_with_amm": tester.get_reserve_ratio_with_amm(chicken),
         "fair_price": tester.get_reserve_ratio_no_amm(chicken),
+        "toll": chicken.toll,
     }

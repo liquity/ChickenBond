@@ -73,6 +73,8 @@ def main(tester):
         # If price is below redemption price, redeem and buy
         tester.redemption_arbitrage(chicken, chicks, iteration)
 
+        chicken.toll = tester.chicken_in_amm_share
+
         log_state(chicken, chicks)
 
         new_row = state_to_row(
@@ -84,13 +86,13 @@ def main(tester):
         )
         data = data.append(new_row, ignore_index=True)
 
-        if PLOT_INTERVAL[1] > 0 and iteration > PLOT_INTERVAL[1]:
+        if PLOTS_INTERVAL[1] > 0 and iteration > PLOTS_INTERVAL[1]:
             break
 
-    plot_interval = PLOT_INTERVAL[:]
+    plot_interval = PLOTS_INTERVAL[:]
     group=90
     group_description="Quarter"
-    if PLOT_INTERVAL[1] > 0:
+    if PLOTS_INTERVAL[1] > 0:
         group = 1
         group_description = "Day"
     else:
@@ -99,7 +101,7 @@ def main(tester):
     log_state(chicken, chicks)
 
     #print(data)
-    #"""
+
     plot_charts(
         chicken,
         chicks,
@@ -108,17 +110,20 @@ def main(tester):
         description=tester.name,
         group=group,
         group_description=group_description,
-        show=True,
-        save=True,
-        global_prefix="001",
+        show=PLOTS_SHOW,
+        save=PLOTS_SAVE,
+        global_prefix=PLOTS_PREFIX,
         tester_prefixes_getter = tester.prefixes_getter
     )
-    #"""
+
     return
 
 if __name__ == "__main__":
-    main(TesterIssuanceBonds())
-    main(TesterIssuanceBondsAMM_1())
-    main(TesterIssuanceBondsAMM_2())
-    main(TesterIssuanceBondsAMM_3())
-    main(TesterRebonding())          # Approach 2 + Rebonding
+    #main(TesterIssuanceBonds())      # No AMM
+    #main(TesterIssuanceBondsAMM_1()) # Approach 1 from https://github.com/liquity/ChickenBond/issues/3
+    #main(TesterIssuanceBondsAMM_2()) # Approach 2 from https://github.com/liquity/ChickenBond/issues/3
+    #main(TesterIssuanceBondsAMM_3()) # Approach 3 from https://github.com/liquity/ChickenBond/issues/3
+    #main(TesterRebonding())          # Approach 2 + Rebonding
+    #main(TesterIssuanceBondsAMMDynamicTollFair_2()) # Approach 2 + Dynamic toll
+    #main(TesterRebondingDynamicTollFair())          # Approach 2 + Rebonding + Dynamic toll
+    main(TesterIssuanceBondsAMMNetGainToll_2())

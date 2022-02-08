@@ -1,5 +1,7 @@
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from lib.constants import *
 from lib.chicken import *
@@ -151,20 +153,18 @@ def plot_stoken_price(data, max_value=200, description="", group=1, group_descri
         "x": [],
         "price": [],
     })
+    fair_prices = []
+    twap_prices = []
+    spot_prices = []
+    redemption_prices = []
+    tolls = []
     for d in range(len(data.index) // group):
         # Reserve ratio without AMM
         fair_price = min(
             data['fair_price'][start_index + d * group],
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": fair_price,
-                "var": "Fair Price"
-            },
-            ignore_index=True
-        )
+        fair_prices.append(fair_price)
 
         # TWAP
         twap_price = data['stoken_twap'][start_index + d * group]
@@ -172,14 +172,7 @@ def plot_stoken_price(data, max_value=200, description="", group=1, group_descri
             twap_price,
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": twap_price,
-                "var": "TWAP"
-            },
-            ignore_index=True
-        )
+        twap_prices.append(twap_price)
 
         # Spot
         spot_price = data['stoken_price'][start_index + d * group]
@@ -187,33 +180,44 @@ def plot_stoken_price(data, max_value=200, description="", group=1, group_descri
             spot_price,
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": spot_price,
-                "var": "Spot"
-            },
-            ignore_index=True
-        )
+        spot_prices.append(spot_price)
 
         # Redemption price
         redemption_price = min(
             data['redemption_price'][start_index + d * group],
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": redemption_price,
-                "var": "Redemption Price"
-            },
-            ignore_index=True
-        )
+        redemption_prices.append(redemption_price)
 
-    fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - sTOKEN Price")
+        # Toll %
+        toll = data['toll'][start_index + d * group] * 100
+        tolls.append(toll)
+
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.add_trace(
+        go.Scatter(y=fair_prices, name="Fair price"),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(y=twap_prices, name="Twap price"),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(y=spot_prices, name="Spot price"),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(y=redemption_prices, name="Redemption price"),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(y=tolls, name="AMM Toll (%)"),
+        secondary_y=True,
+    )
 
     fig.update_xaxes(tick0=0, dtick=len(data.index)//group/20, title_text=group_description)
-    fig.update_yaxes(title_text="sTOKEN Price in TOKEN")
+    fig.update_yaxes(title_text="sTOKEN Price in TOKEN", secondary_y=False)
+    fig.update_yaxes(title_text="AMM Toll %", secondary_y=True)
 
     if show: fig.show()
     maybe_save(fig, save, get_prefixes, "sTOKEN_price")
