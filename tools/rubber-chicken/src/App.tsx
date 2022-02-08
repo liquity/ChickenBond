@@ -51,7 +51,7 @@ const lineStyle = (color = "#cccccc") => ({
   data: { stroke: color }
 });
 
-const [accruedStyle, cappedStyle, topUpStyle, arrInStyle, arrUpStyle] = colorScale.map(color =>
+const [accruedStyle, cappedStyle, topUpStyle, returnInStyle, returnUpStyle] = colorScale.map(color =>
   lineStyle(color)
 );
 
@@ -92,11 +92,25 @@ const checkTollBasis = (value: string): TollBasis => {
   return value as TollBasis;
 };
 
-const defaultPolRatioInit = 3;
+const returnLabels = {
+  roi: {
+    in: "ROI (In)",
+    up: "ROI (Up)"
+  },
+
+  arr: {
+    in: "ARR (In)",
+    up: "ARR (Up)"
+  }
+};
+
+const percentBasedLabels = new Set(Object.values(returnLabels).flatMap(o => Object.values(o)));
+
+const defaultPolRatioInit = 4;
 const defaultTollPct = 20;
 const defaultTollBasis = "initial";
-const defaultPremiumPct = 45;
-const defaultNaturalRatePct = 10;
+const defaultPremiumPct = 100;
+const defaultNaturalRatePct = 0;
 const defaultBond = 100;
 
 const defaultFCurve = `k => (k / ${range[range.length - 1]})`;
@@ -114,6 +128,7 @@ const App = () => {
   const [bondInput, setBondInput] = useState(`${defaultBond}`);
   const [fCurveInput, setFCurveInput] = useState(`${defaultFCurve}`);
   const [useFunctions, setUseFunctions] = useState(false);
+  const [annualize, setAnnualize] = useState(true);
   const [revertDummy, revert] = useReducer(() => ({}), {});
 
   useEffect(() => {
@@ -226,7 +241,7 @@ const App = () => {
     }
   }, [useFunctions, premiumPct, fPremiumPctInput]);
 
-  const arrInSeries = useMemo(() => {
+  const returnInSeries = useMemo(() => {
     if (isNaN(bond) || !cappedSeries || !polRatioSeries || !premiumPctSeries) {
       return undefined;
     }
@@ -237,13 +252,13 @@ const App = () => {
         x !== 0
           ? Math.pow(
               (capped * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100)) / bond,
-              range[range.length - 1] / x
+              annualize ? range[range.length - 1] / x : 1
             ) - 1
           : null
     }));
-  }, [bond, cappedSeries, polRatioSeries, premiumPctSeries]);
+  }, [bond, cappedSeries, polRatioSeries, premiumPctSeries, annualize]);
 
-  const arrUpSeries = useMemo(() => {
+  const returnUpSeries = useMemo(() => {
     if (isNaN(bond) || !accruedSeries || !topUpSeries || !polRatioSeries || !premiumPctSeries) {
       return undefined;
     }
@@ -256,25 +271,25 @@ const App = () => {
               (accrued * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100) -
                 topUpSeries[i].y) /
                 bond,
-              range[range.length - 1] / x
+              annualize ? range[range.length - 1] / x : 1
             ) - 1
           : null
     }));
-  }, [bond, accruedSeries, topUpSeries, polRatioSeries, premiumPctSeries]);
+  }, [bond, accruedSeries, topUpSeries, polRatioSeries, premiumPctSeries, annualize]);
 
   const maxAccrued = seriesMax(accruedSeries);
   const maxTopUp = seriesMax(topUpSeries);
-  const maxArrIn = seriesMax(arrInSeries);
-  const maxArrUp = seriesMax(arrUpSeries);
+  const maxReturnIn = seriesMax(returnInSeries);
+  const maxReturnUp = seriesMax(returnUpSeries);
 
-  const scale = Math.max(maxAccrued, maxTopUp) / Math.max(maxArrIn, maxArrUp);
+  const scale = Math.max(maxAccrued, maxTopUp) / Math.max(maxReturnIn, maxReturnUp);
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
-  const scaledArrIn = arrInSeries
+  const scaledReturnIn = returnInSeries
     ?.filter((irr): irr is { x: number; y: number } => irr.y != null && irr.y >= -0.25)
     .map(({ x, y }) => ({ x, y: y * scale }));
 
-  const scaledArrUp = arrUpSeries
+  const scaledReturnUp = returnUpSeries
     ?.filter((irr): irr is { x: number; y: number } => irr.y != null && irr.y >= -0.25)
     .map(({ x, y }) => ({ x, y: y * scale }));
 
@@ -397,6 +412,23 @@ const App = () => {
         </Box>
 
         <Box sx={{ flexGrow: 1, mt: 4 }}>
+          <Box
+            sx={{
+              ml: 5,
+              span: {
+                fontSize: 1,
+                fontWeight: "bold",
+                lineHeight: 1
+              }
+            }}
+          >
+            <Switch
+              label="Annualize returns"
+              checked={annualize}
+              onChange={() => setAnnualize(!annualize)}
+            />
+          </Box>
+
           <VictoryChart
             theme={VictoryTheme.material}
             width={800}
@@ -413,7 +445,7 @@ const App = () => {
                 voronoiDimension="x"
                 labels={({ datum }) =>
                   `${datum.childName}: ${
-                    datum.childName === "ARR (In)" || datum.childName === "ARR (Up)"
+                    percentBasedLabels.has(datum.childName)
                       ? percent(datum._y)
                       : Math.round(datum._y * 100) / 100
                   }`
@@ -430,8 +462,10 @@ const App = () => {
                 { name: "Accrued [sTOKEN]" },
                 { name: "Capped [sTOKEN]" },
                 { name: "Top-up [TOKEN]" },
-                { name: "ARR (In)" },
-                { name: "ARR (Up)" }
+
+                ...Object.values(annualize ? returnLabels.arr : returnLabels.roi).map(name => ({
+                  name
+                }))
               ]}
             />
 
@@ -439,7 +473,7 @@ const App = () => {
             <VictoryAxis dependentAxis />
             <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
 
-            {(accruedSeries || cappedSeries || topUpSeries || scaledArrIn || scaledArrUp) && (
+            {(accruedSeries || cappedSeries || topUpSeries || scaledReturnIn || scaledReturnUp) && (
               <VictoryGroup>
                 {accruedSeries && (
                   <VictoryLine name="Accrued [sTOKEN]" data={accruedSeries} style={accruedStyle} />
@@ -453,11 +487,20 @@ const App = () => {
                   <VictoryLine name="Top-up (Up) [TOKEN]" data={topUpSeries} style={topUpStyle} />
                 )}
 
-                {scaledArrIn && (
-                  <VictoryLine name="ARR (In)" data={scaledArrIn} style={arrInStyle} />
+                {scaledReturnIn && (
+                  <VictoryLine
+                    name={annualize ? returnLabels.arr.in : returnLabels.roi.in}
+                    data={scaledReturnIn}
+                    style={returnInStyle}
+                  />
                 )}
-                {scaledArrUp && (
-                  <VictoryLine name="ARR (Up)" data={scaledArrUp} style={arrUpStyle} />
+
+                {scaledReturnUp && (
+                  <VictoryLine
+                    name={annualize ? returnLabels.arr.up : returnLabels.roi.up}
+                    data={scaledReturnUp}
+                    style={returnUpStyle}
+                  />
                 )}
               </VictoryGroup>
             )}
