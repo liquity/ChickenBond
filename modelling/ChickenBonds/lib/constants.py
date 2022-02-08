@@ -5,7 +5,7 @@ MONTH = int(TIME_UNITS_PER_YEAR / 12)   # Months per year
 YEAR = TIME_UNITS_PER_YEAR              # Days per year
 ITERATIONS = TIME_UNITS_PER_YEAR * 4    # Total iterations steps in days
 PLOT_INTERVAL = [0, 0]                  # [0, 0] will plot’em all
-
+LOG_LEVEL = 0                           # To display logs in console (for now only 0: off, and 1: on)
 
 # ------------- User and Money --------------------
 NUM_CHICKS = 100
@@ -22,12 +22,12 @@ BOND_AMOUNT = (100, 1000)               # Random number between 100 and 1,000.
 INITIAL_PRICE = 19.0                    # Initial price of sLQTY quoted in LQTY
 
 PRICE_PREMIUM = "perpetuity"            # The estimator of the price premium ("normal_dist","perpetuity","coop_balance")
-premium_mu = 0.1                        # Expected value of the normal distribution as a fraction of POL token balance
-premium_sigma = 0.1                     # Deviation of the normal distribution as a fraction of the POL token balance
+PREMIUM_MU = 0.1                        # Expected value of the normal distribution as a fraction of POL token balance
+PREMIUM_SIGMA = 0.1                     # Deviation of the normal distribution as a fraction of the POL token balance
 
 PRICE_VOLATILITY = "None"               # Risk estimator of the price ("None", "bounded", "unbounded")
-vola_mu = 0                             # Expected value of a normal dist. for the volatility of price
-vola_sigma = 1                          # Std. deviation of the normal dist of the volatility of the price
+VOLA_MU = 0                             # Expected value of a normal dist. for the volatility of price
+VOLA_SIGMA = 1                          # Std. deviation of the normal dist of the volatility of the price
 
 TWAP_PERIOD = 20                        # Average price of sLQTY over xx periods
 
