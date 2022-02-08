@@ -2,7 +2,6 @@ import os
 import numpy as np
 
 from lib.constants import *
-from lib import *
 from lib.chicken import *
 from lib.utils import *
 from lib.state import *
@@ -40,7 +39,7 @@ def main(tester):
 
     print(f"\n  --> Model: {tester.name}")
     print('  ------------------------------------------------------\n')
-    log_state(chicken, chicks)
+    log_state(chicken, chicks, LOG_LEVEL)
 
     tester.init(chicks)
 
@@ -63,11 +62,6 @@ def main(tester):
 
         # Users chicken in and out
         tester.update_chicken(chicken, chicks, data, iteration)
-        print("Out:", tester.chicken_out_counter)
-        print("In:", tester.chicken_in_counter)
-        print("Up:", tester.chicken_up_counter)
-        print("Locked:", tester.chicken_up_locked)
-        tester.chicken_up_locked = 0
 
         # Provide and withdraw liqudity to/from AMM
         tester.adjust_liquidity(chicken, chicks, chicken.amm_average_apr, iteration)
@@ -78,7 +72,7 @@ def main(tester):
         # If price is below redemption price, redeem and buy
         tester.redemption_arbitrage(chicken, chicks, iteration)
 
-        log_state(chicken, chicks)
+        log_state(chicken, chicks, LOG_LEVEL)
 
         new_row = state_to_row(
             chicken,
@@ -101,7 +95,7 @@ def main(tester):
     else:
         plot_interval[1] = ITERATIONS
 
-    log_state(chicken, chicks)
+    log_state(chicken, chicks, 1)
 
 
     #print(data)
@@ -125,6 +119,6 @@ def main(tester):
 if __name__ == "__main__":
     main(TesterIssuanceBonds())
     # main(TesterIssuanceBondsAMM_1())
-    # main(TesterIssuanceBondsAMM_2())
+    main(TesterIssuanceBondsAMM_2())
     # main(TesterIssuanceBondsAMM_3())
-    # main(TesterRebonding())          # Approach 2 + Rebonding
+    main(TesterRebonding())          # Approach 2 + Rebonding
