@@ -83,13 +83,13 @@ def main(tester):
         )
         data = data.append(new_row, ignore_index=True)
 
-        if PLOT_INTERVAL[1] > 0 and iteration > PLOT_INTERVAL[1]:
+        if PLOTS_INTERVAL[1] > 0 and iteration > PLOTS_INTERVAL[1]:
             break
 
-    plot_interval = PLOT_INTERVAL[:]
+    plot_interval = PLOTS_INTERVAL[:]
     group=90
     group_description="Quarter"
-    if PLOT_INTERVAL[1] > 0:
+    if PLOTS_INTERVAL[1] > 0:
         group = 1
         group_description = "Day"
     else:
@@ -99,7 +99,7 @@ def main(tester):
 
 
     #print(data)
-    #"""
+
     plot_charts(
         chicken,
         chicks,
@@ -108,12 +108,12 @@ def main(tester):
         description=tester.name,
         group=group,
         group_description=group_description,
-        show=True,
-        save=True,
-        global_prefix="001",
+        show=PLOTS_SHOW,
+        save=PLOTS_SAVE,
+        global_prefix=PLOTS_PREFIX,
         tester_prefixes_getter = tester.prefixes_getter
     )
-    #"""
+
     return
 
 if __name__ == "__main__":

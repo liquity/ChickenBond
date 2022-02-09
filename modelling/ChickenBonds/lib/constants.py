@@ -1,10 +1,16 @@
-
 # ------------ ITERATIONS AND TIME UNITS -----------------
 TIME_UNITS_PER_YEAR = 360
 MONTH = int(TIME_UNITS_PER_YEAR / 12)   # Months per year
 YEAR = TIME_UNITS_PER_YEAR              # Days per year
 ITERATIONS = TIME_UNITS_PER_YEAR * 4    # Total iterations steps in days
-PLOT_INTERVAL = [0, 0]                  # [0, 0] will plot’em all
+
+# ------------ Plots -----------------
+PLOTS_SHOW = True                       # Whether to open browser tabs to show plots
+PLOTS_SAVE = False                      # Whether to save plots in images/ folder
+PLOTS_PREFIX = '001'                    # Prefix for plot files in case of saving
+PLOTS_INTERVAL = [0, 0]                 # [0, 0] will plot’em all
+
+# ------------ Logs -----------------
 LOG_LEVEL = 0                           # To display logs in console (for now only 0: off, and 1: on)
 
 # ------------- User and Money --------------------
