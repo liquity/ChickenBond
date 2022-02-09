@@ -21,7 +21,6 @@ class TesterInterface():
         self.chicken_in_counter = 0
         self.chicken_up_counter = 0
         self.chicken_out_counter = 0
-        # TODO
         self.chicken_up_locked = 0
 
         return
@@ -52,13 +51,15 @@ class TesterInterface():
 
     def get_pol_ratio_with_amm(self, chicken):
         pass
-
+    def get_pol_ratio(self, chicken):
+        pass
     def get_reserve_ratio_no_amm(self, chicken):
         pass
 
     def get_reserve_ratio_with_amm(self, chicken):
         pass
-
+    def get_reserve_ratio(self, chicken):
+        pass
     def distribute_yield(self, chicken, chicks, iteration):
         pass
 
@@ -279,6 +280,9 @@ class TesterIssuanceBonds(TesterBase):
         # claimable stoken is returned twice because with the toll the effective amount can differ
         return claimable_stoken, bond_cap, claimable_stoken, 0, 0
 
+    def is_bootstrap_chicken_in(self, chick, iteration):
+        return iteration == BOOTSTRAP_ITERATION and chick.bond_time == 0
+
     def get_accumulated_stoken(self, chick, iteration):
         """ Calculated the total amount of accumulated sLQTY tokens of a user.
 
@@ -337,7 +341,6 @@ class TesterIssuanceBonds(TesterBase):
         print("Out:", self.chicken_out_counter)
         print("In:", self.chicken_in_counter)
         print("Up:", self.chicken_up_counter)
-        # TODO
         print("Locked:", self.chicken_up_locked)
         self.chicken_up_locked = 0
 
@@ -365,13 +368,15 @@ class TesterIssuanceBonds(TesterBase):
         target_profit = chick.bond_target_profit * chick.bond_amount
 
         max_claimable_stoken = self.get_accumulated_stoken(chick, iteration)
-        # If the user reached the sLQTY cap, certainly chicken-up.
 
-        # TODO: now they will chicken in as soon as they break even??
-        # if max_claimable_stoken > bond_cap or profit <= target_profit:
-        if max_claimable_stoken > bond_cap or profit <= 0:
-            # If the chicks profit are below their target_profit,
-            # do neither chicken-in nor chicken-up.
+        # If the chicks profit are below their target_profit,
+        # do neither chicken-in nor chicken-up.
+        if profit <= target_profit:
+            self.chicken_up_locked += 1
+        if profit <= target_profit and not self.is_bootstrap_chicken_in(chick, iteration):
+            return 0, 0, 0, 0
+        # If the user reached the sLQTY cap, certainly chicken-up.
+        if max_claimable_stoken > bond_cap:
             return 0, 0, 0, 0
 
         foregone_amount = chick.bond_amount - mintable_amount * stoken_price
@@ -444,14 +449,10 @@ class TesterIssuanceBonds(TesterBase):
         # Check if chicken-up is profitable
         # Profit = (ALL claimable sLQTY * Price) - (Initial investment + additional investment)
         profit = (claimable_amount * stoken_price) - (chick.bond_amount + top_up_amount)
-        target_profit = chick.bond_target_profit * (chick.bond_amount + top_up_amount)
+        #target_profit = chick.bond_target_profit * (chick.bond_amount + top_up_amount)
 
-        # TODO
-        # if profit <= target_profit:
-        #     self.chicken_up_locked += 1
-
+        # Do not chicken-up if the profit is negative or in 80% of the cases.
         if profit <= 0 or np.random.binomial(1, 1 - CHICKEN_UP_PROBABILITY, 1):
-            # Do not chicken-up if the profit is negative or in 80% of the cases.
             return 0
 
         # Transfer the assets first to the COOP account, which is then transferred
@@ -551,7 +552,7 @@ class TesterIssuanceBondsAMM_1(TesterIssuanceBonds):
         )
 
         foregone_amount = chick.bond_amount - claimable_stoken
-        amm_token_amount, amm_stoken_amount = get_amm_amounts(chicken, foregone_amount)
+        amm_token_amount, amm_stoken_amount = self.get_amm_amounts(chicken, foregone_amount)
 
         return claimable_stoken, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount
 

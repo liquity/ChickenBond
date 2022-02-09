@@ -3,6 +3,7 @@ TIME_UNITS_PER_YEAR = 360
 MONTH = int(TIME_UNITS_PER_YEAR / 12)   # Months per year
 YEAR = TIME_UNITS_PER_YEAR              # Days per year
 ITERATIONS = TIME_UNITS_PER_YEAR * 4    # Total iterations steps in days
+BOOTSTRAP_ITERATION = 30                # Iteration at which first bonders will chicken in to bootstrap the system
 
 # ------------ Plots -----------------
 PLOTS_SHOW = True                       # Whether to open browser tabs to show plots
