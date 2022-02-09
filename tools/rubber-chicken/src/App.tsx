@@ -7,6 +7,7 @@ import {
   Heading,
   Input,
   Label,
+  Radio,
   Select,
   Switch,
   Textarea,
@@ -51,9 +52,8 @@ const lineStyle = (color = "#cccccc") => ({
   data: { stroke: color }
 });
 
-const [topUpStyle, payoutInStyle, payoutUpStyle, returnInStyle, returnUpStyle] = colorScale.map(
-  color => lineStyle(color)
-);
+const [topUpStyle, payoutInStyle, payoutUpStyle, rightAxisInStyle, rightAxisUpStyle] =
+  colorScale.map(color => lineStyle(color));
 
 const Tooltip = ({ datum, text, style, ...props }: VictoryTooltipProps) => (
   <VictoryTooltip
@@ -93,19 +93,45 @@ const checkTollBasis = (value: string): TollBasis => {
   return value as TollBasis;
 };
 
-const returnLabels = {
+const rightAxisOptions = {
   roi: {
-    in: "ROI (In)",
-    up: "ROI (Up)"
+    name: "Return on Investment",
+    labels: {
+      in: "ROI (In)",
+      up: "ROI (Up)"
+    }
   },
 
   arr: {
-    in: "ARR (In)",
-    up: "ARR (Up)"
+    name: "Annualized Rate of Return",
+    labels: {
+      in: "ARR (In)",
+      up: "ARR (Up)"
+    }
+  },
+
+  toll: {
+    name: "Effective Toll",
+    labels: {
+      in: "Effective Toll (In)",
+      up: "Effective Toll (Up)"
+    }
   }
 };
 
-const percentBasedLabels = new Set(Object.values(returnLabels).flatMap(o => Object.values(o)));
+type RightAxis = keyof typeof rightAxisOptions;
+
+const checkRightAxis = (value: string): RightAxis => {
+  if (!Object.keys(rightAxisOptions).includes(value)) {
+    throw new Error(`wrong RightAxis value "${value}"`);
+  }
+
+  return value as RightAxis;
+};
+
+const rightAxisLabelSet = new Set(
+  Object.values(rightAxisOptions).flatMap(o => Object.values(o.labels))
+);
 
 const defaultPolRatioInit = 4;
 const defaultTollPct = 20;
@@ -129,7 +155,7 @@ const App = () => {
   const [bondInput, setBondInput] = useState(`${defaultBond}`);
   const [fCurveInput, setFCurveInput] = useState(`${defaultFCurve}`);
   const [useFunctions, setUseFunctions] = useState(false);
-  const [annualize, setAnnualize] = useState(true);
+  const [rightAxis, setRightAxis] = useState<RightAxis>("arr");
   const [revertDummy, revert] = useReducer(() => ({}), {});
 
   useEffect(() => {
@@ -307,9 +333,12 @@ const App = () => {
 
     return payoutInSeries.map(({ x, y: payout }) => ({
       x,
-      y: (x !== 0 ? Math.pow(payout / bond, annualize ? range[range.length - 1] / x : 1) : 0) - 1
+      y:
+        (x !== 0
+          ? Math.pow(payout / bond, rightAxis === "arr" ? range[range.length - 1] / x : 1)
+          : 0) - 1
     }));
-  }, [bond, payoutInSeries, annualize]);
+  }, [bond, payoutInSeries, rightAxis]);
 
   const returnUpSeries = useMemo(() => {
     if (isNaN(bond) || !payoutUpSeries || !topUpSeries) {
@@ -320,21 +349,27 @@ const App = () => {
       x,
       y:
         (x !== 0
-          ? Math.pow((payout - topUpSeries[i].y) / bond, annualize ? range[range.length - 1] / x : 1)
+          ? Math.pow(
+              (payout - topUpSeries[i].y) / bond,
+              rightAxis === "arr" ? range[range.length - 1] / x : 1
+            )
           : 0) - 1
     }));
-  }, [bond, payoutUpSeries, topUpSeries, annualize]);
+  }, [bond, payoutUpSeries, topUpSeries, rightAxis]);
 
-  const maxPayout = seriesMax(payoutUpSeries);
-  const maxTopUp = seriesMax(topUpSeries);
-  const maxReturnIn = seriesMax(returnInSeries);
-  const maxReturnUp = seriesMax(returnUpSeries);
+  const maxLeftAxis = Math.max(seriesMax(payoutUpSeries), seriesMax(topUpSeries));
 
-  const scale = Math.max(maxPayout, maxTopUp) / Math.max(maxReturnIn, maxReturnUp);
+  const maxRightAxis =
+    rightAxis === "toll"
+      ? Math.max(seriesMax(tollInSeries), seriesMax(tollUpSeries))
+      : Math.max(seriesMax(returnInSeries), seriesMax(returnUpSeries));
+
+  const scale = maxLeftAxis / maxRightAxis;
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
-  const scaledReturnIn = returnInSeries?.map(({ x, y }) => ({ x, y: y * scale }));
-  const scaledReturnUp = returnUpSeries?.map(({ x, y }) => ({ x, y: y * scale }));
+  const [rightAxisIn, rightAxisUp] = (
+    rightAxis === "toll" ? [tollInSeries, tollUpSeries] : [returnInSeries, returnUpSeries]
+  ).map(series => series?.map(({ x, y }) => ({ x, y: y * scale })));
 
   return (
     <ThemeProvider theme={theme}>
@@ -455,21 +490,20 @@ const App = () => {
         </Box>
 
         <Box sx={{ flexGrow: 1, mt: 4 }}>
-          <Box
-            sx={{
-              ml: 5,
-              span: {
-                fontSize: 1,
-                fontWeight: "bold",
-                lineHeight: 1
-              }
-            }}
-          >
-            <Switch
-              label="Annualize returns"
-              checked={annualize}
-              onChange={() => setAnnualize(!annualize)}
-            />
+          <Box sx={{ ml: 5 }}>
+            <Label sx={{ mb: 2, fontWeight: "bold" }}>Right Axis</Label>
+
+            {Object.entries(rightAxisOptions).map(([key, { name }]) => (
+              <Label key={key} sx={{ ml: 2 }}>
+                <Radio
+                  name="right-axis"
+                  value={key}
+                  checked={rightAxis === key}
+                  onChange={e => setRightAxis(checkRightAxis(e.target.value))}
+                />
+                {name}
+              </Label>
+            ))}
           </Box>
 
           <VictoryChart
@@ -488,7 +522,7 @@ const App = () => {
                 voronoiDimension="x"
                 labels={({ datum }) =>
                   `${datum.childName}: ${
-                    percentBasedLabels.has(datum.childName)
+                    rightAxisLabelSet.has(datum.childName)
                       ? percent(datum._y)
                       : Math.round(
                           (datum.childName.includes("[sTOKEN]") ? datum.sTOKEN : datum._y) * 100
@@ -500,7 +534,7 @@ const App = () => {
             }
           >
             <VictoryLegend
-              x={645}
+              x={660}
               y={140}
               colorScale={colorScale}
               data={[
@@ -508,9 +542,7 @@ const App = () => {
                 { name: "Payout (In)" },
                 { name: "Payout (Up)" },
 
-                ...Object.values(annualize ? returnLabels.arr : returnLabels.roi).map(name => ({
-                  name
-                }))
+                ...Object.values(rightAxisOptions[rightAxis].labels).map(name => ({ name }))
               ]}
             />
 
@@ -518,11 +550,7 @@ const App = () => {
             <VictoryAxis dependentAxis />
             <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
 
-            {(topUpSeries ||
-              payoutInSeries ||
-              payoutUpSeries ||
-              scaledReturnIn ||
-              scaledReturnUp) && (
+            {(topUpSeries || payoutInSeries || payoutUpSeries || rightAxisIn || rightAxisUp) && (
               <VictoryGroup>
                 {topUpSeries && (
                   <VictoryLine name="Top-up [TOKEN]" data={topUpSeries} style={topUpStyle} />
@@ -544,19 +572,19 @@ const App = () => {
                   />
                 )}
 
-                {scaledReturnIn && (
+                {rightAxisIn && (
                   <VictoryLine
-                    name={annualize ? returnLabels.arr.in : returnLabels.roi.in}
-                    data={scaledReturnIn}
-                    style={returnInStyle}
+                    name={rightAxisOptions[rightAxis].labels.in}
+                    data={rightAxisIn}
+                    style={rightAxisInStyle}
                   />
                 )}
 
-                {scaledReturnUp && (
+                {rightAxisUp && (
                   <VictoryLine
-                    name={annualize ? returnLabels.arr.up : returnLabels.roi.up}
-                    data={scaledReturnUp}
-                    style={returnUpStyle}
+                    name={rightAxisOptions[rightAxis].labels.up}
+                    data={rightAxisUp}
+                    style={rightAxisUpStyle}
                   />
                 )}
               </VictoryGroup>
