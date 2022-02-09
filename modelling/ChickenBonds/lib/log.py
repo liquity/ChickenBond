@@ -1,6 +1,8 @@
 from functools import reduce
 
-def log_system(chicken, token, stoken):
+def log_system(chicken):
+    token = chicken.token
+    stoken = chicken.stoken
     coop_bal = chicken.coop_token_balance()
     pol_bal = chicken.pol_token_balance()
     amm_value = chicken.amm.get_value_in_token_A_of(chicken.pol_account)
@@ -42,6 +44,6 @@ def log_chicks(chicken, chicks, tokens):
 def log_state(chicken, chicks, log_level=1):
     if log_level == 0:
         return
-    log_system(chicken, chicken.token, chicken.stoken)
+    log_system(chicken)
     #log_chicks(chicken, chicks)
     return
