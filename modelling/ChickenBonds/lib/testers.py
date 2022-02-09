@@ -325,7 +325,7 @@ class TesterIssuanceBonds(TesterBase):
 
             # ----------- Chicken-in --------------------
             # Check if chicken-in conditions are met and eventually chicken-in
-            new_chicken_in_amount, new_chicken_in_forgone = \
+            new_chicken_in_amount, new_chicken_in_forgone, _, _ = \
                 self.chicken_in(chicken, chick, iteration, data)
             total_chicken_in_amount += new_chicken_in_amount
             total_chicken_in_foregone += new_chicken_in_forgone
@@ -372,13 +372,13 @@ class TesterIssuanceBonds(TesterBase):
         if max_claimable_stoken > bond_cap or profit <= 0:
             # If the chicks profit are below their target_profit,
             # do neither chicken-in nor chicken-up.
-            return 0, 0
+            return 0, 0, 0, 0
 
         foregone_amount = chick.bond_amount - mintable_amount * stoken_price
         chicken.chicken_in(chick, claimable_stoken)
         self.chicken_in_counter += 1
 
-        return claimable_stoken, foregone_amount
+        return claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount
 
     def chicken_out(self, chicken, chick, iteration, data):
         """ Chicken  out defines leaving users. User are only allowed to leave if
@@ -562,24 +562,28 @@ class TesterIssuanceBondsAMM_1(TesterIssuanceBonds):
 
         return
 
-    def chicken_in(self, chicken, chicks, data, iteration):
-        total_chicken_in_amount = 0
-        total_chicken_in_foregone = 0
-        bonded_chicks = self.get_bonded_chicks(chicks)
-        # print(f"-- Chicken in")
-        # print(f"Bonds: {len(bonded_chicks)}")
-        for chick in bonded_chicks:
-            claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount = \
-                self.chicken_in_one(chicken, chick, data, iteration)
+    def chicken_in(self, chicken, chick, data, iteration):
+        claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount = \
+            super().chicken_in(chicken, chick, data, iteration)
 
-            # Redirect part of bond to AMM
-            if amm_token_amount > 0:
-                self.divert_to_amm(chicken, amm_token_amount, amm_stoken_amount)
+        # Redirect part of bond to AMM
+        if amm_token_amount > 0:
+            self.divert_to_amm(chicken, amm_token_amount, amm_stoken_amount)
 
-            total_chicken_in_amount = total_chicken_in_amount + claimable_stoken
-            total_chicken_in_foregone = total_chicken_in_foregone + foregone_amount
+        return claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount
 
-        return total_chicken_in_amount, total_chicken_in_foregone
+    """
+    TODO:
+    def chicken_up(self, chicken, chick, data, iteration):
+        claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount = \
+            super().chicken_up(chicken, chick, data, iteration)
+
+        # Redirect part of bond to AMM
+        if amm_token_amount > 0:
+            self.divert_to_amm(chicken, amm_token_amount, amm_stoken_amount)
+
+        return claimable_stoken, foregone_amount, amm_token_amount, amm_stoken_amount
+    """
 
     def adjust_liquidity(self, chicken, chicks, amm_average_apr, iteration):
         return
@@ -976,6 +980,10 @@ class TesterRebonding(TesterIssuanceBondsAMM_2):
         # print(f"\n\n-- Rebond")
         # print(f"Rebonds: {len(rebonders)}")
         for chick in rebonders:
+            claimable_stoken, new_chicken_in_forgone, amm_token_amount, amm_stoken_amount = \
+                self.chicken_in(chicken, chick, iteration, data)
+            if claimable_stoken == 0:
+                continue
             """
             print("\n \033[31mBalances before\033[0m")
             print(f" - {chicken.token.symbol} balance: {chicken.token.balance_of(chick.account):,.2f}")
@@ -983,59 +991,9 @@ class TesterRebonding(TesterIssuanceBondsAMM_2):
             print(f" - {chicken.stoken.symbol} balance: {chicken.stoken.balance_of(chick.account):,.2f}")
             """
 
-            assert iteration >= chick.bond_time
-            pol_ratio = self.get_pol_ratio(chicken)
-            assert pol_ratio == 0 or pol_ratio >= 1
-            if pol_ratio == 0:
-                pol_ratio = 1
-            # If AMM price is lower than redemption price, rebonding is not profitable
-            if self.get_stoken_spot_price(chicken) <= pol_ratio:
-                continue
-            mintable_amount, bond_cap, claimable_stoken, amm_token_amount, amm_stoken_amount = \
-                self.get_claimable_stoken(chicken, chick, iteration, pol_ratio)
-            # If not profitable (If the value obtained from sTOKEN is not greater than the bond)
-            if claimable_stoken * self.get_stoken_spot_price(chicken) < chick.bond_amount:
-                continue
-            # if the cap is not reached yet
-            if mintable_amount < bond_cap:
-                """
-                print("\n---")
-                print(" - Rebond: Cap not reached yet")
-                print(f"POL ratio: {pol_ratio:,.2f}")
-                print(chick)
-                print(f"bond:          {chick.bond_amount:,.2f}")
-                print(f"claimable:     {claimable_stoken:,.2f}")
-                print(f"cap:           {bond_cap:,.2f}")
-                print(f"mintable:      {mintable_amount:,.2f}")
-                """
-                continue
-
-            # chicken up?
-            if np.random.random() < self.chicken_up_probability:
-                # print(f"\n-- Chicken up!")
-                top_up_amount = min(chicken.token.balance_of(chick.account), chick.bond_amount)
-                chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
-                claimable_stoken = claimable_stoken * (1 + top_up_amount / chick.bond_amount)
-                chick.bond_amount = chick.bond_amount + top_up_amount
-
-            foregone_amount = chick.bond_amount - claimable_stoken
-            """
-            print("\n---")
-            print(f"POL ratio: {pol_ratio:,.2f}")
-            print(chick)
-            print(f"mintable:      {mintable_amount:,.2f}")
-            print(f"claimable:     {claimable_stoken:,.2f}")
-            print(f"foregone:      {foregone_amount:,.2f}")
-            print(f"bond:          {chick.bond_amount:,.2f}")
-            print(f"cap:           {bond_cap:,.2f}")
-            """
-
-            total_chicken_in_amount = total_chicken_in_amount + claimable_stoken
-            total_chicken_in_foregone = total_chicken_in_foregone + foregone_amount
-            chicken.chicken_in(chick, claimable_stoken)
-
             # Redirect part of bond to AMM
-            self.divert_to_amm(chicken, amm_token_amount, amm_stoken_amount)
+            if amm_token_amount > 0:
+                self.divert_to_amm(chicken, amm_token_amount, amm_stoken_amount)
 
             # rebond
             # sell sTOKEN in the AMM
@@ -1057,24 +1015,19 @@ class TesterRebonding(TesterIssuanceBondsAMM_2):
             print(f" - {chicken.stoken.symbol} balance: {chicken.stoken.balance_of(chick.account):,.2f}")
             """
 
+        # TODO: rebond after chicken up
+
         total_chicken_out_amount = 0
 
         return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount, total_rebonded
 
     def update_chicken(self, chicken, chicks, data, iteration):
-        np.random.seed(2023 * iteration)
-        np.random.shuffle(chicks)
-
-        # chicken in
-        total_chicken_in_amount, total_chicken_in_foregone = self.chicken_in(chicken, chicks, data, iteration)
-
         # rebond
         _, rebond_foregone, _, total_rebonded = self.rebond(chicken, chicks, data, iteration)
         # if total_rebonded > 0:
         #    exit(1)
-        total_chicken_in_foregone = total_chicken_in_foregone + rebond_foregone
+        #total_chicken_in_foregone = total_chicken_in_foregone + rebond_foregone
 
-        # chicken out
-        total_chicken_out_amount = self.chicken_out(chicken, chicks)
+        super().update_chicken(chicken, chicks, data, iteration)
 
-        return total_chicken_in_amount, total_chicken_in_foregone, total_chicken_out_amount
+        return
