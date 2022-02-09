@@ -37,6 +37,12 @@ class Chicken():
         user.bond_target_profit = target_profit
         return
 
+    def top_up_bond(self, user, amount):
+        assert user.bond_amount > 0
+        self.token.transfer(user.account, self.coop_account, amount)
+        user.bond_amount = user.bond_amount + amount
+        return
+
     def chicken_in(self, user, stoken_amount):
         self.stoken.mint(user.account, stoken_amount)
         self.token.transfer(self.coop_account, self.pol_account, user.bond_amount)

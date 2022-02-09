@@ -4,7 +4,6 @@ import random
 
 from lib.constants import *
 
-
 # Testers
 
 class TesterInterface():
@@ -82,6 +81,7 @@ class TesterInterface():
 class TesterBase(TesterInterface):
     def __init__(self):
         super().__init__()
+        self.price_max_value = 40
         return
 
     def prefixes_getter(self):
@@ -455,9 +455,9 @@ class TesterIssuanceBonds(TesterBase):
         if profit <= 0 or np.random.binomial(1, 1 - CHICKEN_UP_PROBABILITY, 1):
             return 0
 
-        # Transfer the assets first to the COOP account, which is then transferred
-        # to the POL account in chicken.chicken_in()
-        # chicken.token.transfer(chick.account, chicken.coop_account, top_up_amount)
+        # First top up
+        chicken.top_up_bond(chick, top_up_amount)
+        # Then chicken in
         chicken.chicken_in(chick, claimable_amount)
         self.chicken_up_counter += 1
 
