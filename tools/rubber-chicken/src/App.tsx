@@ -34,9 +34,9 @@ const groupStyle: ThemeUICSSObject = {
 };
 
 const colorScale = [
-  "#45B29D",
-  "#EFC94C",
   "#E27A3F",
+  "#EFC94C",
+  "#45B29D",
   "#4F7DA1",
   "#334D5C"
   // "#DF5A49",
@@ -51,8 +51,8 @@ const lineStyle = (color = "#cccccc") => ({
   data: { stroke: color }
 });
 
-const [accruedStyle, cappedStyle, topUpStyle, returnInStyle, returnUpStyle] = colorScale.map(color =>
-  lineStyle(color)
+const [topUpStyle, payoutInStyle, payoutUpStyle, returnInStyle, returnUpStyle] = colorScale.map(
+  color => lineStyle(color)
 );
 
 const Tooltip = ({ datum, text, style, ...props }: VictoryTooltipProps) => (
@@ -79,7 +79,8 @@ const range = [...Array(numSamples).keys()];
 
 const tollBasisOptions = new Map([
   ["initial" as const, "Initial bond"],
-  ["toppedUp" as const, "Topped-up bond"]
+  ["toppedUp" as const, "Topped-up bond"],
+  ["netGain" as const, "Net gain"]
 ]);
 
 type TollBasis = typeof tollBasisOptions extends Map<infer T, unknown> ? T : never;
@@ -134,6 +135,7 @@ const App = () => {
   useEffect(() => {
     setPolRatioInitInput(`${defaultPolRatioInit}`);
     setTollPctInput(`${defaultTollPct}`);
+    setTollBasis(`${defaultTollBasis}`);
     setPremiumPctInput(`${defaultPremiumPct}`);
     setFPremiumPctInput(`${defaultFPremiumPct}`);
     setNaturalRatePctInput(`${defaultNaturalRatePct}`);
@@ -144,10 +146,10 @@ const App = () => {
   }, [revertDummy]);
 
   const polRatioInit = Number(polRatioInitInput);
-  const naturalRatePct = Number(naturalRatePctInput);
-  const premiumPct = Number(premiumPctInput);
+  const naturalRate = Number(naturalRatePctInput) / 100;
+  const premium = Number(premiumPctInput) / 100;
   const bond = Number(bondInput);
-  const tollPct = Number(tollPctInput);
+  const toll = Number(tollPctInput) / 100;
 
   const yieldSeries = useMemo(() => {
     if (useFunctions) {
@@ -161,13 +163,13 @@ const App = () => {
         }));
       } catch {}
     } else {
-      if (!isNaN(naturalRatePct)) {
-        const y = Math.pow(1 + naturalRatePct / 100, 1 / range[range.length - 1]);
+      if (!isNaN(naturalRate)) {
+        const y = Math.pow(1 + naturalRate, 1 / range[range.length - 1]);
 
         return range.map(x => ({ x, y }));
       }
     }
-  }, [useFunctions, naturalRatePct, fNaturalRatePctInput]);
+  }, [useFunctions, naturalRate, fNaturalRatePctInput]);
 
   const polRatioSeries = useMemo(() => {
     if (isNaN(polRatioInit) || !yieldSeries) {
@@ -201,97 +203,138 @@ const App = () => {
   }, [bond, curveSeries]);
 
   const cappedSeries = useMemo(() => {
-    if (isNaN(bond) || isNaN(tollPct) || !polRatioSeries || !accruedSeries) {
+    if (isNaN(bond) || !polRatioSeries || !accruedSeries) {
       return undefined;
     }
 
     return accruedSeries.map(({ x, y: accrued }, i) => ({
       x,
-      y: Math.min(accrued, ((1 - tollPct / 100) * bond) / polRatioSeries[i].y)
+      y: Math.min(accrued, bond / polRatioSeries[i].y)
     }));
-  }, [bond, tollPct, polRatioSeries, accruedSeries]);
+  }, [bond, polRatioSeries, accruedSeries]);
 
   const topUpSeries = useMemo(() => {
-    if (isNaN(bond) || isNaN(tollPct) || !polRatioSeries || !accruedSeries || !cappedSeries) {
+    if (isNaN(bond) || !polRatioSeries || !accruedSeries || !cappedSeries) {
       return undefined;
     }
 
     return accruedSeries.map(({ x, y: accrued }, i) => ({
       x,
-      y: Math.max(
-        ((accrued - cappedSeries[i].y) * polRatioSeries[i].y) /
-          (1 - (tollBasis === "toppedUp" ? tollPct / 100 : 0)),
-        0
-      )
+      y: Math.max((accrued - cappedSeries[i].y) * polRatioSeries[i].y, 0)
     }));
-  }, [bond, tollPct, tollBasis, polRatioSeries, accruedSeries, cappedSeries]);
+  }, [bond, polRatioSeries, accruedSeries, cappedSeries]);
 
-  const premiumPctSeries = useMemo(() => {
+  const premiumSeries = useMemo(() => {
     if (useFunctions) {
       try {
         // eslint-disable-next-line no-new-func
         const f = new Function("k", `"use strict"; return ${fPremiumPctInput};`)();
 
-        return range.map(x => ({ x, y: f(x) }));
+        return range.map(x => ({ x, y: f(x) / 100 }));
       } catch {}
     } else {
-      if (!isNaN(premiumPct)) {
-        return range.map(x => ({ x, y: premiumPct }));
+      if (!isNaN(premium)) {
+        return range.map(x => ({ x, y: premium }));
       }
     }
-  }, [useFunctions, premiumPct, fPremiumPctInput]);
+  }, [useFunctions, premium, fPremiumPctInput]);
 
-  const returnInSeries = useMemo(() => {
-    if (isNaN(bond) || !cappedSeries || !polRatioSeries || !premiumPctSeries) {
+  const tollInSeries = useMemo(() => {
+    if (isNaN(toll)) {
+      return undefined;
+    }
+
+    if (tollBasis !== "netGain") {
+      return range.map(x => ({ x, y: toll }));
+    }
+
+    if (!curveSeries || !polRatioSeries || !premiumSeries) {
+      return undefined;
+    }
+
+    return curveSeries.map(({ x, y: curve }, i) => ({
+      x,
+      y:
+        curve * polRatioSeries[i].y * (1 + premiumSeries[i].y) < 1
+          ? 0
+          : toll - toll / (1 + premiumSeries[i].y) / Math.min(curve * polRatioSeries[i].y, 1)
+    }));
+  }, [tollBasis, toll, curveSeries, polRatioSeries, premiumSeries]);
+
+  const tollUpSeries = useMemo(() => {
+    if (tollBasis !== "initial") {
+      return tollInSeries;
+    }
+
+    if (isNaN(toll) || !curveSeries || !polRatioSeries) {
+      return undefined;
+    }
+
+    return curveSeries.map(({ x, y: curve }, i) => ({
+      x,
+      y: toll / Math.max(curve * polRatioSeries[i].y, 1)
+    }));
+  }, [tollBasis, toll, tollInSeries, curveSeries, polRatioSeries]);
+
+  const payoutInSeries = useMemo(() => {
+    if (!cappedSeries || !tollInSeries || !polRatioSeries || !premiumSeries) {
       return undefined;
     }
 
     return cappedSeries.map(({ x, y: capped }, i) => ({
       x,
-      y:
-        x !== 0
-          ? Math.pow(
-              (capped * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100)) / bond,
-              annualize ? range[range.length - 1] / x : 1
-            ) - 1
-          : null
+      y: capped * (1 - tollInSeries[i].y) * (polRatioSeries[i].y * (1 + premiumSeries[i].y)),
+      sTOKEN: capped * (1 - tollInSeries[i].y)
     }));
-  }, [bond, cappedSeries, polRatioSeries, premiumPctSeries, annualize]);
+  }, [cappedSeries, tollInSeries, polRatioSeries, premiumSeries]);
 
-  const returnUpSeries = useMemo(() => {
-    if (isNaN(bond) || !accruedSeries || !topUpSeries || !polRatioSeries || !premiumPctSeries) {
+  const payoutUpSeries = useMemo(() => {
+    if (!accruedSeries || !tollUpSeries || !polRatioSeries || !premiumSeries) {
       return undefined;
     }
 
     return accruedSeries.map(({ x, y: accrued }, i) => ({
       x,
-      y:
-        x !== 0
-          ? Math.pow(
-              (accrued * polRatioSeries[i].y * (1 + premiumPctSeries[i].y / 100) -
-                topUpSeries[i].y) /
-                bond,
-              annualize ? range[range.length - 1] / x : 1
-            ) - 1
-          : null
+      y: accrued * (1 - tollUpSeries[i].y) * (polRatioSeries[i].y * (1 + premiumSeries[i].y)),
+      sTOKEN: accrued * (1 - tollUpSeries[i].y)
     }));
-  }, [bond, accruedSeries, topUpSeries, polRatioSeries, premiumPctSeries, annualize]);
+  }, [accruedSeries, tollUpSeries, polRatioSeries, premiumSeries]);
 
-  const maxAccrued = seriesMax(accruedSeries);
+  const returnInSeries = useMemo(() => {
+    if (isNaN(bond) || !payoutInSeries) {
+      return undefined;
+    }
+
+    return payoutInSeries.map(({ x, y: payout }) => ({
+      x,
+      y: (x !== 0 ? Math.pow(payout / bond, annualize ? range[range.length - 1] / x : 1) : 0) - 1
+    }));
+  }, [bond, payoutInSeries, annualize]);
+
+  const returnUpSeries = useMemo(() => {
+    if (isNaN(bond) || !payoutUpSeries || !topUpSeries) {
+      return undefined;
+    }
+
+    return payoutUpSeries.map(({ x, y: payout }, i) => ({
+      x,
+      y:
+        (x !== 0
+          ? Math.pow((payout - topUpSeries[i].y) / bond, annualize ? range[range.length - 1] / x : 1)
+          : 0) - 1
+    }));
+  }, [bond, payoutUpSeries, topUpSeries, annualize]);
+
+  const maxPayout = seriesMax(payoutUpSeries);
   const maxTopUp = seriesMax(topUpSeries);
   const maxReturnIn = seriesMax(returnInSeries);
   const maxReturnUp = seriesMax(returnUpSeries);
 
-  const scale = Math.max(maxAccrued, maxTopUp) / Math.max(maxReturnIn, maxReturnUp);
+  const scale = Math.max(maxPayout, maxTopUp) / Math.max(maxReturnIn, maxReturnUp);
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
-  const scaledReturnIn = returnInSeries
-    ?.filter((irr): irr is { x: number; y: number } => irr.y != null && irr.y >= -0.25)
-    .map(({ x, y }) => ({ x, y: y * scale }));
-
-  const scaledReturnUp = returnUpSeries
-    ?.filter((irr): irr is { x: number; y: number } => irr.y != null && irr.y >= -0.25)
-    .map(({ x, y }) => ({ x, y: y * scale }));
+  const scaledReturnIn = returnInSeries?.map(({ x, y }) => ({ x, y: y * scale }));
+  const scaledReturnUp = returnUpSeries?.map(({ x, y }) => ({ x, y: y * scale }));
 
   return (
     <ThemeProvider theme={theme}>
@@ -395,7 +438,7 @@ const App = () => {
               <Label sx={{ mt: 3 }}>sTOKEN Premium [%]</Label>
               {useFunctions ? (
                 <Textarea
-                  sx={!premiumPctSeries ? { bg: "pink" } : {}}
+                  sx={!premiumSeries ? { bg: "pink" } : {}}
                   value={fPremiumPctInput}
                   rows={5}
                   onChange={e => setFPremiumPctInput(e.target.value)}
@@ -447,7 +490,9 @@ const App = () => {
                   `${datum.childName}: ${
                     percentBasedLabels.has(datum.childName)
                       ? percent(datum._y)
-                      : Math.round(datum._y * 100) / 100
+                      : Math.round(
+                          (datum.childName.includes("[sTOKEN]") ? datum.sTOKEN : datum._y) * 100
+                        ) / 100
                   }`
                 }
                 labelComponent={<Tooltip centerOffset={{ y: -56 }} />}
@@ -459,9 +504,9 @@ const App = () => {
               y={140}
               colorScale={colorScale}
               data={[
-                { name: "Accrued [sTOKEN]" },
-                { name: "Capped [sTOKEN]" },
-                { name: "Top-up [TOKEN]" },
+                { name: "Top-up" },
+                { name: "Payout (In)" },
+                { name: "Payout (Up)" },
 
                 ...Object.values(annualize ? returnLabels.arr : returnLabels.roi).map(name => ({
                   name
@@ -473,18 +518,30 @@ const App = () => {
             <VictoryAxis dependentAxis />
             <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
 
-            {(accruedSeries || cappedSeries || topUpSeries || scaledReturnIn || scaledReturnUp) && (
+            {(topUpSeries ||
+              payoutInSeries ||
+              payoutUpSeries ||
+              scaledReturnIn ||
+              scaledReturnUp) && (
               <VictoryGroup>
-                {accruedSeries && (
-                  <VictoryLine name="Accrued [sTOKEN]" data={accruedSeries} style={accruedStyle} />
-                )}
-
-                {cappedSeries && (
-                  <VictoryLine name="Capped [sTOKEN]" data={cappedSeries} style={cappedStyle} />
-                )}
-
                 {topUpSeries && (
-                  <VictoryLine name="Top-up (Up) [TOKEN]" data={topUpSeries} style={topUpStyle} />
+                  <VictoryLine name="Top-up [TOKEN]" data={topUpSeries} style={topUpStyle} />
+                )}
+
+                {payoutInSeries && (
+                  <VictoryLine
+                    name="Payout (In) [sTOKEN]"
+                    data={payoutInSeries}
+                    style={payoutInStyle}
+                  />
+                )}
+
+                {payoutUpSeries && (
+                  <VictoryLine
+                    name="Payout (Up) [sTOKEN]"
+                    data={payoutUpSeries}
+                    style={payoutUpStyle}
+                  />
                 )}
 
                 {scaledReturnIn && (
