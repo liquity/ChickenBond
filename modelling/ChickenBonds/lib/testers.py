@@ -308,6 +308,14 @@ class TesterIssuanceBonds(TesterBase):
         """
         return chick.bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time)
 
+    def get_pol_ratio_update_chicken(self, chicken, chick, iteration):
+        assert iteration >= chick.bond_time
+        pol_ratio = self.get_pol_ratio(chicken)
+        assert pol_ratio == 0 or pol_ratio >= 1
+        if pol_ratio == 0:
+            pol_ratio = 1
+        return pol_ratio
+
     def update_chicken(self, chicken, chicks, data, iteration):
         """ Update the state of each user. Users may:
             - chicken-out
@@ -328,20 +336,27 @@ class TesterIssuanceBonds(TesterBase):
         print(f"Bonded Chicks: {len(bonded_chicks)}")
 
         for chick in bonded_chicks:
-
-            assert iteration >= chick.bond_time
-            pol_ratio = self.get_pol_ratio(chicken)
-            assert pol_ratio == 0 or pol_ratio >= 1
-            if pol_ratio == 0:
-                pol_ratio = 1
+            pol_ratio = self.get_pol_ratio_update_chicken(chicken, chick, iteration)
 
             # ----------- Chicken-out --------------------
             # Check if chicken-out conditions are met and eventually chicken-out
             self.chicken_out(chicken, chick, iteration, data)
 
+        bonded_chicks = self.get_bonded_chicks(chicks)
+        print(f"Bonded Chicks: {len(bonded_chicks)}")
+
+        for chick in bonded_chicks:
+            pol_ratio = self.get_pol_ratio_update_chicken(chicken, chick, iteration)
+
             # ----------- Chicken-in --------------------
             # Check if chicken-in conditions are met and eventually chicken-in
             self.chicken_in(chicken, chick, iteration, data)
+
+        bonded_chicks = self.get_bonded_chicks(chicks)
+        print(f"Bonded Chicks: {len(bonded_chicks)}")
+
+        for chick in bonded_chicks:
+            pol_ratio = self.get_pol_ratio_update_chicken(chicken, chick, iteration)
 
             # ----------- Chicken-up --------------------
             # Check if chicken-up conditions are met and eventually chicken-up
