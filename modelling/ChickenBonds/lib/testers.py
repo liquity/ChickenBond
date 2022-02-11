@@ -249,12 +249,10 @@ class TesterIssuanceBonds(TesterBase):
     def get_chicken_in_profit_percentage(self):
         return np.random.gamma(self.chicken_in_gamma_shape, self.chicken_in_gamma_scale, 1)[0]
 
-    # There’s no need to use the compound formula, because the generated yield is added to the POL on each iteration
-    # So it’s already being compounded
     def distribute_yield(self, chicken, chicks, iteration):
         base_amount = chicken.reserve_token_balance()
 
-        generated_yield = base_amount * self.external_yield / TIME_UNITS_PER_YEAR
+        generated_yield = base_amount * ((1 + self.external_yield) ** (1 / TIME_UNITS_PER_YEAR) - 1)
 
         chicken.token.mint(chicken.pol_account, generated_yield)
         return
