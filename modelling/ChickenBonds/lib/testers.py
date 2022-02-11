@@ -252,6 +252,8 @@ class TesterIssuanceBonds(TesterBase):
         not_bonded_chicks = self.get_available_for_bonding_chicks(chicken, chicks)
         not_bonded_chicks_len = len(not_bonded_chicks)
         num_new_bonds = np.random.binomial(not_bonded_chicks_len, self.bond_probability)
+        if iteration == 0:
+            num_new_bonds = BOOTSTRAP_NUM_BONDS
         # print(f"available: {not_bonded_chicks_len:,.2f}")
         # print(f"bonding:   {num_new_bonds:,.2f}")
         for chick in not_bonded_chicks[:num_new_bonds]:
@@ -277,6 +279,9 @@ class TesterIssuanceBonds(TesterBase):
         )
         # claimable stoken is returned twice because with the toll the effective amount can differ
         return claimable_amount, bond_cap, claimable_amount, 0, 0
+
+    def is_bootstrap_chicken_out(self, chick, iteration):
+        return iteration <= BOOTSTRAP_ITERATION and chick.bond_time == 0
 
     def is_bootstrap_chicken_in(self, chick, iteration):
         return iteration == BOOTSTRAP_ITERATION and chick.bond_time == 0
@@ -355,13 +360,18 @@ class TesterIssuanceBonds(TesterBase):
         max_claimable_amount = self.get_accumulated_stoken(chick, iteration)
         profit = max_claimable_amount * stoken_price - chick.bond_amount
 
-        # if break even is not reached and chicken-out proba (10%) is fulfilled
-        if profit <= 0 and np.random.binomial(1, self.chicken_out_probability) == 1:
-            chicken.chicken_out(chick)
-            self.chicken_out_counter += 1
-            return chick.bond_amount
+        # skip chicken out for bootstrappers
+        if self.is_bootstrap_chicken_out(chick, iteration):
+            return 0
 
-        return 0
+        # if break even is reached or chicken-out proba (10%) is not fulfilled
+        if profit > 0 or np.random.binomial(1, self.chicken_out_probability) == 0:
+            return 0
+
+        chicken.chicken_out(chick)
+        self.chicken_out_counter += 1
+        return chick.bond_amount
+
 
     def chicken_in(self, chicken, chick, iteration, data):
         """ User may chicken-in if the have already exceeded the break-even
@@ -373,6 +383,9 @@ class TesterIssuanceBonds(TesterBase):
         @param data: Logging data
         @return: Amount of new claimable sLQTY
         """
+
+        if iteration < BOOTSTRAP_ITERATION:
+            return 0, 0, 0
 
         pol_ratio = self.get_pol_ratio(chicken)
         mintable_amount, bond_cap, claimable_amount, amm_token_amount, amm_stoken_amount = \
@@ -393,7 +406,7 @@ class TesterIssuanceBonds(TesterBase):
         if profit <= target_profit and not self.is_bootstrap_chicken_in(chick, iteration):
             return 0, 0, 0
         # If the user reached the sLQTY cap, certainly chicken-up.
-        if max_claimable_amount > bond_cap:
+        if max_claimable_amount > bond_cap and not self.is_bootstrap_chicken_in(chick, iteration):
             return 0, 0, 0
 
         chicken.chicken_in(chick, claimable_amount)
