@@ -19,6 +19,7 @@ import {
   VictoryAxis,
   VictoryChart,
   VictoryGroup,
+  VictoryLabel,
   VictoryLegend,
   VictoryLine,
   VictoryTheme,
@@ -140,9 +141,9 @@ const defaultPremiumPct = 100;
 const defaultNaturalRatePct = 0;
 const defaultBond = 100;
 
-const defaultFCurve = `k => (k / ${range[range.length - 1]})`;
-const defaultFPremiumPct = "k => 20";
-const defaultFNaturalRatePct = "k => 10";
+const defaultFCurve = `toll => k => (k / ${range[range.length - 1]})`;
+const defaultFPremiumPct = `k => ${defaultPremiumPct}`;
+const defaultFNaturalRatePct = `k => ${defaultNaturalRatePct}`;
 
 const App = () => {
   const [polRatioInitInput, setPolRatioInitInput] = useState(`${defaultPolRatioInit}`);
@@ -176,6 +177,8 @@ const App = () => {
   const premium = Number(premiumPctInput) / 100;
   const bond = Number(bondInput);
   const toll = Number(tollPctInput) / 100;
+
+  type Series = { x: number; y: number }[] | undefined;
 
   const yieldSeries = useMemo(() => {
     if (useFunctions) {
@@ -214,11 +217,11 @@ const App = () => {
   const curveSeries = useMemo(() => {
     try {
       // eslint-disable-next-line no-new-func
-      const f = new Function("k", `"use strict"; return ${fCurveInput};`)();
+      const f = new Function("k", `"use strict"; return ${fCurveInput};`)()(toll);
 
       return range.map(x => ({ x, y: f(x) }));
     } catch {}
-  }, [fCurveInput]);
+  }, [fCurveInput, toll]);
 
   const accruedSeries = useMemo(() => {
     if (isNaN(bond) || !curveSeries) {
@@ -326,50 +329,71 @@ const App = () => {
     }));
   }, [accruedSeries, tollUpSeries, polRatioSeries, premiumSeries]);
 
-  const returnInSeries = useMemo(() => {
+  const roiInSeries = useMemo(() => {
     if (isNaN(bond) || !payoutInSeries) {
       return undefined;
     }
 
     return payoutInSeries.map(({ x, y: payout }) => ({
       x,
-      y:
-        (x !== 0
-          ? Math.pow(payout / bond, rightAxis === "arr" ? range[range.length - 1] / x : 1)
-          : 0) - 1
+      y: payout / bond - 1
     }));
-  }, [bond, payoutInSeries, rightAxis]);
+  }, [bond, payoutInSeries]);
 
-  const returnUpSeries = useMemo(() => {
+  const roiUpSeries = useMemo(() => {
     if (isNaN(bond) || !payoutUpSeries || !topUpSeries) {
       return undefined;
     }
 
     return payoutUpSeries.map(({ x, y: payout }, i) => ({
       x,
-      y:
-        (x !== 0
-          ? Math.pow(
-              (payout - topUpSeries[i].y) / bond,
-              rightAxis === "arr" ? range[range.length - 1] / x : 1
-            )
-          : 0) - 1
+      y: (payout - topUpSeries[i].y) / bond - 1
     }));
-  }, [bond, payoutUpSeries, topUpSeries, rightAxis]);
+  }, [bond, payoutUpSeries, topUpSeries]);
+
+  const arrInSeries = useMemo(() => {
+    if (!roiInSeries) {
+      return undefined;
+    }
+
+    return roiInSeries.map(({ x, y: roi }) => ({
+      x,
+      y: (x !== 0 ? Math.pow(1 + roi, range[range.length - 1] / x) : 0) - 1
+    }));
+  }, [roiInSeries]);
+
+  const arrUpSeries = useMemo(() => {
+    if (!roiUpSeries) {
+      return undefined;
+    }
+
+    return roiUpSeries.map(({ x, y: roi }) => ({
+      x,
+      y: (x !== 0 ? Math.pow(1 + roi, range[range.length - 1] / x) : 0) - 1
+    }));
+  }, [roiUpSeries]);
+
+  const rightAxisMap: { [k: string]: [Series, Series] } = {
+    roi: [roiInSeries, roiUpSeries],
+    arr: [arrInSeries, arrUpSeries],
+    toll: [tollInSeries, tollUpSeries]
+  };
+
+  const rawRightAxis = rightAxisMap[rightAxis];
 
   const maxLeftAxis = Math.max(seriesMax(payoutUpSeries), seriesMax(topUpSeries));
-
-  const maxRightAxis =
-    rightAxis === "toll"
-      ? Math.max(seriesMax(tollInSeries), seriesMax(tollUpSeries))
-      : Math.max(seriesMax(returnInSeries), seriesMax(returnUpSeries));
-
+  const maxRightAxis = Math.max(...rawRightAxis.map(seriesMax));
   const scale = maxLeftAxis / maxRightAxis;
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
-  const [rightAxisIn, rightAxisUp] = (
-    rightAxis === "toll" ? [tollInSeries, tollUpSeries] : [returnInSeries, returnUpSeries]
-  ).map(series => series?.map(({ x, y }) => ({ x, y: y * scale })));
+  const [rightAxisIn, rightAxisUp] = rawRightAxis.map(series =>
+    series?.map(({ x, y }) => ({ x, y: y * scale }))
+  );
+
+  const maxArr =
+    arrInSeries && arrUpSeries
+      ? [...arrInSeries, ...arrUpSeries].reduce((a, b) => (a.y > b.y ? a : b))
+      : undefined;
 
   return (
     <ThemeProvider theme={theme}>
@@ -459,7 +483,6 @@ const App = () => {
                 <Textarea
                   sx={!yieldSeries ? { bg: "pink" } : {}}
                   value={fNaturalRatePctInput}
-                  rows={5}
                   onChange={e => setFNaturalRatePctInput(e.target.value)}
                 />
               ) : (
@@ -475,7 +498,6 @@ const App = () => {
                 <Textarea
                   sx={!premiumSeries ? { bg: "pink" } : {}}
                   value={fPremiumPctInput}
-                  rows={5}
                   onChange={e => setFPremiumPctInput(e.target.value)}
                 />
               ) : (
@@ -510,7 +532,7 @@ const App = () => {
             theme={VictoryTheme.material}
             width={800}
             height={500}
-            domainPadding={{ y: 1 }}
+            domainPadding={{ y: [1, 25] }}
             padding={{
               top: 20,
               bottom: 45,
@@ -520,6 +542,7 @@ const App = () => {
             containerComponent={
               <VictoryVoronoiContainer
                 voronoiDimension="x"
+                voronoiBlacklist={["maxArr"]}
                 labels={({ datum }) =>
                   `${datum.childName}: ${
                     rightAxisLabelSet.has(datum.childName)
@@ -549,6 +572,25 @@ const App = () => {
             <VictoryAxis />
             <VictoryAxis dependentAxis />
             <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
+
+            {maxArr && (
+              <VictoryLine
+                name="maxArr"
+                style={{
+                  data: { strokeWidth: 1, stroke: "rgb(144, 164, 174)" },
+                  labels: { fontWeight: "bold" }
+                }}
+                labels={[`Max ARR = ${Math.round(maxArr.y * 10000) / 100}%`]}
+                labelComponent={
+                  <VictoryLabel
+                    y={rightAxis === "toll" ? 48 : 20} // XXX
+                    dx={maxArr.x < range[range.length - 1] * 0.75 ? 5 : -5}
+                    textAnchor={maxArr.x < range[range.length - 1] * 0.75 ? "start" : "end"}
+                  />
+                }
+                x={() => maxArr.x}
+              />
+            )}
 
             {(topUpSeries || payoutInSeries || payoutUpSeries || rightAxisIn || rightAxisUp) && (
               <VictoryGroup>
