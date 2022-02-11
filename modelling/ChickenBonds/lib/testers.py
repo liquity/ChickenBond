@@ -30,6 +30,9 @@ class TesterInterface():
     def prefixes_getter(self):
         pass
 
+    def get_fair_price(self, chicken):
+        pass
+
     def get_stoken_spot_price(self, chicken):
         pass
 
@@ -50,15 +53,19 @@ class TesterInterface():
 
     def get_pol_ratio_with_amm(self, chicken):
         pass
+
     def get_pol_ratio(self, chicken):
         pass
+
     def get_reserve_ratio_no_amm(self, chicken):
         pass
 
     def get_reserve_ratio_with_amm(self, chicken):
         pass
+
     def get_reserve_ratio(self, chicken):
         pass
+
     def distribute_yield(self, chicken, chicks, iteration):
         pass
 
@@ -162,7 +169,7 @@ class TesterIssuanceBonds(TesterBase):
 
         return
 
-    def get_stoken_spot_price(self, chicken):
+    def get_fair_price(self, chicken):
         """
         Calculate the fair spot price of sLQTY. The price is determined by the price floor plus a premium.
         @param chicken: The reserves.
@@ -194,6 +201,9 @@ class TesterIssuanceBonds(TesterBase):
                       + volatility_mapper.get(PRICE_VOLATILITY, 0)
 
         return total_price
+
+    def get_stoken_spot_price(self, chicken):
+        return self.get_fair_price(chicken)
 
     def get_stoken_twap(self, data, iteration):
         if iteration <= self.twap_period:
@@ -649,15 +659,17 @@ class TesterIssuanceBondsAMM_1(TesterIssuanceBonds):
     def amm_arbitrage(self, chicken, chicks, iteration):
         if chicken.stoken.total_supply == 0:
             return
-        reserve_ratio = self.get_reserve_ratio_no_amm(chicken)
+
+        fair_price = self.get_fair_price(chicken)
         stoken_spot_price = self.get_stoken_spot_price(chicken)
+        # print(f"fair price:   {fair_price:,.2f}")
         # print(f"stoken price: {stoken_spot_price:,.2f}")
 
         # if there’s more than 5% divergence, balance between AMM and reserve ratio
-        if reserve_ratio < stoken_spot_price * (1 - self.amm_arbitrage_divergence):
-            return self.sell_stoken(chicken, chicks, reserve_ratio)
-        elif reserve_ratio > stoken_spot_price * (1 + self.amm_arbitrage_divergence):
-            return self.buy_stoken(chicken, chicks, reserve_ratio)
+        if fair_price < stoken_spot_price * (1 - self.amm_arbitrage_divergence):
+            return self.sell_stoken(chicken, chicks, fair_price)
+        elif fair_price > stoken_spot_price * (1 + self.amm_arbitrage_divergence):
+            return self.buy_stoken(chicken, chicks, fair_price)
 
     # POL and AMM pro-rata
     def redeem(self, chicken, chick, stoken_amount, pol_ratio):

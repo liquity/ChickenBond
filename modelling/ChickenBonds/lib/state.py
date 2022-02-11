@@ -31,5 +31,6 @@ def state_to_row(
         "pol_ratio_no_amm": tester.get_pol_ratio_no_amm(chicken),
         "redemption_price": tester.get_pol_ratio(chicken),
         "reserve_ratio_with_amm": tester.get_reserve_ratio_with_amm(chicken),
-        "fair_price": tester.get_reserve_ratio_no_amm(chicken),
+        "reserve_ratio_no_amm": tester.get_reserve_ratio_no_amm(chicken),
+        "fair_price": tester.get_fair_price(chicken),
     }

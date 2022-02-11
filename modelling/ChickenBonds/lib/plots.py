@@ -210,6 +210,20 @@ def plot_stoken_price(data, max_value=200, description="", group=1, group_descri
             ignore_index=True
         )
 
+        # Reserve ratio
+        reserve_ratio = min(
+            data['reserve_ratio_no_amm'][start_index + d * group],
+            max_value # to avoid “zooming out too much with the initial spike”
+        )
+        new_data = new_data.append(
+            {
+                "x": start_index + d,
+                "y": reserve_ratio,
+                "var": "Reserve ratio (no AMM)"
+            },
+            ignore_index=True
+        )
+
     fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - sTOKEN Price")
 
     fig.update_xaxes(tick0=0, dtick=len(data.index)//group/20, title_text=group_description)
