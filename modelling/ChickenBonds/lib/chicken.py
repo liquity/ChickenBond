@@ -52,7 +52,9 @@ class Chicken():
         return
 
     def chicken_out(self, user):
-        self.token.transfer(self.coop_account, user.account, user.bond_amount)
+        assert self.token.balance_of(self.coop_account) - user.bond_amount > -0.0001
+        amount = min(user.bond_amount, self.token.balance_of(self.coop_account)) # to avoid rounding issues
+        self.token.transfer(self.coop_account, user.account, amount)
         user.bond_amount = 0
         user.bond_time = 0
         user.bond_target_profit = 0

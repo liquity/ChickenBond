@@ -97,9 +97,6 @@ def main(tester):
 
     log_state(chicken, chicks, 1)
 
-
-    #print(data)
-
     plot_charts(
         chicken,
         chicks,
