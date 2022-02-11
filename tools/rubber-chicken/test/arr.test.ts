@@ -31,7 +31,10 @@ const arbitraryParams = () =>
         .float()
         .filter(positive)
         .map(x => 1 / x),
-      premium: fc.float().filter(positive),
+      premium: fc
+        .float()
+        .filter(positive)
+        .map(x => 1 / x),
 
       T: fc.float().filter(positive)
     })
