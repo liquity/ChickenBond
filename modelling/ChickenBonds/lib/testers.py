@@ -806,22 +806,22 @@ class TesterIssuanceBondsAMM_2(TesterIssuanceBondsAMM_1):
     """
 
     def get_claimable_amount(self, chicken, chick, iteration, pol_ratio):
+        # TOLL
         token_toll = chick.bond_amount * self.chicken_in_amm_share
+        stoken_price = self.get_stoken_spot_price(chicken)
+        stoken_toll = token_toll / stoken_price
+
         effective_bond_amount = chick.bond_amount - token_toll
         bond_cap = self.get_bond_cap(effective_bond_amount, pol_ratio)
         mintable_amount = min(
-            # TODO: should we use here total or effective bond amount?
-            effective_bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time),
+            chick.bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time),
             bond_cap
         )
-
-        # subtract to be minted sTOKEN
-        stoken_price = self.get_stoken_spot_price(chicken)
-        stoken_toll = token_toll / stoken_price
 
         # Note: stoken_toll > mintable_token iff pol_ratio / stoken_price > (1 - chicken_in_amm_share) / chicken_in_amm_share
         # In particular if stoken_price > pol_ratio && chicken_in_amm_share < 0.5, it won’t hold
         claimable_amount = max(mintable_amount - stoken_toll, 0)
+
         """
         print("\n\n")
         print(f"POL ratio: {pol_ratio:,.2f}")
@@ -832,12 +832,16 @@ class TesterIssuanceBondsAMM_2(TesterIssuanceBondsAMM_1):
         print(f"sTOKEN price:      {stoken_price:,.2f}")
         print(f"sTOKEN toll:       {stoken_toll:,.2f}")
         print(f"Cap:               {bond_cap:,.2f}")
-        print(f"Mintable pre cap:  {effective_bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time):,.2f}")
+        print(f"Mintable raw:      {chick.bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time):,.2f}")
+        #print(f"Mintable pre cap:  {effective_bond_amount * self.bond_mint_ratio * (iteration - chick.bond_time):,.2f}")
         print(f"Mintable:          {mintable_amount:,.2f}")
         print(f"Claimable:         {claimable_amount:,.2f}")
+        print(f"Operation ratio:   {effective_bond_amount / mintable_amount:,.2f}")
         print(f"r/p:               {pol_ratio / stoken_price:,.2f}")
         print(f"(1-s)/s:           {(1 - self.chicken_in_amm_share) / self.chicken_in_amm_share:,.2f}")
         """
+
+        assert effective_bond_amount / mintable_amount - pol_ratio > -0.0001
 
         return mintable_amount, bond_cap, claimable_amount, token_toll, stoken_toll
 
