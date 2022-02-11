@@ -88,7 +88,6 @@ class TesterInterface():
 class TesterBase(TesterInterface):
     def __init__(self):
         super().__init__()
-        self.price_max_value = 40
         return
 
     def prefixes_getter(self):
@@ -153,8 +152,12 @@ class TesterIssuanceBonds(TesterBase):
         self.plot_prefix = '0_0'
         self.plot_file_description = 'bonds'
 
+        self.price_max_value = 40
+
         self.initial_price = INITIAL_PRICE
         self.twap_period = TWAP_PERIOD
+        self.price_premium = PRICE_PREMIUM
+        self.price_volatility = PRICE_VOLATILITY
 
         self.external_yield = EXTERNAL_YIELD
 
@@ -197,8 +200,8 @@ class TesterIssuanceBonds(TesterBase):
                              }
 
         total_price = (base_amount / stoken_supply) \
-                      + premium_mapper.get(PRICE_PREMIUM, 0) \
-                      + volatility_mapper.get(PRICE_VOLATILITY, 0)
+                      + premium_mapper.get(self.price_premium, 0) \
+                      + volatility_mapper.get(self.price_volatility, 0)
 
         return total_price
 
