@@ -8,7 +8,6 @@ import {
   Input,
   Label,
   Radio,
-  Select,
   Switch,
   Textarea,
   ThemeProvider,
@@ -39,8 +38,8 @@ const colorScale = [
   "#E27A3F",
   "#EFC94C",
   "#45B29D",
-  "#4F7DA1",
-  "#334D5C"
+  "#4F7DA1"
+  // "#334D5C"
   // "#DF5A49",
   // "#DF948A",
   // "#55DBC1",
@@ -53,8 +52,9 @@ const lineStyle = (color = "#cccccc") => ({
   data: { stroke: color }
 });
 
-const [topUpStyle, payoutInStyle, payoutUpStyle, rightAxisInStyle, rightAxisUpStyle] =
-  colorScale.map(color => lineStyle(color));
+const [bondedStyle, capStyle, payoutStyle, rightAxisStyle] = colorScale.map(color =>
+  lineStyle(color)
+);
 
 const Tooltip = ({ datum, text, style, ...props }: VictoryTooltipProps) => (
   <VictoryTooltip
@@ -78,45 +78,20 @@ const seriesMax = (series?: Array<{ x: number; y: number | null }>) =>
 const numSamples = 201;
 const range = [...Array(numSamples).keys()];
 
-const tollBasisOptions = new Map([
-  ["initial" as const, "Initial bond"],
-  ["toppedUp" as const, "Topped-up bond"],
-  ["netGain" as const, "Net gain"]
-]);
-
-type TollBasis = typeof tollBasisOptions extends Map<infer T, unknown> ? T : never;
-
-const checkTollBasis = (value: string): TollBasis => {
-  if (!(tollBasisOptions as Map<string, never>).has(value)) {
-    throw new Error(`wrong TollBasis value "${value}"`);
-  }
-
-  return value as TollBasis;
-};
-
 const rightAxisOptions = {
   roi: {
     name: "Return on Investment",
-    labels: {
-      in: "ROI (In)",
-      up: "ROI (Up)"
-    }
+    label: "ROI"
   },
 
   arr: {
     name: "Annualized Rate of Return",
-    labels: {
-      in: "ARR (In)",
-      up: "ARR (Up)"
-    }
+    label: "ARR"
   },
 
   toll: {
-    name: "Effective Toll",
-    labels: {
-      in: "Effective Toll (In)",
-      up: "Effective Toll (Up)"
-    }
+    name: "Toll",
+    label: "Toll"
   }
 };
 
@@ -130,47 +105,39 @@ const checkRightAxis = (value: string): RightAxis => {
   return value as RightAxis;
 };
 
-const rightAxisLabelSet = new Set(
-  Object.values(rightAxisOptions).flatMap(o => Object.values(o.labels))
-);
+const rightAxisLabelSet = new Set(Object.values(rightAxisOptions).map(o => o.label));
 
 type Series = { x: number; y: number }[] | undefined;
 
 const defaultPolRatioInit = 4;
-const defaultTollPct = 20;
-const defaultTollBasis = "initial";
 const defaultPremiumPct = 100;
 const defaultNaturalRatePct = 0;
 const defaultBond = 100;
 
-const defaultFCurve = `toll => k => (k / ${range[range.length - 1]})`;
+const defaultFToll = `k => 0.97 ** k`;
 const defaultFPremiumPct = `k => ${defaultPremiumPct}`;
 const defaultFNaturalRatePct = `k => ${defaultNaturalRatePct}`;
 
 const App = () => {
   const [polRatioInitInput, setPolRatioInitInput] = useState(`${defaultPolRatioInit}`);
-  const [tollPctInput, setTollPctInput] = useState(`${defaultTollPct}`);
-  const [tollBasis, setTollBasis] = useState<TollBasis>(`${defaultTollBasis}`);
   const [premiumPctInput, setPremiumPctInput] = useState(`${defaultPremiumPct}`);
   const [fPremiumPctInput, setFPremiumPctInput] = useState(`${defaultFPremiumPct}`);
   const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
   const [fNaturalRatePctInput, setFNaturalRatePctInput] = useState(`${defaultFNaturalRatePct}`);
   const [bondInput, setBondInput] = useState(`${defaultBond}`);
-  const [fCurveInput, setFCurveInput] = useState(`${defaultFCurve}`);
+  const [fTollInput, setFTollInput] = useState(`${defaultFToll}`);
   const [useFunctions, setUseFunctions] = useState(false);
   const [rightAxis, setRightAxis] = useState<RightAxis>("arr");
   const [revertDummy, revert] = useReducer(() => ({}), {});
 
   useEffect(() => {
     setPolRatioInitInput(`${defaultPolRatioInit}`);
-    setTollPctInput(`${defaultTollPct}`);
-    setTollBasis(`${defaultTollBasis}`);
     setPremiumPctInput(`${defaultPremiumPct}`);
     setFPremiumPctInput(`${defaultFPremiumPct}`);
     setNaturalRatePctInput(`${defaultNaturalRatePct}`);
     setFNaturalRatePctInput(`${defaultFNaturalRatePct}`);
     setBondInput(`${defaultBond}`);
-    setFCurveInput(`${defaultFCurve}`);
+    setFTollInput(`${defaultFToll}`);
     setUseFunctions(false);
   }, [revertDummy]);
 
@@ -178,7 +145,6 @@ const App = () => {
   const naturalRate = Number(naturalRatePctInput) / 100;
   const premium = Number(premiumPctInput) / 100;
   const bond = Number(bondInput);
-  const toll = Number(tollPctInput) / 100;
 
   const yieldSeries = useMemo(() => {
     if (useFunctions) {
@@ -214,44 +180,14 @@ const App = () => {
     });
   }, [polRatioInit, yieldSeries]);
 
-  const curveSeries = useMemo(() => {
+  const tollSeries = useMemo(() => {
     try {
       // eslint-disable-next-line no-new-func
-      const f = new Function("k", `"use strict"; return ${fCurveInput};`)()(toll);
+      const f = new Function("k", `"use strict"; return ${fTollInput};`)();
 
       return range.map(x => ({ x, y: f(x) }));
     } catch {}
-  }, [fCurveInput, toll]);
-
-  const accruedSeries = useMemo(() => {
-    if (isNaN(bond) || !curveSeries) {
-      return undefined;
-    }
-
-    return curveSeries.map(({ x, y: curve }) => ({ x, y: bond * curve }));
-  }, [bond, curveSeries]);
-
-  const cappedSeries = useMemo(() => {
-    if (isNaN(bond) || !polRatioSeries || !accruedSeries) {
-      return undefined;
-    }
-
-    return accruedSeries.map(({ x, y: accrued }, i) => ({
-      x,
-      y: Math.min(accrued, bond / polRatioSeries[i].y)
-    }));
-  }, [bond, polRatioSeries, accruedSeries]);
-
-  const topUpSeries = useMemo(() => {
-    if (isNaN(bond) || !polRatioSeries || !accruedSeries || !cappedSeries) {
-      return undefined;
-    }
-
-    return accruedSeries.map(({ x, y: accrued }, i) => ({
-      x,
-      y: Math.max((accrued - cappedSeries[i].y) * polRatioSeries[i].y, 0)
-    }));
-  }, [bond, polRatioSeries, accruedSeries, cappedSeries]);
+  }, [fTollInput]);
 
   const premiumSeries = useMemo(() => {
     if (useFunctions) {
@@ -268,136 +204,72 @@ const App = () => {
     }
   }, [useFunctions, premium, fPremiumPctInput]);
 
-  const tollInSeries = useMemo(() => {
-    if (isNaN(toll)) {
+  const capSeries = useMemo(() => {
+    if (isNaN(bond) || !polRatioSeries || !premiumSeries) {
       return undefined;
     }
 
-    if (tollBasis !== "netGain") {
-      return range.map(x => ({ x, y: toll }));
-    }
-
-    if (!curveSeries || !polRatioSeries || !premiumSeries) {
-      return undefined;
-    }
-
-    return curveSeries.map(({ x, y: curve }, i) => ({
+    return polRatioSeries.map(({ x, y: polRatio }, i) => ({
       x,
-      y:
-        curve * polRatioSeries[i].y * (1 + premiumSeries[i].y) < 1
-          ? 0
-          : toll - toll / (1 + premiumSeries[i].y) / Math.min(curve * polRatioSeries[i].y, 1)
+      sTOKEN: bond / polRatio,
+      y: bond * (1 + premiumSeries[i].y)
     }));
-  }, [tollBasis, toll, curveSeries, polRatioSeries, premiumSeries]);
+  }, [bond, polRatioSeries, premiumSeries]);
 
-  const tollUpSeries = useMemo(() => {
-    if (tollBasis !== "initial") {
-      return tollInSeries;
-    }
-
-    if (isNaN(toll) || !curveSeries || !polRatioSeries) {
+  const payoutSeries = useMemo(() => {
+    if (!capSeries || !tollSeries || !polRatioSeries || !premiumSeries) {
       return undefined;
     }
 
-    return curveSeries.map(({ x, y: curve }, i) => ({
+    return capSeries.map(({ x, sTOKEN, y }, i) => ({
       x,
-      y: toll / Math.max(curve * polRatioSeries[i].y, 1)
+      sTOKEN: sTOKEN * (1 - tollSeries[i].y),
+      y: y * (1 - tollSeries[i].y)
     }));
-  }, [tollBasis, toll, tollInSeries, curveSeries, polRatioSeries]);
+  }, [capSeries, tollSeries, polRatioSeries, premiumSeries]);
 
-  const payoutInSeries = useMemo(() => {
-    if (!cappedSeries || !tollInSeries || !polRatioSeries || !premiumSeries) {
+  const roiSeries = useMemo(() => {
+    if (isNaN(bond) || !payoutSeries) {
       return undefined;
     }
 
-    return cappedSeries.map(({ x, y: capped }, i) => ({
-      x,
-      y: capped * (1 - tollInSeries[i].y) * (polRatioSeries[i].y * (1 + premiumSeries[i].y)),
-      sTOKEN: capped * (1 - tollInSeries[i].y)
-    }));
-  }, [cappedSeries, tollInSeries, polRatioSeries, premiumSeries]);
-
-  const payoutUpSeries = useMemo(() => {
-    if (!accruedSeries || !tollUpSeries || !polRatioSeries || !premiumSeries) {
-      return undefined;
-    }
-
-    return accruedSeries.map(({ x, y: accrued }, i) => ({
-      x,
-      y: accrued * (1 - tollUpSeries[i].y) * (polRatioSeries[i].y * (1 + premiumSeries[i].y)),
-      sTOKEN: accrued * (1 - tollUpSeries[i].y)
-    }));
-  }, [accruedSeries, tollUpSeries, polRatioSeries, premiumSeries]);
-
-  const roiInSeries = useMemo(() => {
-    if (isNaN(bond) || !payoutInSeries) {
-      return undefined;
-    }
-
-    return payoutInSeries.map(({ x, y: payout }) => ({
+    return payoutSeries.map(({ x, y: payout }) => ({
       x,
       y: payout / bond - 1
     }));
-  }, [bond, payoutInSeries]);
+  }, [bond, payoutSeries]);
 
-  const roiUpSeries = useMemo(() => {
-    if (isNaN(bond) || !payoutUpSeries || !topUpSeries) {
+  const arrSeries = useMemo(() => {
+    if (!roiSeries) {
       return undefined;
     }
 
-    return payoutUpSeries.map(({ x, y: payout }, i) => ({
-      x,
-      y: (payout - topUpSeries[i].y) / bond - 1
-    }));
-  }, [bond, payoutUpSeries, topUpSeries]);
-
-  const arrInSeries = useMemo(() => {
-    if (!roiInSeries) {
-      return undefined;
-    }
-
-    return roiInSeries.map(({ x, y: roi }) => ({
+    return roiSeries.map(({ x, y: roi }) => ({
       x,
       y: (x !== 0 ? Math.pow(1 + roi, range[range.length - 1] / x) : 0) - 1
     }));
-  }, [roiInSeries]);
+  }, [roiSeries]);
 
-  const arrUpSeries = useMemo(() => {
-    if (!roiUpSeries) {
-      return undefined;
-    }
-
-    return roiUpSeries.map(({ x, y: roi }) => ({
-      x,
-      y: (x !== 0 ? Math.pow(1 + roi, range[range.length - 1] / x) : 0) - 1
-    }));
-  }, [roiUpSeries]);
-
-  const rightAxisMap: { [k: string]: [Series, Series] } = {
-    roi: [roiInSeries, roiUpSeries],
-    arr: [arrInSeries, arrUpSeries],
-    toll: [tollInSeries, tollUpSeries]
+  const rightAxisMap: { [k: string]: Series } = {
+    roi: roiSeries,
+    arr: arrSeries,
+    toll: tollSeries
   };
 
   const rawRightAxis = rightAxisMap[rightAxis];
 
-  const maxLeftAxis = Math.max(seriesMax(payoutUpSeries), seriesMax(topUpSeries));
-  const maxRightAxis = Math.max(...rawRightAxis.map(seriesMax));
+  const maxLeftAxis = seriesMax(payoutSeries);
+  const maxRightAxis = seriesMax(rawRightAxis);
   const scale = maxLeftAxis / maxRightAxis;
+  const scaledRightAxis = rawRightAxis?.map(({ x, y }) => ({ x, y: y * scale }));
+
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
-  const [rightAxisIn, rightAxisUp] = rawRightAxis.map(series =>
-    series?.map(({ x, y }) => ({ x, y: y * scale }))
-  );
-
-  const maxArr =
-    arrInSeries && arrUpSeries
-      ? [...arrInSeries, ...arrUpSeries].reduce((a, b) => (a.y > b.y ? a : b))
-      : undefined;
+  const maxArr = arrSeries?.reduce((a, b) => (a.y > b.y ? a : b));
 
   return (
     <ThemeProvider theme={theme}>
-      <Heading as="h1">🐔 Crazy Chicken Investment Calculator</Heading>
+      <Heading as="h1">🐔 Crazier Chicken Investment Calculator</Heading>
 
       <Flex sx={{ alignItems: "flex-start", p: 3 }}>
         <Box sx={{ width: "300px" }}>
@@ -420,24 +292,6 @@ const App = () => {
                 value={polRatioInitInput}
                 onChange={e => setPolRatioInitInput(e.target.value)}
               />
-
-              <Label sx={{ mt: 3 }}>Toll [%]</Label>
-              <Input
-                type="number"
-                min={0}
-                step={1}
-                value={tollPctInput}
-                onChange={e => setTollPctInput(e.target.value)}
-              />
-
-              <Label sx={{ mt: 3 }}>Toll Basis</Label>
-              <Select value={tollBasis} onChange={e => setTollBasis(checkTollBasis(e.target.value))}>
-                {[...tollBasisOptions].map(([key, description]) => (
-                  <option key={key} value={key}>
-                    {description}
-                  </option>
-                ))}
-              </Select>
             </Box>
 
             <Heading as="h4">Chicken Bond</Heading>
@@ -450,11 +304,11 @@ const App = () => {
                 onChange={e => setBondInput(e.target.value)}
               />
 
-              <Label sx={{ mt: 3 }}>Curve</Label>
+              <Label sx={{ mt: 3 }}>Toll Curve</Label>
               <Textarea
-                sx={!curveSeries ? { bg: "pink" } : {}}
-                value={fCurveInput}
-                onChange={e => setFCurveInput(e.target.value)}
+                sx={!tollSeries ? { bg: "pink" } : {}}
+                value={fTollInput}
+                onChange={e => setFTollInput(e.target.value)}
               />
             </Box>
 
@@ -561,11 +415,10 @@ const App = () => {
               y={140}
               colorScale={colorScale}
               data={[
-                { name: "Top-up" },
-                { name: "Payout (In)" },
-                { name: "Payout (Up)" },
-
-                ...Object.values(rightAxisOptions[rightAxis].labels).map(name => ({ name }))
+                { name: "Bonded" },
+                { name: "Cap" },
+                { name: "Payout" },
+                { name: rightAxisOptions[rightAxis].label }
               ]}
             />
 
@@ -592,41 +445,27 @@ const App = () => {
               />
             )}
 
-            {(topUpSeries || payoutInSeries || payoutUpSeries || rightAxisIn || rightAxisUp) && (
+            {(!isNaN(bond) || capSeries || payoutSeries || scaledRightAxis) && (
               <VictoryGroup>
-                {topUpSeries && (
-                  <VictoryLine name="Top-up [TOKEN]" data={topUpSeries} style={topUpStyle} />
-                )}
-
-                {payoutInSeries && (
+                {!isNaN(bond) && (
                   <VictoryLine
-                    name="Payout (In) [sTOKEN]"
-                    data={payoutInSeries}
-                    style={payoutInStyle}
+                    name="Bonded [TOKEN]"
+                    data={range.map(x => ({ x, y: bond }))}
+                    style={bondedStyle}
                   />
                 )}
 
-                {payoutUpSeries && (
-                  <VictoryLine
-                    name="Payout (Up) [sTOKEN]"
-                    data={payoutUpSeries}
-                    style={payoutUpStyle}
-                  />
+                {capSeries && <VictoryLine name="Cap [sTOKEN]" data={capSeries} style={capStyle} />}
+
+                {payoutSeries && (
+                  <VictoryLine name="Payout [sTOKEN]" data={payoutSeries} style={payoutStyle} />
                 )}
 
-                {rightAxisIn && (
+                {scaledRightAxis && (
                   <VictoryLine
-                    name={rightAxisOptions[rightAxis].labels.in}
-                    data={rightAxisIn}
-                    style={rightAxisInStyle}
-                  />
-                )}
-
-                {rightAxisUp && (
-                  <VictoryLine
-                    name={rightAxisOptions[rightAxis].labels.up}
-                    data={rightAxisUp}
-                    style={rightAxisUpStyle}
+                    name={rightAxisOptions[rightAxis].label}
+                    data={scaledRightAxis}
+                    style={rightAxisStyle}
                   />
                 )}
               </VictoryGroup>
