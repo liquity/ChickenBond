@@ -110,18 +110,22 @@ const rightAxisLabelSet = new Set(Object.values(rightAxisOptions).map(o => o.lab
 type Series = { x: number; y: number }[] | undefined;
 
 const defaultPolRatioInit = 4;
-const defaultPremiumPct = 100;
+const defaultFairPremiumPct = 100;
+const defaultMktDeviationPct = 0;
 const defaultNaturalRatePct = 0;
 const defaultBond = 100;
 
-const defaultFToll = `k => 0.97 ** k`;
-const defaultFPremiumPct = `k => ${defaultPremiumPct}`;
+const defaultFToll = `p => k => 1 - k / (k + ${range[range.length - 1] / 8} * p)`;
+const defaultFFairPremiumPct = `k => ${defaultFairPremiumPct}`;
+const defaultFMktDeviationPct = `k => ${defaultMktDeviationPct}`;
 const defaultFNaturalRatePct = `k => ${defaultNaturalRatePct}`;
 
 const App = () => {
   const [polRatioInitInput, setPolRatioInitInput] = useState(`${defaultPolRatioInit}`);
-  const [premiumPctInput, setPremiumPctInput] = useState(`${defaultPremiumPct}`);
-  const [fPremiumPctInput, setFPremiumPctInput] = useState(`${defaultFPremiumPct}`);
+  const [fairPremiumPctInput, setFairPremiumPctInput] = useState(`${defaultFairPremiumPct}`);
+  const [fFairPremiumPctInput, setFFairPremiumPctInput] = useState(`${defaultFFairPremiumPct}`);
+  const [mktDeviationPctInput, setMktDeviationPctInput] = useState(`${defaultMktDeviationPct}`);
+  const [fMktDeviationPctInput, setFMktDeviationPctInput] = useState(`${defaultFMktDeviationPct}`);
   const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
   const [fNaturalRatePctInput, setFNaturalRatePctInput] = useState(`${defaultFNaturalRatePct}`);
   const [bondInput, setBondInput] = useState(`${defaultBond}`);
@@ -132,8 +136,10 @@ const App = () => {
 
   useEffect(() => {
     setPolRatioInitInput(`${defaultPolRatioInit}`);
-    setPremiumPctInput(`${defaultPremiumPct}`);
-    setFPremiumPctInput(`${defaultFPremiumPct}`);
+    setFairPremiumPctInput(`${defaultFairPremiumPct}`);
+    setFFairPremiumPctInput(`${defaultFFairPremiumPct}`);
+    setMktDeviationPctInput(`${defaultMktDeviationPct}`);
+    setFMktDeviationPctInput(`${defaultFMktDeviationPct}`);
     setNaturalRatePctInput(`${defaultNaturalRatePct}`);
     setFNaturalRatePctInput(`${defaultFNaturalRatePct}`);
     setBondInput(`${defaultBond}`);
@@ -143,7 +149,8 @@ const App = () => {
 
   const polRatioInit = Number(polRatioInitInput);
   const naturalRate = Number(naturalRatePctInput) / 100;
-  const premium = Number(premiumPctInput) / 100;
+  const fairPremium = Number(fairPremiumPctInput) / 100;
+  const mktDeviation = Number(mktDeviationPctInput) / 100;
   const bond = Number(bondInput);
 
   const yieldSeries = useMemo(() => {
@@ -154,12 +161,12 @@ const App = () => {
 
         return range.map(x => ({
           x,
-          y: Math.pow(1 + f(x) / 100, 1 / range[range.length - 1])
+          y: (1 + f(x) / 100) ** (1 / range[range.length - 1])
         }));
       } catch {}
     } else {
       if (!isNaN(naturalRate)) {
-        const y = Math.pow(1 + naturalRate, 1 / range[range.length - 1]);
+        const y = (1 + naturalRate) ** (1 / range[range.length - 1]);
 
         return range.map(x => ({ x, y }));
       }
@@ -180,44 +187,61 @@ const App = () => {
     });
   }, [polRatioInit, yieldSeries]);
 
-  const tollSeries = useMemo(() => {
-    try {
-      // eslint-disable-next-line no-new-func
-      const f = new Function("k", `"use strict"; return ${fTollInput};`)();
-
-      return range.map(x => ({ x, y: f(x) }));
-    } catch {}
-  }, [fTollInput]);
-
-  const premiumSeries = useMemo(() => {
+  const fairPremiumSeries = useMemo(() => {
     if (useFunctions) {
       try {
         // eslint-disable-next-line no-new-func
-        const f = new Function("k", `"use strict"; return ${fPremiumPctInput};`)();
+        const f = new Function("k", `"use strict"; return ${fFairPremiumPctInput};`)();
 
         return range.map(x => ({ x, y: f(x) / 100 }));
       } catch {}
     } else {
-      if (!isNaN(premium)) {
-        return range.map(x => ({ x, y: premium }));
+      if (!isNaN(fairPremium)) {
+        return range.map(x => ({ x, y: fairPremium }));
       }
     }
-  }, [useFunctions, premium, fPremiumPctInput]);
+  }, [useFunctions, fairPremium, fFairPremiumPctInput]);
+
+  const mktDeviationSeries = useMemo(() => {
+    if (useFunctions) {
+      try {
+        // eslint-disable-next-line no-new-func
+        const f = new Function("k", `"use strict"; return ${fMktDeviationPctInput};`)();
+
+        return range.map(x => ({ x, y: f(x) / 100 }));
+      } catch {}
+    } else {
+      if (!isNaN(mktDeviation)) {
+        return range.map(x => ({ x, y: mktDeviation }));
+      }
+    }
+  }, [useFunctions, mktDeviation, fMktDeviationPctInput]);
+
+  const tollSeries = useMemo(() => {
+    const p = fairPremiumSeries ? fairPremiumSeries[0].y : 0;
+
+    try {
+      // eslint-disable-next-line no-new-func
+      const f = new Function("k", `"use strict"; return ${fTollInput};`)()(p);
+
+      return range.map(x => ({ x, y: f(x) }));
+    } catch {}
+  }, [fTollInput, fairPremiumSeries]);
 
   const capSeries = useMemo(() => {
-    if (isNaN(bond) || !polRatioSeries || !premiumSeries) {
+    if (isNaN(bond) || !polRatioSeries || !fairPremiumSeries || !mktDeviationSeries) {
       return undefined;
     }
 
     return polRatioSeries.map(({ x, y: polRatio }, i) => ({
       x,
       sTOKEN: bond / polRatio,
-      y: bond * (1 + premiumSeries[i].y)
+      y: bond * (1 + fairPremiumSeries[i].y) * (1 + mktDeviationSeries[i].y)
     }));
-  }, [bond, polRatioSeries, premiumSeries]);
+  }, [bond, polRatioSeries, fairPremiumSeries, mktDeviationSeries]);
 
   const payoutSeries = useMemo(() => {
-    if (!capSeries || !tollSeries || !polRatioSeries || !premiumSeries) {
+    if (!capSeries || !tollSeries) {
       return undefined;
     }
 
@@ -226,7 +250,7 @@ const App = () => {
       sTOKEN: sTOKEN * (1 - tollSeries[i].y),
       y: y * (1 - tollSeries[i].y)
     }));
-  }, [capSeries, tollSeries, polRatioSeries, premiumSeries]);
+  }, [capSeries, tollSeries]);
 
   const roiSeries = useMemo(() => {
     if (isNaN(bond) || !payoutSeries) {
@@ -246,7 +270,7 @@ const App = () => {
 
     return roiSeries.map(({ x, y: roi }) => ({
       x,
-      y: (x !== 0 ? Math.pow(1 + roi, range[range.length - 1] / x) : 0) - 1
+      y: (x !== 0 ? (1 + roi) ** (range[range.length - 1] / x) : 0) - 1
     }));
   }, [roiSeries]);
 
@@ -347,18 +371,34 @@ const App = () => {
                 />
               )}
 
-              <Label sx={{ mt: 3 }}>sTOKEN Premium [%]</Label>
+              <Label sx={{ mt: 3 }}>sTOKEN Fair Premium [%]</Label>
               {useFunctions ? (
                 <Textarea
-                  sx={!premiumSeries ? { bg: "pink" } : {}}
-                  value={fPremiumPctInput}
-                  onChange={e => setFPremiumPctInput(e.target.value)}
+                  sx={!fairPremiumSeries ? { bg: "pink" } : {}}
+                  value={fFairPremiumPctInput}
+                  onChange={e => setFFairPremiumPctInput(e.target.value)}
                 />
               ) : (
                 <Input
                   type="number"
-                  value={premiumPctInput}
-                  onChange={e => setPremiumPctInput(e.target.value)}
+                  min={0}
+                  value={fairPremiumPctInput}
+                  onChange={e => setFairPremiumPctInput(e.target.value)}
+                />
+              )}
+
+              <Label sx={{ mt: 3 }}>sTOKEN Market Deviation [%]</Label>
+              {useFunctions ? (
+                <Textarea
+                  sx={!mktDeviationSeries ? { bg: "pink" } : {}}
+                  value={fMktDeviationPctInput}
+                  onChange={e => setFMktDeviationPctInput(e.target.value)}
+                />
+              ) : (
+                <Input
+                  type="number"
+                  value={mktDeviationPctInput}
+                  onChange={e => setMktDeviationPctInput(e.target.value)}
                 />
               )}
             </Box>
@@ -433,7 +473,7 @@ const App = () => {
                   data: { strokeWidth: 1, stroke: "rgb(144, 164, 174)" },
                   labels: { fontWeight: "bold" }
                 }}
-                labels={[`Max ARR = ${Math.round(maxArr.y * 10000) / 100}%`]}
+                labels={[`Max ARR ≈ ${Math.round(maxArr.y * 10000) / 100}%`]}
                 labelComponent={
                   <VictoryLabel
                     y={rightAxis === "toll" ? 48 : 20} // XXX
