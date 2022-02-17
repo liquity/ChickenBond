@@ -12,7 +12,7 @@ def state_to_row(
 ):
     return {
         "amm_token": chicken.amm.token_A_balance(),
-        "amm_stoken": chicken.amm.token_B_balance(),
+        "amm_coll": chicken.amm.token_B_balance(),
         "coop_token": chicken.coop_token_balance(),
         "pol_token": chicken.pol_token_balance(),
         #"total_coll": ,
@@ -27,10 +27,11 @@ def state_to_row(
         "stoken_apr_twap": tester.get_stoken_apr_twap(chicken, data, iteration),
         "stoken_price": tester.get_stoken_spot_price(chicken),
         "stoken_twap": tester.get_stoken_twap(data, iteration),
-        "pol_ratio_with_amm": tester.get_pol_ratio_with_amm(chicken),
-        "pol_ratio_no_amm": tester.get_pol_ratio_no_amm(chicken),
+        "pol_ratio_with_amm": chicken.get_pol_ratio_with_amm(),
+        "pol_ratio_no_amm": chicken.get_pol_ratio_no_amm(),
         "redemption_price": tester.get_pol_ratio(chicken),
-        "reserve_ratio_with_amm": tester.get_reserve_ratio_with_amm(chicken),
-        "reserve_ratio_no_amm": tester.get_reserve_ratio_no_amm(chicken),
+        "reserve_ratio_with_amm": chicken.get_reserve_ratio_with_amm(),
+        "reserve_ratio_no_amm": chicken.get_reserve_ratio_no_amm(),
         "fair_price": tester.get_fair_price(chicken),
+        "rebond_time": tester.get_rebond_time(chicken),
     }

@@ -14,26 +14,36 @@ def log_system(chicken):
     print(f" - AMM {token.symbol} value:  {amm_value:,.2f}")
     print(f" - {stoken.symbol} supply:    {stoken.total_supply:,.2f}")
     if stoken.total_supply > 0:
-        print(f" - POL ratio     (| no AMM): {(pol_bal + amm_value) / stoken.total_supply:,.2f}   |   {pol_bal / stoken.total_supply:,.2f}")
-        print(f" - Reserve ratio (| no AMM): {(coop_bal + pol_bal + amm_value) / stoken.total_supply:,.2f}   |   {(coop_bal + pol_bal) / stoken.total_supply:,.2f}")
+        print(f" - POL ratio     (| no AMM): {chicken.get_pol_ratio_with_amm():,.2f}   |   {chicken.get_pol_ratio_no_amm():,.2f}")
+        print(f" - Reserve ratio (| no AMM): {chicken.get_reserve_ratio_with_amm():,.2f}   |   {chicken.get_reserve_ratio_no_amm():,.2f}")
+    return
+
+def log_amm_pool(amm, name):
     print(f"")
-    print(f"AMM pool:")
-    print(f"{chicken.amm}")
+    print(f"{name} pool:")
+    print(f"{amm}")
+    return
+
+def log_amm(chicken):
+    log_amm_pool(chicken.amm, "AMM")
     print(f" - AMM APR: {chicken.amm_iteration_apr:.3%}")
-    print(f"")
+    return
+
+def log_stoken_amm(chicken):
+    log_amm_pool(chicken.stoken_amm, "sTOKEN AMM")
     return
 
 def log_chick_balances(chicken, chick):
     token_bal = chicken.token.balance_of(chick.account)
     stoken_bal = chicken.stoken.balance_of(chick.account)
     stoken_value = chicken.stoken.balance_of(chick.account) * chicken.amm.get_token_B_price()
+    print("")
     print(f"User {chick.account}:")
     print(f" - {chicken.token.symbol} balance: {token_bal:,.2f}")
     print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
     print(f" - {chicken.stoken.symbol} balance: {stoken_bal:,.2f}")
     print(f" - {chicken.stoken.symbol} value:   {stoken_value:,.2f}")
     print(f" - Total value: {token_bal + chick.bond_amount + stoken_value:,.2f}")
-    print("")
     return
 
 def log_chicks(chicken, chicks, tokens):
@@ -45,5 +55,8 @@ def log_state(chicken, chicks, log_level=1):
     if log_level == 0:
         return
     log_system(chicken)
+    log_amm(chicken)
+    log_stoken_amm(chicken)
     #log_chicks(chicken, chicks)
+    print("")
     return

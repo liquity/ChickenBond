@@ -3,7 +3,7 @@
 ## Pre-requisites
 
 ```
-pip3 install numpy pandas plotly kaleido
+pip3 install numpy pandas plotly kaleido scipy
 ```
 
 ## Running

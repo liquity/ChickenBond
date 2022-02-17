@@ -11,11 +11,11 @@ from lib.log import *
 from lib.plots import *
 
 def deploy():
-    coll = Token('COLL')
+    coll = Token('ETH')
     lqty = Token('LQTY')
     slqty = Token('sLQTY')
 
-    chicken = Chicken(coll, lqty, slqty, "Coop", "POL", "AMM", AMM_FEE)
+    chicken = Chicken(coll, lqty, slqty, "Coop", "POL", "AMM", AMM_FEE, "STOKEN_AMM", AMM_FEE)
 
     chicks = list(map(lambda chick: User(f"chick_{chick:02}"), range(NUM_CHICKS)))
     # Initial CHICK balance
@@ -24,6 +24,13 @@ def deploy():
 
     borrower = User("borrower")
     #lqty.mint(borrower.account, INITIAL_AMOUNT)
+
+    # Add funds to sLQTY AMM pool:
+    whale = User("whale")
+    whale_amount = NUM_CHICKS * INITIAL_AMOUNT * 100000
+    lqty.mint(whale.account, whale_amount)
+    chicken.stoken_amm.add_liquidity_single_A(whale.account, whale_amount, 1)
+
     return chicken, chicks, borrower
 
 def main(tester):
@@ -64,13 +71,13 @@ def main(tester):
         tester.update_chicken(chicken, chicks, data, iteration)
 
         # Provide and withdraw liqudity to/from AMM
-        tester.adjust_liquidity(chicken, chicks, chicken.amm_average_apr, iteration)
+        #tester.adjust_liquidity(chicken, chicks, chicken.amm_average_apr, iteration)
 
         # If price is low, buy from AMM and stake
-        tester.amm_arbitrage(chicken, chicks, iteration)
+        #tester.amm_arbitrage(chicken, chicks, iteration)
 
         # If price is below redemption price, redeem and buy
-        tester.redemption_arbitrage(chicken, chicks, iteration)
+        #tester.redemption_arbitrage(chicken, chicks, iteration)
 
         log_state(chicken, chicks, LOG_LEVEL)
 
@@ -83,7 +90,7 @@ def main(tester):
         )
         data = data.append(new_row, ignore_index=True)
 
-        if PLOTS_INTERVAL[1] > 0 and iteration > PLOTS_INTERVAL[1]:
+        if PLOTS_INTERVAL[1] > 0 and iteration >= PLOTS_INTERVAL[1]:
             break
 
     plot_interval = PLOTS_INTERVAL[:]
@@ -114,8 +121,6 @@ def main(tester):
     return
 
 if __name__ == "__main__":
-    main(TesterIssuanceBonds())
-    # main(TesterIssuanceBondsAMM_1())
-    main(TesterIssuanceBondsAMM_2())
-    # main(TesterIssuanceBondsAMM_3())
-    main(TesterRebonding())          # Approach 2 + Rebonding
+    main(TesterSimpleToll())
+    main(TesterRebonding10())
+    main(TesterRebondingAll())

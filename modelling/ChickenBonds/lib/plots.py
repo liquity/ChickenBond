@@ -1,5 +1,7 @@
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from lib.constants import *
 from lib.chicken import *
@@ -71,20 +73,9 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
         )
         new_data = new_data.append(
             {
-                "x": "AMM sTOKEN",
+                "x": "AMM ETH",
                 "stacked_x": f"{start_index + d:03}_amm",
-                "amount": data['amm_stoken'][start_index + d * group],
-                "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
-                "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
-                "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
-            },
-            ignore_index=True
-        )
-        new_data = new_data.append(
-            {
-                "x": "AMM sTOKEN (TOKEN value)",
-                "stacked_x": f"{start_index + d:03}_amm",
-                "amount": data['amm_stoken'][start_index + d * group] * data['stoken_price'][start_index + d * group] - data['amm_stoken'][start_index + d * group],
+                "amount": data['amm_coll'][start_index + d * group],
                 "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
                 "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
                 "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
@@ -118,7 +109,8 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
 
     #colors = px.colors.qualitative.Plotly
     # debt: '#BA2D0B'
-    colors = ['#274C77', '#00D995', '#b6134a', '#F3DE8A', '#FBF5DB', '#5DB7DE', '#9dd3eb']
+    # coll value: #BF5DB
+    colors = ['#274C77', '#00D995', '#b6134a', '#F3DE8A', '#5DB7DE', '#9dd3eb']
     fig = px.bar(
         new_data,
         x='stacked_x',
@@ -144,90 +136,83 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
     return
 
 def plot_stoken_price(data, max_value=200, description="", group=1, group_description="Day", show=True, save=False, get_prefixes=lambda:None):
-    #print(data['stoken_price'])
+    # TODO:
+    # "x": start_index + d,
     start_index = data.index[0]
 
-    new_data = pd.DataFrame({
-        "x": [],
-        "price": [],
-    })
+    fair_prices = []
+    redemption_prices = []
+    reserve_ratios = []
+    rebond_times = []
     for d in range(len(data.index) // group):
         # Reserve ratio without AMM
         fair_price = min(
             data['fair_price'][start_index + d * group],
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": fair_price,
-                "var": "Fair Price"
-            },
-            ignore_index=True
-        )
+        fair_prices.append(fair_price)
 
+        """
         # TWAP
         twap_price = data['stoken_twap'][start_index + d * group]
         twap_price = min(
             twap_price,
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": twap_price,
-                "var": "TWAP"
-            },
-            ignore_index=True
-        )
+        """
 
         # Spot
+        """
         spot_price = data['stoken_price'][start_index + d * group]
         spot_price = min(
             spot_price,
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": spot_price,
-                "var": "Spot"
-            },
-            ignore_index=True
-        )
+        """
 
         # Redemption price
         redemption_price = min(
             data['redemption_price'][start_index + d * group],
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": redemption_price,
-                "var": "Redemption Price"
-            },
-            ignore_index=True
-        )
+        redemption_prices.append(redemption_price)
 
         # Reserve ratio
         reserve_ratio = min(
             data['reserve_ratio_no_amm'][start_index + d * group],
             max_value # to avoid “zooming out too much with the initial spike”
         )
-        new_data = new_data.append(
-            {
-                "x": start_index + d,
-                "y": reserve_ratio,
-                "var": "Reserve ratio (no AMM)"
-            },
-            ignore_index=True
-        )
+        reserve_ratios.append(reserve_ratio)
 
-    fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - sTOKEN Price")
+        # Rebond time
+        rebond_times.append(data['rebond_time'][start_index + d * group])
+
+    #fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - sTOKEN Price")
+    fig = make_subplots(specs=[[{"secondary_y": True}]], subplot_titles=[f"{description} - sTOKEN Price"])
+
+    fig.add_trace(
+        go.Scatter(y=fair_prices, name="Fair Price"),
+        secondary_y=False,
+    )
+
+    fig.add_trace(
+        go.Scatter(y=redemption_prices, name="Redemption Price"),
+        secondary_y=False,
+    )
+
+    fig.add_trace(
+        go.Scatter(y=reserve_ratios, name="Reserve Ratio"),
+        secondary_y=False,
+    )
+
+    fig.add_trace(
+        go.Scatter(y=rebond_times, name="Rebond Time"),
+        secondary_y=True,
+    )
 
     fig.update_xaxes(tick0=0, dtick=len(data.index)//group/20, title_text=group_description)
-    fig.update_yaxes(title_text="sTOKEN Price in TOKEN")
+    fig.update_yaxes(title_text="sTOKEN Price in TOKEN", secondary_y=False)
+    fig.update_yaxes(title_text="Rebond time", secondary_y=True)
 
     if show: fig.show()
     maybe_save(fig, save, get_prefixes, "sTOKEN_price")
@@ -463,7 +448,7 @@ def plot_charts(
 ):
     plot_chicken_state(data, description, group, group_description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '1'))
     plot_stoken_price(data, price_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '2'))
-    plot_aprs(data, apr_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '3'))
+    #plot_aprs(data, apr_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '3'))
     #plot_borrow_repay(data, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '5'))
     plot_chicks(data, chicken, chicks, description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '6'))
     #plot_chicks_total_value(chicken, chicks, description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '7'))
