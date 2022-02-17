@@ -5,8 +5,8 @@ YEAR = TIME_UNITS_PER_YEAR              # Days per year
 ITERATIONS = TIME_UNITS_PER_YEAR * 4    # Total iterations steps in days
 
 # ------------ Bootstrap -----------------
-BOOTSTRAP_ITERATION = 20                # Iteration at which first bonders will chicken in to bootstrap the system
-BOOTSTRAP_NUM_BONDS = 10                # Number of bonds for bootstrap
+BOOTSTRAP_ITERATION = 10                # Iteration at which first bonders will chicken in to bootstrap the system
+BOOTSTRAP_NUM_BONDS = 0                # Number of bonds for bootstrap
 
 # ------------ Plots -----------------
 PLOTS_SHOW = True                       # Whether to open browser tabs to show plots
@@ -32,6 +32,7 @@ BOND_AMOUNT = (100, 1000)               # Random number between 100 and 1,000.
 AMM_APR_PERIOD = 10
 AMM_FEE = 0.04 / 100                    # ToDo
 MAX_SLIPPAGE = 0.03                     # ToDo
+AMM_YIELD = 0.02                        # ToDo
 AMM_ARBITRAGE_DIVERGENCE = 0.05         # ToDo
 REDEMPTION_ARBITRAGE_DIVERGENCE = 0.05  # ToDo
 
@@ -43,13 +44,12 @@ SD_NATURAL_RATE = 0.002                 # ToDo
 CHICKEN_IN_GAMMA = (1.5, 0.1)           # Parameters of gamma distribution for random target return (Mean: 1.5 * 0.1)
 CHICKEN_OUT_PROBABILITY = 0.05          # Probability of a user randomly chicken out
 CHICKEN_UP_PROBABILITY = 0.2            # Probability of a user over in profit range to chicken-up
-CHICKEN_IN_AMM_SHARE = 0.2              # ToDo
 
 # -------------- Price Parameters ----------------
 # Initial price of sLQTY quoted in LQTY, to make sure bootstrap is profitable
-INITIAL_PRICE = 1.2 / (BOND_STOKEN_ISSUANCE_RATE * BOOTSTRAP_ITERATION * (1-CHICKEN_IN_AMM_SHARE))
+INITIAL_PRICE = 1.2 * (BOOTSTRAP_ITERATION + 1) / BOOTSTRAP_ITERATION
 
-PRICE_PREMIUM = "perpetuity"            # The estimator of the price premium ("normal_dist","perpetuity","coop_balance")
+PRICE_PREMIUM = "coop_balance"            # The estimator of the price premium ("normal_dist","perpetuity","coop_balance")
 PREMIUM_MU = 0.1                        # Expected value of the normal distribution as a fraction of POL token balance
 PREMIUM_SIGMA = 0.1                     # Deviation of the normal distribution as a fraction of the POL token balance
 
