@@ -6,7 +6,7 @@ import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /* TODO: 
 - Decide whether we need extra functionality e.g. for OpenSea / other markets, e.g. baseTokenURI
-- Decide whether we need an on-chain function for listing all bonds owned by the user
+- Decide whether we need an on-chain function for listing all bonds owned by the user, or whether events are sufficient
 */
 contract BondNFT is ERC721, Ownable {
     using Counters for Counters.Counter;

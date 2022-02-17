@@ -151,6 +151,33 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(balanceBefore - 10e18, balanceAfter);
     }
 
+    function testCreateBondRecordsBondData() public {
+        // A creates bond #1
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), 10e18);
+        chickenBondManager.createBond(10e18);
+        vm.stopPrank();
+
+        // Confirm bond data for bond #2 is 0
+        (uint B_bondedLUSD, uint B_bondStartTime) = chickenBondManager.getBondData(2);
+        assertEq(B_bondedLUSD, 0);
+        assertEq(B_bondStartTime, 0);
+
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), 10e18);
+        chickenBondManager.createBond(10e18);
+        vm.stopPrank();
+
+        // Check bonded amount and bond start time are now recorded for B's bond
+        (B_bondedLUSD, B_bondStartTime) = chickenBondManager.getBondData(2);
+        assertEq(B_bondedLUSD, 10e18);
+        assertEq(B_bondStartTime, currentTime);
+    }
+
     function testFirstCreateBondIncreasesTheBondNFTTokenSupply() public {
         // Get NFT token supply before
         uint tokenSupplyBefore = bondNFT.getCurrentTokenSupply();
@@ -206,7 +233,7 @@ contract ChickenBondManagerTest is DSTest {
      function testCreateBondMintsBondNFTWithCorrectIDToBonder() public {
         // Expect revert when checking the owner of id #2, since it hasnt been minted
         vm.expectRevert("ERC721: owner query for nonexistent token");
-        address ownerOfID1Before = bondNFT.ownerOf(2);
+        address ownerOfID2Before = bondNFT.ownerOf(2);
        
         // A creates bond
         vm.startPrank(A);
@@ -216,8 +243,8 @@ contract ChickenBondManagerTest is DSTest {
 
         // Check tokenSupply == 1 and A has NFT id #1
         assertEq(bondNFT.getCurrentTokenSupply(),  1);
-        address ownerOfID0 = bondNFT.ownerOf(1);
-        assertEq(ownerOfID0, A);
+        address ownerOfID1 = bondNFT.ownerOf(1);
+        assertEq(ownerOfID1, A);
         
         // B creates bond
         vm.startPrank(B);
@@ -226,8 +253,8 @@ contract ChickenBondManagerTest is DSTest {
         vm.stopPrank();
 
         // Check owner of NFT id #2 is B
-        address ownerOfID1After = bondNFT.ownerOf(2);
-        assertEq(ownerOfID1After, B);
+        address ownerOfID2After = bondNFT.ownerOf(2);
+        assertEq(ownerOfID2After, B);
     }
 
     function testCreateBondTransfersLUSDToYearnVault() public {
@@ -243,5 +270,192 @@ contract ChickenBondManagerTest is DSTest {
         uint256 yearnVaultBalanceAfter = lusdToken.balanceOf(address(yearnLUSDVault));
 
         assertEq(yearnVaultBalanceAfter, yearnVaultBalanceBefore + 10e18);
+    }
+
+    // --- chickenOut tests ---
+
+    function testChickenOutReducesTotalPendingLUSD() public {
+        // A, B create bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // Get B's bondID
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // get totalPendingLUSD before
+        uint totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
+
+        // B chickens out
+        vm.startPrank(B);
+        chickenBondManager.chickenOut(B_bondID);
+        vm.stopPrank();
+
+       // check totalPendingLUSD decreases by correct amount
+        uint totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
+        assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore - bondAmount);
+    }
+    
+    function testChickenOutDeletesBondData() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // Confirm B has correct bond data
+        (uint B_bondedLUSD, uint B_bondStartTime) = chickenBondManager.getBondData(B_bondID);
+        assertEq(B_bondedLUSD, bondAmount);
+        assertEq(B_bondStartTime, currentTime);
+
+        // B chickens out
+        vm.startPrank(B);
+        chickenBondManager.chickenOut(B_bondID);
+        vm.stopPrank();
+
+        // Confirm B's bond data is now zero'd
+        (B_bondedLUSD, B_bondStartTime) = chickenBondManager.getBondData(B_bondID);
+        assertEq(B_bondedLUSD, 0);
+        assertEq(B_bondStartTime, 0);
+    }
+
+    function testChickenOutTransfersLUSDToBonder() public {
+        // A, B create bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // Get B lusd balance before
+        uint B_LUSDBalanceBefore = lusdToken.balanceOf(B);
+
+        // B chickens out
+        vm.startPrank(B);
+        chickenBondManager.chickenOut(B_bondID);
+        vm.stopPrank();
+
+        uint B_LUSDBalanceAfter = lusdToken.balanceOf(B);
+        assertEq(B_LUSDBalanceAfter, B_LUSDBalanceBefore + bondAmount);
+    }
+
+    function testChickenOutReducesBondNFTTokenCountByOne() public {
+        // A, B create bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // Since B was the last bonder, his bond ID is also the total current supply
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+        uint nftTokenSupplyBefore = bondNFT.getCurrentTokenSupply();
+
+        // B chickens out
+        vm.startPrank(B);
+        chickenBondManager.chickenOut(B_bondID);
+        vm.stopPrank();
+
+        uint nftTokenSupplyAfter = bondNFT.getCurrentTokenSupply();
+
+        // Check NFT token supply has decreased by 1
+        assertEq(nftTokenSupplyAfter, nftTokenSupplyBefore - 1);
+    }
+
+    function testChickenOutRemovesOwnerOfBondNFT() public {
+        // A, B create bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // Confirm B owns bond #2
+        assertEq(B_bondID, 2);
+        address ownerOfBondID2 = bondNFT.ownerOf(B_bondID);
+        assertEq(ownerOfBondID2, B);
+
+        // B chickens out
+        vm.startPrank(B);
+        chickenBondManager.chickenOut(B_bondID);
+        vm.stopPrank();
+
+        // Expect ownerOF bond ID #2 call to revert due to non-existent owner
+        vm.expectRevert("ERC721: owner query for nonexistent token");
+        ownerOfBondID2 = bondNFT.ownerOf(B_bondID);
+    }
+
+    function testChickenOutDecreasesBonderNFTBalance() public {
+        // A, B create bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // Confirm B's NFT balance is 1
+        uint B_NFTBalanceBefore = bondNFT.balanceOf(B);
+        assertEq(B_NFTBalanceBefore, 1);
+
+        // B chickens out
+        vm.startPrank(B);
+        chickenBondManager.chickenOut(B_bondID);
+        vm.stopPrank();
+
+        uint B_NFTBalanceAfter = bondNFT.balanceOf(B);
+
+        // Check B's NFT balance has decreased by 1
+        assertEq(B_NFTBalanceAfter, B_NFTBalanceBefore - 1);
     }
 }

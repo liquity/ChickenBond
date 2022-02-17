@@ -22,7 +22,7 @@ contract ChickenBondManager is Ownable {
     // --- Data structures ---
 
      struct BondData {
-        uint256 LUSDAmount;
+        uint256 lusdAmount;
         uint256 startTime;
     }
 
@@ -32,6 +32,7 @@ contract ChickenBondManager is Ownable {
     uint256 constant MAX_UINT256 = type(uint256).max;
 
     // --- Initializer ---
+
     // TODO: make constructor
     function initialize(address _bondNFTAddress, address _lusdTokenAddress, address _yearnLUSDVault) external onlyOwner {
         bondNFT = IBondNFT(_bondNFTAddress);
@@ -47,14 +48,14 @@ contract ChickenBondManager is Ownable {
 
     function createBond(uint256 _lusdAmount) external {
         // Mint the bond NFT to the caller and get the bond ID
-        uint256 tokenID = bondNFT.mint(msg.sender);
+        uint256 bondID = bondNFT.mint(msg.sender);
 
         //Record the user’s bond data: bond_amount and start_time
         BondData memory bondData;
-        bondData.LUSDAmount = _lusdAmount;
+        bondData.lusdAmount = _lusdAmount;
         bondData.startTime = block.timestamp;
 
-        idToBondData[tokenID] = bondData;
+        idToBondData[bondID] = bondData;
 
         totalPendingLUSD += _lusdAmount;
 
@@ -63,4 +64,24 @@ contract ChickenBondManager is Ownable {
         // Deposit the LUSD to the Yearn LUSD vault
         yearnLUSDVault.deposit(_lusdAmount);
     } 
+
+    // Chicken out
+    function chickenOut(uint _bondID) external {
+        _requireCallerOwnsBond(_bondID);
+
+        uint bondedLUSD = idToBondData[_bondID].lusdAmount;
+        
+        totalPendingLUSD -= bondedLUSD;
+        delete idToBondData[_bondID];
+
+        yearnLUSDVault.withdraw(bondedLUSD);
+
+        // Send bonded LUSD back to caller and burn their bond NFT
+        lusdToken.transfer(msg.sender, bondedLUSD);
+        bondNFT.burn(_bondID);
+    }
+
+    function _requireCallerOwnsBond(uint256 _bondID) internal {
+        require(msg.sender == bondNFT.ownerOf(_bondID), "CBM: Caller must own the bond");
+    }
 }

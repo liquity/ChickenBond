@@ -10,21 +10,21 @@ contract MockYearnLUSDVault is Ownable {
     ILUSDToken public lusdToken;
    
     mapping (address => uint256) balances;
+    uint public totalLUSDBalance;
 
     function setAddresses(address _lusdTokenAddress) external onlyOwner {
         lusdToken = ILUSDToken(_lusdTokenAddress);
     }
 
     function deposit (uint256 _lusdAmount) external {
-        console.log("here 1");
         lusdToken.transferFrom(msg.sender, address(this), _lusdAmount);
-        console.log("here 2");
         balances[msg.sender] += _lusdAmount;
-        console.log("here 3");
+        totalLUSDBalance += _lusdAmount;
     }
 
     function withdraw (uint256 _lusdAmount) external {
         lusdToken.transfer(msg.sender, _lusdAmount);
         balances[msg.sender] -= _lusdAmount;
+        totalLUSDBalance -= _lusdAmount;
     }
 }
