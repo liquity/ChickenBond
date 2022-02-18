@@ -3,7 +3,7 @@
 pragma solidity 0.8.10;
 
 import "../console.sol";
-import "../Interfaces/IERC20.sol";
+import "../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 
 // MockLUSDToken is a "light" version of the mainnet deployed LUSDToken, with only basic functionality for testing.
@@ -112,13 +112,9 @@ contract MockLUSDToken is IERC20 {
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) external  returns (bool) {
-        console.log("TFhere1");
         _requireValidRecipient(recipient);
-        console.log("TFhere2");
         _transfer(sender, recipient, amount);
-        console.log("TFhere3");
         _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
-        console.log("TFhere4");
         return true;
     }
 

@@ -22,7 +22,7 @@ contract BondNFT is ERC721, Ownable {
     }
 
     function mint(address _bonder) external returns (uint256) {
-        requireCallerIsChickenBondsManager(msg.sender);
+        requireCallerIsChickenBondsManager();
         _tokenSupply.increment();
 
         uint256 tokenID = _tokenSupply.current();
@@ -32,7 +32,7 @@ contract BondNFT is ERC721, Ownable {
     } 
 
     function burn(uint256 _tokenID) external {
-        requireCallerIsChickenBondsManager(msg.sender);
+        requireCallerIsChickenBondsManager();
         _tokenSupply.decrement();
 
         _burn(_tokenID);
@@ -42,7 +42,7 @@ contract BondNFT is ERC721, Ownable {
         return _tokenSupply.current();
     }
 
-    function requireCallerIsChickenBondsManager(address _caller) internal view {
-        require(_caller == chickenBondManagerAddress, "BondNFT: Caller must be ChickenBondManager");
+    function requireCallerIsChickenBondsManager() internal view {
+        require(msg.sender == chickenBondManagerAddress, "BondNFT: Caller must be ChickenBondManager");
     }
 }

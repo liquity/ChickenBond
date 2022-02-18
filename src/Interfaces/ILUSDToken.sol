@@ -2,7 +2,7 @@
 
 // pragma solidity 0.8.10;
 
-import "./IERC20.sol";
+import "../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 
 interface ILUSDToken is IERC20 { 
     
@@ -11,7 +11,6 @@ interface ILUSDToken is IERC20 {
     event TroveManagerAddressChanged(address _troveManagerAddress);
     event StabilityPoolAddressChanged(address _newStabilityPoolAddress);
     event BorrowerOperationsAddressChanged(address _newBorrowerOperationsAddress);
-
     event LUSDTokenBalanceUpdated(address _user, uint _amount);
 
     // --- Functions ---

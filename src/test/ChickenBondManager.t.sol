@@ -4,10 +4,11 @@ pragma solidity 0.8.10;
 import "ds-test/test.sol";
 import "../ChickenBondManager.sol";
 import "../BondNFT.sol"; 
-// import "../Interfaces/ILUSDToken.sol";
+import "../SLUSDToken.sol";
 import "./TestContracts/LUSDTokenTester.sol";
 import "./TestContracts/Accounts.sol";
-import "../ExternalContracts/MockYearnLUSDVault.sol";
+import "../ExternalContracts/MockYearnVault.sol";
+import  "../ExternalContracts/MockCurvePool.sol";
 import "../console.sol";
 
 interface Vm {
@@ -28,8 +29,11 @@ contract ChickenBondManagerTest is DSTest {
 
     ChickenBondManager chickenBondManager;
     BondNFT bondNFT;
+    SLUSDToken sLUSDToken;
     LUSDTokenTester lusdToken;
-    MockYearnLUSDVault yearnLUSDVault;
+    MockCurvePool curvePool;
+    MockYearnVault yearnLUSDVault;
+    MockYearnVault yearnCurveVault;
 
     Vm vm = Vm(CHEATCODE_ADDRESS);
 
@@ -39,6 +43,9 @@ contract ChickenBondManagerTest is DSTest {
     address public C;
     
     function setUp() public {
+        // Start tests at a non-zero timestamp
+        vm.warp(block.timestamp + 600);
+
         accounts = new Accounts();
         createAccounts();
 
@@ -55,16 +62,36 @@ contract ChickenBondManagerTest is DSTest {
         assertTrue(lusdToken.balanceOf(A) == 100e18);
         assertTrue(lusdToken.balanceOf(B) == 100e18);
         assertTrue(lusdToken.balanceOf(C) == 100e18);
-    
-        yearnLUSDVault = new MockYearnLUSDVault();
+
+        // Deploy external mock contracts
+        curvePool = new MockCurvePool("LUSD-3CRV Pool", "LUSD3CRV-f");
+        curvePool.setAddresses(address(lusdToken));
+
+        yearnLUSDVault = new MockYearnVault("LUSD yVault", "yvLUSD");
         yearnLUSDVault.setAddresses(address(lusdToken));
 
+        yearnCurveVault = new MockYearnVault("Curve LUSD Pool yVault", "yvCurve-LUSD");
+        yearnCurveVault.setAddresses(address(curvePool));
+
+
+        // Deploy core ChickenBonds system
         chickenBondManager = new ChickenBondManager();
+        sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract 
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
-        chickenBondManager.initialize(address(bondNFT), address(lusdToken), address(yearnLUSDVault));
+       
+        chickenBondManager.initialize(
+            address(bondNFT),
+            address(lusdToken), 
+            address(curvePool),
+            address(yearnLUSDVault),
+            address(yearnCurveVault),
+            address(sLUSDToken)
+        );
+
         bondNFT.setAddresses(address(chickenBondManager));
+        sLUSDToken.setAddresses(address(chickenBondManager));
     }
 
     function createAccounts() public {
@@ -274,6 +301,10 @@ contract ChickenBondManagerTest is DSTest {
 
     // --- chickenOut tests ---
 
+    function testFailOutChickenCallerIsNotBonder() public {
+        //TODO 
+    }
+
     function testChickenOutReducesTotalPendingLUSD() public {
         // A, B create bond
         uint bondAmount = 10e18;
@@ -458,4 +489,157 @@ contract ChickenBondManagerTest is DSTest {
         // Check B's NFT balance has decreased by 1
         assertEq(B_NFTBalanceAfter, B_NFTBalanceBefore - 1);
     }
+
+    // --- calcsLUSD Accrual tests ---
+
+    function testCalcAccruedSLUSDReturns0for0StartTime() public {}
+
+    // Use Foundry fuzz test here!
+    function testCalcAccruedSLUSDIsMonotonicIncreasingWithTime(uint _timeSinceBonded) public {}
+
+    function testCalcSLUSDAccrualIncreasesWithTimeForABonder() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+
+        uint A_accruedSLUSDBefore = chickenBondManager.calcAccruedSLUSD(A_bondID);
+        assertEq(A_accruedSLUSDBefore, 0);
+
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // 10 minutes passes 
+        vm.warp(block.timestamp + 600);
+
+        uint A_accruedSLUSDAfter = chickenBondManager.calcAccruedSLUSD(A_bondID);
+        assertTrue(A_accruedSLUSDAfter > A_accruedSLUSDBefore);
+    }
+
+      function testCalcSLUSDAccrualIReturns0AfterBonderChickenOut() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // A chickens out
+        chickenBondManager.chickenOut(A_bondID);
+
+        // Check A's accrued SLUSD is 0
+        uint A_accruedSLUSDBefore = chickenBondManager.calcAccruedSLUSD(A_bondID);
+        assertEq(A_accruedSLUSDBefore, 0);
+    }
+
+    function testCalcSLUSDAccrualReturns0ForNonBonder() public {
+          // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint unusedBondID = bondNFT.getCurrentTokenSupply() + 1;
+
+        // 10 minutes passes 
+        vm.warp(block.timestamp + 600);
+
+        // Check accrued sLUSD for a nonexistent bond is 0
+        uint accruedSLUSD = chickenBondManager.calcAccruedSLUSD(unusedBondID);
+        assertEq(accruedSLUSD, 0);
+    }
+
+    // --- chickenIn tests ---
+
+    function testFailChickenInCallerIsNotBonder() public {}
+    function testFailChickenInBackingRatioExceedsCap() public {}
+
+    function testChickenInDeletesBondData() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // Confirm B has correct bond data
+        (uint B_bondedLUSD, uint B_bondStartTime) = chickenBondManager.getBondData(B_bondID);
+        assertEq(B_bondedLUSD, bondAmount);
+        assertEq(B_bondStartTime, currentTime);
+
+        // 10 minutes passes 
+        vm.warp(block.timestamp + 600);
+
+        // B chickens in
+        vm.startPrank(B);
+        chickenBondManager.chickenIn(B_bondID);
+        vm.stopPrank();
+
+        // Confirm B's bond data is now zero'd
+        (B_bondedLUSD, B_bondStartTime) = chickenBondManager.getBondData(B_bondID);
+        assertEq(B_bondedLUSD, 0);
+        assertEq(B_bondStartTime, 0);
+    }
+
+    function testChickenInTransfersAccruedSLUSDToBonder() public {
+         // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // Get B sLUSD balance before
+        uint B_sLUSDBalanceBefore = sLUSDToken.balanceOf(B);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Get B's accrued sLUSD and confirm it is non-zero
+        uint B_accruedSLUSD = chickenBondManager.calcAccruedSLUSD(B_bondID);
+        
+        // B chickens in
+        chickenBondManager.chickenIn(B_bondID);
+
+        // Check B's sLUSD balance has increased by correct amount
+        uint B_sLUSDBalanceAfter = sLUSDToken.balanceOf(B);
+        assertEq(B_sLUSDBalanceAfter, B_sLUSDBalanceBefore + B_accruedSLUSD);
+    }
+
+    function testChickenInReducesBondNFTTokenCountByOne() public {}
+    function testChickenInDecreasesBonderNFTBalance() public {}
+    function testChickenInRemovesOwnerOfBondNFT() public {}
 }
