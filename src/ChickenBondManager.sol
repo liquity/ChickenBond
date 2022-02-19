@@ -10,7 +10,6 @@ import "./Interfaces/IMockYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
 
 contract ChickenBondManager is Ownable {
-
     // ChickenBonds contracts
     IBondNFT public bondNFT;
 
@@ -35,10 +34,9 @@ contract ChickenBondManager is Ownable {
     uint256 constant MAX_UINT256 = type(uint256).max;
     uint256 constant SECONDS_IN_ONE_HOUR = 3600;
 
-    // --- Initializer ---
+    // --- constructor ---
 
-    // TODO: make constructor
-    function initialize
+   constructor
     (
         address _bondNFTAddress, 
         address _lusdTokenAddress, 
@@ -47,7 +45,7 @@ contract ChickenBondManager is Ownable {
         address _yearnCurveVaultAddress,
         address _sLUSDTokenAddress
     ) 
-        external onlyOwner 
+        public onlyOwner 
     {
         bondNFT = IBondNFT(_bondNFTAddress);
         lusdToken = ILUSDToken(_lusdTokenAddress);
@@ -57,9 +55,10 @@ contract ChickenBondManager is Ownable {
         yearnCurveVault = IMockYearnVault(_yearnCurveVaultAddress);
 
         
-        // TODO: Decide between one-time infinite LUSD approval to Yearn vaults (lower gas cost per user tx, less secure) 
+        // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure) 
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
         lusdToken.approve(address(yearnLUSDVault), MAX_UINT256);
+        lusdToken.approve(address(curvePool), MAX_UINT256);
 
         renounceOwnership();
     }
@@ -120,13 +119,45 @@ contract ChickenBondManager is Ownable {
         bondNFT.burn(_bondID);
     }
 
+    function redeem(uint _sLUSDToRedeem) external {
+        /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
+        Current approach leaves redemption fees in the acquired bucket. */
+        uint fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
+        
+        // Calculate redemption fraction to withdraw, given that we leave the fee inside the system
+        uint fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - calcRedemptionFeePercentage()) / 1e18;
 
+        uint yTokensToWithdrawFromLUSDVault = yearnLUSDVault.balanceOf(address(this)) * fractionOfAcquiredLUSDToWithdraw / 1e18;
+        uint yTokensToWithdrawFromCurveVault = yearnCurveVault.balanceOf(address(this)) * fractionOfAcquiredLUSDToWithdraw / 1e18;
 
+        // The LUSD and LUSD3CRV deltas from SP/Curve withdrawals are the amounts to send to the redeemer
+        uint lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        uint LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
+
+        yearnLUSDVault.withdraw(yTokensToWithdrawFromLUSDVault); // obtain LUSD from Yearn
+        yearnCurveVault.withdraw(yTokensToWithdrawFromCurveVault); // obtain LUSD3CRV from Yearn
+
+        uint LUSD3CRVDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
+        curvePool.remove_liquidity(LUSD3CRVDelta); // obtain LUSD from Curve
+
+        uint lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+
+        // Burn the redeemed sLUSD
+        sLUSDToken.burn(msg.sender, _sLUSDToRedeem);
+
+        // Send the LUSD to the redeemer
+        lusdToken.transfer(msg.sender, lusdBalanceDelta);
+    }
+
+    // TODO: Determine the basis for the redemption fee formula. 5% constant fee is a placeholder.
+    function calcRedemptionFeePercentage() public pure returns(uint256) {
+        return 5e16;
+    }
 
     // --- Helper functions ---
 
     // External getter for calculating accrued LUSD based on bond ID
-    function calcAccruedSLUSD(uint _bondID) external view returns (uint256) {
+    function calcAccruedSLUSD(uint _bondID) external view returns(uint256) {
         BondData memory bond = idToBondData[_bondID];
         return _calcAccruedSLUSD(bond);
     }
@@ -183,7 +214,7 @@ contract ChickenBondManager is Ownable {
     }
 
     function calcBondCap(uint _bondedAmount) public view returns (uint256) {
-        // TODO: potentially refactor - i.e. have a (1 / backingRatio) function - for more precision
+        // TODO: potentially refactor this -  i.e. have a (1 / backingRatio) function for more precision
         return _bondedAmount * 1e18 / calcSystemBackingRatio();
     }
 
@@ -194,8 +225,7 @@ contract ChickenBondManager is Ownable {
     }
 
     function _requireCapGreaterThanAccruedSLUSD(uint256 _accruedSLUSD, uint _bondedAmount) internal view {
-        //TODO: calc correct cap?
-        uint sLUSDCap =  calcBondCap(_bondedAmount);
+        uint sLUSDCap = calcBondCap(_bondedAmount);
         require(sLUSDCap >= _accruedSLUSD, "CBM: sLUSD cap must be greater than the accrued sLUSD");
     }
 }

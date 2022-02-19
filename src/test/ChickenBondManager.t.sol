@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "ds-test/test.sol";
 import "../ChickenBondManager.sol";
 import "../BondNFT.sol"; 
-import "../SLUSDToken.sol";
+import "./TestContracts/SLUSDTokenTester.sol";
 import "./TestContracts/LUSDTokenTester.sol";
 import "./TestContracts/Accounts.sol";
 import "../ExternalContracts/MockYearnVault.sol";
@@ -26,7 +26,6 @@ address constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
 
 contract ChickenBondManagerTest is DSTest {
     Accounts accounts;
-
     ChickenBondManager chickenBondManager;
     BondNFT bondNFT;
     SLUSDToken sLUSDToken;
@@ -73,15 +72,13 @@ contract ChickenBondManagerTest is DSTest {
         yearnCurveVault = new MockYearnVault("Curve LUSD Pool yVault", "yvCurve-LUSD");
         yearnCurveVault.setAddresses(address(curvePool));
 
-
         // Deploy core ChickenBonds system
-        chickenBondManager = new ChickenBondManager();
-        sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
+        sLUSDToken = new SLUSDTokenTester("sLUSDToken", "SLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract 
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
        
-        chickenBondManager.initialize(
+        chickenBondManager = new ChickenBondManager(
             address(bondNFT),
             address(lusdToken), 
             address(curvePool),
@@ -601,7 +598,7 @@ contract ChickenBondManagerTest is DSTest {
     }
 
     function testChickenInTransfersAccruedSLUSDToBonder() public {
-         // A creates bond
+        // A creates bond
         uint bondAmount = 10e18;
 
         vm.startPrank(A);
@@ -638,7 +635,59 @@ contract ChickenBondManagerTest is DSTest {
 
     // function testFailChickenInCallerIsNotBonder() public {}
     // function testFailChickenInBackingRatioExceedsCap() public {}
+    function testChickenInIncreasesTotalAcquiredLUSD() public {}
     function testChickenInReducesBondNFTTokenCountByOne() public {}
     function testChickenInDecreasesBonderNFTBalance() public {}
     function testChickenInRemovesOwnerOfBondNFT() public {}
+
+    // --- redemption tests ---
+
+    // function testFailRedeemWhenCallerHasInsufficientSLUSD() public {}
+    // function testFailRedeemWhenPOLisZero() public {}
+
+    function testDecreasesCallersSLUSDBalance() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Confirm A's sLUSD balance is zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance == 0);
+
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's sLUSD balance is non-zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        // B redeems some sLUSD
+        sLUSDToRedeem = sLUSDBal / 2;
+        vm.startPrank(B);
+        chickenBondManager.redeem(sLUSDToRedeem);
+
+        // Check B's sLUSD balance has decreased
+        uint B_sLUSDBalanceAfter = sLUSDToken.balanceOf(B);
+        assertTrue(B_sLUSDBalanceAfter < sLUSDBalance);
+        asserTrue(B_sLUSDBalanceAfter > 0);
+    }
+
+    function testDecreasesTotalSLUSDSupply() public {}
+    function testDecreasesTotalAcquiredLUSD() public {}
+    function testIncreasesCallersLUSDBalance() public {}
 }

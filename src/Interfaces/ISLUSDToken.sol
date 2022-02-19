@@ -5,4 +5,6 @@ import "../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 
 interface ISLUSDToken is IERC20 {
     function mint(address _to, uint256 _sLUSDAmount) external;
+
+    function burn(address _from, uint256 _sLUSDAmount) external;
 }

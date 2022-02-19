@@ -18,8 +18,12 @@ contract SLUSDToken is ERC20, Ownable {
 
     function mint(address _to, uint256 _sLUSDAmount) external {
         _requireCallerIsChickenBondsManager();
-
         _mint(_to, _sLUSDAmount);
+    }
+
+    function burn(address _from, uint256 _sLUSDAmount) external {
+        _requireCallerIsChickenBondsManager();
+        _burn(_from, _sLUSDAmount);
     }
 
     function _requireCallerIsChickenBondsManager() internal view {
