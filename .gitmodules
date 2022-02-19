@@ -1,6 +1,6 @@
 [submodule "lib/ds-test"]
-	path = lib/ds-test
+	path = LUSDChickenBonds/lib/ds-test
 	url = https://github.com/dapphub/ds-test
 [submodule "lib/openzeppelin-contracts"]
-	path = lib/openzeppelin-contracts
+	path = LUSDChickenBonds/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
