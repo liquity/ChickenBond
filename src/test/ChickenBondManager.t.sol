@@ -301,10 +301,6 @@ contract ChickenBondManagerTest is DSTest {
 
     // --- chickenOut tests ---
 
-    function testFailOutChickenCallerIsNotBonder() public {
-        //TODO 
-    }
-
     function testChickenOutReducesTotalPendingLUSD() public {
         // A, B create bond
         uint bondAmount = 10e18;
@@ -490,6 +486,10 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(B_NFTBalanceAfter, B_NFTBalanceBefore - 1);
     }
 
+    //  function testFailOutChickenCallerIsNotBonder() public {
+    //     //TODO 
+    // }
+
     // --- calcsLUSD Accrual tests ---
 
     function testCalcAccruedSLUSDReturns0for0StartTime() public {}
@@ -560,9 +560,6 @@ contract ChickenBondManagerTest is DSTest {
     }
 
     // --- chickenIn tests ---
-
-    function testFailChickenInCallerIsNotBonder() public {}
-    function testFailChickenInBackingRatioExceedsCap() public {}
 
     function testChickenInDeletesBondData() public {
         // A creates bond
@@ -639,6 +636,8 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(B_sLUSDBalanceAfter, B_sLUSDBalanceBefore + B_accruedSLUSD);
     }
 
+    // function testFailChickenInCallerIsNotBonder() public {}
+    // function testFailChickenInBackingRatioExceedsCap() public {}
     function testChickenInReducesBondNFTTokenCountByOne() public {}
     function testChickenInDecreasesBonderNFTBalance() public {}
     function testChickenInRemovesOwnerOfBondNFT() public {}

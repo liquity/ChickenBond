@@ -64,6 +64,8 @@ contract ChickenBondManager is Ownable {
         renounceOwnership();
     }
 
+    // --- User-facing functions ---
+
     function createBond(uint256 _lusdAmount) external {
         // Mint the bond NFT to the caller and get the bond ID
         uint256 bondID = bondNFT.mint(msg.sender);
@@ -95,7 +97,8 @@ contract ChickenBondManager is Ownable {
         totalPendingLUSD -= bondedLUSD;
         delete idToBondData[_bondID];
 
-        yearnLUSDVault.withdraw(bondedLUSD);
+        uint yTokensToBurn = yearnLUSDVault.calcYTokenToToken(bondedLUSD);
+        yearnLUSDVault.withdraw(yTokensToBurn);
 
         // Send bonded LUSD back to caller and burn their bond NFT
         lusdToken.transfer(msg.sender, bondedLUSD);
@@ -116,6 +119,11 @@ contract ChickenBondManager is Ownable {
         sLUSDToken.mint(msg.sender, accruedLUSD);
         bondNFT.burn(_bondID);
     }
+
+
+
+
+    // --- Helper functions ---
 
     // External getter for calculating accrued LUSD based on bond ID
     function calcAccruedSLUSD(uint _bondID) external view returns (uint256) {
@@ -160,28 +168,34 @@ contract ChickenBondManager is Ownable {
         return lusdInYearn + lusdInCurve - totalPendingLUSD;
     }
 
-   
-    function calcBackingRatio() public view returns (uint256) {
-       uint totalSLUSDSupply = sLUSDToken.totalSupply();
+    function calcSystemBackingRatio() public view returns (uint256) {
+        uint totalSLUSDSupply = sLUSDToken.totalSupply();
+        uint totalAcquiredLUSD = getTotalAcquiredLUSD();
 
-        /* TODO: Determine how to define the backing ratio when there is 0 sLUSD, i.e. before the first chickenIn.
-        * For now, return a backing ratio of 1.
+        /* TODO: Determine how to define the backing ratio when there is 0 sLUSD and 0 totalAcquiredLUSD,
+        * i.e. before the first chickenIn. For now, return a backing ratio of 1. Note: Both quantities would be 0
+        * also when the sLUSD supply is fully redeemed.
         */
-        if (totalSLUSDSupply == 0) {return 1e18;}
+        if (totalSLUSDSupply == 0  && totalAcquiredLUSD == 0) {return 1e18;}
+        if (totalSLUSDSupply == 0) {return MAX_UINT256;}
 
-        return getTotalAcquiredLUSD() * 1e18 / totalSLUSDSupply;
+        return  totalAcquiredLUSD * 1e18 / totalSLUSDSupply;
     }
+
+    function calcBondCap(uint _bondedAmount) public view returns (uint256) {
+        // TODO: potentially refactor - i.e. have a (1 / backingRatio) function - for more precision
+        return _bondedAmount * 1e18 / calcSystemBackingRatio();
+    }
+
+    // --- 'require' functions
 
     function _requireCallerOwnsBond(uint256 _bondID) internal view {
         require(msg.sender == bondNFT.ownerOf(_bondID), "CBM: Caller must own the bond");
     }
 
     function _requireCapGreaterThanAccruedSLUSD(uint256 _accruedSLUSD, uint _bondedAmount) internal view {
-         uint backingRatio = calcBackingRatio();
-
         //TODO: calc correct cap?
-        uint sLUSDCap = backingRatio * _bondedAmount / 1e18;
-
+        uint sLUSDCap =  calcBondCap(_bondedAmount);
         require(sLUSDCap >= _accruedSLUSD, "CBM: sLUSD cap must be greater than the accrued sLUSD");
     }
 }
