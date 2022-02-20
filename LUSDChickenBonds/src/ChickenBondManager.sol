@@ -187,7 +187,7 @@ contract ChickenBondManager is Ownable {
     *
     *
     * In practice, the total acquired LUSD calculation will depend on the specifics of how Yearn vaults calculate 
-    their balances, and whether we implement a toll on chicken-ins (and therefore permanent DEX liquidity) */
+    their balances and incorporate the yield, and whether we implement a toll on chicken-ins (and therefore divert some permanent DEX liquidity) */
     function getTotalAcquiredLUSD() public view returns (uint256) {
         uint yTokenBalanceLUSD = yearnLUSDVault.balanceOf(address(this));
         uint lusdInYearn = yearnLUSDVault.calcYTokenToToken(yTokenBalanceLUSD);

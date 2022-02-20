@@ -645,7 +645,7 @@ contract ChickenBondManagerTest is DSTest {
     // function testFailRedeemWhenCallerHasInsufficientSLUSD() public {}
     // function testFailRedeemWhenPOLisZero() public {}
 
-    function testDecreasesCallersSLUSDBalance() public {
+    function testRedeemDecreasesCallersSLUSDBalance() public {
         // A creates bond
         uint bondAmount = 10e18;
 
@@ -688,7 +688,140 @@ contract ChickenBondManagerTest is DSTest {
         assertTrue(B_sLUSDBalanceAfter > 0);
     }
 
-    function testDecreasesTotalSLUSDSupply() public {}
-    function testDecreasesTotalAcquiredLUSD() public {}
-    function testIncreasesCallersLUSDBalance() public {}
+    function testRedeemDecreasesTotalAcquiredLUSD() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Confirm A's sLUSD balance is zero
+        uint A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance == 0);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's sLUSD balance is non-zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        uint totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
+
+        // B redeems some sLUSD
+        uint sLUSDToRedeem = sLUSDBalance / 2;
+        vm.startPrank(B);
+        chickenBondManager.redeem(sLUSDToRedeem);
+
+        uint totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
+
+        // Check total acquired LUSD has decreased and is non-zero
+        assertTrue(totalAcquiredLUSDAfter < totalAcquiredLUSDBefore);
+        assertTrue(totalAcquiredLUSDAfter > 0);
+    }
+
+    function testRedeemDecreasesTotalSLUSDSupply() public {
+         // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Confirm A's sLUSD balance is zero
+        uint A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance == 0);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's sLUSD balance is non-zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        uint totalSLUSDBefore = sLUSDToken.totalSupply();
+
+        // B redeems some sLUSD
+        uint sLUSDToRedeem = sLUSDBalance / 2;
+        vm.startPrank(B);
+        chickenBondManager.redeem(sLUSDToRedeem);
+
+        uint totalSLUSDAfter = sLUSDToken.totalSupply();
+
+         // Check total sLUSD supply has decreased and is non-zero
+        assertTrue(totalSLUSDAfter < totalSLUSDBefore);
+        assertTrue(totalSLUSDAfter > 0);
+    }
+
+    function testRedeemIncreasesCallersLUSDBalance() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Confirm A's sLUSD balance is zero
+        uint A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance == 0);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's sLUSD balance is non-zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        uint B_LUSDBalanceBefore = lusdToken.balanceOf(B);
+
+        // B redeems some sLUSD
+        uint sLUSDToRedeem = sLUSDBalance / 2;
+        vm.startPrank(B);
+        chickenBondManager.redeem(sLUSDToRedeem);
+
+        uint B_LUSDBalanceAfter = lusdToken.balanceOf(B);
+
+        // Check B's LUSD Balance has increased
+        assertTrue(B_LUSDBalanceAfter > B_LUSDBalanceBefore);
+    }
 }
