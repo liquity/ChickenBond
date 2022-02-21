@@ -93,8 +93,8 @@ contract ChickenBondManager is Ownable {
 
         uint bondedLUSD = idToBondData[_bondID].lusdAmount;
         
-        totalPendingLUSD -= bondedLUSD;
         delete idToBondData[_bondID];
+        totalPendingLUSD -= bondedLUSD;
 
         uint yTokensToBurn = yearnLUSDVault.calcYTokenToToken(bondedLUSD);
         yearnLUSDVault.withdraw(yTokensToBurn);
