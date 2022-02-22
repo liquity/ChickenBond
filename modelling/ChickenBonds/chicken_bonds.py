@@ -122,5 +122,3 @@ def main(tester):
 
 if __name__ == "__main__":
     main(TesterSimpleToll())
-    main(TesterRebonding10())
-    main(TesterRebondingAll())
