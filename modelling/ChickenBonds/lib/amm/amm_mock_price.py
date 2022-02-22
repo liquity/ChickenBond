@@ -1,3 +1,5 @@
+import math
+
 from lib.amm.amm_interface import *
 
 class AmmMockPrice(AmmInterface):
@@ -32,13 +34,14 @@ class AmmMockPrice(AmmInterface):
 
     def add_liquidity(self, account, token_A_amount, token_B_amount):
         assert token_A_amount > 0
-        total_liquidity = self.get_total_liquidity()
-
-        self.lp_token.mint(account, token_A_amount)
+        lp_amount = token_A_amount
 
         self.token_A.transfer(account, self.pool_account, token_A_amount)
         if token_B_amount > 0:
             self.token_B.transfer(account, self.pool_account, token_B_amount)
+            lp_amount = lp_amount + token_B_amount * self.get_token_B_price()
+
+        self.lp_token.mint(account, lp_amount)
 
         return
 
@@ -47,6 +50,17 @@ class AmmMockPrice(AmmInterface):
 
     def add_liquidity_single_A(self, account, token_A_amount, max_slippage):
         return self.add_liquidity(account, token_A_amount, 0)
+
+    def add_liquidity_single_B(self, account, token_B_amount, max_slippage):
+        assert token_B_amount > 0
+        total_liquidity = self.get_total_liquidity()
+
+        lp_amount = token_B_amount * self.get_token_B_price()
+        self.lp_token.mint(account, token_B_amount)
+
+        self.token_B.transfer(account, self.pool_account, token_B_amount)
+
+        return
 
     def swap_A_for_B(self, account, input_amount):
         try:
