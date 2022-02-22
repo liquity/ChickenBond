@@ -75,7 +75,7 @@ const Tooltip = ({ datum, text, style, ...props }: VictoryTooltipProps) => (
 const seriesMax = (series?: Array<{ x: number; y: number | null }>) =>
   series?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
 
-const numSamples = 201;
+const numSamples = 366;
 const range = [...Array(numSamples).keys()];
 
 const rightAxisOptions = {
@@ -115,7 +115,7 @@ const defaultMktDeviationPct = 0;
 const defaultNaturalRatePct = 0;
 const defaultBond = 100;
 
-const defaultFToll = `p => k => 1 - k / (k + ${range[range.length - 1] / 8} * p)`;
+const defaultFToll = `p => k => 1 - k / (k + 60 * p)`;
 const defaultFFairPremiumPct = `k => ${defaultFairPremiumPct}`;
 const defaultFMktDeviationPct = `k => ${defaultMktDeviationPct}`;
 const defaultFNaturalRatePct = `k => ${defaultNaturalRatePct}`;
