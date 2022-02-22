@@ -5,6 +5,7 @@ class User():
         self.bond_time = 0
         self.bond_target_profit = 0
         self.rebonder = False
+        self.lp = False
 
     def __str__(self):
         bond_string = ""

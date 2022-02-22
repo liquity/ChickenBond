@@ -341,6 +341,8 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
         chick_name = chick.account
         if chick.rebonder:
             chick_name = chick.account.replace('chick', 'rebnd')
+        if chick.lp:
+            chick_name = chick.account.replace('chick', 'liqpr')
 
         new_data = new_data.append(
             {
@@ -371,6 +373,14 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
                 "x": "sTOKEN",
                 "stacked_x": chick_name,
                 "amount": chicken.stoken.balance_of(chick.account) * stoken_price,
+            },
+            ignore_index=True
+        )
+        new_data = new_data.append(
+            {
+                "x": "TOKEN/sTOKEN LP tokens",
+                "stacked_x": chick_name,
+                "amount": chicken.stoken_amm.get_value_in_token_A_of(chick.account),
             },
             ignore_index=True
         )

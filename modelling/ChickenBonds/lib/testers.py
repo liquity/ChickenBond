@@ -95,7 +95,8 @@ class TesterSimpleToll(TesterInterface):
         self.chicken_in_gamma_scale = CHICKEN_IN_GAMMA[1]
         self.chicken_out_probability = CHICKEN_OUT_PROBABILITY
 
-        self.rebonders = REBONDERS
+        self.rebonders = NUM_REBONDERS
+        self.lps = NUM_LPS
 
         self.max_slippage = MAX_SLIPPAGE
         self.amm_arbitrage_divergence = AMM_ARBITRAGE_DIVERGENCE
@@ -107,6 +108,8 @@ class TesterSimpleToll(TesterInterface):
     def init(self, chicks):
         for i in range(self.rebonders):
             chicks[i].rebonder = True
+        for i in range(self.rebonders, self.rebonders + self.lps):
+            chicks[i].lp = True
 
         return
 
@@ -421,9 +424,12 @@ class TesterSimpleToll(TesterInterface):
     def rebond(self, chicken, chick, claimable_amount, iteration):
         # sell sTOKEN in the AMM
         chicken.stoken_amm.set_price_B(self.get_stoken_spot_price(chicken))
+        # we use all balance in case a previous rebond was capped due to low liquidity
+        stoken_balance = chicken.stoken.balance_of(chick.account)
+        assert stoken_balance >= claimable_amount
         stoken_swap_amount = min(
             chicken.stoken_amm.get_input_B_for_max_slippage(self.max_slippage, 0, 0),
-            claimable_amount,
+            stoken_balance,
         )
         bought_token_amount = chicken.stoken_amm.swap_B_for_A(chick.account, stoken_swap_amount)
         # bond again
@@ -512,8 +518,13 @@ class TesterSimpleToll(TesterInterface):
             self.divert_to_amm(chicken, amm_token_amount, amm_coll_amount)
 
         if chick.rebonder:
+            # Rebond
             #print("\n --> Rebonding!")
             self.rebond(chicken, chick, claimable_amount, iteration)
+        elif chick.lp:
+            # Provide liquidity to TOKEN/sTOKEN pool
+            chicken.stoken_amm.add_liquidity_single_B(chick.account, claimable_amount, 0) # TODO
+
 
         return
 
