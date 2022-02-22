@@ -21,6 +21,7 @@ LOG_LEVEL = 0                           # To display logs in console (for now on
 NUM_CHICKS = 100
 NUM_ACTIVE_CHICKS_PER_STEP = int(NUM_CHICKS / 10)
 INITIAL_AMOUNT = 10000
+REBONDERS = int(NUM_CHICKS / 2)         # Number of users that will rebond upon chickening in
 
 # -------------- Bonding Parameters ----------------
 BOND_STOKEN_ISSUANCE_RATE = 0.002       # New sLQTY minted per iteration as a fraction of the bonded amount.

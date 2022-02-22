@@ -95,7 +95,7 @@ class TesterSimpleToll(TesterInterface):
         self.chicken_in_gamma_scale = CHICKEN_IN_GAMMA[1]
         self.chicken_out_probability = CHICKEN_OUT_PROBABILITY
 
-        self.rebonders = 0
+        self.rebonders = REBONDERS
 
         self.max_slippage = MAX_SLIPPAGE
         self.amm_arbitrage_divergence = AMM_ARBITRAGE_DIVERGENCE
@@ -669,21 +669,3 @@ class TesterSimpleToll(TesterInterface):
         return
     """
 
-class TesterRebonding10(TesterSimpleToll):
-    def __init__(self):
-        super().__init__()
-        self.name = "Simple toll model, 10 rebonders"
-        self.plot_prefix = '0_1'
-        self.plot_file_description = 'simple_toll_10_rebonders'
-
-        self.rebonders = 10
-
-class TesterRebondingAll(TesterSimpleToll):
-    def __init__(self):
-        super().__init__()
-        self.name = "Simple toll model, All rebonders, no chicken out"
-        self.plot_prefix = '0_1'
-        self.plot_file_description = 'simple_toll_all_rebonders'
-        self.chicken_out_probability = 0
-
-        self.rebonders = NUM_CHICKS
