@@ -70,7 +70,7 @@ def main(tester):
         # Users chicken in and out
         tester.update_chicken(chicken, chicks, data, iteration)
 
-        # Provide and withdraw liqudity to/from AMM
+        # Provide and withdraw liquidity to/from AMM
         #tester.adjust_liquidity(chicken, chicks, chicken.amm_average_apr, iteration)
 
         # If price is low, buy from AMM and stake
