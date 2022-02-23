@@ -262,12 +262,14 @@ class TesterSimpleToll(TesterInterface):
 
         return
 
+    def get_bond_probability(self, iteration):
+        return self.bond_probability[int(iteration / (int(ITERATIONS/len(self.bond_probability))))]
     def bond(self, chicken, chicks, iteration):
         np.random.seed(2022 * iteration)
         np.random.shuffle(chicks)
         not_bonded_chicks = self.get_available_for_bonding_chicks(chicken, chicks)
         not_bonded_chicks_len = len(not_bonded_chicks)
-        num_new_bonds = np.random.binomial(not_bonded_chicks_len, self.bond_probability)
+        num_new_bonds = np.random.binomial(not_bonded_chicks_len, self.get_bond_probability(iteration))
         if iteration == 0:
             num_new_bonds = BOOTSTRAP_NUM_BONDS
         # print(f"available: {not_bonded_chicks_len:,.2f}")
