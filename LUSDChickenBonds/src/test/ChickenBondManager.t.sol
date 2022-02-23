@@ -635,6 +635,7 @@ contract ChickenBondManagerTest is DSTest {
 
     // function testFailChickenInCallerIsNotBonder() public {}
     // function testFailChickenInBackingRatioExceedsCap() public {}
+    function testChickenInDecreasesTotalPendingLUSD() public {}
     function testChickenInIncreasesTotalAcquiredLUSD() public {}
     function testChickenInReducesBondNFTTokenCountByOne() public {}
     function testChickenInDecreasesBonderNFTBalance() public {}
@@ -824,4 +825,236 @@ contract ChickenBondManagerTest is DSTest {
         // Check B's LUSD Balance has increased
         assertTrue(B_LUSDBalanceAfter > B_LUSDBalanceBefore);
     }
+
+    function testRedeemDecreasesAcquiredLUSDInYearnByCorrectFraction() public {
+        uint redemptionFraction = 5e17; // 50%
+        uint percentageFee = chickenBondManager.calcRedemptionFeePercentage();
+        uint fractionRemainingAfterRedemption = redemptionFraction * (1e18 + percentageFee) / 1e18;
+
+        // A creates bond
+        uint bondAmount = 10e18;
+       
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Confirm A's sLUSD balance is zero
+        uint A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance == 0);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's sLUSD balance is non-zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        assertEq(sLUSDToken.totalSupply(), sLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        // Get acquired LUSD in Yearn before
+        uint acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
+        
+        // B redeems some sLUSD
+        uint sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
+        vm.startPrank(B);
+        chickenBondManager.redeem(sLUSDToRedeem);
+
+        // Check acquired LUSD in Yearn has decreased by correct fraction
+        uint acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
+        assertEq(acquiredLUSDInYearnAfter, (acquiredLUSDInYearnBefore * fractionRemainingAfterRedemption / 1e18));
+        
+    }
+
+    function testRedeemDecreasesAcquiredLUSDInCurveByCorrectFraction() public {
+        uint redemptionFraction = 5e17; // 50%
+        uint percentageFee = chickenBondManager.calcRedemptionFeePercentage();
+        uint fractionRemainingAfterRedemption = redemptionFraction * (1e18 + percentageFee) / 1e18;
+
+        // A creates bond
+        uint bondAmount = 10e18;
+       
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        // Get current time
+        uint currentTime = block.timestamp;
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Confirm A's sLUSD balance is zero
+        uint A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance == 0);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's sLUSD balance is non-zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        assertEq(sLUSDToken.totalSupply(), sLUSDToken.balanceOf(B));
+
+        // A shifts some LUSD from SP to Curve
+        chickenBondManager.shiftLUSDFromSPToCurve();
+
+        // Get acquired LUSD in Curve before
+        uint acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
+        assertTrue(acquiredLUSDInCurveBefore > 0);
+
+        // B redeems some sLUSD
+        uint sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
+        vm.startPrank(B);
+        chickenBondManager.redeem(sLUSDToRedeem);
+
+        // Check acquired LUSD in curve after has reduced by correct fraction
+        uint acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
+        assertEq(acquiredLUSDInCurveAfter, (acquiredLUSDInCurveBefore * fractionRemainingAfterRedemption / 1e18));
+    }
+
+    // --- shiftLUSDFromSPToCurve tests -
+
+    // CBM system trackers
+    function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInCBM() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // check total acquired LUSD > 0
+        uint totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        // Get total LUSD in CBM before
+        uint CBM_lusdBalanceBefore = lusdToken.balanceOf(address(chickenBondManager));
+
+        // Shift LUSD from SP to Curve
+        chickenBondManager.shiftLUSDFromSPToCurve();
+        
+        // Check total LUSD in CBM has not changed
+        uint CBM_lusdBalanceAfter = lusdToken.balanceOf(address(chickenBondManager));
+
+        assertEq(CBM_lusdBalanceAfter, CBM_lusdBalanceBefore);
+    }
+
+    function testShiftLUSDFromSPToCurveDoesntChangeCBMTotalAcquiredLUSDTracker() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // get CBM's recorded total acquired LUSD before
+        uint totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSDBefore > 0);
+
+        // Shift LUSD from SP to Curve
+        chickenBondManager.shiftLUSDFromSPToCurve();
+
+        // check CBM's recorded total acquire LUSD hasn't changed
+        uint totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
+        assertEq(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore);
+    }
+    
+    function testShiftLUSDFromSPToCurveDecreasesCBMAcquiredLUSDInYearnTracker() public {
+        // A creates bond
+        uint bondAmount = 25e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Get acquired LUSD in Yearn before
+        uint acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
+
+        // Shift LUSD from SP to Curve
+        chickenBondManager.shiftLUSDFromSPToCurve();
+
+        // Check acquired LUSD in Yearn has decreased
+        uint acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
+        assertTrue(acquiredLUSDInYearnAfter < acquiredLUSDInYearnBefore);
+    }
+
+    function testShiftLUSDFromSPToCurveDoesntChangeCBMPendingLUSDTracker() public {
+        // A creates bond
+        uint bondAmount = 25e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Get pending LUSD before
+        uint totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
+
+        // Shift LUSD from SP to Curve
+        chickenBondManager.shiftLUSDFromSPToCurve();
+
+        // Check pending LUSD After has not changed 
+        uint totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
+        assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
+    }
+
+    // CBM Yearn and Curve trackers 
+
+    // function testShiftLUSDFromSPToCurveDecreasesCBMLUSDInYearnTracker() public {}
+    // function testShiftLUSDFromSPToCurveDecreasesCBMAcquiredLUSDInYearnTracker() public {}
+    // function testShiftLUSDFromSPToCurveIncreasesCBMLUSDInCurveTracker() public {}
+
+    // Actual Yearn and Curve balance tests
+    // function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInYearnAndCurve() public {}
+
+    // function testShiftLUSDFromSPToCurveDecreasesLUSDInYearn() public {}
+    // function testShiftLUSDFromSPToCurveIncreaseLUSDInCurve() public {}
+
+    // function testFailShiftLUSDFromSPToCurveWhen0LUSDInYearn() public {}
+   
 }

@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Interfaces/IBondNFT.sol";
 import "./console.sol";
 import "./Interfaces/ILUSDToken.sol";
@@ -10,6 +11,7 @@ import "./Interfaces/IMockYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
 
 contract ChickenBondManager is Ownable {
+
     // ChickenBonds contracts
     IBondNFT public bondNFT;
 
@@ -59,6 +61,7 @@ contract ChickenBondManager is Ownable {
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
         lusdToken.approve(address(yearnLUSDVault), MAX_UINT256);
         lusdToken.approve(address(curvePool), MAX_UINT256);
+        curvePool.approve(address(yearnCurveVault), MAX_UINT256);
 
         renounceOwnership();
     }
@@ -90,6 +93,16 @@ contract ChickenBondManager is Ownable {
 
     function chickenOut(uint _bondID) external {
         _requireCallerOwnsBond(_bondID);
+
+          /* In practice this assert should mostly hold. However, there could be edge cases where it doesn't: 
+        * - Heavy liquidations, and before yield has been converted
+        * - Heavy loss-making liquidations, i.e. at <100% CR
+        * - SP or Yearn vault hack that drains LUSD
+        *
+        * TODO: decide how to handle chickenOuts if/when the recorded totalPendingLUSD is not fully backed by actual 
+        * LUSD in Yearn / the SP.
+        */
+        assert(getLUSDInYearn() - getAcquiredLUSDInYearn() >= totalPendingLUSD);
 
         uint bondedLUSD = idToBondData[_bondID].lusdAmount;
         
@@ -123,11 +136,15 @@ contract ChickenBondManager is Ownable {
         /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
         Current approach leaves redemption fees in the acquired bucket. */
         uint fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
-        
+    
         // Calculate redemption fraction to withdraw, given that we leave the fee inside the system
         uint fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - calcRedemptionFeePercentage()) / 1e18;
 
-        uint yTokensToWithdrawFromLUSDVault = yearnLUSDVault.balanceOf(address(this)) * fractionOfAcquiredLUSDToWithdraw / 1e18;
+        // Get the LUSD to withdraw from Yearn, and the corresponding yTokens
+        uint lusdToWithdrawFromYearn = getAcquiredLUSDInYearn() * fractionOfAcquiredLUSDToWithdraw / 1e18;
+        uint yTokensToWithdrawFromLUSDVault = yearnLUSDVault.calcTokenToYToken(lusdToWithdrawFromYearn);
+        
+        // Since 100% of the Curve liquidity is "acquired", just get the yTokens directly
         uint yTokensToWithdrawFromCurveVault = yearnCurveVault.balanceOf(address(this)) * fractionOfAcquiredLUSDToWithdraw / 1e18;
 
         // The LUSD and LUSD3CRV deltas from SP/Curve withdrawals are the amounts to send to the redeemer
@@ -149,15 +166,52 @@ contract ChickenBondManager is Ownable {
         lusdToken.transfer(msg.sender, lusdBalanceDelta);
     }
 
-    // TODO: Determine the basis for the redemption fee formula. 5% constant fee is a placeholder.
-    function calcRedemptionFeePercentage() public pure returns(uint256) {
-        return 5e16;
-    }
+    function shiftLUSDFromSPToCurve() public {
+        // Calculate the LUSD to pull from the Yearn LUSD vault
+        uint lusdToShift = _calcLUSDToShiftToCurve();
+        _requireNonZeroLUSDToShift(lusdToShift);
+
+        uint yTokensToBurn = yearnLUSDVault.calcTokenToYToken(lusdToShift);
+
+        // Convert yTokens to LUSD
+        uint lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        yearnLUSDVault.withdraw(yTokensToBurn);
+        uint lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+
+        // In principle this assert should hold. In practice, there may be a slight discrepancy depending on Yearn calculations.
+        assert(lusdBalanceDelta == lusdToShift);
+
+        // Deposit the received LUSD to Curve in return for LUSD3CRV-f tokens
+        uint LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
+        curvePool.add_liquidity(lusdBalanceDelta);
+        uint LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
+
+        // Deposit the received LUSD3CRV-f to Yearn Curve vault
+        yearnCurveVault.deposit(LUSD3CRVBalanceDelta);
+   }
 
     // --- Helper functions ---
 
+    /* Placeholder function for calculating LUSD to shift to curve. Currently shifts 10% of the acquired LUSD in the Stability Pool.
+    * TODO: replace with logic that calculates the LUSD quantity to shift based on resulting Curve spot price of 1. Requires mathematical formula
+    for quantity based on price (i.e. rearrange Curve spot price formula)
+    *
+    * Simple alternative:  make the outer shift function revert if the resulting LUSD spot price on Curve is below 1.
+    * Advantage: reduces complexity / bug surface area, and moves the burden of a correct LUSD quantity calculation to the front-end.
+    */
+    function _calcLUSDToShiftToCurve() public returns (uint256) {
+        uint acquiredLUSDInYearn = getAcquiredLUSDInYearn();
+        
+        return  acquiredLUSDInYearn / 10;
+    }
+
+     // TODO: Determine the basis for the redemption fee formula. 5% constant fee is a placeholder.
+    function calcRedemptionFeePercentage() public pure returns (uint256) {
+        return 5e16;
+    }
+
     // External getter for calculating accrued LUSD based on bond ID
-    function calcAccruedSLUSD(uint _bondID) external view returns(uint256) {
+    function calcAccruedSLUSD(uint _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
         return _calcAccruedSLUSD(bond);
     }
@@ -189,14 +243,31 @@ contract ChickenBondManager is Ownable {
     * In practice, the total acquired LUSD calculation will depend on the specifics of how Yearn vaults calculate 
     their balances and incorporate the yield, and whether we implement a toll on chicken-ins (and therefore divert some permanent DEX liquidity) */
     function getTotalAcquiredLUSD() public view returns (uint256) {
+        return  getAcquiredLUSDInYearn() + getAcquiredLUSDInCurve();
+    }
+
+    function getLUSDInYearn() public view returns (uint256) {
         uint yTokenBalanceLUSD = yearnLUSDVault.balanceOf(address(this));
         uint lusdInYearn = yearnLUSDVault.calcYTokenToToken(yTokenBalanceLUSD);
-        
+
+        return lusdInYearn;
+    }
+
+    function getAcquiredLUSDInYearn() public view returns (uint256) {
+        uint acquiredLUSDInYearn = getLUSDInYearn() - totalPendingLUSD;
+
+        assert(acquiredLUSDInYearn >= 0);
+
+        return acquiredLUSDInYearn;
+    }
+
+    function getAcquiredLUSDInCurve() public view returns (uint256) {
         uint yTokenBalanceLUSD3CRV = yearnCurveVault.balanceOf(address(this));
         uint lusd3CRVInYearn = yearnCurveVault.calcYTokenToToken(yTokenBalanceLUSD3CRV);
+        
         uint lusdInCurve = curvePool.calcLUSD3CRVToLUSD(lusd3CRVInYearn);
 
-        return lusdInYearn + lusdInCurve - totalPendingLUSD;
+        return lusdInCurve;
     }
 
     function calcSystemBackingRatio() public view returns (uint256) {
@@ -227,5 +298,9 @@ contract ChickenBondManager is Ownable {
     function _requireCapGreaterThanAccruedSLUSD(uint256 _accruedSLUSD, uint _bondedAmount) internal view {
         uint sLUSDCap = calcBondCap(_bondedAmount);
         require(sLUSDCap >= _accruedSLUSD, "CBM: sLUSD cap must be greater than the accrued sLUSD");
+    }
+
+    function _requireNonZeroLUSDToShift(uint256 _lusdToShift) internal pure {
+        require(_lusdToShift > 0, "CBM: LUSD to shift must be > 0");
     }
 }

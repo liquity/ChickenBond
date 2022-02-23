@@ -18,7 +18,7 @@ contract MockYearnVault is ERC20, Ownable {
 
     function deposit(uint256 _tokenAmount) external {
         token.transferFrom(msg.sender, address(this), _tokenAmount);
-       
+
         uint lpShares = calcTokenToYToken(_tokenAmount);
         _mint(msg.sender, lpShares);
     }
@@ -32,11 +32,11 @@ contract MockYearnVault is ERC20, Ownable {
 
     /* Simplified LP shares calculators. Shares issued/burned 1:1 with deposited/withdrawn LUSD respectively.
     * In practice, the conversion will be more complicated and will depend on yield earned by the vault. */
-    function calcTokenToYToken(uint256 _tokenAmount) public pure returns(uint256) {
+    function calcTokenToYToken(uint256 _tokenAmount) public pure returns (uint256) {
         return _tokenAmount;
     }
 
-    function calcYTokenToToken(uint256 _yTokenAmount) public pure returns(uint256) {
+    function calcYTokenToToken(uint256 _yTokenAmount) public pure returns (uint256) {
         return _yTokenAmount;
     }
 }
