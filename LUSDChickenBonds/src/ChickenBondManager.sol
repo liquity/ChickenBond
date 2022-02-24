@@ -166,7 +166,7 @@ contract ChickenBondManager is Ownable {
         lusdToken.transfer(msg.sender, lusdBalanceDelta);
     }
 
-    function shiftLUSDFromSPToCurve() public {
+    function shiftLUSDFromSPToCurve() external {
         // Calculate the LUSD to pull from the Yearn LUSD vault
         uint lusdToShift = _calcLUSDToShiftToCurve();
         _requireNonZeroLUSDToShift(lusdToShift);
@@ -178,7 +178,9 @@ contract ChickenBondManager is Ownable {
         yearnLUSDVault.withdraw(yTokensToBurn);
         uint lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
 
-        // In principle this assert should hold. In practice, there may be a slight discrepancy depending on Yearn calculations.
+        /* In principle this assert should hold. In practice, there may be a slight discrepancy depending on Yearn calculations
+        * (in which case, we should decide on the acceptable margin of tolerance).
+        */
         assert(lusdBalanceDelta == lusdToShift);
 
         // Deposit the received LUSD to Curve in return for LUSD3CRV-f tokens
@@ -190,19 +192,57 @@ contract ChickenBondManager is Ownable {
         yearnCurveVault.deposit(LUSD3CRVBalanceDelta);
    }
 
+   function shiftLUSDFromCurveToSP() external {
+       // Calculate LUSD to pull from Curve
+        uint lusdToShift = _calcLUSDToShiftToSP();
+        _requireNonZeroLUSDToShift(lusdToShift);
+        
+        //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
+        uint LUSD3CRVfToBurn = curvePool.calcLUSDToLUSD3CRV(lusdToShift);
+
+        //Calculate yTokens to swap for LUSD3CRV-f 
+        uint yTokensToBurn = yearnCurveVault.calcTokenToYToken(LUSD3CRVfToBurn);
+
+        // Convert yTokens to LUSD3CRV-f
+        uint LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
+        yearnCurveVault.withdraw(yTokensToBurn);
+        uint LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
+
+        /* In principle this assert should hold. In practice, there may be a slight discrepancy depending on Yearn calculations
+        * (in which case, we should decide on the acceptable margin of tolerance).
+        */
+        assert(LUSD3CRVBalanceDelta == LUSD3CRVfToBurn);
+
+        // Withdraw LUSD from Curve
+        uint lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        curvePool.remove_liquidity(LUSD3CRVBalanceDelta);
+        uint lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+
+        // Should hold in principle. Depends on Curve calculations
+        assert(lusdBalanceDelta == lusdToShift);
+
+        // Deposit the received LUSD to Yearn LUSD vault
+        yearnLUSDVault.deposit(lusdBalanceDelta);
+    }
+
+
     // --- Helper functions ---
 
-    /* Placeholder function for calculating LUSD to shift to curve. Currently shifts 10% of the acquired LUSD in the Stability Pool.
-    * TODO: replace with logic that calculates the LUSD quantity to shift based on resulting Curve spot price of 1. Requires mathematical formula
-    for quantity based on price (i.e. rearrange Curve spot price formula)
+    /* Placeholder functions for calculating LUSD to shift to/from Curve. They currently shift 10% of the acquired LUSD in the source pool
+    * to the destination pool.
+    * 
+    * TODO: replace with logic that calculates the LUSD quantity to shift based on a resulting Curve spot price that does not cross the 
+    boundary price of 1. Requires mathematical formula for quantity based on price (i.e. rearrange Curve spot price formula)
     *
-    * Simple alternative:  make the outer shift function revert if the resulting LUSD spot price on Curve is below 1.
+    * Simple alternative:  make the outer shift function revert if the resulting LUSD spot price on Curve has crossed the boundary.
     * Advantage: reduces complexity / bug surface area, and moves the burden of a correct LUSD quantity calculation to the front-end.
     */
-    function _calcLUSDToShiftToCurve() public returns (uint256) {
-        uint acquiredLUSDInYearn = getAcquiredLUSDInYearn();
-        
-        return  acquiredLUSDInYearn / 10;
+    function _calcLUSDToShiftToCurve() public returns (uint256) {  
+        return  getAcquiredLUSDInYearn() / 10;
+    }
+
+    function _calcLUSDToShiftToSP() public returns (uint256) {
+        return getAcquiredLUSDInCurve() / 10;
     }
 
      // TODO: Determine the basis for the redemption fee formula. 5% constant fee is a placeholder.

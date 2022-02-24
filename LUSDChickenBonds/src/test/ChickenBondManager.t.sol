@@ -991,6 +991,39 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore);
     }
     
+    function testShiftLUSDFromSPToCurveDoesntChangeCBMPendingLUSDTracker() public {
+        uint bondAmount = 25e18;
+
+        // B and A create bonds
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Get pending LUSD before
+        uint totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
+        assertTrue(totalPendingLUSDBefore > 0);
+
+        // Shift LUSD from SP to Curve
+        chickenBondManager.shiftLUSDFromSPToCurve();
+
+        // Check pending LUSD After has not changed 
+        uint totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
+        assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
+    }
+
+    // CBM Yearn and Curve trackers 
     function testShiftLUSDFromSPToCurveDecreasesCBMAcquiredLUSDInYearnTracker() public {
         // A creates bond
         uint bondAmount = 25e18;
@@ -1015,9 +1048,9 @@ contract ChickenBondManagerTest is DSTest {
         // Check acquired LUSD in Yearn has decreased
         uint acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
         assertTrue(acquiredLUSDInYearnAfter < acquiredLUSDInYearnBefore);
-    }
-
-    function testShiftLUSDFromSPToCurveDoesntChangeCBMPendingLUSDTracker() public {
+    } 
+    
+    function testShiftLUSDFromSPToCurveDecreasesCBMLUSDInYearnTracker() public {
         // A creates bond
         uint bondAmount = 25e18;
 
@@ -1032,22 +1065,42 @@ contract ChickenBondManagerTest is DSTest {
         // A chickens in
         chickenBondManager.chickenIn(A_bondID);
 
-        // Get pending LUSD before
-        uint totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
+        // Get CBM's view of LUSD in Yearn  
+        uint lusdInYearnBefore = chickenBondManager.getLUSDInYearn();
 
         // Shift LUSD from SP to Curve
         chickenBondManager.shiftLUSDFromSPToCurve();
 
-        // Check pending LUSD After has not changed 
-        uint totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
-        assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
+        // Check CBM's view of LUSD in Yearn has decreased
+        uint lusdInYearnAfter = chickenBondManager.getLUSDInYearn();
+        assertTrue(lusdInYearnAfter < lusdInYearnBefore);
     }
 
-    // CBM Yearn and Curve trackers 
+    function testShiftLUSDFromSPToCurveIncreasesCBMLUSDInCurveTracker() public {
+        // A creates bond
+        uint bondAmount = 25e18;
 
-    // function testShiftLUSDFromSPToCurveDecreasesCBMLUSDInYearnTracker() public {}
-    // function testShiftLUSDFromSPToCurveDecreasesCBMAcquiredLUSDInYearnTracker() public {}
-    // function testShiftLUSDFromSPToCurveIncreasesCBMLUSDInCurveTracker() public {}
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Get CBM's view of LUSD in Curve before
+        uint lusdInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
+
+        // Shift LUSD from SP to Curve
+        chickenBondManager.shiftLUSDFromSPToCurve();
+
+        // Check CBM's view of LUSD in Curve has inccreased
+        uint lusdInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
+        assertTrue(lusdInCurveAfter > lusdInCurveBefore);
+    }
 
     // Actual Yearn and Curve balance tests
     // function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInYearnAndCurve() public {}
@@ -1057,4 +1110,251 @@ contract ChickenBondManagerTest is DSTest {
 
     // function testFailShiftLUSDFromSPToCurveWhen0LUSDInYearn() public {}
    
+
+    // --- shiftLUSDFromCurveToSP tests ---
+
+    function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInCBM() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // check total acquired LUSD > 0
+        uint totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        chickenBondManager.shiftLUSDFromSPToCurve();
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+    
+        // Get total LUSD in CBM before
+        uint CBM_lusdBalanceBefore = lusdToken.balanceOf(address(chickenBondManager));
+
+        // Shift LUSD from Curve to SP
+        chickenBondManager.shiftLUSDFromCurveToSP();
+        
+        // Check total LUSD in CBM has not changed
+        uint CBM_lusdBalanceAfter = lusdToken.balanceOf(address(chickenBondManager));
+
+        assertEq(CBM_lusdBalanceAfter, CBM_lusdBalanceBefore);
+    }
+
+    function testShiftLUSDFromCurveToSPDoesntChangeCBMTotalAcquiredLUSDTracker() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // check total acquired LUSD > 0
+        uint totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        chickenBondManager.shiftLUSDFromSPToCurve();
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        // get CBM's recorded total acquired LUSD before
+        uint totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSDBefore > 0);
+
+        // Shift LUSD from Curve to SP
+        chickenBondManager.shiftLUSDFromCurveToSP();
+
+        // check CBM's recorded total acquire LUSD hasn't changed
+        uint totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
+        assertEq(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore);
+    }
+
+    function testShiftLUSDFromCurveToSPDoesntChangeCBMPendingLUSDTracker() public {// A creates bond
+        uint bondAmount = 10e18;
+
+        // B and A create bonds
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // check total acquired LUSD > 0
+        uint totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        chickenBondManager.shiftLUSDFromSPToCurve();
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        // Get pending LUSD before
+        uint totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
+        assertTrue(totalPendingLUSDBefore > 0);
+
+        // Shift LUSD from Curve to SP
+        chickenBondManager.shiftLUSDFromCurveToSP();
+
+        // Check pending LUSD After has not changed 
+        uint totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
+        assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
+    }
+
+    // CBM Yearn and Curve trackers
+    function testShiftLUSDFromCurveToSPIncreasesCBMAcquiredLUSDInYearnTracker() public {
+        uint bondAmount = 10e18;
+
+        // B and A create bonds
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // check total acquired LUSD > 0
+        uint totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        chickenBondManager.shiftLUSDFromSPToCurve();
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        // Get acquired LUSD in Yearn Before
+        uint acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
+
+        // Shift LUSD from Curve to SP
+        chickenBondManager.shiftLUSDFromCurveToSP();
+
+        // Check acquired LUSD in Yearn Increases
+        uint acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
+        assertTrue(acquiredLUSDInYearnAfter > acquiredLUSDInYearnBefore);
+    }
+
+    function testShiftLUSDFromCurveToSPIncreasesCBMLUSDInYearnTracker() public {
+        uint bondAmount = 10e18;
+
+        // B and A create bonds
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // check total acquired LUSD > 0
+        uint totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        chickenBondManager.shiftLUSDFromSPToCurve();
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        // Get LUSD in Yearn Before
+        uint lusdInYearnBefore = chickenBondManager.getLUSDInYearn();
+
+        // Shift LUSD from Curve to SP
+        chickenBondManager.shiftLUSDFromCurveToSP();
+
+        // Check LUSD in Yearn Increases
+        uint lusdInYearnAfter = chickenBondManager.getLUSDInYearn();
+        assertTrue(lusdInYearnAfter > lusdInYearnBefore);
+    }
+    
+    
+    function testShiftLUSDFromCurveToSPDecreasesCBMLUSDInCurveTracker() public {
+        uint bondAmount = 10e18;
+
+        // B and A create bonds
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // check total acquired LUSD > 0
+        uint totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        chickenBondManager.shiftLUSDFromSPToCurve();
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        // Get acquired LUSD in Curve Before
+        uint acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
+
+        // Shift LUSD from Curve to SP
+        chickenBondManager.shiftLUSDFromCurveToSP();
+
+        // Check LUSD in Curve Decreases
+        uint acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
+        assertTrue(acquiredLUSDInCurveAfter < acquiredLUSDInCurveBefore);
+    }
+
+
+    // Actual Yearn and Curve balance tests
+
+    // function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInYearnAndCurve() public {}
+
+    // function testShiftLUSDFromCurveToSPIncreasesLUSDInYearn() public {}
+    // function testShiftLUSDFromCurveToSPDecreasesLUSDInCurve() public {}
+
+    // function testFailShiftLUSDFromCurveToSPWhen0LUSDInCurve() public {}
 }
