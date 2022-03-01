@@ -144,6 +144,7 @@ def plot_stoken_price(data, max_value=200, description="", group=1, group_descri
     redemption_prices = []
     reserve_ratios = []
     rebond_times = []
+    chicken_in_times = []
     for d in range(len(data.index) // group):
         # Reserve ratio without AMM
         fair_price = min(
@@ -187,6 +188,9 @@ def plot_stoken_price(data, max_value=200, description="", group=1, group_descri
         # Rebond time
         rebond_times.append(data['rebond_time'][start_index + d * group])
 
+        # Chicken in time for optimal APR
+        chicken_in_times.append(data['chicken_in_time'][start_index + d * group])
+
     #fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - sTOKEN Price")
     fig = make_subplots(specs=[[{"secondary_y": True}]], subplot_titles=[f"{description} - sTOKEN Price"])
 
@@ -207,6 +211,11 @@ def plot_stoken_price(data, max_value=200, description="", group=1, group_descri
 
     fig.add_trace(
         go.Scatter(y=rebond_times, name="Rebond Time"),
+        secondary_y=True,
+    )
+
+    fig.add_trace(
+        go.Scatter(y=chicken_in_times, name="Chicken in Time"),
         secondary_y=True,
     )
 
@@ -237,6 +246,7 @@ def plot_aprs(data, max_value=20, description="", group=1, group_description="Da
             },
             ignore_index=True
         )
+        """
         new_data = new_data.append(
             {
                 "x": d,
@@ -245,6 +255,7 @@ def plot_aprs(data, max_value=20, description="", group=1, group_description="Da
             },
             ignore_index=True
         )
+        """
 
         stoken_spot = data['stoken_apr'][start_index + d * group] * 100
         stoken_spot = min(
@@ -281,49 +292,6 @@ def plot_aprs(data, max_value=20, description="", group=1, group_description="Da
 
     if show: fig.show()
     maybe_save(fig, save, get_prefixes, "APRs")
-    return
-
-
-def plot_borrow_repay(data, description="", group=7, group_description="Week", show=True, save=False, get_prefixes=lambda:None):
-    start_index = data.index[0]
-
-    new_data = pd.DataFrame({
-        "x": [],
-        "amount": [],
-    })
-    for d in range(1, len(data.index) // group + 1):
-        new_data = new_data.append(
-            {
-                "x": d,
-                "y": data['borrowed'][start_index + (d-1) * group : start_index + d * group].sum(),
-                "var": "Borrowed"
-            },
-            ignore_index=True
-        )
-        new_data = new_data.append(
-            {
-                "x": d,
-                "y": data['repaid'][start_index + (d-1) * group : start_index + d * group].sum(),
-                "var": "Repaid"
-            },
-            ignore_index=True
-        )
-        new_data = new_data.append(
-            {
-                "x": d,
-                "y": data['outstanding_debt'][start_index + d * group - 1],
-                "var": "Outstanding debt"
-            },
-            ignore_index=True
-        )
-
-    fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - Borrowing / Repayment")
-
-    fig.update_xaxes(tick0=0, dtick=len(data.index)//group/20, title_text=group_description)
-    fig.update_yaxes(title_text="Amount")
-
-    if show: fig.show()
-    maybe_save(fig, save, get_prefixes, "borrowing_repayment")
     return
 
 def plot_chicks(data, chicken, chicks, description="", show=True, save=False, get_prefixes=lambda:None):
@@ -406,36 +374,6 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
 
     return
 
-def plot_chicks_total_value(chicken, chicks, description="", show=True, save=False, get_prefixes=lambda:None):
-    new_data = pd.DataFrame({
-        "x": [],
-        "amount": [],
-    })
-    for chick in chicks:
-        new_data = new_data.append(
-            {
-                "x": chick.account,
-                "amount": chicken.user_total_assets_value(chick),
-            },
-            ignore_index=True
-        )
-
-    #print(new_data)
-
-    fig = px.bar(
-        new_data,
-        x='x',
-        y='amount',
-        labels={'x': 'Balance', 'x': 'Chick'},
-    )
-
-    fig.update_layout(title_text=f"{description} - Chick total assets value in TOKEN")
-
-    if show: fig.show()
-    maybe_save(fig, save, get_prefixes, "Chick_total_assets")
-
-    return
-
 def get_prefixes_getter(global_prefix, tester_prefixes_getter, plot_prefix):
     tester_prefix = ''
     file_tester_description = ''
@@ -458,8 +396,6 @@ def plot_charts(
 ):
     plot_chicken_state(data, description, group, group_description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '1'))
     plot_stoken_price(data, price_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '2'))
-    #plot_aprs(data, apr_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '3'))
-    #plot_borrow_repay(data, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '5'))
+    plot_aprs(data, apr_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '3'))
     plot_chicks(data, chicken, chicks, description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '6'))
-    #plot_chicks_total_value(chicken, chicks, description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '7'))
     return
