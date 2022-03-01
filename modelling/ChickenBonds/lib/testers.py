@@ -80,9 +80,8 @@ class TesterSimpleToll(TesterInterface):
         self.plot_prefix = '0_0'
         self.plot_file_description = 'simple_toll'
 
-        self.price_max_value = 2 # for plots, for a better scaling
+        self.price_max_value = 2
 
-        self.pol_ratio = 1
         self.initial_price = INITIAL_PRICE
         self.twap_period = TWAP_PERIOD
         self.price_premium = PRICE_PREMIUM
@@ -178,8 +177,9 @@ class TesterSimpleToll(TesterInterface):
         @return: The sLQTY spot price.
         """
 
+        # TODO
         stoken_supply = chicken.stoken.total_supply
-        if stoken_supply == 0:
+        if stoken_supply < BOND_AMOUNT[1] * 10:
             return self.initial_price
 
         base_amount = chicken.pol_token_balance()
@@ -210,8 +210,7 @@ class TesterSimpleToll(TesterInterface):
         return self.get_stoken_twap(data, iteration)
 
     def get_pol_ratio(self, chicken):
-        #return chicken.get_pol_ratio_no_amm()
-        return self.pol_ratio
+        return chicken.get_pol_ratio_no_amm()
 
     def get_reserve_ratio(self, chicken):
         return chicken.get_reserve_ratio_no_amm()
@@ -260,8 +259,6 @@ class TesterSimpleToll(TesterInterface):
         return base_amount * ((1 + yield_percentage) ** (1 / TIME_UNITS_PER_YEAR) - 1)
 
     def distribute_yield(self, chicken, chicks, iteration):
-        initial_pol_balance = chicken.pol_token_balance()
-
         # Reserve generated yield
         generated_yield = self.get_yield_amount(chicken.reserve_token_balance(), self.external_yield)
 
@@ -271,10 +268,6 @@ class TesterSimpleToll(TesterInterface):
         generated_yield = self.get_yield_amount(chicken.amm.get_value_in_token_A(), self.amm_yield)
 
         chicken.token.mint(chicken.pol_account, generated_yield)
-
-        final_pol_balance = chicken.pol_token_balance()
-        if initial_pol_balance > 0 and chicken.stoken.total_supply > 0:
-            self.pol_ratio = self.pol_ratio * final_pol_balance / initial_pol_balance
 
         return
 
