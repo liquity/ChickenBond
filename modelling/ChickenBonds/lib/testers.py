@@ -12,7 +12,7 @@ class TesterInterface():
         self.iterations = ITERATIONS
 
         self.price_max_value = 200
-        self.apr_max_value = 20
+        self.apr_max_value = 200
 
         self.plot_prefix = ''
         self.plot_file_description = ''
@@ -153,6 +153,24 @@ class TesterSimpleToll(TesterInterface):
 
         return new_natural_rate
 
+    def get_premium(self, chicken):
+        stoken_supply = chicken.stoken.total_supply
+        if stoken_supply == 0:
+            return 0
+
+        base_amount = chicken.pol_token_balance()
+
+        mu = base_amount * PREMIUM_MU
+        sigma = mu * PREMIUM_SIGMA
+
+        # Different methods to estimate the premium of sLQTY tokens.
+        premium_mapper = {"normal_dist": np.random.normal(mu, sigma, 1)[0] / stoken_supply,
+                          "perpetuity": (chicken.coop_token_balance() * EXTERNAL_YIELD) ** (1 / TIME_UNITS_PER_YEAR),
+                          "coop_balance": (chicken.coop_token_balance() + (self.amm_yield/self.external_yield) * chicken.amm.get_value_in_token_A()) / stoken_supply,
+                          }
+
+        return premium_mapper.get(self.price_premium, 0)
+
     def get_fair_price(self, chicken):
         """
         Calculate the fair spot price of sLQTY. The price is determined by the price floor plus a premium.
@@ -165,14 +183,6 @@ class TesterSimpleToll(TesterInterface):
             return self.initial_price
 
         base_amount = chicken.pol_token_balance()
-        mu = base_amount * PREMIUM_MU
-        sigma = mu * PREMIUM_SIGMA
-
-        # Different methods to estimate the premium of sLQTY tokens.
-        premium_mapper = {"normal_dist": np.random.normal(mu, sigma, 1)[0] / stoken_supply,
-                          "perpetuity": (chicken.coop_token_balance() * EXTERNAL_YIELD) ** (1 / TIME_UNITS_PER_YEAR),
-                          "coop_balance": (chicken.coop_token_balance() + (self.amm_yield/self.external_yield) * chicken.amm.get_value_in_token_A()) / stoken_supply,
-                          }
 
         # Different methods to include volatility in the price.
         volatility_mapper = {"None": 0,
@@ -181,7 +191,7 @@ class TesterSimpleToll(TesterInterface):
                              }
 
         total_price = (base_amount / stoken_supply) \
-                      + premium_mapper.get(self.price_premium, 0) \
+                      + self.get_premium(chicken) \
                       + volatility_mapper.get(self.price_volatility, 0)
 
         return total_price
@@ -206,31 +216,37 @@ class TesterSimpleToll(TesterInterface):
     def get_reserve_ratio(self, chicken):
         return chicken.get_reserve_ratio_no_amm()
 
-    def get_stoken_apr_from_price(self, chicken, stoken_price):
-        base_amount = chicken.coop_token_balance() + chicken.pol_token_balance()
-        generated_yield = base_amount * self.external_yield
-        stoken_supply = chicken.stoken.total_supply
-        if stoken_supply == 0 or stoken_price == 0:
+    def get_optimal_apr_chicken_in_time(self, chicken):
+        p = self.get_premium(chicken)
+        r = self.pol_ratio
+        if p == 0:
             return 0
-
-        return generated_yield / (stoken_supply * stoken_price)
-
-    def get_stoken_apr_with_amm(self, chicken, stoken_apr, amm_apr):
-        if chicken.stoken.total_supply == 0:
-            return stoken_apr
-        total_apr = stoken_apr + amm_apr * chicken.amm.get_value_in_token_B_of(chicken.pol_account) \
-            / chicken.stoken.total_supply
-        return total_apr
+        return (r + math.sqrt(r * (r+p))) / p
 
     def get_stoken_apr_spot(self, chicken):
-        stoken_spot_price = self.get_stoken_spot_price(chicken)
-        base_apr = self.get_stoken_apr_from_price(chicken, stoken_spot_price)
-        return self.get_stoken_apr_with_amm(chicken, base_apr, chicken.amm_iteration_apr)
+        p = self.get_premium(chicken)
+        r = self.pol_ratio
+        if p == 0:
+            return 0
+        # optimal_time
+        t = self.get_optimal_apr_chicken_in_time(chicken)
+        apr = ((1+p/r) * t / (t+1) - 1) * TIME_UNITS_PER_YEAR / t
+        """
+        print(f"backing ratio: {r:,.2f}")
+        print(f"premium:       {p:,.2f}")
+        print(f"optimal time:  {t:,.2f}")
+        print(f"APR: {apr:,.2f}")
+        """
+        return apr
 
     def get_stoken_apr_twap(self, chicken, data, iteration):
-        stoken_twap = self.get_stoken_twap(data, iteration)
-        base_apr = self.get_stoken_apr_from_price(chicken, stoken_twap)
-        return self.get_stoken_apr_with_amm(chicken, base_apr, chicken.amm_average_apr)
+        if iteration == 0:
+            return 0
+        if iteration <= self.twap_period:
+            return data[0: iteration].mean()["stoken_apr"]
+        # print(data[iteration - self.twap_period : iteration]["stoken_apr"])
+        # print(f"average: {data[iteration - self.twap_period : iteration].mean()['stoken_apr']:,.2f}")
+        return data[iteration - self.twap_period: iteration].mean()["stoken_apr"]
 
     def get_stoken_apr(self, chicken, data, iteration):
         return self.get_stoken_apr_twap(chicken, data, iteration)
