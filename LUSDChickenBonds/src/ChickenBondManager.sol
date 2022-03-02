@@ -34,7 +34,7 @@ contract ChickenBondManager is Ownable {
     mapping (uint => BondData) public idToBondData;
 
     uint256 constant MAX_UINT256 = type(uint256).max;
-    uint256 constant SECONDS_IN_ONE_HOUR = 3600;
+    uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
 
     // --- constructor ---
 
@@ -121,14 +121,24 @@ contract ChickenBondManager is Ownable {
         _requireCallerOwnsBond(_bondID);
 
         BondData memory bond = idToBondData[_bondID];
-        uint accruedLUSD = _calcAccruedSLUSD(bond);
-
-        _requireCapGreaterThanAccruedSLUSD(accruedLUSD, bond.lusdAmount);
+        
+        uint backingRatio = calcSystemBackingRatio();
+        uint accruedSLUSD = _calcAccruedSLUSD(bond, backingRatio);
     
         delete idToBondData[_bondID];
         totalPendingLUSD -= bond.lusdAmount;
+
+        /* Get LUSD amounts to acquire and refund. Acquire LUSD in proportion to the system's current backing ratio, 
+        * in order to maintain it. */
+        uint lusdToAcquire = accruedSLUSD * backingRatio / 1e18;
+        uint lusdToRefund = bond.lusdAmount - lusdToAcquire;
         
-        sLUSDToken.mint(msg.sender, accruedLUSD);
+        // Pull the refund from Yearn LUSD vault
+        yearnLUSDVault.withdraw(lusdToRefund);
+
+        // Send tokens and burn the bond NFT
+        lusdToken.transfer(msg.sender, lusdToRefund);
+        sLUSDToken.mint(msg.sender, accruedSLUSD);
         bondNFT.burn(_bondID);
     }
 
@@ -253,18 +263,26 @@ contract ChickenBondManager is Ownable {
     // External getter for calculating accrued LUSD based on bond ID
     function calcAccruedSLUSD(uint _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
-        return _calcAccruedSLUSD(bond);
+
+        return _calcAccruedSLUSD(bond, calcSystemBackingRatio());
     }
 
     // Internal getter for calculating accrued LUSD based on BondData struct
-    function _calcAccruedSLUSD(BondData memory bond) internal view returns (uint256) {
+    function _calcAccruedSLUSD(BondData memory _bond, uint256 _backingRatio) internal view returns (uint256) {
         // All bonds have a non-zero creation timestamp, so return accrued sLQTY 0 if the startTime is 0
-        if (bond.startTime == 0) {return 0;}
+        if (_bond.startTime == 0) {return 0;}
+        uint256 bondSLUSDCap = _calcBondSLUSDCap(_bond.lusdAmount, _backingRatio);
 
-        /* Simple linear placeholder formula for the sLUSD accrual: 1 bonded LUSD earns 0.01 sLUSD per hour.
-        TODO: replace with final sLUSD accrual formula. */
-        uint bondDuration = (block.timestamp - bond.startTime);
-        return bond.lusdAmount * bondDuration / (SECONDS_IN_ONE_HOUR * 100);
+        /* Simple placeholder formula for the sLUSD accrual of the form: ct/(t+a), where "c" is the cap and  
+        * "a" is a constant parameter which determines the accrual rate. The current value of a = SECONDS_IN_ONE_MONTH
+        * results in an accrued sLUSD equal to 50% of the cap after one month.
+        *
+        * TODO: replace with final sLUSD accrual formula. */
+        uint bondDuration = (block.timestamp - _bond.startTime);
+        uint accruedSLUSD = bondSLUSDCap * bondDuration / (bondDuration + SECONDS_IN_ONE_MONTH);
+        assert(accruedSLUSD < bondSLUSDCap);
+
+        return accruedSLUSD;
     }
 
     function getBondData(uint256 _bondID) external view returns (uint256, uint256) {
@@ -324,20 +342,24 @@ contract ChickenBondManager is Ownable {
         return  totalAcquiredLUSD * 1e18 / totalSLUSDSupply;
     }
 
-    function calcBondCap(uint _bondedAmount) public view returns (uint256) {
+    // External getter for calculating the bond sLUSD cap based on bond ID
+    function calcBondSLUSDCap(uint256 _bondID) external view returns (uint256) {
+        uint backingRatio = calcSystemBackingRatio();
+        BondData memory bond = idToBondData[_bondID];
+
+        return _calcBondSLUSDCap(bond.lusdAmount, backingRatio);
+    }
+
+    // Internal getter for calculating the bond sLUSD cap based on bonded amount and backing ratio
+    function _calcBondSLUSDCap(uint _bondedAmount, uint _backingRatio) internal view returns (uint256) {
         // TODO: potentially refactor this -  i.e. have a (1 / backingRatio) function for more precision
-        return _bondedAmount * 1e18 / calcSystemBackingRatio();
+        return _bondedAmount * 1e18 / _backingRatio;
     }
 
     // --- 'require' functions
 
     function _requireCallerOwnsBond(uint256 _bondID) internal view {
         require(msg.sender == bondNFT.ownerOf(_bondID), "CBM: Caller must own the bond");
-    }
-
-    function _requireCapGreaterThanAccruedSLUSD(uint256 _accruedSLUSD, uint _bondedAmount) internal view {
-        uint sLUSDCap = calcBondCap(_bondedAmount);
-        require(sLUSDCap >= _accruedSLUSD, "CBM: sLUSD cap must be greater than the accrued sLUSD");
     }
 
     function _requireNonZeroLUSDToShift(uint256 _lusdToShift) internal pure {

@@ -2,7 +2,9 @@
 pragma solidity 0.8.10;
 
 import "ds-test/test.sol";
+
 import "../ChickenBondManager.sol";
+import "../../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../BondNFT.sol"; 
 import "./TestContracts/SLUSDTokenTester.sol";
 import "./TestContracts/LUSDTokenTester.sol";
@@ -19,6 +21,7 @@ interface Vm {
     function startPrank(address sender) external;
     function stopPrank() external;
     function expectRevert() external;
+    function assume(bool) external;
 }
 
 address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
@@ -99,6 +102,16 @@ contract ChickenBondManagerTest is DSTest {
 
         accountsList = tempAccounts;
     }
+
+    function assertEqWithErrorMargin(uint256 _x, uint256 _y, uint256 _margin) public {
+        uint256 diff = abs(_x, _y);
+        assertLe(diff, _margin);
+    }
+
+    function abs(uint256 x, uint256 y) public returns (uint256) {
+        return x > y ? x - y : y - x;
+    }
+
 
     // --- Deployment / setup tests ---
 
@@ -187,7 +200,6 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(B_bondedLUSD, 0);
         assertEq(B_bondStartTime, 0);
 
-        // Get current time
         uint currentTime = block.timestamp;
 
         // B creates bond
@@ -202,7 +214,7 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(B_bondStartTime, currentTime);
     }
 
-    function testFirstCreateBondIncreasesTheBondNFTTokenSupply() public {
+    function testFirstCreateBondIncreasesTheBondNFTCountByOne() public {
         // Get NFT token supply before
         uint tokenSupplyBefore = bondNFT.getCurrentTokenSupply();
 
@@ -217,7 +229,7 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(tokenSupplyBefore + 1, tokenSupplyAfter);
     }
 
-    function testCreateBondIncreasesTheBondNFTTokenSupply() public {
+    function testCreateBondIncreasesTheBondNFTCountByOne() public {
         // A creates bond
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), 10e18);
@@ -238,7 +250,7 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(tokenSupplyBefore + 1, tokenSupplyAfter);
     }
 
-    function testCreateBondIncreasesBonderNFTBalance() public {
+    function testCreateBondIncreasesBonderNFTBalanceByOne() public {
         // Check A has no NFTs
         uint A_NFTBalanceBefore = bondNFT.balanceOf(A);
         assertEq(A_NFTBalanceBefore, 0);
@@ -337,7 +349,6 @@ contract ChickenBondManagerTest is DSTest {
         chickenBondManager.createBond(bondAmount);
         vm.stopPrank();
 
-        // Get current time
         uint currentTime = block.timestamp;
 
         // B creates bond
@@ -392,7 +403,7 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(B_LUSDBalanceAfter, B_LUSDBalanceBefore + bondAmount);
     }
 
-    function testChickenOutReducesBondNFTTokenCountByOne() public {
+    function testChickenOutReducesBondNFTCountByOne() public {
         // A, B create bond
         uint bondAmount = 10e18;
 
@@ -452,7 +463,7 @@ contract ChickenBondManagerTest is DSTest {
         ownerOfBondID2 = bondNFT.ownerOf(B_bondID);
     }
 
-    function testChickenOutDecreasesBonderNFTBalance() public {
+    function testChickenOutDecreasesBonderNFTBalanceByOne() public {
         // A, B create bond
         uint bondAmount = 10e18;
 
@@ -489,11 +500,122 @@ contract ChickenBondManagerTest is DSTest {
 
     // --- calcsLUSD Accrual tests ---
 
-    function testCalcAccruedSLUSDReturns0for0StartTime() public {}
+    function testCalcAccruedSLUSDReturns0for0StartTime() public {
+        // A, B create bond
+        uint bondAmount = 10e18;
 
-    // Use Foundry fuzz test here!
-    function testCalcAccruedSLUSDIsMonotonicIncreasingWithTime(uint _timeSinceBonded) public {}
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
 
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+
+        uint A_accruedSLUSD = chickenBondManager.calcAccruedSLUSD(A_bondID);
+        assertEq(A_accruedSLUSD, 0);
+    }
+
+     // TODO: convert to fuzz test
+    function testCalcAccruedSLUSDReturnsNonZeroSLUSDForNonZeroInterval() public {
+        uint _1Month = 60 * 60 * 24 * 30;
+
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+
+        vm.warp(block.timestamp + _1Month);
+
+        uint A_accruedSLUSD = chickenBondManager.calcAccruedSLUSD(A_bondID);
+        assertTrue(A_accruedSLUSD > 0);
+    }
+
+    // TODO: convert to fuzz test
+    function testCalcAccruedSLUSDNeverReachesCap() public {
+        uint tenMinutes = 60 * 60 * 10;
+        uint thousandYears = 60 * 60 * 24 * 365 * 1000;
+
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+
+        // time passes
+        vm.warp(block.timestamp + tenMinutes);
+
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        //B creates bond
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + tenMinutes);
+        
+        // Check accrued sLUSD < sLUSD Cap
+        assertTrue(chickenBondManager.calcAccruedSLUSD(B_bondID) < chickenBondManager.calcBondSLUSDCap(B_bondID));
+        
+        // 1000 years passes
+        vm.warp(block.timestamp + thousandYears);
+
+        // Check accrued sLUSD < sLUSD Cap
+        assertTrue(chickenBondManager.calcAccruedSLUSD(B_bondID) < chickenBondManager.calcBondSLUSDCap(B_bondID));
+    }
+
+    // TODO: convert to fuzz test
+    function testCalcAccruedSLUSDIsMonotonicIncreasingWithTime(uint _timeSinceBonded) public {
+        uint tenMinutes = 60 * 60 * 10;
+        uint thousandYears = 60 * 60 * 24 * 365 * 1000;
+
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+
+        // time passes
+        vm.warp(block.timestamp + tenMinutes);
+
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        //B creates bond
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+    
+        uint time = block.timestamp;
+        uint accruedSLUSD;
+        for (uint256 i = 0; i < 5; i++) {
+            // 10 minutes passes
+            time += tenMinutes;
+            vm.warp(time);
+            uint newAccruedSLUSD = chickenBondManager.calcBondSLUSDCap(B_bondID);
+            assertTrue(newAccruedSLUSD > accruedSLUSD);
+        }
+    }
+
+    // TODO: convert to fuzz test
     function testCalcSLUSDAccrualIncreasesWithTimeForABonder() public {
         // A creates bond
         uint bondAmount = 10e18;
@@ -506,9 +628,6 @@ contract ChickenBondManagerTest is DSTest {
 
         uint A_accruedSLUSDBefore = chickenBondManager.calcAccruedSLUSD(A_bondID);
         assertEq(A_accruedSLUSDBefore, 0);
-
-        // Get current time
-        uint currentTime = block.timestamp;
 
         // 10 minutes passes 
         vm.warp(block.timestamp + 600);
@@ -526,9 +645,7 @@ contract ChickenBondManagerTest is DSTest {
         chickenBondManager.createBond(bondAmount);
 
         uint A_bondID = bondNFT.getCurrentTokenSupply();
-        // Get current time
-        uint currentTime = block.timestamp;
-
+       
         // A chickens out
         chickenBondManager.chickenOut(A_bondID);
 
@@ -567,10 +684,9 @@ contract ChickenBondManagerTest is DSTest {
         chickenBondManager.createBond(bondAmount);
         vm.stopPrank();
 
-        // Get current time
         uint currentTime = block.timestamp;
 
-        // B creates bond
+       // B creates bond
         vm.startPrank(B);
         lusdToken.approve(address(chickenBondManager), bondAmount);
         chickenBondManager.createBond(bondAmount);
@@ -606,9 +722,6 @@ contract ChickenBondManagerTest is DSTest {
         chickenBondManager.createBond(bondAmount);
         vm.stopPrank();
 
-        // Get current time
-        uint currentTime = block.timestamp;
-
         // B creates bond
         vm.startPrank(B);
         lusdToken.approve(address(chickenBondManager), bondAmount);
@@ -633,14 +746,212 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(B_sLUSDBalanceAfter, B_sLUSDBalanceBefore + B_accruedSLUSD);
     }
 
-    // function testFailChickenInCallerIsNotBonder() public {}
-    // function testFailChickenInBackingRatioExceedsCap() public {}
-    function testChickenInDecreasesTotalPendingLUSD() public {}
-    function testChickenInIncreasesTotalAcquiredLUSD() public {}
-    function testChickenInReducesBondNFTTokenCountByOne() public {}
-    function testChickenInDecreasesBonderNFTBalance() public {}
-    function testChickenInRemovesOwnerOfBondNFT() public {}
+     function testChickenInIncreasesBondHolderLUSDBalance() public {
+        // A creates bond
+        uint bondAmount = 10e18;
 
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // Get B LUSD balance before
+        uint B_LUSDBalanceBefore = lusdToken.balanceOf(B);
+    
+        // B chickens in
+        chickenBondManager.chickenIn(B_bondID);
+
+        // Check B's LUSD balance has increased by correct amount
+        uint B_LUSDBalanceAfter = lusdToken.balanceOf(B);
+        assertGt(B_LUSDBalanceAfter, B_LUSDBalanceBefore);
+    }
+    
+    
+    function testChickenInDecreasesTotalPendingLUSDByBondAmount() public {
+         // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Get total pending LUSD before
+        uint totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
+
+        // B chickens in
+        chickenBondManager.chickenIn(B_bondID);
+
+        // Check total pending LUSD has increased by correct amount
+        uint totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
+        assertLt(totalPendingLUSDAfter, totalPendingLUSDBefore);
+    }
+
+    function testChickenInIncreasesTotalAcquiredLUSD() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Get total pending LUSD before
+        uint totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
+
+        // B chickens in
+        chickenBondManager.chickenIn(B_bondID);
+
+        // Check total acquired LUSD has increased by correct amount
+        uint totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
+        assertGt(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore);
+    }
+
+    function testChickenInReducesBondNFTCountByOne() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        uint nftTokenSupplyBefore = bondNFT.getCurrentTokenSupply();
+
+        // B chickens in
+        chickenBondManager.chickenIn(B_bondID);
+
+        uint nftTokenSupplyAfter = bondNFT.getCurrentTokenSupply();
+        assertEq(nftTokenSupplyAfter, nftTokenSupplyBefore - 1);
+    }
+
+    function testChickenInDecreasesBonderNFTBalanceByOne() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        uint nftTokenSupplyBefore = bondNFT.getCurrentTokenSupply();
+
+        // Get B's NFT balance before
+        uint B_bondNFTBalanceBefore = bondNFT.balanceOf(B);
+
+        // B chickens in
+        chickenBondManager.chickenIn(B_bondID);
+
+        // Check B's NFT balance decreases by 1
+        uint B_bondNFTBalanceAfter = bondNFT.balanceOf(B);
+        assertEq(B_bondNFTBalanceAfter, B_bondNFTBalanceBefore - 1);
+    }
+
+    function testChickenInRemovesOwnerOfBondNFT() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Confirm bond owner is B
+        address bondOwnerBefore = bondNFT.ownerOf(B_bondID);
+        assertEq(bondOwnerBefore, B);
+
+        // B chickens in
+        chickenBondManager.chickenIn(B_bondID);
+
+        // Expert revert when we check for the owner of a non-existent token
+        vm.expectRevert("ERC721: owner query for nonexistent token");
+        address bondOwnerAfter = bondNFT.ownerOf(B_bondID);
+    }
+
+    function testChickenInRevertsWhenCallerIsNotABonder() public {
+        // A creates bond
+        uint bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint A_bondID = bondNFT.getCurrentTokenSupply();
+        uint nonexistentBondID = bondNFT.getCurrentTokenSupply() + 1;
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // Confirm B has no bonds
+        uint B_bondCount = bondNFT.balanceOf(B);
+        
+        // Expert revert when non-bonder B 
+        vm.startPrank(B);
+        vm.expectRevert("ERC721: owner query for nonexistent token");
+        chickenBondManager.chickenIn(bondAmount);
+    }
+    
     // --- redemption tests ---
 
     // function testFailRedeemWhenCallerHasInsufficientSLUSD() public {}
@@ -653,9 +964,6 @@ contract ChickenBondManagerTest is DSTest {
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), bondAmount);
         chickenBondManager.createBond(bondAmount);
-       
-        // Get current time
-        uint currentTime = block.timestamp;
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -696,9 +1004,6 @@ contract ChickenBondManagerTest is DSTest {
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), bondAmount);
         chickenBondManager.createBond(bondAmount);
-       
-        // Get current time
-        uint currentTime = block.timestamp;
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -742,10 +1047,7 @@ contract ChickenBondManagerTest is DSTest {
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), bondAmount);
         chickenBondManager.createBond(bondAmount);
-       
-        // Get current time
-        uint currentTime = block.timestamp;
-
+    
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
     
@@ -788,9 +1090,6 @@ contract ChickenBondManagerTest is DSTest {
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), bondAmount);
         chickenBondManager.createBond(bondAmount);
-       
-        // Get current time
-        uint currentTime = block.timestamp;
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -837,9 +1136,6 @@ contract ChickenBondManagerTest is DSTest {
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), bondAmount);
         chickenBondManager.createBond(bondAmount);
-       
-        // Get current time
-        uint currentTime = block.timestamp;
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -869,12 +1165,14 @@ contract ChickenBondManagerTest is DSTest {
         // B redeems some sLUSD
         uint sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
         vm.startPrank(B);
+        assertEq(sLUSDToRedeem, sLUSDToken.totalSupply() * redemptionFraction / 1e18);
         chickenBondManager.redeem(sLUSDToRedeem);
 
         // Check acquired LUSD in Yearn has decreased by correct fraction
         uint acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
-        assertEq(acquiredLUSDInYearnAfter, (acquiredLUSDInYearnBefore * fractionRemainingAfterRedemption / 1e18));
-        
+        uint expectedAcquiredLUSDInYearnAfter = acquiredLUSDInYearnBefore * fractionRemainingAfterRedemption / 1e18;
+
+        assertEqWithErrorMargin(acquiredLUSDInYearnAfter, expectedAcquiredLUSDInYearnAfter, 1000);
     }
 
     function testRedeemDecreasesAcquiredLUSDInCurveByCorrectFraction() public {
@@ -888,9 +1186,6 @@ contract ChickenBondManagerTest is DSTest {
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), bondAmount);
         chickenBondManager.createBond(bondAmount);
-       
-        // Get current time
-        uint currentTime = block.timestamp;
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -923,12 +1218,18 @@ contract ChickenBondManagerTest is DSTest {
         // B redeems some sLUSD
         uint sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
         vm.startPrank(B);
+        assertEq(sLUSDToRedeem, sLUSDToken.totalSupply() * redemptionFraction / 1e18);
         chickenBondManager.redeem(sLUSDToRedeem);
 
         // Check acquired LUSD in curve after has reduced by correct fraction
         uint acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
-        assertEq(acquiredLUSDInCurveAfter, (acquiredLUSDInCurveBefore * fractionRemainingAfterRedemption / 1e18));
+        uint expectedAcquiredLUSDInCurveAfter = acquiredLUSDInCurveBefore * fractionRemainingAfterRedemption / 1e18;
+
+        assertEqWithErrorMargin(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1000);
     }
+
+  
+
 
     // --- shiftLUSDFromSPToCurve tests -
 
