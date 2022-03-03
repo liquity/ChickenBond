@@ -69,6 +69,8 @@ contract ChickenBondManager is Ownable {
     // --- User-facing functions ---
 
     function createBond(uint256 _lusdAmount) external {
+        _requireNonZeroAmount(_lusdAmount);
+        
         // Mint the bond NFT to the caller and get the bond ID
         uint256 bondID = bondNFT.mint(msg.sender);
 
@@ -143,6 +145,7 @@ contract ChickenBondManager is Ownable {
     }
 
     function redeem(uint256 _sLUSDToRedeem) external {
+        _requireNonZeroAmount(_sLUSDToRedeem);
         /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
         Current approach leaves redemption fees in the acquired bucket. */
         uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
@@ -179,7 +182,7 @@ contract ChickenBondManager is Ownable {
     function shiftLUSDFromSPToCurve() external {
         // Calculate the LUSD to pull from the Yearn LUSD vault
         uint256 lusdToShift = _calcLUSDToShiftToCurve();
-        _requireNonZeroLUSDToShift(lusdToShift);
+        _requireNonZeroAmount(lusdToShift);
 
         uint256 yTokensToBurn = yearnLUSDVault.calcTokenToYToken(lusdToShift);
 
@@ -205,7 +208,7 @@ contract ChickenBondManager is Ownable {
    function shiftLUSDFromCurveToSP() external {
        // Calculate LUSD to pull from Curve
         uint256 lusdToShift = _calcLUSDToShiftToSP();
-        _requireNonZeroLUSDToShift(lusdToShift);
+        _requireNonZeroAmount(lusdToShift);
         
         //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
         uint256 LUSD3CRVfToBurn = curvePool.calcLUSDToLUSD3CRV(lusdToShift);
@@ -362,7 +365,7 @@ contract ChickenBondManager is Ownable {
         require(msg.sender == bondNFT.ownerOf(_bondID), "CBM: Caller must own the bond");
     }
 
-    function _requireNonZeroLUSDToShift(uint256 _lusdToShift) internal pure {
-        require(_lusdToShift > 0, "CBM: LUSD to shift must be > 0");
+    function _requireNonZeroAmount(uint256 _amount) internal pure {
+        require(_amount > 0, "CBM: Amount must be > 0");
     }
 }

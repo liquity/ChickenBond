@@ -22,6 +22,7 @@ interface Vm {
     function stopPrank() external;
     function expectRevert() external;
     function assume(bool) external;
+    function tip(address token, address to, uint256 give) external;
 }
 
 address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
@@ -38,6 +39,8 @@ contract ChickenBondManagerTest is DSTest {
     MockYearnVault yearnCurveVault;
 
     Vm vm = Vm(CHEATCODE_ADDRESS);
+
+    uint256 MAX_UINT256 = type(uint256).max;
 
     address[] accountsList;
     address public A;
@@ -308,6 +311,14 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(yearnVaultBalanceAfter, yearnVaultBalanceBefore + 10e18);
     }
 
+    function testCreateBondRevertsWithZeroInputAmount() public {
+        // A tries to bond 0 LUSD
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), 10e18);
+        vm.expectRevert("CBM: Amount must be > 0");
+        chickenBondManager.createBond(0);
+    }
+
     // --- chickenOut tests ---
 
     function testChickenOutReducesTotalPendingLUSD() public {
@@ -494,9 +505,48 @@ contract ChickenBondManagerTest is DSTest {
         assertEq(B_NFTBalanceAfter, B_NFTBalanceBefore - 1);
     }
 
-    //  function testFailOutChickenCallerIsNotBonder() public {
-    //     //TODO 
-    // }
+    function testChickenOutRevertsWhenCallerIsNotBonder() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint256 A_bondID = bondNFT.getCurrentTokenSupply();
+
+        // B tries to chicken out A's bond
+        vm.startPrank(B);
+        vm.expectRevert("CBM: Caller must own the bond");
+        chickenBondManager.chickenOut(A_bondID);
+
+        // B tries to chicken out non-existent bond
+        vm.expectRevert("ERC721: owner query for nonexistent token");
+        chickenBondManager.chickenOut(37);
+    }
+
+    function testChickenOutRevertsWhenBonderChickensOutBondTheyDontOwn() public {
+        // A, B create bond
+        uint256 bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        uint256 B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // A attempts to chicken out B's bond
+        vm.startPrank(A);
+        vm.expectRevert("CBM: Caller must own the bond");
+        chickenBondManager.chickenOut(B_bondID);
+    }
 
     // --- calcsLUSD Accrual tests ---
 
@@ -945,17 +995,48 @@ contract ChickenBondManagerTest is DSTest {
 
         // Confirm B has no bonds
         uint256 B_bondCount = bondNFT.balanceOf(B);
+        assertEq(B_bondCount, 0);
         
-        // Expert revert when non-bonder B 
+        // B tries to chicken out A's bond
         vm.startPrank(B);
-        vm.expectRevert("ERC721: owner query for nonexistent token");
-        chickenBondManager.chickenIn(bondAmount);
-    }
-    
-    // --- redemption tests ---
+        vm.expectRevert("CBM: Caller must own the bond");
+        chickenBondManager.chickenIn(A_bondID);
 
-    // function testFailRedeemWhenCallerHasInsufficientSLUSD() public {}
-    // function testFailRedeemWhenPOLisZero() public {}
+        // B tries to chicken out a non-existent bond
+        vm.expectRevert("ERC721: owner query for nonexistent token");
+        chickenBondManager.chickenIn(37);   
+   }
+
+    function testChickenInRevertsWhenBonderChickensInBondTheyDontOwn() public { 
+         // A creates bond
+        uint256 bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint256 B_bondID = bondNFT.getCurrentTokenSupply();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        // Confirm bond owner is B
+        address bondOwnerBefore = bondNFT.ownerOf(B_bondID);
+        assertEq(bondOwnerBefore, B);
+
+        // A tries to chickens in B's bond
+        vm.startPrank(A);
+        vm.expectRevert("CBM: Caller must own the bond");
+        chickenBondManager.chickenIn(B_bondID);
+    }
+
+    // --- redemption tests ---
 
     function testRedeemDecreasesCallersSLUSDBalance() public {
         // A creates bond
@@ -1228,8 +1309,96 @@ contract ChickenBondManagerTest is DSTest {
         assertEqWithErrorMargin(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1000);
     }
 
-  
+    function testRedeemRevertsWhenCallerHasInsufficientSLUSD() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
 
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        uint256 A_bondID = bondNFT.getCurrentTokenSupply();
+
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // A transfers some sLUSD to B
+        vm.startPrank(A);
+        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        uint B_sLUSDBalance = sLUSDToken.balanceOf(B);
+        assertGt(B_sLUSDBalance, 0);
+
+        // B tries to redeem more LUSD than they have
+        vm.startPrank(B);
+        vm.expectRevert("ERC20: burn amount exceeds balance");
+        chickenBondManager.redeem(B_sLUSDBalance + 1);
+
+        /* Reverts on transfer rather than burn, since it tries to redeem more than the total SLUSD supply, and therefore tries 
+        * to withdraw more LUSD than is held by the system */
+        vm.expectRevert("ERC20: transfer amount exceeds balance");
+        chickenBondManager.redeem(B_sLUSDBalance + 13e37);
+    }
+
+    function testRedeemRevertsWithZeroInputAmount() public {
+         // A creates bond
+        uint256 bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        uint256 A_bondID = bondNFT.getCurrentTokenSupply();
+
+        // A chickens in
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check B's sLUSD balance is zero
+        uint256 B_sLUSDBalance = sLUSDToken.balanceOf(B);
+        assertEq(B_sLUSDBalance, 0);
+
+        // B tries to redeem with 0 sLUSD balance
+        vm.startPrank(B);
+        vm.expectRevert("CBM: Amount must be > 0");
+        chickenBondManager.redeem(0);
+    }
+
+    function testFailRedeemRevertsWhenTotalAcquiredLUSDisZero() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        uint256 A_bondID = bondNFT.getCurrentTokenSupply();
+
+        // confirm acquired LUSD is 0
+        assertEq(chickenBondManager.getTotalAcquiredLUSD(), 0);
+
+        // Cheat: tip 5e18 sLUSD to B
+        vm.tip(address(sLUSDToken), B, 5e18);
+        uint256 B_sLUSDBalance = sLUSDToken.balanceOf(B);
+        assertEq(B_sLUSDBalance, 5e18);
+
+        // B tries to redeem his sLUSD while there is 0 total acquired LUSD
+        vm.startPrank(B);
+        // vm.expectRevert("asa");
+        chickenBondManager.redeem(5e18);
+    }
 
     // --- shiftLUSDFromSPToCurve tests -
 
@@ -1410,6 +1579,7 @@ contract ChickenBondManagerTest is DSTest {
     // function testShiftLUSDFromSPToCurveIncreaseLUSDInCurve() public {}
 
     // function testFailShiftLUSDFromSPToCurveWhen0LUSDInYearn() public {}
+    // function testShiftLUSDFromSPToCurveRevertsWithZeroLUSDinSP() public {}
    
 
     // --- shiftLUSDFromCurveToSP tests ---
@@ -1658,4 +1828,5 @@ contract ChickenBondManagerTest is DSTest {
     // function testShiftLUSDFromCurveToSPDecreasesLUSDInCurve() public {}
 
     // function testFailShiftLUSDFromCurveToSPWhen0LUSDInCurve() public {}
+
 }
