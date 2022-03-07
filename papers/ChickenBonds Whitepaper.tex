@@ -1,0 +1,147 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{blindtext}
+\usepackage{amsmath}
+\usepackage[a4paper, inner=1.7cm, outer=2.7cm, top=3cm, bottom=3cm, bindingoffset=1.2cm]{geometry}
+\usepackage{tcolorbox}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{makecell}
+\usepackage{boldline}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage[table]{colortbl}
+\usepackage[english]{babel}
+\usepackage{amsthm}
+
+\newtheorem*{invariant}{Invariant}
+
+\renewcommand\theadalign{bc}
+\renewcommand\theadfont{\bfseries}
+\renewcommand\theadgape{\Gape[4pt]}
+\renewcommand\cellgape{\Gape[4pt]}
+
+\begin{document}
+
+\title{\textbf{ChickenBonds: Self-Bootstrapping Treasury}}
+\author{Liquity Team}
+\date{April 5, 2021}
+
+\maketitle
+
+\section*{Abstract}
+ChickenBonds is an autonomous self-bootstrapping treasury system that acquires yield-bearing tokens (TKN) through a novel bonding mechanism: users may bond TKN and start accruing a "boosted" derivative token (bTKN) in return.
+
+At any time, bond holders can either retrieve their principal foregoing the accrued amount ("chicken out") or trade it in against the accrued bTKN ("chicken in").
+
+The TKN acquired by the system backs the bTKN supply: while a portion of the TKN in the treasury is directly redeemable by bTKN holders, another portion is contributing to the redeemable amount through the generated yield.
+
+By retaining the revenue from the entire treasury including outstanding bonds, the system amplifies the redemption value of the bTKN, resulting in a rising price floor. This yield amplification makes it attractive to buy and hold bTKN in addition to obtaining it through bonding. 
+
+ChickenBonds are versatile and can be used by protocols to obtain DEX liquidity for their token at no cost or to pursue more sophisticated liquidity management strategies. An interesting use case involves bonding LP tokens.
+
+\section{Introduction}
+
+\section{Treasury}
+The protocol operates a \textit{Treasury R} consisting of three logical parts ("buckets"):  \textit{Pending Bucket}, \textit{Acquired Bucket} and \textit{Permanent Bucket}.
+
+Each bucket contains a certain quantity of TKN or other assets whose value can be readily expressed in TKN. We suppose that the assets in the buckets can be invested in a third-party protocol (e.g. staked natively or deposited to a DEX) to generate yield while being withdrawable at any time. 
+
+The current state of the Treasury can thus be described by the following tuple:
+
+$$R:=(q_p, q_a, q_o, r_p, r_a, r_d)$$
+
+where $q_p$, $q_a$ and $q_d$ stand for the quantities held by the respective buckets, and $r_p$, $r_a$, $r_d$ for their rates of return. Note that the buckets as logical quantities do not need to correspond to the physical investment vehicles. A bucket may invest its funds to multiple investment vehicles, and several buckets may use the same venue earning the same rate of return.
+
+The buckets are used as follows:
+\begin{itemize}
+    \item \textit{Pending Bucket.} Contains the TKN bonded by users that are still active bond holders, i.e. whose deposits haven’t been acquired by the protocol yet.  Since bond holders may withdraw their bonded TKN at will (see below “chicken out”), their deposits are considered as pending. The yield earned by the Pending Bucket is credited to the Acquired Bucket.
+    \item \textit{Acquired Bucket.} Contains a portion of the TKN relinquished by former bond holders after a "chicken in" event as well as the yield of the Pending and the Permanent Buckets. The Acquired Bucket directly backs the bTKN supply. 
+    \item \textit{Permanent Bucket.} Contains the other portion of the TKN relinquished by former bond holders. The yield earned by the Permanent Bucket is credited to the Acquired Bucket.
+\end{itemize}
+
+\subsection{Yield Amplification and Reinvestment}
+Given that the Acquired Bucket earns a return not only on its own assets, but additionally receives the returns from the Pending and the Permanent Buckets, it achieves an amplified return $r_a^\star > r_a$ on the amount $q_a$. We call this useful property \textit{yield amplification}.
+
+As the protocol doesn't distribute any yields, but reinvests them inside the Acquired Bucket, the value of the Acquired Bucket will grow over time even without the inflow of new capital. Due to the yield amplification, the Acquired Bucket grows faster than if the same funds were invested regularly with a (compounding) rate of return $r_a$.
+
+\subsection{Acquired Bucket backing the Boosted Token}
+The protocol maintains a supply $S$ of a \textit{Boosted Token} (bTKN) according to preset rules for minting and burning. The bTKN supply is directly backed by the Acquired Bucket, i.e. it can be redeemed against a pro rata share of the assets (usually TKN) held therein.
+
+We call the amount of TKN for which each unit of TKN can be redeemed for the  \textit{redemption price}. The redemption price corresponds to the \textit{backing ratio} $r$ defined as $\frac{q_a}{S}$, which is subject to the following invariant:
+
+\begin{invariant}[Backing ratio never decreases]
+The protocol ensures that the backing ratio $r$ can only ever increase, but never decrease.
+\end{invariant}
+
+\section{User interactions}
+
+Users can interact with the protocol in the followings ways:
+\begin{itemize}
+    \item \textit{Bonding}. Users can bond TKN in order to earn bTKN.
+    \item \textit{Redemption}. Users can redeem bTKN for TKN.
+\end{itemize}
+
+\subsection{Bonding}
+Bonding is the main use case that allows the system to build up its treasury by incentivizing users through the issuance of a  \textit{Boosted Token}, the bTKN. 
+
+Users can bond any amount $b$ of TKN at any time in exchange for a position called \textit{Chicken Bond}, represented by an NFT. The bonded TKN is added to the \textit{Pending Bucket} where it earns a yield for the system's Treasury.
+
+A Chicken Bond accrues a virtual balance $s(t)$ of bTKN over time, according to a curve that asymptotically approaches a "cap" ensuring the invariant of a never decreasing backing ratio.
+
+The accrual curve can be of the form 
+
+$$s(t) := \frac{b}{r} \cdot \frac{t}{t+\alpha}$$ 
+
+$\alpha$ parametrizes the slope of the curve and could be automatically adjusted by the protocol in order to control the speed of the value accrual which depends on changing price premium (see below).
+
+We call the fraction $\frac{b}{r}$ the cap $c$ which corresponds to the amount of bTKN that could be minted by the protocol such that the backing ratio would be kept constant if $b$ was entirely added to the Acquired Bucket. Therefore, the ratio between the cap and the bond corresponds to the ratio between the bTKN supply and the Acquired Bucket. Thus,
+
+$$\frac{c}{b} = \frac{S}{q_a} $$
+
+The owner of a bond can exit their position any time by choosing either of the following options:
+
+\begin{itemize}
+    \item \textit{Chicken out}. Retrieve the principal foregoing the accrued bTKN.
+    \item \textit{Chicken in}. Obtain the accrued bTKN foregoing the bonded TKN.
+\end{itemize}
+
+In both cases, the Chicken Bond NFT is burned as the bond holder’s position is closed. Depending on the option chosen, the bonded TKN is either fully paid back to the user or it transitions from the Pending Bucket to the Acquired Bucket and the Permanent Bucket. 
+
+TODO: refund
+
+\subsubsection{Chicken out}
+By chickening out, the bond holder gets the entire bonded TKN back, foregoing the accrued balance of bTKN (which doesn’t get minted). The option to withdraw the principal at any time makes bonding an essentially risk-free investment where the user only incurs the opportunity costs.
+
+Upon a chicken in event at time $t+1$, the Treasury changes as follows:
+$$q_p(t+1) := q_p(t) - b$$
+
+As an alternative, the bond holder may sell their NFT on the secondary market. The buyer of the NFT has the same rights against the protocol as the original bond holder.
+
+\subsubsection{Chicken in}
+A user that chickens in loses the bonded TKN in exchange for the accrued balance of bTKN that is minted and paid out by the protocol. A payout tax may be charged on the accrued balance (reducing the user’s payout) in order to incentivize liquidity for a bTKN/TKN exchange pair.
+
+Instead of keeping the received bTKN, the user may sell it on the open market and opt to reinvest the proceeds by creating a new, typically larger bond (aka as “rebonding”, see below).
+
+Upon a chicken in, the protocol acquires the bonded TKN which transitions from the Pending Bucket to the Acquired Bucket and the Permanent Bucket. To that end, the bonded amount $b$ is split into two amounts $b_a$ and $b_d$ in proportion to the ratio of the currently accrued bTKN $s$ to the cap $c$:
+
+$$b_a = \frac{s}{c} \cdot b = s \cdot r$$
+$$b_d = \frac{c-s}{c} \cdot b = b - s \cdot r$$
+
+The two amounts are then added to the Acquired and the Permanent Bucket, so that the Treasury transitions to the following state:
+
+$$q_a(t+1) := q_a(t) + b_a = q_a(t) + s \cdot r $$
+$$q_d(t+1) := q_d(t) + b_d = q_d(t) + (b - s \cdot r)$$
+$$q_p(t+1) := q_p(t) - b$$
+
+\subsection{Redemption}
+At any time, a holder can redeem $s$ bTKN for $\frac{s}{S}\cdot q_a$ TKN.
+The TKN are removed from the Acquired Bucket and paid out the user, while the redeemed bTKN are burned.
+
+The state of the Treasury changes as follows: 
+
+$$q_a(t+1) := q_a(t) \cdot (1 - \frac{s}{S})$$
+$$S(t+1) := S(t) - s$$
+
+\end{document}
