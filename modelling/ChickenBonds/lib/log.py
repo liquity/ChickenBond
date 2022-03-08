@@ -1,6 +1,6 @@
 from functools import reduce
 
-def log_system(chicken):
+def log_system(chicken, tester):
     token = chicken.token
     stoken = chicken.stoken
     coop_bal = chicken.coop_token_balance()
@@ -9,13 +9,18 @@ def log_system(chicken):
     print(f"")
     print("Chicken Bonds state")
     #print(f" - Outstanding debt: {chicken.outstanding_debt:,.2f}")
-    print(f" - Coop {token.symbol}:       {coop_bal:,.2f}")
-    print(f" - POL {token.symbol}:        {pol_bal:,.2f}")
-    print(f" - AMM {token.symbol} value:  {amm_value:,.2f}")
-    print(f" - {stoken.symbol} supply:    {stoken.total_supply:,.2f}")
+    print(f" - Pending {token.symbol}:               {coop_bal:,.2f}")
+    print(f" - Acquired {token.symbol}:              {pol_bal:,.2f}")
+    print(f" - Permanent (DEX) {token.symbol} value: {amm_value:,.2f}")
+    print(f" - {stoken.symbol} supply:               {stoken.total_supply:,.2f}")
     if stoken.total_supply > 0:
-        print(f" - POL ratio     (| no AMM): {chicken.get_pol_ratio_with_amm():,.2f}   |   {chicken.get_pol_ratio_no_amm():,.2f}")
+        print(f" - Backing ratio (| no AMM): {chicken.get_pol_ratio_with_amm():,.2f}   |   {chicken.get_pol_ratio_no_amm():,.2f}")
         print(f" - Reserve ratio (| no AMM): {chicken.get_reserve_ratio_with_amm():,.2f}   |   {chicken.get_reserve_ratio_no_amm():,.2f}")
+
+    print("")
+    print(f"Fair price:      {tester.get_fair_price(chicken):,.2f}")
+    print(f"Rebond Time:     {tester.get_rebond_time(chicken):,.2f}")
+    print(f"Chicken in Time: {tester.get_optimal_apr_chicken_in_time(chicken):,.2f}")
     return
 
 def log_amm_pool(amm, name):
@@ -51,10 +56,10 @@ def log_chicks(chicken, chicks, tokens):
         log_chick_balances(chicken, chick)
     return
 
-def log_state(chicken, chicks, log_level=1):
+def log_state(chicken, chicks, tester, log_level=1):
     if log_level == 0:
         return
-    log_system(chicken)
+    log_system(chicken, tester)
     log_amm(chicken)
     log_stoken_amm(chicken)
     #log_chicks(chicken, chicks)

@@ -25,11 +25,13 @@ def deploy():
     borrower = User("borrower")
     #lqty.mint(borrower.account, INITIAL_AMOUNT)
 
+    """
     # Add funds to sLQTY AMM pool:
     whale = User("whale")
     whale_amount = NUM_CHICKS * INITIAL_AMOUNT * 100000
     lqty.mint(whale.account, whale_amount)
     chicken.stoken_amm.add_liquidity_single_A(whale.account, whale_amount, 1)
+    """
 
     return chicken, chicks, borrower
 
@@ -46,7 +48,7 @@ def main(tester):
 
     print(f"\n  --> Model: {tester.name}")
     print('  ------------------------------------------------------\n')
-    log_state(chicken, chicks, LOG_LEVEL)
+    log_state(chicken, chicks, tester, LOG_LEVEL)
 
     tester.init(chicks)
 
@@ -55,7 +57,7 @@ def main(tester):
         print("  -------------------\033[0m\n")
 
         natural_rate = tester.get_natural_rate(natural_rate, iteration)
-        chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(chicken, accrued_fees_A, accrued_fees_B)
+        chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(chicken.stoken_amm, accrued_fees_A, accrued_fees_B)
         chicken.amm_average_apr = get_amm_average_apr(data, iteration)
         #print(f"AMM iteration APR: {chicken.amm_iteration_apr:.3%}")
         #print(f"AMM average APR: {chicken.amm_average_apr:.3%}")
@@ -74,12 +76,12 @@ def main(tester):
         #tester.adjust_liquidity(chicken, chicks, chicken.amm_average_apr, iteration)
 
         # If price is low, buy from AMM and stake
-        #tester.amm_arbitrage(chicken, chicks, iteration)
+        tester.amm_arbitrage(chicken, chicks, iteration)
 
         # If price is below redemption price, redeem and buy
-        #tester.redemption_arbitrage(chicken, chicks, iteration)
+        tester.redemption_arbitrage(chicken, chicks, iteration)
 
-        log_state(chicken, chicks, LOG_LEVEL)
+        log_state(chicken, chicks, tester, LOG_LEVEL)
 
         new_row = state_to_row(
             chicken,
@@ -102,13 +104,13 @@ def main(tester):
     else:
         plot_interval[1] = ITERATIONS
 
-    log_state(chicken, chicks, 1)
+    log_state(chicken, chicks, tester, 1)
 
     plot_charts(
         chicken,
         chicks,
         data[plot_interval[0] : plot_interval[1]],
-        tester.price_max_value, tester.apr_max_value,
+        tester.price_max_value, tester.time_max_value, tester.apr_min_value, tester.apr_max_value,
         description=tester.name,
         group=group,
         group_description=group_description,

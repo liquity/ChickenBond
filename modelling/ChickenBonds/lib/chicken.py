@@ -13,7 +13,8 @@ class Chicken():
         self.amm = UniswapPool(amm_account, token, coll_token, amm_fee)
         #self.amm = ConstantPricePool(amm_account, token, stoken, amm_fee)
         #self.amm = StableSwapPool(amm_account, token, stoken, amm_fee, amplification_factor)
-        self.stoken_amm = AmmMockPrice(stoken_amm_account, token, stoken, stoken_amm_fee)
+        #self.stoken_amm = AmmMockPrice(stoken_amm_account, token, stoken, stoken_amm_fee)
+        self.stoken_amm = UniswapPool(stoken_amm_account, token, stoken, stoken_amm_fee)
 
         self.amm_iteration_apr = 0.0
         self.amm_average_apr = 0.0
