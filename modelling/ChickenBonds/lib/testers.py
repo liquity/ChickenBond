@@ -217,14 +217,14 @@ class TesterSimpleToll(TesterInterface):
 
     def get_optimal_apr_chicken_in_time(self, chicken):
         p = self.get_premium(chicken)
-        r = self.pol_ratio
+        r = self.get_pol_ratio(chicken)
         if p == 0:
             return 0
         return (r + math.sqrt(r * (r+p))) / p
 
     def get_stoken_apr_spot(self, chicken):
         p = self.get_premium(chicken)
-        r = self.pol_ratio
+        r = self.get_pol_ratio(chicken)
         if p == 0:
             return 0
         # optimal_time
