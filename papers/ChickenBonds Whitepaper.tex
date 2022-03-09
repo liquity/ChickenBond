@@ -14,6 +14,7 @@
 \usepackage[table]{colortbl}
 \usepackage[english]{babel}
 \usepackage{amsthm}
+\usepackage{hyperref}
 
 \newtheorem*{invariant}{Invariant}
 
@@ -50,16 +51,21 @@ Each bucket contains a certain quantity of TKN or other assets whose value can b
 
 The current state of the Treasury can thus be described by the following tuple:
 
-$$R:=(q_p, q_a, q_o, r_p, r_a, r_d)$$
+\begin{equation}
+  \label{eq:treasury}
+    R:=(q_p, q_a, q_o, r_p, r_a, r_d)
+\end{equation}
 
 where $q_p$, $q_a$ and $q_d$ stand for the quantities held by the respective buckets, and $r_p$, $r_a$, $r_d$ for their rates of return. Note that the buckets as logical quantities do not need to correspond to the physical investment vehicles. A bucket may invest its funds to multiple investment vehicles, and several buckets may use the same venue earning the same rate of return.
 
 The buckets are used as follows:
 \begin{itemize}
-    \item \textit{Pending Bucket.} Contains the TKN bonded by users that are still active bond holders, i.e. whose deposits haven’t been acquired by the protocol yet.  Since bond holders may withdraw their bonded TKN at will (see below “chicken out”), their deposits are considered as pending. The yield earned by the Pending Bucket is credited to the Acquired Bucket.
-    \item \textit{Acquired Bucket.} Contains a portion of the TKN relinquished by former bond holders after a "chicken in" event as well as the yield of the Pending and the Permanent Buckets. The Acquired Bucket directly backs the bTKN supply. 
+    \item \textit{Pending Bucket.} Contains the TKN bonded by users that are still active bond holders, i.e. whose deposits haven’t been acquired by the protocol yet. Since bond holders may withdraw their bonded TKN at will (see \ref{sec:chicken-out} “chicken out“), their deposits are considered as pending. The yield earned by the Pending Bucket is credited to the Acquired Bucket.
+    \item \textit{Acquired Bucket.} Contains a portion of the TKN relinquished by former bond holders after a "chicken in" event (see \ref{sec:chicken-in}) as well as the yield of the Pending and the Permanent Buckets. The Acquired Bucket directly backs the bTKN supply. 
     \item \textit{Permanent Bucket.} Contains the other portion of the TKN relinquished by former bond holders. The yield earned by the Permanent Bucket is credited to the Acquired Bucket.
 \end{itemize}
+
+Having a Permanent Bucket may turn out as unnecessary or even detrimental for some use cases. As an alternative, the protocol can thus be set up with no Permanent Bucket (see \ref{sec:two-bucket}).
 
 \subsection{Yield Amplification and Reinvestment}
 Given that the Acquired Bucket earns a return not only on its own assets, but additionally receives the returns from the Pending and the Permanent Buckets, it achieves an amplified return $r_a^\star > r_a$ on the amount $q_a$. We call this useful property \textit{yield amplification}.
@@ -67,12 +73,12 @@ Given that the Acquired Bucket earns a return not only on its own assets, but ad
 As the protocol doesn't distribute any yields, but reinvests them inside the Acquired Bucket, the value of the Acquired Bucket will grow over time even without the inflow of new capital. Due to the yield amplification, the Acquired Bucket grows faster than if the same funds were invested regularly with a (compounding) rate of return $r_a$.
 
 \subsection{Acquired Bucket backing the Boosted Token}
-The protocol maintains a supply $S$ of a \textit{Boosted Token} (bTKN) according to preset rules for minting and burning. The bTKN supply is directly backed by the Acquired Bucket, i.e. it can be redeemed against a pro rata share of the assets (usually TKN) held therein.
+The protocol maintains a supply $S$ of a \textit{Boosted Token} (bTKN) according to preset rules for minting and burning. The bTKN supply is directly backed by the Acquired Bucket, i.e. it can be redeemed against a pro rata share of the assets (usually TKN) held therein (see \ref{sec:chicken-out}).
 
-We call the amount of TKN for which each unit of TKN can be redeemed for the  \textit{redemption price}. The redemption price corresponds to the \textit{backing ratio} $r$ defined as $\frac{q_a}{S}$, which is subject to the following invariant:
+We call the amount of TKN for which each unit of TKN can be redeemed for the  \textit{redemption price}. The redemption price $p_r$ corresponds to the \textit{backing ratio} and is defined as $\frac{q_a}{S}$. It is subject to the following invariant:
 
-\begin{invariant}[Backing ratio never decreases]
-The protocol ensures that the backing ratio $r$ can only ever increase, but never decrease.
+\begin{invariant}[Redemption price never decreases]
+The protocol ensures that the redemption price $p_r$ (backing ratio) can only ever increase, but never decrease.
 \end{invariant}
 
 \section{User interactions}
@@ -88,17 +94,24 @@ Bonding is the main use case that allows the system to build up its treasury by 
 
 Users can bond any amount $b$ of TKN at any time in exchange for a position called \textit{Chicken Bond}, represented by an NFT. The bonded TKN is added to the \textit{Pending Bucket} where it earns a yield for the system's Treasury.
 
-A Chicken Bond accrues a virtual balance $s(t)$ of bTKN over time, according to a curve that asymptotically approaches a "cap" ensuring the invariant of a never decreasing backing ratio.
+A Chicken Bond accrues a virtual balance $s(t)$ of bTKN over time, according to a curve that asymptotically approaches a "cap" ensuring the invariant of a never decreasing redemption price.
 
 The accrual curve can be of the form 
 
-$$s(t) := \frac{b}{r} \cdot \frac{t}{t+\alpha}$$ 
+\begin{equation}
+  \label{eq:accrual}
+    s(t) := \frac{b}{p_r} \cdot \frac{t}{t+\alpha}
+\end{equation}
 
-$\alpha$ parametrizes the slope of the curve and could be automatically adjusted by the protocol in order to control the speed of the value accrual which depends on changing price premium (see below).
 
-We call the fraction $\frac{b}{r}$ the cap $c$ which corresponds to the amount of bTKN that could be minted by the protocol such that the backing ratio would be kept constant if $b$ was entirely added to the Acquired Bucket. Therefore, the ratio between the cap and the bond corresponds to the ratio between the bTKN supply and the Acquired Bucket. Thus,
+$\alpha$ parametrizes the slope of the curve and could be automatically adjusted by the protocol in order to control the speed of the value accrual which depends on the fluctuating price premium (see below).
 
-$$\frac{c}{b} = \frac{S}{q_a} $$
+We call the fraction $\frac{b}{p_r}$ the cap $c$ which corresponds to the amount of bTKN that could be minted by the protocol such that the redemption price would be kept constant if $b$ was entirely added to the Acquired Bucket. Therefore, the ratio between the cap and the bond corresponds to the ratio between the bTKN supply and the Acquired Bucket. Thus, we have
+
+\begin{equation}
+  \label{eq:cap-bond-ratio}
+    \frac{c}{b} = \frac{S}{q_a}
+\end{equation}   
 
 The owner of a bond can exit their position any time by choosing either of the following options:
 
@@ -109,39 +122,226 @@ The owner of a bond can exit their position any time by choosing either of the f
 
 In both cases, the Chicken Bond NFT is burned as the bond holder’s position is closed. Depending on the option chosen, the bonded TKN is either fully paid back to the user or it transitions from the Pending Bucket to the Acquired Bucket and the Permanent Bucket. 
 
-TODO: refund
-
 \subsubsection{Chicken out}
+\label{sec:chicken-out}
 By chickening out, the bond holder gets the entire bonded TKN back, foregoing the accrued balance of bTKN (which doesn’t get minted). The option to withdraw the principal at any time makes bonding an essentially risk-free investment where the user only incurs the opportunity costs.
 
 Upon a chicken in event at time $t+1$, the Treasury changes as follows:
-$$q_p(t+1) := q_p(t) - b$$
+
+\begin{equation}
+  \label{eq:chicken-out-transition}
+    q_p(t+1) := q_p(t) - b
+\end{equation}
 
 As an alternative, the bond holder may sell their NFT on the secondary market. The buyer of the NFT has the same rights against the protocol as the original bond holder.
 
 \subsubsection{Chicken in}
+\label{sec:chicken-in}
 A user that chickens in loses the bonded TKN in exchange for the accrued balance of bTKN that is minted and paid out by the protocol. A payout tax may be charged on the accrued balance (reducing the user’s payout) in order to incentivize liquidity for a bTKN/TKN exchange pair.
 
 Instead of keeping the received bTKN, the user may sell it on the open market and opt to reinvest the proceeds by creating a new, typically larger bond (aka as “rebonding”, see below).
 
 Upon a chicken in, the protocol acquires the bonded TKN which transitions from the Pending Bucket to the Acquired Bucket and the Permanent Bucket. To that end, the bonded amount $b$ is split into two amounts $b_a$ and $b_d$ in proportion to the ratio of the currently accrued bTKN $s$ to the cap $c$:
 
-$$b_a = \frac{s}{c} \cdot b = s \cdot r$$
-$$b_d = \frac{c-s}{c} \cdot b = b - s \cdot r$$
+\begin{equation}
+  \label{eq:chicken-in-ba}
+    b_a = \frac{s}{c} \cdot b = s \cdot p_r
+\end{equation}
+\begin{equation}
+  \label{eq:chicken-in-bd}
+    b_d = \frac{c-s}{c} \cdot b = b - s \cdot p_r
+\end{equation}
 
 The two amounts are then added to the Acquired and the Permanent Bucket, so that the Treasury transitions to the following state:
 
-$$q_a(t+1) := q_a(t) + b_a = q_a(t) + s \cdot r $$
-$$q_d(t+1) := q_d(t) + b_d = q_d(t) + (b - s \cdot r)$$
-$$q_p(t+1) := q_p(t) - b$$
+\begin{equation}
+  \label{eq:chicken-in-qa}
+    q_a(t+1) := q_a(t) + b_a = q_a(t) + s \cdot p_r
+\end{equation}
+\begin{equation}
+  \label{eq:chicken-in-qd}
+    q_d(t+1) := q_d(t) + b_d = q_d(t) + (b - s \cdot p_r)
+\end{equation}
+\begin{equation}
+  \label{eq:chicken-in-qp}
+    q_p(t+1) := q_p(t) - b
+\end{equation}
 
 \subsection{Redemption}
+\label{sec:redemption}
 At any time, a holder can redeem $s$ bTKN for $\frac{s}{S}\cdot q_a$ TKN.
 The TKN are removed from the Acquired Bucket and paid out the user, while the redeemed bTKN are burned.
 
 The state of the Treasury changes as follows: 
 
-$$q_a(t+1) := q_a(t) \cdot (1 - \frac{s}{S})$$
-$$S(t+1) := S(t) - s$$
+\begin{equation}
+  \label{eq:redemption-qa}
+    q_a(t+1) := q_a(t) \cdot (1 - \frac{s}{S})
+\end{equation}
+\begin{equation}
+  \label{eq:redemption-S}
+    S(t+1) := S(t) - s
+\end{equation}
+
+To throttle the rate of redemption or counter extreme situations and black swan events, the system could charge a redemption fee (see \ref{sec::redemption-fee}).
+
+\section{Economics of ChickenBonds}
+The Boosted Token bKTN derives its value from the Acquired Bucket as its direct backing and the yield generated by the entire Treasury. 
+
+Since the bTKN supply is redeemable for a proportional share of the acquired TKN, the market cap of bTKN should normally be worth at least the amount of TKN in the Acquired Bucket. This means that the redemption price $p_r$ will act as a price floor, below which arbitrage becomes possible: people can buy bTKN for less than what they get upon redemption. Should bTKN ever drop below the redemption price, we can expect it to bounce back quickly due to the buying pressure stemming from redemptions.
+
+In practice, we can expect bTKN to trade significantly above its price floor most of the time due to the yield amplification: if we suppose that $r_a$ corresponds to the market rate (or natural rate) $r_m$, the Acquired Bucket and thus $p_r$ will grow at a higher rate than $r_m$ given the extra yield generated by the Pending and the Permanent Bucket. This increased return warrants a price premium since the market should price in the amplified growth rate by paying a higher price for bTKN than the redemption price. We call this expected market price the fair price $p_f$.
+
+\subsection{Estimating the fair price $p_f$}
+TODO
+
+\subsection{Profitability of bonding}
+Bonding is only profitable if $p_f > p_r$. The rate of return depends on the difference $p_f - p_r$ and the shape (steepness) of the accrual curve $s(t)$.
+
+\subsection{Optimal rebonding strategy}
+When people bond, they get an accruing balance of bTKN that they can trade in against the bonded amount of TKN which remains fixed during the lifetime of the bond. The system doesn't auto-compound the accrued profits from bonding. In order to benefit from a compounding effect, bond holders can chicken in, sell their received bTKN for TKN and reinvest the TKN to create a new, larger bond, and repeat that process over and over again.
+
+In the following, we analyze the optimal strategy by deriving a time period that maximizes the profitability of bonding for a given system configuration, for users with a sufficiently long time horizon. Before doing so, we first determine the time it takes for a bonder to break even.
+
+\subsubsection{Break even time}
+
+
+\subsubsection{Optimal rebonding time}
+We assume $b$, $p_r$ and $p_f$ stay constant and suppose $p_f > p_r$ all the time, which is a prerequisite for bonding to be profitable. 
+
+Before deriving the optimal rebonding time, we start by comparing the final value of a user's bond (expressed in TKN) after a time period $T$ without rebonding (denoted by $f$) with the final value of a bond that is rebonded at time $t<T$ (denoted by $f_r$). 
+
+\paragraph{No rebonding}
+We multiply the accrued bTKN tokens from equation \ref{eq:accrual} by the market price which is supposed to be equal to the fair price $p_f$:
+
+\begin{equation}
+  \label{eq:o-s}
+f = p_f\frac{b}{p_r}\frac{T}{T+1}
+\end{equation}
+
+\paragraph{With rebonding}
+At time $t$, when the user chickens in and rebonds, the new bond amount $b'$ will be:
+\begin{equation}
+b'= p_f\frac{b}{p_r}\frac{t}{t+1}
+\end{equation}
+
+From that point until the end there will be a period of $T-t$, where the outcome of the bond will be:
+\begin{equation}
+f_r = p_f\frac{b'}{p_r}\frac{T-t}{T-t+1}
+\end{equation}
+
+So finally we have
+\begin{equation}
+  \label{eq:o-r}
+f_r = b\left(\frac{p_f}{p_r}\right)^2\frac{t}{t+1}\frac{T-t}{T-t+1}
+\end{equation}
+
+Now we generalize the approach for $n$ regular rebonding events, expressing the resulting value (in TKN) for a given rebonding period $t$ with $f_n(t)$.
+
+\begin{equation}
+  \label{eq:n-rebond_1}
+f_n(t) = b \left(\frac{p_f}{p_r}\right)^n \left(\frac{T}{T+n}\right)^{n-1} \frac{t - \frac{n}{n-1}T}{t - \frac{n}{n-1}T + 1}
+\end{equation}
+
+At $t=T$:
+
+\begin{equation}
+  \label{eq:n-rebond_2}
+f_n(T) = b \left(\frac{p_f}{p_r}\right)^{n} \left(\frac{T}{T+n}\right)^{n-1} \frac{\frac{T}{n}}{\frac{T}{n} + 1}
+\end{equation}
+
+\begin{equation}
+  \label{eq:n-rebond_3}
+f_n(T) = b \left(\frac{p_f}{p_r} \frac{T}{T+n} \right)^{n}
+\end{equation}
+
+To find the maximum value of $f_n(t)$, we take its derivative on $n$:
+\[
+f_T'(n) = b \left(\frac{p_f}{p_r} \frac{T}{T+n}\right)^n \left(\ln\left(\frac{p_f}{p_r} \frac{T}{T+n}\right) - n \frac{\frac{p_f}{p_r} \frac{T}{(T+n)^2}}{\frac{p_f}{p_r} \frac{T}{T+n}}\right) = b \left(\frac{p_f}{p_r} \frac{T}{T+n}\right)^n \ln\left(\frac{p_f}{p_r} \frac{T}{T+n}\right) - \frac{n}{T+n}
+\]
+
+Then equating it to zero:
+
+\[
+f_T'(n) = 0 \iff \ln\left(\frac{p_f}{p_r} \frac{T}{T+n}\right) = \frac{n}{T+n}
+\]
+
+\[
+\frac{p_f}{p_r} \frac{T}{T+n} = e^{\frac{n}{T+n}}
+\]
+
+Dividing by $e$ both sides:
+
+\[
+\frac{p_f}{re} \frac{T}{T+n} = e^{\frac{n}{T+n} - 1}
+\]
+
+\[
+\frac{p_f}{re} \frac{T}{T+n} = e^{\frac{-T}{T+n}}
+\]
+
+\[
+\frac{T}{T+n} e^{\frac{T}{T+n}} = \frac{p_f}{re} 
+\]
+
+And then, it has the form $z e^z = w$ from Lambert W function: \url{https://en.wikipedia.org/wiki/Lambert_W_function}, so:
+
+\[
+\frac{T}{T+n} = W\left(\frac{p_f}{re} \right)
+\]
+
+\[
+1 + \frac{n}{T} = \frac{1}{W\left(\frac{p_f}{re} \right)}
+\]
+
+\[
+n = \frac{T}{W\left(\frac{p_f}{re} \right)} - 1
+\]
+
+%\begin{equation}
+%  \label{}
+%n = \frac{T\left(1 - W\left(\frac{re}{p_f}\right)\right)}{W\left(\frac{re}{p_f}\right)}
+%\end{equation}
+
+Now find the first rebonding time:
+\begin{equation}
+  \label{}
+t_0 = \frac{T}{n} = \frac{W\left(\frac{re}{p_f}\right)}{1 - W\left(\frac{re}{p_f}\right)}
+\end{equation}
+
+We can write it in terms of premium $\lambda = \frac{p_f}{p_r}$
+
+\begin{equation}
+  \label{}
+t_0 = \frac{W\left(\frac{e}{\lambda}\right)}{1 - W\left(\frac{e}{\lambda}\right)} = \frac{1}{\frac{1}{W\left(\frac{e}{\lambda}\right)} - 1}
+\end{equation}
+
+Note that as $\lambda > 1$, $\frac{e}{\lambda} < e$, so $0 < W(\frac{e}{\lambda}) < 1$ and therefore $t_0 > 0$, and that $t_0(\lambda)$ is a monotonic decreasing function, with $\lim_{\lambda \rightarrow 1}t_0(\lambda) = +\infty$.
+
+\section{Protocol enhancements}
+\subsection{Bootstrapping}
+Right after launch, the initial bTKN supply will be 0 as the token is only minted upon chicken in events. Similarly, the Acquired Bucket is empty until the first bond holder chickens in. As a result, the redemption price $p_r$ (backing ratio) is undefined and cannot be used for calculating the accrued amount $s(t)$.
+
+Meanwhile, the protocol already starts earning yield on the Pending Bucket before anybody chickens in. For fairness reasons, we want to ensure that this initial yield isn't simply earned by the bond holder who chickens in first.
+
+To tackle this bootstrapping problem, we define the initial redemption price at the time of the first chicken in to be $p_r = 1$. The protocol thus needs to mint the same amount of bTKN as the amount of TKN acquired by the protocol up to that time. The accumulated yield of the Pending Bucket, which would normally belong to the Acquired Bucket, can be used to bootstrap a bTKN/TKN DEX pair, as the protocol can mint the bTKN to fill the other side of the AMM.
+
+To make sure that the initial AMM price reflects the initial redemption price of 1, the system needs to deposit the same nominal amount of bTKN and TKN. So, it can use $50\%$ of the accumulated yield (in TKN) to bootstrap the AMM, while moving the other half into the Acquired Bucket. The bTKN that is minted to bootstrap the AMM is also considered as being "acquired" and is thus reflected in $q_a$, such that $q_a = S$ holds upon the very first chicken in, ensuring $p_r = 1$.
+
+\subsection{Two-bucket version}
+\label{sec:two-bucket}
+A Permanent Bucket may not be suitable for all use cases and protocol tokens. For example, if TKN is a token that is minted through loans, keeping a portion of it inside the Permanent Bucket forever would essentially reduce the circulating supply, which could impact the ability of borrowers to repay their debts. On the other hand, such tokens have usually no fixed or capped supply, but can be minted as needed, meaning that technically there's an unbounded amount of TKN that could be bonded over time.
+
+This makes bonding more sustainable in the long run even without a Permanent Bucket.
+
+
+\subsection{Auto-adjusting the steepness $\alpha$ of the accrual curve}
+
+
+\subsection{Redemption fees}
+  \label{sec::redemption-fee}
+
+ 
+
 
 \end{document}
