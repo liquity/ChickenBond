@@ -4,3 +4,6 @@
 [submodule "LUSDChickenBonds/lib/openzeppelin-contracts"]
 	path = LUSDChickenBonds/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
+[submodule "LUSDChickenBonds/lib/forge-std"]
+	path = LUSDChickenBonds/lib/forge-std
+	url = https://github.com/brockelmore/forge-std
