@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.10;
+pragma solidity ^0.8.10;
 
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
@@ -55,8 +55,7 @@ contract ChickenBondManager is Ownable {
         curvePool = ICurvePool(_curvePoolAddress);
         yearnLUSDVault = IMockYearnVault(_yearnLUSDVaultAddress);
         yearnCurveVault = IMockYearnVault(_yearnCurveVaultAddress);
-
-        
+    
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure) 
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
         lusdToken.approve(address(yearnLUSDVault), MAX_UINT256);

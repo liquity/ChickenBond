@@ -1,4 +1,4 @@
-pragma solidity 0.8.10;
+pragma solidity ^0.8.10;
 import "../../SLUSDToken.sol";
 
 contract SLUSDTokenTester is SLUSDToken {
