@@ -345,6 +345,144 @@ This allows us to reformulate the equation, which could be solved for $\alpha$:
   \frac{p_f(t + T_{opt}) - p_f(t)}{p_f(t)} = \frac{T_{opt}}{365} r_m 
 \end{equation}
 
+\subsubsection{Conservative approach}
+This approach is probably not the most accurate or realistic, but at least it can serve as a lower bound for the fair price.
+
+Let’s imagine a user who wants to buy bTKN to sell it after some time $T$, and, being conservative, they don’t want to rely on other users making the same valuations, but to make sure that even reedeming their bTKN they would at least make the gains corresponding to the natural rate.
+
+In the following chart, red line would correspond to the natural rate, green one to the redemption price and purple one to the (conservative) fair price.
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_conservative_price.png}
+
+The formula therefore for the conservative fair price would be:
+
+\begin{equation}
+  \label{eq:conservative-1}
+p_f(t) = p_r(t + T) - (n(t+T) - n(t))
+\end{equation}
+
+Where $n(t)$ would represent the natural rate.
+
+Assuming time $t$ to be denominated in days, the daily natural rate $r_m$ is expected to be low, so for values of $t$ in the order of magnitude of a year we can use the following approximation:
+
+\begin{equation}
+  \label{eq:conservative_natural_approximation}
+n(t) = (1 + r_m)^t = 1 + r_m \cdot t
+\end{equation}
+
+We need to find then a formula for $p_r$ and we are all set.
+
+\paragraph{With rebonding}
+With rebonding this is quite hard, as we need optimal rebonding time $T_{OP}$, which in turn uses fair price (see \ref{sec:T_OP}).
+
+If we assume that redemption price has an exponential behavior, due to the compounding effect of rebonding, of the form $p_r = a^t$ \footnote{This is probably wrong, as we will see in the no rebonding case!}, then fair price would be (using approximation in \ref{eq:conservative_natural_approximation}):
+
+\begin{equation}
+  \label{eq:conservative-2}
+p_f(t) = a^{t+T} - r_m T
+\end{equation}
+
+Let’s try to find $a$.
+
+For $t=0$, ${q_a}_0 = S_0$ and $p_r(0) = 1$. See \ref{sec:bootstrapping}.
+
+Optimal rebonding time (using \ref{eq:optimal_chicken_in_1} and assuming $\alpha = 1$ to simplify):
+
+\begin{equation}
+  \label{eq:conservative_T_OP}
+T_{OP} = \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1}
+\end{equation}
+
+The corresponding issuance proportion:
+
+\begin{equation}
+  \label{eq:conservative_issuance_proportion}
+  \begin{split}
+  \frac{T_{OP}}{T_{OP} + 1} & = \frac{\frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1}}{\frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1} + 1} \\
+  & = \frac{1+ \sqrt{a^T - r_mT}}{1+ \sqrt{a^T - r_mT} + a^T - r_mT - 1} \\
+  & = \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT + \sqrt{a^T - r_mT}} \\
+  & = \frac{(1+ \sqrt{a^T - r_mT})(a^T - r_mT - \sqrt{a^T - r_mT})}{(a^T - r_mT)^2 + a^T - r_mT} \\
+  & = \frac{a^T - r_mT - \sqrt{a^T - r_mT} + (a^T - r_mT)\sqrt{a^T - r_mT} - (a^T - r_mT)}{(a^T - r_mT)(a^T - r_mT - 1)} \\
+  & = \frac{- \sqrt{a^T - r_mT} + (a^T - r_mT)\sqrt{a^T - r_mT}}{(a^T - r_mT)(a^T - r_mT - 1)} \\
+  & = \frac{(a^T - r_mT - 1)\sqrt{a^T - r_mT}}{(a^T - r_mT)(a^T - r_mT - 1)} \\
+  & = \frac{\sqrt{a^T - r_mT}}{a^T - r_mT} \\
+  & = \frac{1}{\sqrt{a^T - r_mT}}
+  \end{split}
+\end{equation}
+
+Now moving forward to $t_1 = T_{OP}$:
+
+\[
+{q_p}_1 = {q_p}_0 \frac{a^T -r_mT}{\sqrt{a^T -r_mT}} = {q_p}_0 \sqrt{a^T - r_mT}
+\]
+
+\[
+{q_a}_1 = {q_a}_0 + [({q_a}_0 + {q_p}_0)r_s + {q_d}_0 r_d] T_{OP} + {q_p}_0 \frac{1}{\sqrt{a^T - r_mT}}
+\]
+
+\[
+S_1 = S_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}} = {q_a}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}
+\]
+
+So finally:
+
+\begin{equation}
+  \label{eq:conservative_p_r_1}
+  \begin{split}
+    {p_r}_1 & = \frac{{q_a}_1}{S_1} \\
+    & = \frac{{q_a}_0 + [({q_a}_0 + {q_p}_0)r_s + {q_d}_0 r_d] T_{OP} + {q_p}_0 \frac{1}{\sqrt{a^T - r_mT}}}{{q_a}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \\
+    & = 1 + \frac{({q_a}_0 + {q_p}_0)r_s + {q_d}_0 r_d + {q_p}_0}{{q_a}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1} \\
+  \end{split}
+\end{equation}
+
+If we now equate this to $p_r(T_{OP})$ we get:
+\begin{equation}
+  \label{}
+1 + \frac{({q_a}_0 + {q_p}_0)r_s + {q_d}_0 r_d + {q_p}_0}{{q_a}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1} = a ^{\frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1}}
+\end{equation}
+
+which seems quite hard to solve for $a$.
+
+\paragraph{Without rebonding}
+
+Although this approach without rebonding quite misses the point, as redemption price would be too close to natural rate, we can still try:
+
+Now we only account for the yield generated, which doesn’t increase the bTKN total supply:
+
+\[
+S_t = S_1 = S_0 = {q_a}_0
+\]
+
+We try to compute acquired bucket for several time intervals, let’s say daily:
+
+\[
+{q_a}_1 = {q_a}_0 + [({q_a}_0 + {q_p}_0) r_s + {q_d}_0 r_d] = {q_a}_0 + {q_a}_0 r_s + {q_p}_0 r_s + {q_d}_0 r_d
+\]
+
+\[
+{q_a}_t = {q_a}_0(1+r_s)^t + ({q_p}_0 r_s + {q_d}_0 r_d) \left(r_s^t + \sum_{j=1}^{t-1} \binom{t}{j} a^j \right)
+\]
+
+So for time $t$ the redemption price would be:
+
+\[
+p_r(t) = \frac{{q_a}_t}{S_1} = \frac{{q_a}_0(1+r_s)^t + ({q_p}_0 r_s + {q_d}_0 r_d) \left(r_s^t + \sum_{j=1}^{t-1} \binom{t}{j} a^j \right)}{{q_a}_0}
+\]
+
+\begin{equation}
+  \label{eq:conservative_p_r_base_2_a}
+p_r(t) = (1+r_s)^t + \frac{{q_p}_0 r_s + {q_d}_0 r_d}{{q_a}_0} \left(r_s^{t-1} + \sum_{j=1}^{t-1} \binom{t}{j} r_s^{t-1-j} \right)
+\end{equation}
+
+We can approximate it to:
+
+\begin{equation}
+  \label{eq:conservative_p_r_base_2_b}
+p_r(t) = (1+r_s)^t + \frac{{q_p}_0 r_s + {q_d}_0 r_d}{{q_a}_0} t
+\end{equation}
+
+In particular this shows that the assumption that redemption price follows a pure exponential $a^t$ is not correct.
+
 \subsection{Profitability of bonding}
 Bonding is only profitable for $\lambda>1$, i.e. if $p_f>p_r$. In that case, we can easily calculate the break even point which is reached when $s(t)>b$, i.e.
 \begin{equation}
@@ -374,6 +512,7 @@ When people bond, they get an accruing balance of bTKN that they can trade in ag
 In the following, we analyze the optimal rebonding strategy for users with a sufficiently long time horizon by deriving a time period that maximizes the profitability of (regular) rebonding for a given system configuration.
 
 \subsubsection{Optimal rebonding time}
+  \label{sec:T_OP}
 We assume $b$, $p_r$ and $p_f$ stay constant. Moreover, we suppose $p_f>p_r$ all the time, which is a prerequisite for bonding to be profitable. 
 
 TODO: Do we need to prove that rebonding in \textit{regular} intervals is the optimal strategy? If we can show that rebonding at time $t<T$ of a bond created at time 0 yields a higher ROI than simple bonding at time $T$, we could apply the same reasoning to the new bond created at $t$. As long as all factors determining the profitability are constant (and since the ROI is independent of the absolute bond size), this implies that rebonding of the new bond becomes more attractive after the exact same time period, thus at $2t$. Repeating this process, we can thus state that the profit-maximising strategy involves rebonding at a regular pace all else being equal.
@@ -578,6 +717,7 @@ TODO: check and update once we have a formula for the fair price
 
 \section{Protocol enhancements}
 \subsection{Bootstrapping}
+  \label{sec:bootstrapping}
 Right after launch, the initial bTKN supply will be 0 as the token is only minted upon chicken in events. Similarly, the Acquired Bucket is empty until the first bond holder chickens in. As a result, the redemption price $p_r$ (backing ratio) is undefined and cannot be used for calculating the accrued amount $s(t)$ during this bootstrapping period.
 
 Meanwhile, the protocol already starts earning yield on the Pending Bucket before anybody chickens in. For fairness reasons, we want to ensure that this initial yield isn't simply earned by the bond holder who chickens in first.
