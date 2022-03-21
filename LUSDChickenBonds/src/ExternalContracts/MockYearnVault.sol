@@ -24,7 +24,7 @@ contract MockYearnVault is ERC20, Ownable {
     }
 
     function withdraw (uint256 _lpShares) external {
-        uint tokenAmount = calcYTokenToToken(_lpShares);
+        uint tokenAmount = _lpShares;
         token.transfer(msg.sender, tokenAmount);
 
         _burn(msg.sender, _lpShares);
@@ -36,7 +36,28 @@ contract MockYearnVault is ERC20, Ownable {
         return _tokenAmount;
     }
 
-    function calcYTokenToToken(uint256 _yTokenAmount) public pure returns (uint256) {
-        return _yTokenAmount;
+    function lockedProfit() public pure returns (uint256) {
+        return 0;
+    }
+
+    function lockedProfitDegradation() public pure returns (uint256) {
+        return 0;
+    }
+
+    // Some Yearn vaults have this typo ("degration" vs "degradation")
+    function lockedProfitDegration() public pure returns (uint256) {
+        return 0;
+    }
+
+    function lastReport() public pure returns (uint256) {
+        return 1e6;
+    }
+
+    function totalDebt() public pure returns (uint256) {
+        return 0;
+    }
+
+    function availableDepositLimit() public pure returns (uint256) {
+        return 20e18;
     }
 }

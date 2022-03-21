@@ -3,12 +3,15 @@ pragma solidity ^0.8.10;
 
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+
 import "./Interfaces/IBondNFT.sol";
 import "./console.sol";
 import "./Interfaces/ILUSDToken.sol";
 import "./Interfaces/ISLUSDToken.sol";
-import "./Interfaces/IMockYearnVault.sol";
+import "./Interfaces/IYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
+import "./Interfaces/IYearnRegistry.sol";
 
 contract ChickenBondManager is Ownable {
 
@@ -20,12 +23,13 @@ contract ChickenBondManager is Ownable {
 
     // External contracts
     ICurvePool curvePool;
-    IMockYearnVault yearnLUSDVault;
-    IMockYearnVault yearnCurveVault;
+    IYearnVault yearnLUSDVault;
+    IYearnVault yearnCurveVault;
+    IYearnRegistry yearnRegistry;
 
     // --- Data structures ---
 
-     struct BondData {
+    struct BondData {
         uint256 lusdAmount;
         uint256 startTime;
     }
@@ -45,7 +49,8 @@ contract ChickenBondManager is Ownable {
         address _curvePoolAddress,
         address _yearnLUSDVaultAddress, 
         address _yearnCurveVaultAddress,
-        address _sLUSDTokenAddress
+        address _sLUSDTokenAddress,
+        address _yearnRegistryAddress
     ) 
         public onlyOwner 
     {
@@ -53,14 +58,20 @@ contract ChickenBondManager is Ownable {
         lusdToken = ILUSDToken(_lusdTokenAddress);
         sLUSDToken = ISLUSDToken(_sLUSDTokenAddress);
         curvePool = ICurvePool(_curvePoolAddress);
-        yearnLUSDVault = IMockYearnVault(_yearnLUSDVaultAddress);
-        yearnCurveVault = IMockYearnVault(_yearnCurveVaultAddress);
+        yearnLUSDVault = IYearnVault(_yearnLUSDVaultAddress);
+        yearnCurveVault = IYearnVault(_yearnCurveVaultAddress);
+        yearnRegistry = IYearnRegistry(_yearnRegistryAddress);
     
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure) 
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
         lusdToken.approve(address(yearnLUSDVault), MAX_UINT256);
         lusdToken.approve(address(curvePool), MAX_UINT256);
         curvePool.approve(address(yearnCurveVault), MAX_UINT256);
+
+        // Check that the system is hooked up to the correct latest Yearn vaults
+        assert(address(yearnLUSDVault) == yearnRegistry.latestVault(address(lusdToken)));
+        // TODO: Check mainnet registry for the deployed Yearn Curve vault
+        // assert(address(yearnCurveVault) == yearnRegistry.latestVault(address(curvePool)));
 
         renounceOwnership();
     }
@@ -110,7 +121,7 @@ contract ChickenBondManager is Ownable {
         delete idToBondData[_bondID];
         totalPendingLUSD -= bondedLUSD;
 
-        uint256 yTokensToBurn = yearnLUSDVault.calcYTokenToToken(bondedLUSD);
+        uint256 yTokensToBurn = yearnLUSDVault.calcTokenToYToken(bondedLUSD);
         yearnLUSDVault.withdraw(yTokensToBurn);
 
         // Send bonded LUSD back to caller and burn their bond NFT
@@ -119,13 +130,18 @@ contract ChickenBondManager is Ownable {
     }
 
     function chickenIn(uint256 _bondID) external {
+        console.log("here3");
         _requireCallerOwnsBond(_bondID);
 
+        console.log("here4");
         BondData memory bond = idToBondData[_bondID];
         
         uint256 backingRatio = calcSystemBackingRatio();
+        console.log(backingRatio, "backingRatio");
+        console.log("here5");
         uint256 accruedSLUSD = _calcAccruedSLUSD(bond, backingRatio);
-    
+         console.log("here6");
+
         delete idToBondData[_bondID];
         totalPendingLUSD -= bond.lusdAmount;
 
@@ -134,8 +150,10 @@ contract ChickenBondManager is Ownable {
         uint256 lusdToAcquire = accruedSLUSD * backingRatio / 1e18;
         uint256 lusdToRefund = bond.lusdAmount - lusdToAcquire;
         
+        console.log("here7");
         // Pull the refund from Yearn LUSD vault
         yearnLUSDVault.withdraw(lusdToRefund);
+        console.log("here8");
 
         // Send tokens and burn the bond NFT
         lusdToken.transfer(msg.sender, lusdToRefund);
@@ -281,8 +299,15 @@ contract ChickenBondManager is Ownable {
         *
         * TODO: replace with final sLUSD accrual formula. */
         uint256 bondDuration = (block.timestamp - _bond.startTime);
+        console.log(bondDuration, "bondDuration");
+        console.log(block.timestamp, "block.timestamp");
+        console.log(_bond.startTime, "_bond.startTime");
+
         uint256 accruedSLUSD = bondSLUSDCap * bondDuration / (bondDuration + SECONDS_IN_ONE_MONTH);
+        console.log(accruedSLUSD, "accruedSLUSD");
+        console.log(bondSLUSDCap, "bondSLUSDCap");
         assert(accruedSLUSD < bondSLUSDCap);
+
 
         return accruedSLUSD;
     }
@@ -307,14 +332,30 @@ contract ChickenBondManager is Ownable {
     }
 
     function getLUSDInYearn() public view returns (uint256) {
-        uint256 yTokenBalanceLUSD = yearnLUSDVault.balanceOf(address(this));
-        uint256 lusdInYearn = yearnLUSDVault.calcYTokenToToken(yTokenBalanceLUSD);
+        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
 
         return lusdInYearn;
     }
 
     function getAcquiredLUSDInYearn() public view returns (uint256) {
-        uint256 acquiredLUSDInYearn = getLUSDInYearn() - totalPendingLUSD;
+        console.log(getLUSDInYearn(), "getLUSDInYearn()");
+        console.log(totalPendingLUSD, "totalPendingLUSD");
+
+        uint256 lusdInYearn = getLUSDInYearn();
+        uint256 totalPendingLUSDCached = totalPendingLUSD;
+
+        /* In principle, the acquired LUSD is always the delta between the LUSD deposited to Yearn and the total pending LUSD.
+        * When sLUSD supply == 0 (i.e. before the "first" chicken-in), this delta should be 0.  However in practice, due to rounding
+        * error in Yearn's share calculation (which our calcShareValue function accurately replicates), the delta can be negative.
+        * We assume that a negative delta always corresponds to 0 acquired LUSD.
+        *
+        * TODO: Determine if this is the situation whereby the delta can be negative. Potentially enforce some minimum 
+        * chicken-in value so that acquired LUSD always more than covers any rounding error in the share value.
+        */
+        uint256 acquiredLUSDInYearn = lusdInYearn > totalPendingLUSD ? lusdInYearn - totalPendingLUSD : 0;
+
+        console.log(getLUSDInYearn(), "LUSD in Yearn");
+        console.log(totalPendingLUSD, "totalPendingLUSD");
 
         assert(acquiredLUSDInYearn >= 0);
 
@@ -322,17 +363,74 @@ contract ChickenBondManager is Ownable {
     }
 
     function getAcquiredLUSDInCurve() public view returns (uint256) {
-        uint256 yTokenBalanceLUSD3CRV = yearnCurveVault.balanceOf(address(this));
-        uint256 lusd3CRVInYearn = yearnCurveVault.calcYTokenToToken(yTokenBalanceLUSD3CRV);
+        uint256 lusd3CRVInYearn = calcYearnCurveVaultShareValue();
         
         uint256 lusdInCurve = curvePool.calcLUSD3CRVToLUSD(lusd3CRVInYearn);
 
         return lusdInCurve;
     }
 
+    function calcYearnLUSDVaultShareValue() public view returns (uint256) {
+        uint256 lockedProfitDegradation = yearnLUSDVault.lockedProfitDegradation();
+        return calcShareValue(yearnLUSDVault, lockedProfitDegradation);
+    }
+
+    /* Due to a typo in the Yearn Curve vault ("degration" vs "degradation"), we need two separate getter functions for
+    * share value */
+    function calcYearnCurveVaultShareValue() public view returns (uint256) {
+        uint256 lockedProfitDegradation = yearnCurveVault.lockedProfitDegration();
+        return calcShareValue(yearnCurveVault, lockedProfitDegradation);
+    }
+
+    /* Calculates the amount of Yearn Vault deposit token (either LUSD, or LUSD3CRV) that can be withdrawn for a given amount of yToken shares.
+    * This function replicates the logic found inside the internal Yearn Vault function _shareValue(shares). */
+    function calcShareValue(IYearnVault _yearnVault, uint256 _lockedProfitDegradation) public view returns (uint256) {
+        uint256 totalYTokens = _yearnVault.totalSupply();
+        if (totalYTokens == 0) {return 0;}
+
+        uint256 cbYTokens = _yearnVault.balanceOf(address(this));
+        IERC20 vaultDepositToken = IERC20(_yearnVault.token());
+        uint256 lastLockedProfit = _yearnVault.lockedProfit();
+ 
+        uint256 vaultBalance = vaultDepositToken.balanceOf(address(_yearnVault));
+        uint256 strategyDebt = _yearnVault.totalDebt();
+        
+        uint currentLockedProfit;
+
+        // Replicate the vault's _calcLockedProfit() calculation
+        console.log("hereA");
+        uint256 lockedFundsRatio = (block.timestamp - _yearnVault.lastReport()) * _lockedProfitDegradation;
+        console.log(lockedFundsRatio, "lockedFundsRatio");
+        console.log("hereB");
+        // Backwards-calculate the Vault's degration coefficient from the lockedProfitDegration
+        uint256 degradationCoefficient = _lockedProfitDegradation * 1e6 / 46;
+        console.log("hereC");
+        if (lockedFundsRatio < degradationCoefficient) {
+            currentLockedProfit = lastLockedProfit - (
+                    lockedFundsRatio
+                    * lastLockedProfit
+                    / degradationCoefficient
+                );
+        } else {        
+            currentLockedProfit = 0;
+        }
+        console.log("hereD");
+        uint totalVaultAssets = vaultBalance + strategyDebt;
+        uint freeFunds = totalVaultAssets - currentLockedProfit;
+        
+        console.log(freeFunds, "freeFunds");
+        console.log(cbYTokens, "cbYTokens");
+
+        uint shareValue = cbYTokens * freeFunds / totalYTokens;
+        console.log(shareValue, "shareValue");
+        return shareValue;
+    }
+
     function calcSystemBackingRatio() public view returns (uint256) {
         uint256 totalSLUSDSupply = sLUSDToken.totalSupply();
         uint256 totalAcquiredLUSD = getTotalAcquiredLUSD();
+        console.log(totalSLUSDSupply, "totalSLUSDSupply");
+        console.log(totalAcquiredLUSD, "totalAcquiredLUSD");
 
         /* TODO: Determine how to define the backing ratio when there is 0 sLUSD and 0 totalAcquiredLUSD,
         * i.e. before the first chickenIn. For now, return a backing ratio of 1. Note: Both quantities would be 0
@@ -347,6 +445,7 @@ contract ChickenBondManager is Ownable {
     // External getter for calculating the bond sLUSD cap based on bond ID
     function calcBondSLUSDCap(uint256 _bondID) external view returns (uint256) {
         uint256 backingRatio = calcSystemBackingRatio();
+       
         BondData memory bond = idToBondData[_bondID];
 
         return _calcBondSLUSDCap(bond.lusdAmount, backingRatio);

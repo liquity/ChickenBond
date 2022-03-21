@@ -26,6 +26,7 @@ contract BaseTest is DSTest, stdCheats {
     ICurvePool curvePool;
     IYearnVault yearnLUSDVault;
     IYearnVault yearnCurveVault;
+    IYearnRegistry yearnRegistry;
 
     address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
     address constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
@@ -48,9 +49,14 @@ contract BaseTest is DSTest, stdCheats {
         accountsList = tempAccounts;
     }
 
-    function assertEqWithErrorMargin(uint256 _x, uint256 _y, uint256 _margin) public {
+    function assertApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin) public {
         uint256 diff = abs(_x, _y);
         assertLe(diff, _margin);
+    }
+
+    function assertGeWithMaxDelta(uint256 _x, uint256 _y, uint256 _delta) public {
+        uint diff = _x - _y;
+        assertLt(diff, _delta);
     }
 
     function abs(uint256 x, uint256 y) public returns (uint256) {

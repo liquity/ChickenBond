@@ -10,6 +10,7 @@ contract MainnetTestSetup is BaseTest {
     // Mainnet addresses
     address constant MAINNET_LUSD_TOKEN_ADDRESS = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address constant MAINNET_YEARN_LUSD_VAULT_ADDRESS = 0x378cb52b00F9D0921cb46dFc099CFf73b42419dC;
+    address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
 
     function setUp() public {
         accounts = new Accounts();
@@ -43,6 +44,8 @@ contract MainnetTestSetup is BaseTest {
         mockYearnCurveVault.setAddresses(address(curvePool));
         yearnCurveVault = IYearnVault(address(mockYearnCurveVault));
 
+        yearnRegistry = IYearnRegistry(MAINNET_YEARN_REGISTRY_ADDRESS);
+
         // Deploy core ChickenBonds system
         sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
 
@@ -55,7 +58,8 @@ contract MainnetTestSetup is BaseTest {
             address(curvePool),
             address(yearnLUSDVault),
             address(yearnCurveVault),
-            address(sLUSDToken)
+            address(sLUSDToken),
+            address(yearnRegistry)
         );
 
         bondNFT.setAddresses(address(chickenBondManager));

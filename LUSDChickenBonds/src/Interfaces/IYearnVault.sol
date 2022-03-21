@@ -7,4 +7,21 @@ interface IYearnVault is IERC20 {
     function deposit(uint256 _tokenAmount) external;
 
     function withdraw(uint256 _tokenAmount) external;
+
+    function lockedProfit() external view returns (uint256);
+
+    function lockedProfitDegration() external view returns (uint256);
+
+    // Some Yearn vaults have this typo ("degration" vs "degradation")
+    function lockedProfitDegradation() external view returns (uint256);
+
+    function lastReport() external view returns (uint256);
+
+    function totalDebt() external view returns (uint256);
+
+    function calcTokenToYToken(uint256 _tokenAmount) external pure returns (uint256); 
+
+    function token() external view returns (address);
+
+    function availableDepositLimit() external view returns (uint256);
 }

@@ -6,6 +6,7 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 // import "../../console.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
+import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
 import "./LUSDTokenTester.sol";
 
@@ -33,7 +34,7 @@ contract DevTestSetup is BaseTest {
         assertEq(lusdToken.balanceOf(B), 100e18);
         assertEq(lusdToken.balanceOf(C), 100e18);
 
-        // Deploy external mock contracts
+        // Deploy external mock contracts, and assign corresponding interfaces
         MockCurvePool mockCurvePool = new MockCurvePool("LUSD-3CRV Pool", "LUSD3CRV-f");
         mockCurvePool.setAddresses(address(lusdToken));
         curvePool = ICurvePool(address(mockCurvePool));
@@ -46,23 +47,31 @@ contract DevTestSetup is BaseTest {
         mockYearnCurveVault.setAddresses(address(curvePool));
         yearnCurveVault = IYearnVault(address(mockYearnCurveVault));
 
+        MockYearnRegistry mockYearnRegistry = new MockYearnRegistry(
+            address(yearnLUSDVault),
+            address(yearnCurveVault),
+            address(lusdToken),
+            address(curvePool)
+        );
+        yearnRegistry = IYearnRegistry(address(mockYearnRegistry));
+
         // Deploy core ChickenBonds system
         sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract 
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
-       
+        
         chickenBondManager = new ChickenBondManager(
             address(bondNFT),
             address(lusdToken), 
             address(curvePool),
             address(yearnLUSDVault),
             address(yearnCurveVault),
-            address(sLUSDToken)
+            address(sLUSDToken),
+            address(yearnRegistry)
         );
 
         bondNFT.setAddresses(address(chickenBondManager));
         sLUSDToken.setAddresses(address(chickenBondManager));
     }
-
 }
