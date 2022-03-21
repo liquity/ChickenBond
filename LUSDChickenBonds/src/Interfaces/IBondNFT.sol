@@ -8,5 +8,7 @@ interface IBondNFT is IERC721 {
 
     function burn(uint256 _tokenID) external;
 
-    function getCurrentTokenSupply() external view returns (uint256);
+    function totalSupply() external view returns (uint256);
+
+    function totalMinted() external view returns (uint256);
 }

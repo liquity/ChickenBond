@@ -130,32 +130,38 @@ contract ChickenBondManager is Ownable {
     }
 
     function chickenIn(uint256 _bondID) external {
-        console.log("here3");
+        // console.log("here3");
         _requireCallerOwnsBond(_bondID);
 
-        console.log("here4");
+        // console.log("here4");
         BondData memory bond = idToBondData[_bondID];
         
         uint256 backingRatio = calcSystemBackingRatio();
         console.log(backingRatio, "backingRatio");
-        console.log("here5");
+        // console.log("here5");
         uint256 accruedSLUSD = _calcAccruedSLUSD(bond, backingRatio);
-         console.log("here6");
+        //  console.log("here6");
 
         delete idToBondData[_bondID];
+
+        // Subtract the bonded amount from the total pending LUSD (and implicitly increase the total acquired LUSD)
         totalPendingLUSD -= bond.lusdAmount;
 
         /* Get LUSD amounts to acquire and refund. Acquire LUSD in proportion to the system's current backing ratio, 
-        * in order to maintain it. */
+        * in order to maintain said ratio. */
         uint256 lusdToAcquire = accruedSLUSD * backingRatio / 1e18;
+        console.log(lusdToAcquire, "lusdToAcquire");
+        console.log(bond.lusdAmount, "bond.lusdAmount");
         uint256 lusdToRefund = bond.lusdAmount - lusdToAcquire;
-        
-        console.log("here7");
+        assert ((lusdToAcquire + lusdToRefund) <= bond.lusdAmount);
+        console.log(lusdToRefund, "lusdToRefund");
+
+        // console.log("here7");
         // Pull the refund from Yearn LUSD vault
         yearnLUSDVault.withdraw(lusdToRefund);
-        console.log("here8");
+        // console.log("here8");
 
-        // Send tokens and burn the bond NFT
+        // Send tokens to the caller and burn the bond NFT
         lusdToken.transfer(msg.sender, lusdToRefund);
         sLUSDToken.mint(msg.sender, accruedSLUSD);
         bondNFT.burn(_bondID);
@@ -398,13 +404,11 @@ contract ChickenBondManager is Ownable {
         uint currentLockedProfit;
 
         // Replicate the vault's _calcLockedProfit() calculation
-        console.log("hereA");
         uint256 lockedFundsRatio = (block.timestamp - _yearnVault.lastReport()) * _lockedProfitDegradation;
         console.log(lockedFundsRatio, "lockedFundsRatio");
-        console.log("hereB");
         // Backwards-calculate the Vault's degration coefficient from the lockedProfitDegration
         uint256 degradationCoefficient = _lockedProfitDegradation * 1e6 / 46;
-        console.log("hereC");
+
         if (lockedFundsRatio < degradationCoefficient) {
             currentLockedProfit = lastLockedProfit - (
                     lockedFundsRatio
@@ -414,7 +418,7 @@ contract ChickenBondManager is Ownable {
         } else {        
             currentLockedProfit = 0;
         }
-        console.log("hereD");
+
         uint totalVaultAssets = vaultBalance + strategyDebt;
         uint freeFunds = totalVaultAssets - currentLockedProfit;
         
