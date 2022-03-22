@@ -384,13 +384,13 @@ We can also consider the evolution of the fair price of bTKN over a given time p
 \paragraph{Equating ROI of bonding TKN and holding bTKN}
 We suppose that users would bond TKN rather than stake bTKN if the expected ROI from bonding is higher than of (buying and) holding bTKN, and vice versa. As long as holding TKN is more attractive than bonding bTKN, we can expect buying pressure on bTKN. Conversely, there should be selling pressure  bTKN if bonding is seen as less profitable. 
 
-As a consequence, there must be an equilibrium price at which holding bTKN and bonding TKN result in the same ROI for both activities. Due to the yield amplification, it's safe to assume that in the long run, holding bTKN is at least as profitable as staking TKN. We further assume that the price of TKN is already "arbitraged" and adapted to the natural rate $r_m$, which thus carries over to the price of bTKN. Therefore, the equilibrium price for bonding vs. holding should also be meaningful as a metric for the fair price.
+As a consequence, there must be an equilibrium price at which holding bTKN and bonding TKN result in the same ROI for both activities. Due to the yield amplification, it's safe to assume that in the long run, holding bTKN is at least as profitable as staking TKN. We further assume that the price of TKN is already “arbitraged” and adapted to the natural rate $r_m$, which thus carries over to the price of bTKN. Therefore, the equilibrium price for bonding vs. holding should also be meaningful as a metric for the fair price.
 
 We now consider one optimal rebonding period $T_{opt}$, making the simplifying assumption that the price premium $\lambda$ stays constant during that time frame. Thus, the fair price $p_f$ changes from $t$ to $T_{opt}$ at the same rate as the redemption price $p_r$, yielding the ROI of holding bTKN:
 
 \begin{equation}
   \label{eq:ROI-eq}
-  H_{ROI} = \frac{p_f(t + T_{opt}) - p_f(t)}{p_f(t)} = \frac{p_r(t + T_{opt}) - p_r(t)}{p_f(t)}  
+  H_{ROI} = \frac{p_f(t + T_{opt}) - p_f(t)}{p_f(t)} = \frac{p_r(t + T_{opt}) - p_r(t)}{p_r(t)}
 \end{equation}
 
 The resulting redemption price at time $t + T_{opt}$ can be expressed by
@@ -402,16 +402,23 @@ The resulting redemption price at time $t + T_{opt}$ can be expressed by
 yielding:
 \begin{equation}
   \label{eq:ROI-eq2}
-  H_{ROI} = \frac{\frac{q_a + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d)}{S} - p_r(t)}{p_r(t)}
+  \begin{split}
+    H_{ROI} & = \frac{\frac{q_a + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d)}{S} - p_r(t)}{p_r(t)} \\
+    & = \frac{q_a}{S \cdot p_r(t)} + \frac{\frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d)}{S\cdot p_r(t)} - \frac{p_r(t)}{p_r(t)} \\
+    & = 1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a} - 1 \\
+    & = \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}
+  \end{split}
 \end{equation}
 
 On the other hand, we can express the ROI of bonding TKN for the same period as:
 
 \begin{equation}
   \label{eq:ROI-bonding}
-  B_{ROI} = \frac{p_f(t+T_{opt})}{p_r(t+T_{opt})}\frac{T_{opt}}{T_{opt}+\alpha} - 1 =
-   \frac{p_f(t)(1 + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d))} {p_r(t)(1 + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d))}    \frac{T_{opt}}{T_{opt}+\alpha} - 1 \\ 
-   & = \frac{p_f(t)}{p_r(t}\frac{T_{opt}}{T_{opt}+\alpha} - 1 =
+  \begin{split}
+    B_{ROI} & = \frac{p_f(t+T_{opt})}{p_r(t+T_{opt})}\frac{T_{opt}}{T_{opt}+\alpha} - 1 \\
+    & = \frac{p_f(t)(1 + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d))} {p_r(t)(1 + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d))}    \frac{T_{opt}}{T_{opt}+\alpha} - 1 \\ 
+    & = \frac{p_f(t)}{p_r(t)}\frac{T_{opt}}{T_{opt}+\alpha} - 1
+  \end{split}
 \end{equation}
 
 Setting the two ROIs equal, and using equation \ref{eq:optimal_chicken_in_2} as an approximation of $T_{opt}$, we can solve the following equation for $p_f$:
@@ -426,7 +433,7 @@ and get:
   p_f = p_r(1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}) \frac{T_{opt}+\alpha}{T_{opt}} 
 \end{equation}
 
-\paragraph{Equating ROI of bonding TKN and holding bTKN}
+\paragraph{Equating ROI of staking TKN and holding bTKN}
 Assuming rational markets and no additional risks for holding bTKN compared to holding (and staking) TKN, we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start. (Or is economically possible under perfectly rational conditions that a portfolio A has a higher yield than a portfolio B with the same risk profile?)
 
 If we know what yield to expect, we could formulate a differential equation to derive a formula for $p_f$ or at least a parameter $\gamma$ for the impact of the pending bucket in the naive formula:
