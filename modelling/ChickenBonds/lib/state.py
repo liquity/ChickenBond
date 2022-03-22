@@ -7,6 +7,7 @@ def state_to_row(
         chicken,
         tester,
         natural_rate,
+        avg_age,
         data,
         iteration
 ):
@@ -21,6 +22,7 @@ def state_to_row(
         #"borrowed": borrowed_amount,
         #"repaid": repaid_amount,
         "natural_rate": natural_rate,
+        "avg_age": avg_age,
         "amm_iteration_apr": chicken.amm_iteration_apr,
         "amm_average_apr": chicken.amm_average_apr,
         "stoken_apr": tester.get_stoken_apr_spot(chicken, data, iteration),

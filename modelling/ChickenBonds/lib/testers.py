@@ -57,6 +57,12 @@ class TesterInterface():
     def get_pol_ratio(self, chicken):
         pass
 
+    def get_avg_outstanding_bond_age(self, chicks, iteration):
+        pass
+
+    def set_accrual_param(self, new_value):
+        pass
+
     def get_reserve_ratio(self, chicken):
         pass
 
@@ -76,10 +82,10 @@ class TesterSimpleToll(TesterInterface):
         self.plot_prefix = '0_0'
         self.plot_file_description = 'simple_toll'
 
-        self.price_max_value = 2
+        self.price_max_value = 8
         self.apr_min_value = -10
-        self.apr_max_value = 100
-        self.time_max_value = 40
+        self.apr_max_value = 200
+        self.time_max_value = 1000
 
         self.initial_price = INITIAL_PRICE
         self.twap_period = TWAP_PERIOD
@@ -88,7 +94,7 @@ class TesterSimpleToll(TesterInterface):
 
         self.external_yield = EXTERNAL_YIELD
 
-        self.bond_mint_ratio = BOND_STOKEN_ISSUANCE_RATE
+        self.accrual_param = INITIAL_ACCRUAL_PARAM
         self.chicken_in_gamma_shape = CHICKEN_IN_GAMMA[0]
         self.chicken_in_gamma_scale = CHICKEN_IN_GAMMA[1]
         self.chicken_out_probability = CHICKEN_OUT_PROBABILITY
@@ -225,10 +231,11 @@ class TesterSimpleToll(TesterInterface):
         """
         m = self.get_stoken_spot_price(chicken)
         r = self.get_pol_ratio(chicken)
+        u = self.accrual_param
         if m <= r:
             return ITERATIONS
 
-        chicken_in_time = (r + math.sqrt(r * m)) / (m - r)
+        chicken_in_time = u * (r + math.sqrt(r * m)) / (m - r)
 
         return min(ITERATIONS, chicken_in_time)
 
@@ -244,11 +251,12 @@ class TesterSimpleToll(TesterInterface):
     def get_bonding_apr_spot(self, chicken):
         m = self.get_stoken_spot_price(chicken)
         r = self.get_pol_ratio(chicken)
+        u = self.accrual_param
         if m <= r:
             return 0
         # optimal_time
         t = self.get_optimal_apr_chicken_in_time(chicken)
-        apr = (m/r * t / (t+1) - 1) * TIME_UNITS_PER_YEAR / t
+        apr = (m/r * t / (t+u) - 1) * TIME_UNITS_PER_YEAR / t
         """
         print(f"backing ratio: {r:,.2f}")
         print(f"spot price:    {m:,.2f}")
@@ -347,6 +355,13 @@ class TesterSimpleToll(TesterInterface):
             pol_ratio = 1
         return pol_ratio
 
+    def get_avg_outstanding_bond_age(self, chicks, iteration):
+        bonded_chicks = self.get_bonded_chicks(chicks)
+        if not bonded_chicks:
+            return 0
+        total = sum(map(lambda chick: iteration - chick.bond_time, bonded_chicks))
+        return total / len(bonded_chicks)
+
     def update_chicken(self, chicken, chicks, data, iteration):
         """ Update the state of each user. Users may:
             - chicken-out
@@ -408,11 +423,14 @@ class TesterSimpleToll(TesterInterface):
     def is_bootstrap_chicken_out(self, chick, iteration):
         return iteration <= BOOTSTRAP_ITERATION and chick.bond_time == 0
 
+    def set_accrual_param(self, new_value):
+        self.accrual_param = new_value
+
     def get_claimable_amount(self, chicken, chick, iteration):
         pol_ratio = self.get_pol_ratio(chicken)
         bond_cap = self.get_bond_cap(chick.bond_amount, pol_ratio)
         bond_duration = iteration - chick.bond_time
-        claimable_amount =  bond_cap * bond_duration / (bond_duration + 1)
+        claimable_amount =  bond_cap * bond_duration / (bond_duration + self.accrual_param)
         """
         print("")
         print(f"pol_ratio:        {pol_ratio}")
@@ -511,7 +529,7 @@ class TesterSimpleToll(TesterInterface):
         print(f"\033[34mrebond_time:      {rebond_time:,.2f}\033[0m")
         """
 
-        return min(rebond_time.real, ITERATIONS)
+        return min(self.accrual_param * rebond_time.real, ITERATIONS)
 
     def rebond(self, chicken, chick, claimable_amount, iteration):
         # If it’s a rebonder and the optimal point hasn’t been reached yet
