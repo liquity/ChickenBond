@@ -240,7 +240,14 @@ For changes to the TKN quantities inside the buckets, we use the notation $\Delt
 This allows us to express the fair price $p_f$ as follows:
 
 \begin{equation}
-  \label{eq:recursive}
+  \label{}
+    p_{f} = \frac{q_{b}+q_{p}(1-P_{In}-P_{Out})+(q_{a}+ P_{In}\Delta q_{a})+(q_{d} + P_{In}\Delta q_{d})\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} + \frac{P_{In}\Delta q_a}{p_r}}
+\end{equation}
+
+As $p_r = \frac{q_a}{S_{sLQTY}}$, we can express it as:
+
+\begin{equation}
+  \label{eq:recursive_hist}
     p_{f} = \frac{q_{b}+q_{p}(1-P_{In}-P_{Out})+(q_{a}+ P_{In}\Delta q_{a})+(q_{d} + P_{In}\Delta q_{d})\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+P_{In} \Delta q_{a} \frac{1}{q_{a}} \right)}
 \end{equation}
 
@@ -288,15 +295,15 @@ Even though $\overline{T}$ may not necessarily reflect the optimal rebonding str
    P_{In} = \frac{1}{\overline{T}} = \frac{q_{d}}{q_{a}}
 \end{equation}
 
-This leads to following fair price (where $q_b$ stands for the rebonded amount):
+This leads to the following fair price (where $q_b$ stands for the rebonded amount):
 
-\begin{equation}
+\[
 p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{a}}\right)+\left(q_{a}+\frac{q_{d}}{q_{a}}q_{p}\frac{q_{a}}{q_{a}+q_{d}}\right)+ \left(q_{d}+\frac{q_{d}}{q_{a}}q_{p}\frac{q_{d}}{q_{a}+q_{d}}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{a}} q_{p}\frac{q_{a}}{q_{a}+q_{d}}\frac{1}{q_{a}} \right)}
-\end{equation}
+\]
 
-\begin{equation}
+\[
 p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{a}}\right)+q_{a}\left(1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}}\right)+q_{d} \left(1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}} \right)}
-\end{equation}
+\]
 
 \begin{equation}
 p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{a}}\right)}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}} \right)} + \frac{q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}}
@@ -305,7 +312,7 @@ p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{a}}\right)}{S_{sLQTY} \left( 1
 Assuming all rebonders can sell their bTKN at the fair price without incurring any slippage, we can express $q_b$ as follows:
 
 \begin{equation}
-q_{b} = p_f P_{In} \Delta q_{a} \frac{1}{q_{a}} = \frac{q_{d}}{q_{a}} \frac{q_{a}}{q_{a}+q_{d}} \frac{p_{f}}{p_{r}}
+q_{b} = p_f P_{In} \Delta q_{a} \frac{1}{p_r} = \frac{q_{d}}{q_{a}} q_p \frac{q_{a}}{q_{a}+q_{d}} \frac{p_{f}}{p_{r}}  = q_p \frac{q_{d}}{q_{a}+q_{d}} \frac{p_{f}}{p_{r}}
 \end{equation}
 
 Resulting in:
@@ -327,49 +334,44 @@ One could use the optimal (future) rebonding time instead of deducting the histo
 
 This leads to:
 
-\begin{equation}
+\[
 p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{1}{T_{opt}}\right)+\left(q_{a}+\frac{1}{T_{opt}} q_{p} \frac{T_{opt}}{T_{opt}+1}\right)+ \left(q_{d}+\frac{1}{T_{opt}} q_{p} \left( 1- \frac{T_{opt}}{T_{opt}+1}\right)\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{1}{T_{opt}} q_{p} \frac{T_{opt}}{T_{opt}+1}\frac{1}{q_{a}} \right)}
-\end{equation}
+\]
 
-\begin{equation}
+\[
 p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{1}{T_{opt}}\right)+\left(q_{a}+ \frac{q_{p}}{T_{opt}+1}\right)+ \left(q_{d}+\frac{q_{p}}{T_{opt}} - \frac{q_{p}}{T_{opt}+1}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+ \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}} \right)}
-\end{equation}
+\]
 
-\begin{equation}
+\[
 p_{f} = \frac{q_{b}+q_{p}\left(1-\frac{1}{T_{opt}}\right)+q_{a}+ \frac{q_{p}}{T_{opt}+1}+\left(q_{d}+q_{p} \left( \frac{1}{T_{opt}}- \frac{1}{T_{opt}+1} \right)\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
-\end{equation}
+\]
 
 \begin{equation}
+  \label{eq:recursive_optimal_1}
 p_{f} = \frac{q_{b}+q_{p} \left(1+\frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left( 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
 \end{equation}
 
 With $\frac{r_{d}}{r_{m}}d_{d}=1$
 
 \begin{equation}
+  \label{eq:recursive_optimal_2}
 p_{f} = \frac{q_{b}+q_{p}+q_{a}+q_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
 \end{equation}
 
 For constant rebonding:
 
 \begin{equation}
-q_{b} = q_{p} \frac{1}{T_{opt}} \frac{T_{opt}}{T_{opt}+1}\frac{p_{f}}{p_{r}}
-\end{equation} 
-
-REMARK: shouldn't this be (using the change to $S_{sLQTY}$ as in equation \ref{eq:recursive})?
-
-\begin{equation}
-q_{b} = p_f P_{In} \Delta q_{a} \frac{1}{q_{a}} = q_{p} \frac{1}{T_{opt}} \frac{T_{opt}}{T_{opt}+1}\frac{p_{f}}{q_{a}}
-\end{equation} 
-
+q_{b} = q_{p} \frac{1}{T_{opt}} \frac{T_{opt}}{T_{opt}+1}\frac{p_{f}}{p_{r}} = \frac{q_{p}}{T_{opt}+1}\frac{p_{f}}{p_{r}}
+\end{equation}
 
 This leads to:
 
-\begin{equation}
+\[
 p_{f} = \frac{ \frac{q_{p}}{T_{opt}+1}\frac{p_{f}}{p_{r}}+q_{p} \left(1+\frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left( 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
-\end{equation}
+\]
 
 \begin{equation}
-p_{f} = \frac{q_{p} \left( 1+   \frac{1}{T_{opt}+1}\frac{p_{f}}{p_{r}}+\frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left( 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
+p_{f} = \frac{q_{p} \left(1 + \frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left(\frac{p_{f}}{p_{r}} + 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
 \end{equation}
 
 With $\frac{r_{d}}{r_{m}}d_{d}=1$
@@ -377,6 +379,12 @@ With $\frac{r_{d}}{r_{m}}d_{d}=1$
 \begin{equation}
 p_{f} = \frac{q_{p} \left( 1+   \frac{1}{T_{opt}+1}\frac{p_{f}}{p_{r}} \right)+q_{a}+q_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
 \end{equation}
+
+We have tried to validate results from this section without success. For instance below we have charts for the historic variant of the recursive approach. We can see non-convergence and really weird behaviour starting from iteration 10:
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_recursive_price_1.png}
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_recursive_price_2.png}
 
 \subsubsection{Yield comparison approach}
 We can also consider the evolution of the fair price of bTKN over a given time period and compare it with an expected yield. In the following, we outline two different approaches.
