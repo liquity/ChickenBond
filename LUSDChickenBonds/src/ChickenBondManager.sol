@@ -123,11 +123,20 @@ contract ChickenBondManager is Ownable {
         delete idToBondData[_bondID];
         totalPendingLUSD -= bondedLUSD;
 
-        uint256 yTokensToBurn = yearnLUSDVault.calcTokenToYToken(bondedLUSD);
-        yearnLUSDVault.withdraw(yTokensToBurn);
+        uint256 yTokensBalanceOfCBM = yearnLUSDVault.balanceOf(address(this));
+        uint256 yTokensToSwapForLUSD = bondedLUSD * yTokensBalanceOfCBM / lusdInYearn;
 
-        // Send bonded LUSD back to caller and burn their bond NFT
-        lusdToken.transfer(msg.sender, bondedLUSD);
+        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        yearnLUSDVault.withdraw(yTokensToSwapForLUSD);
+        uint256 lusdBalanceAfter = lusdToken.balanceOf(address(this));
+
+        uint256 lusdBalanceDelta = lusdBalanceAfter - lusdBalanceBefore;
+
+        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal bondedLUSD. 
+        * Reasoning: the LUSD balance delta can be slightly lower than the bondedLUSD due to floor division in the 
+        * yToken calculation prior to withdrawal. */
+        lusdToken.transfer(msg.sender, lusdBalanceDelta);
+
         bondNFT.burn(_bondID);
     }
 

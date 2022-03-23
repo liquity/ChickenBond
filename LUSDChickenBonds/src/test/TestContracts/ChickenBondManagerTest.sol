@@ -233,9 +233,9 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_bondStartTime, currentTime);
     }
 
-    function testFirstCreateBondIncreasesTheBondNFTCountByOne() public {
+    function testFirstCreateBondIncreasesTheBondNFTSupplyByOne() public {
         // Get NFT token supply before
-        uint256 tokenSupplyBefore = bondNFT.totalMinted();
+        uint256 tokenSupplyBefore = bondNFT.tokenSupply();
 
         // A creates bond
         vm.startPrank(A);
@@ -244,11 +244,26 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check NFT token supply after has increased by 1
-        uint256 tokenSupplyAfter = bondNFT.totalMinted();
+        uint256 tokenSupplyAfter = bondNFT.tokenSupply();
         assertEq(tokenSupplyBefore + 1, tokenSupplyAfter);
     }
 
-    function testCreateBondIncreasesTheBondNFTCountByOne() public {
+    function testFirstCreateBondIncreasesTheBondNFTTotalMintedByOne() public {
+        // Get NFT total minted before
+        uint256 totalMintedBefore = bondNFT.totalMinted();
+
+        // A creates bond
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), 10e18);
+        chickenBondManager.createBond(10e18);
+        vm.stopPrank();
+
+        // Check total minted after has increased by 1
+        uint256 totalMintedAfter = bondNFT.totalMinted();
+        assertEq(totalMintedBefore + 1, totalMintedAfter);
+    }
+
+    function testCreateBondIncreasesTheBondNFTSupplyByOne() public {
         // A creates bond
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), 10e18);
@@ -256,7 +271,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
         
         // Get NFT token supply before
-        uint256 tokenSupplyBefore = bondNFT.totalMinted();
+        uint256 tokenSupplyBefore = bondNFT.tokenSupply();
 
         // B creates bond
         vm.startPrank(B);
@@ -265,8 +280,29 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check NFT token supply after has increased by 1
-        uint256 tokenSupplyAfter = bondNFT.totalMinted();
+        uint256 tokenSupplyAfter = bondNFT.tokenSupply();
         assertEq(tokenSupplyBefore + 1, tokenSupplyAfter);
+    }
+
+    function testCreateBondIncreasesTheBondNFTTotalMintedByOne() public {
+        // A creates bond
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), 10e18);
+        chickenBondManager.createBond(10e18);
+        vm.stopPrank();
+        
+        // Get NFT total minted before
+        uint256 totalMintedBefore = bondNFT.totalMinted();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), 10e18);
+        chickenBondManager.createBond(10e18);
+        vm.stopPrank();
+
+        // Check NFT total minted after has increased by 1
+        uint256 totalMintedAfter = bondNFT.totalMinted();
+        assertEq(totalMintedBefore + 1, totalMintedAfter);
     }
 
     function testCreateBondIncreasesBonderNFTBalanceByOne() public {
@@ -430,7 +466,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_LUSDBalanceAfter, B_LUSDBalanceBefore + bondAmount);
     }
 
-    function testChickenOutReducesBondNFTCountByOne() public {
+    function testChickenOutReducesBondNFTSupplyByOne() public {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
@@ -444,19 +480,48 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.createBond(bondAmount);
         vm.stopPrank();
 
-        // Since B was the last bonder, his bond ID is also the total current supply
+        // Since B was the last bonder, his bond ID is the current total minted
         uint256 B_bondID = bondNFT.totalMinted();
-        uint256 nftTokenSupplyBefore = bondNFT.totalMinted();
+        uint256 nftTokenSupplyBefore = bondNFT.tokenSupply();
 
         // B chickens out
         vm.startPrank(B);
         chickenBondManager.chickenOut(B_bondID);
         vm.stopPrank();
 
-        uint256 nftTokenSupplyAfter = bondNFT.totalMinted();
+        uint256 nftTokenSupplyAfter = bondNFT.tokenSupply();
 
         // Check NFT token supply has decreased by 1
         assertEq(nftTokenSupplyAfter, nftTokenSupplyBefore - 1);
+    }
+
+    function testChickenOutDoesNotChangeBondNFTTotalMinted() public {
+        // A, B create bond
+        uint256 bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // Since B was the last bonder, his bond ID is the current total minted
+        uint256 B_bondID = bondNFT.totalMinted();
+        uint256 nftTotalMintedBefore = bondNFT.totalMinted();
+
+        // B chickens out
+        vm.startPrank(B);
+        chickenBondManager.chickenOut(B_bondID);
+        vm.stopPrank();
+
+        uint256 nftTotalMintedAfter = bondNFT.totalMinted();
+
+        // Check NFT token minted does not change
+        assertEq(nftTotalMintedAfter, nftTotalMintedBefore);
     }
 
     function testChickenOutRemovesOwnerOfBondNFT() public {
@@ -953,7 +1018,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore);
     }
 
-    function testChickenInReducesBondNFTCountByOne() public {
+    function testChickenInReducesBondNFTSupplyByOne() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -972,13 +1037,41 @@ contract ChickenBondManagerTest is BaseTest {
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
     
-        uint256 nftTokenSupplyBefore = bondNFT.totalMinted();
+        uint256 nftTokenSupplyBefore = bondNFT.tokenSupply();
 
         // B chickens in
         chickenBondManager.chickenIn(B_bondID);
 
-        uint256 nftTokenSupplyAfter = bondNFT.totalMinted();
+        uint256 nftTokenSupplyAfter = bondNFT.tokenSupply();
         assertEq(nftTokenSupplyAfter, nftTokenSupplyBefore - 1);
+    }
+
+    function testChickenInDoesNotChangeTotalMinted() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        vm.startPrank(A);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+        vm.stopPrank();
+
+        // B creates bond
+        vm.startPrank(B);
+        lusdToken.approve(address(chickenBondManager), bondAmount);
+        chickenBondManager.createBond(bondAmount);
+       
+        uint256 B_bondID = bondNFT.totalMinted();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+    
+        uint256 nftTotalMintedBefore = bondNFT.totalMinted();
+
+        // B chickens in
+        chickenBondManager.chickenIn(B_bondID);
+
+        uint256 nftTotalMintedAfter = bondNFT.totalMinted();
+        assertEq(nftTotalMintedAfter, nftTotalMintedBefore);
     }
 
     function testChickenInDecreasesBonderNFTBalanceByOne() public {
@@ -1953,9 +2046,9 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     function testCalcYearnLUSDShareValueGivesCorrectAmountAtFirstDepositPartialWithdrawal(uint _denominator) public {
-        vm.assume(_denominator > 0 && _denominator < 1000e18);
-
-        // uint256 _denominator = 9633414992312023026;
+       // Assume we withdraw something between full amount and 1 billion'th.  At some point, the denominator would become
+       // too large, the share amount too small to withdraw any LUSD, and the withdrawal will revert.
+        vm.assume(_denominator > 0 && _denominator < 1e9);
 
         uint256 depositAmount = 10e18;
         // Tip CBM some LUSD 
@@ -1979,7 +2072,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint fractionalCBMShareValue = CBMShareLUSDValue / _denominator;
         console.log(lusdBalAfter, "lusdBalAfter");
         console.log(fractionalCBMShareValue, "fractionalCBMShareValue");
-        
+
         assertApproximatelyEqual(lusdBalAfter, fractionalCBMShareValue, 1e3);
     }
 
