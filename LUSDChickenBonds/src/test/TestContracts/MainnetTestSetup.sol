@@ -11,8 +11,11 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_LUSD_TOKEN_ADDRESS = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address constant MAINNET_YEARN_LUSD_VAULT_ADDRESS = 0x378cb52b00F9D0921cb46dFc099CFf73b42419dC;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
+    uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
 
     function setUp() public {
+        pinBlock(MAINNET_PINNED_BLOCK);
+
         accounts = new Accounts();
         createAccounts();
 
@@ -69,5 +72,10 @@ contract MainnetTestSetup is BaseTest {
         console.log(block.timestamp, "block.timestamp");
         console.log(block.number, "block.number");
         console.log(lusdToken.totalSupply(), "Total LUSD supply");
+    }
+
+    function pinBlock(uint256 _blockTimestamp) public {
+        vm.warp(_blockTimestamp);
+        assertEq(block.timestamp, _blockTimestamp);
     }
 }
