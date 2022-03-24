@@ -53,8 +53,8 @@ def main(tester):
     tester.init(chicks)
 
     for iteration in range(ITERATIONS):
-        print(f"\n\033[31m  --> Iteration {iteration}")
-        print("  -------------------\033[0m\n")
+        #print(f"\n\033[31m  --> Iteration {iteration}")
+        #print("  -------------------\033[0m\n")
 
         natural_rate = tester.get_natural_rate(natural_rate, iteration)
         chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(chicken.stoken_amm, accrued_fees_A, accrued_fees_B)

@@ -31,7 +31,7 @@ BOND_AMOUNT = (100, 1000)               # Random number between 100 and 1,000.
 
 # number of iterations to take the average APR of the AMM
 AMM_APR_PERIOD = 10
-AMM_FEE = 0.04 / 100                    # ToDo
+AMM_FEE = 0.3 / 100                      # ToDo
 MAX_SLIPPAGE = 0.10                     # ToDo
 AMM_YIELD = 0.02                        # ToDo
 
@@ -47,7 +47,7 @@ CHICKEN_OUT_PROBABILITY = 0.05          # Probability of a user randomly chicken
 # Initial price of sLQTY quoted in LQTY, to make sure bootstrap is profitable
 INITIAL_PRICE = 1.2 * (BOOTSTRAP_ITERATION + 1) / BOOTSTRAP_ITERATION
 
-PRICE_PREMIUM = "coop_balance"            # The estimator of the price premium ("normal_dist","perpetuity","coop_balance")
+PRICE_PREMIUM = "full_balance"            # The estimator of the price premium ("normal_dist","perpetuity","coop_balance","full_balance")
 PREMIUM_MU = 0.1                        # Expected value of the normal distribution as a fraction of POL token balance
 PREMIUM_SIGMA = 0.1                     # Deviation of the normal distribution as a fraction of the POL token balance
 

@@ -166,7 +166,8 @@ class TesterSimpleToll(TesterInterface):
         # Different methods to estimate the premium of sLQTY tokens.
         premium_mapper = {"normal_dist": np.random.normal(mu, sigma, 1)[0] / stoken_supply,
                           "perpetuity": (chicken.coop_token_balance() * EXTERNAL_YIELD) ** (1 / TIME_UNITS_PER_YEAR),
-                          "coop_balance": (chicken.coop_token_balance() + (self.amm_yield/self.external_yield) * chicken.amm.get_value_in_token_A()) / stoken_supply,
+                          "coop_balance": chicken.coop_token_balance() / stoken_supply,
+                          "full_balance": (chicken.coop_token_balance() + (self.amm_yield/self.external_yield) * chicken.amm.get_value_in_token_A()) / stoken_supply,
                           }
 
         return premium_mapper.get(self.price_premium, 0)
@@ -391,9 +392,11 @@ class TesterSimpleToll(TesterInterface):
         bonded_chicks = self.get_bonded_chicks(chicks)
         #print(f"Bonded Chicks fin: {len(bonded_chicks)}")
 
+        """
         print("Out:", self.chicken_out_counter)
         print("In:", self.chicken_in_counter)
         print("Locked:", self.chicken_in_locked)
+        """
         self.chicken_in_locked = 0
 
         return
