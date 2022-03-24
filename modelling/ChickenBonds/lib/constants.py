@@ -26,7 +26,6 @@ INITIAL_AMOUNT = 10000
 # -------------- Bonding Parameters ----------------
 BOND_STOKEN_ISSUANCE_RATE = 0.002       # New sLQTY minted per iteration as a fraction of the bonded amount.
 EXTERNAL_YIELD = 0.05 # 5%              # Yield received from staking the total reserves per year.
-BOND_PROBABILITY = [0.05, 0.01, 0.1]                 # 5% of the not bonded users bond each iteration
 BOND_AMOUNT = (100, 1000)               # Random number between 100 and 1,000.
 
 # number of iterations to take the average APR of the AMM

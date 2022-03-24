@@ -89,7 +89,6 @@ class TesterSimpleToll(TesterInterface):
         self.external_yield = EXTERNAL_YIELD
 
         self.bond_mint_ratio = BOND_STOKEN_ISSUANCE_RATE
-        self.bond_probability = BOND_PROBABILITY
         self.chicken_in_gamma_shape = CHICKEN_IN_GAMMA[0]
         self.chicken_in_gamma_scale = CHICKEN_IN_GAMMA[1]
         self.chicken_out_probability = CHICKEN_OUT_PROBABILITY
@@ -304,15 +303,20 @@ class TesterSimpleToll(TesterInterface):
 
         return
 
-    def get_bond_probability(self, iteration):
-        return self.bond_probability[int(iteration / (int(ITERATIONS/len(self.bond_probability))))]
+    def get_bond_probability(self, chicken):
+        # TODO: move constants to constants.py?
+        # chicken_in_time
+        t = self.get_optimal_apr_chicken_in_time(chicken)
+        #p = max(0, min(1, 0.1 * (290 - 9*t) / 200))
+        p = min(1, 0.1 * 100 / t**2)
+        return p
 
     def bond(self, chicken, chicks, iteration):
         np.random.seed(2022 * iteration)
         np.random.shuffle(chicks)
         not_bonded_chicks = self.get_available_for_bonding_chicks(chicken, chicks)
         not_bonded_chicks_len = len(not_bonded_chicks)
-        num_new_bonds = np.random.binomial(not_bonded_chicks_len, self.get_bond_probability(iteration))
+        num_new_bonds = np.random.binomial(not_bonded_chicks_len, self.get_bond_probability(chicken))
         if iteration == 0:
             num_new_bonds = BOOTSTRAP_NUM_BONDS
         #print(f"available: {not_bonded_chicks_len:,.2f}")
