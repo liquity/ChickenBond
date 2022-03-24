@@ -5,7 +5,7 @@ YEAR = TIME_UNITS_PER_YEAR              # Days per year
 ITERATIONS = TIME_UNITS_PER_YEAR * 4    # Total iterations steps in days
 
 # ------------ Bootstrap -----------------
-BOOTSTRAP_ITERATION = 10                # Iteration at which first bonders will chicken in to bootstrap the system
+BOOTSTRAP_ITERATION = 10               # Iteration at which first bonders will chicken in to bootstrap the system
 BOOTSTRAP_NUM_BONDS = 0                # Number of bonds for bootstrap
 
 # ------------ Plots -----------------
@@ -18,25 +18,22 @@ PLOTS_INTERVAL = [0, 0]                 # [0, 0] will plot’em all
 LOG_LEVEL = 0                           # To display logs in console (for now only 0: off, and 1: on)
 
 # ------------- User and Money --------------------
-NUM_CHICKS = 100
-NUM_ACTIVE_CHICKS_PER_STEP = int(NUM_CHICKS / 10)
+NUM_CHICKS =   100
+NUM_REBONDERS = 30     # Number of users that will rebond upon chickening in
+NUM_LPS =       40     # Number of users that will provide liquidity upon chickening in
 INITIAL_AMOUNT = 10000
-NUM_REBONDERS = int(NUM_CHICKS / 2)     # Number of users that will rebond upon chickening in
-NUM_LPS = int((NUM_CHICKS - NUM_REBONDERS) / 2)         # Number of users that will provide liquidity upon chickening in
 
 # -------------- Bonding Parameters ----------------
 BOND_STOKEN_ISSUANCE_RATE = 0.002       # New sLQTY minted per iteration as a fraction of the bonded amount.
 EXTERNAL_YIELD = 0.05 # 5%              # Yield received from staking the total reserves per year.
-BOND_PROBABILITY = [0.05, 0.01, 0]                 # 5% of the not bonded users bond each iteration
+BOND_PROBABILITY = [0.05, 0.01, 0.1]                 # 5% of the not bonded users bond each iteration
 BOND_AMOUNT = (100, 1000)               # Random number between 100 and 1,000.
 
 # number of iterations to take the average APR of the AMM
 AMM_APR_PERIOD = 10
 AMM_FEE = 0.04 / 100                    # ToDo
-MAX_SLIPPAGE = 0.03                     # ToDo
+MAX_SLIPPAGE = 0.10                     # ToDo
 AMM_YIELD = 0.02                        # ToDo
-AMM_ARBITRAGE_DIVERGENCE = 0.05         # ToDo
-REDEMPTION_ARBITRAGE_DIVERGENCE = 0.05  # ToDo
 
 # -------------- Natural Rates ---------------------
 INITIAL_NATURAL_RATE = 0.05             # ToDo
@@ -45,7 +42,6 @@ SD_NATURAL_RATE = 0.002                 # ToDo
 # -------------- Chicken Parameters ----------------
 CHICKEN_IN_GAMMA = (1.5, 0.1)           # Parameters of gamma distribution for random target return (Mean: 1.5 * 0.1)
 CHICKEN_OUT_PROBABILITY = 0.05          # Probability of a user randomly chicken out
-CHICKEN_UP_PROBABILITY = 0.2            # Probability of a user over in profit range to chicken-up
 
 # -------------- Price Parameters ----------------
 # Initial price of sLQTY quoted in LQTY, to make sure bootstrap is profitable

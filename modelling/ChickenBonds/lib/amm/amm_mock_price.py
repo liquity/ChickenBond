@@ -21,16 +21,27 @@ class AmmMockPrice(AmmInterface):
             f"\n - \033[36mPrice {self.token_B.symbol}/{self.token_A.symbol}: {self.get_token_B_price():,.2f}\033[0m" + \
             f"\n - LP tokens total supply {self.get_total_liquidity():,.2f}"
 
+    # to be discounted for APR calculation
+    def set_initial_A_liquidity(self, initial_A_liquidity):
+        self.initial_A_liquidity = initial_A_liquidity
+        return
+
     def set_price_A(self, price):
         self.A_price = price
 
     def set_price_B(self, price):
         self.A_price = 1 / price
 
+    def get_value_in_token_A(self):
+        real_value = super().get_value_in_token_A()
+        # discount initial liquidity for APR calculation
+        return real_value - self.initial_A_liquidity
+
     def get_A_amount_for_liquidity(self, token_B_amount):
-        pass
+        return token_B_amount * self.get_token_B_price()
+
     def get_B_amount_for_liquidity(self, token_A_amount):
-        pass
+        return token_A_amount * self.get_token_A_price()
 
     def add_liquidity(self, account, token_A_amount, token_B_amount):
         assert token_A_amount > 0
@@ -56,7 +67,7 @@ class AmmMockPrice(AmmInterface):
         total_liquidity = self.get_total_liquidity()
 
         lp_amount = token_B_amount * self.get_token_B_price()
-        self.lp_token.mint(account, token_B_amount)
+        self.lp_token.mint(account, lp_amount)
 
         self.token_B.transfer(account, self.pool_account, token_B_amount)
 
