@@ -35,7 +35,16 @@ export const Knobs: React.FC = () => {
         <Heading as="h4">Simulation</Heading>
 
         <Box sx={groupStyle}>
-          <Label>Initial Acquired Bucket [TOKEN, sTOKEN]</Label>
+          <Label>Duration [years]</Label>
+          <Input
+            type="number"
+            min={0}
+            step={1}
+            value={state.periods}
+            onChange={e => set("periods", e.target.value)}
+          />
+
+          <Label sx={{ mt: 3 }}>Initial Acquired Bucket [TOKEN, sTOKEN]</Label>
           <Input type="text" value={state.in0} onChange={e => set("in0", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Curve</Label>
@@ -78,6 +87,7 @@ export const Knobs: React.FC = () => {
             onChange={e => set("selectedSteer", validateSteerOption(e.target.value))}
           >
             <option value="asymmetric">Asymmetric (speed-up only)</option>
+            <option value="symmetric">Symmetric</option>
             <option value="pid">PID</option>
           </Select>
 
@@ -91,6 +101,18 @@ export const Knobs: React.FC = () => {
                 step={0.01}
                 value={state.asymmetricAdjustmentRate}
                 onChange={e => set("asymmetricAdjustmentRate", e.target.value)}
+              />
+            </>
+          ) : state.selectedSteer === "symmetric" ? (
+            <>
+              <Label sx={{ mt: 3 }}>Adjustment Rate</Label>
+              <Input
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={state.symmetricAdjustmentRate}
+                onChange={e => set("symmetricAdjustmentRate", e.target.value)}
               />
             </>
           ) : (

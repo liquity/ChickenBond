@@ -22,8 +22,9 @@ export const subToken = (p: Pair, TOKEN: number): Pair => subPair(p, { TOKEN, sT
 
 export const lowpass =
   (alpha: number, y = 0) =>
-  (x: number): number =>
-    (y = alpha * x + (1 - alpha) * y);
+  <T>(f: (x: T) => number) =>
+  (x: T): number =>
+    (y = alpha * f(x) + (1 - alpha) * y);
 
 export const panic = <T>(errorMessage: string): T => {
   throw new Error(errorMessage);

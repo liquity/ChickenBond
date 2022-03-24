@@ -85,6 +85,8 @@ export const SimulationChart: React.FC = () => {
       <VictoryLine name="r" data={data} x="k" y="r" style={rStyle} />
       <VictoryLine name="u" data={data} x="k" y="u" style={uStyle} />
       <VictoryLine name="e" data={data} x="k" y="e" style={eStyle} />
+      {/* <VictoryLine name="coop" data={data} x="k" y="coop.TOKEN" style={rStyle} />
+      <VictoryLine name="POL" data={data} x="k" y="in.TOKEN" style={eStyle} /> */}
     </VictoryChart>
   );
 };

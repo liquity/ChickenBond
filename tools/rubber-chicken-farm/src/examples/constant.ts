@@ -26,7 +26,7 @@ export const constantFarm = () => {
     point: () => 0,
     gauge: () => 0,
     steer: ({ u }) => u,
-    spot: ({ stats }) => f((stats.coop.TOKEN + stats.in.TOKEN) / stats.in.sTOKEN),
+    spot: f(({ stats }) => (stats.coop.TOKEN + stats.in.TOKEN) / stats.in.sTOKEN),
     hatch: () => 100,
     move: ({ k, u, premium, bond }) =>
       k >= Math.round(bond.k0 + u * tMaxArr(premium)) ? "in" : null

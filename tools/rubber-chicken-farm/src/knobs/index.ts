@@ -1,6 +1,6 @@
 import { ChickenFarmParams, ChickenFarmSteerParams } from "../model/ChickenFarm";
 
-const steerOptions = new Set(["asymmetric", "pid"] as const);
+const steerOptions = new Set(["asymmetric", "symmetric", "pid"] as const);
 
 export type SteerOption = typeof steerOptions extends Set<infer T> ? T : never;
 
@@ -13,9 +13,12 @@ export const validateSteerOption = (value: string): SteerOption => {
 };
 
 export interface ParsedSimulationKnobs extends Omit<ChickenFarmParams, "period" | "steer"> {
+  periods: number;
+
   selectedSteer: SteerOption;
 
   asymmetricAdjustmentRate: number;
+  symmetricAdjustmentRate: number;
 
   pidKp: (params: ChickenFarmSteerParams) => number;
   pidKi: (params: ChickenFarmSteerParams) => number;
@@ -25,6 +28,7 @@ export interface ParsedSimulationKnobs extends Omit<ChickenFarmParams, "period" 
 export type SimulationKnobs = { [P in keyof ParsedSimulationKnobs]: string };
 
 export const simulationDefaults: SimulationKnobs = {
+  periods: "4",
   u0: "100",
   in0: "[1000, 500]",
   curve: "(dk, u) => dk / (dk + u)",
@@ -54,6 +58,7 @@ export const simulationDefaults: SimulationKnobs = {
   selectedSteer: "asymmetric",
 
   asymmetricAdjustmentRate: "0.1",
+  symmetricAdjustmentRate: "0.1",
 
   pidKp: "() => 1",
   pidKi: "() => 0",
@@ -61,7 +66,7 @@ export const simulationDefaults: SimulationKnobs = {
 };
 
 export const parseSimulationKnobs = (knobs: Readonly<SimulationKnobs>): ParsedSimulationKnobs => {
-  const { u0, in0, selectedSteer, asymmetricAdjustmentRate, ...functions } = knobs;
+  const { periods, u0, in0, selectedSteer, asymmetricAdjustmentRate, ...functions } = knobs;
 
   // eslint-disable-next-line no-new-func
   const [in0_TOKEN, in0_sTOKEN] = new Function(`"use strict"; return ${in0};`)();
@@ -80,6 +85,7 @@ export const parseSimulationKnobs = (knobs: Readonly<SimulationKnobs>): ParsedSi
       sTOKEN: in0_sTOKEN
     },
 
+    periods: Number(periods),
     u0: Number(u0),
     asymmetricAdjustmentRate: Number(asymmetricAdjustmentRate),
     selectedSteer: validateSteerOption(selectedSteer),

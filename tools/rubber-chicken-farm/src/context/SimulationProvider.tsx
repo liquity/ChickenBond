@@ -6,13 +6,11 @@ import { useKnobs } from "./KnobsProvider";
 import { collectSamples, PID } from "../utils";
 
 export interface SimulationContextType {
-  samples: number;
   period: number;
   data: ChickenFarmDatum[];
 }
 
 const SimulationContext = createContext<SimulationContextType>({
-  samples: 0,
   period: 0,
   data: []
 });
@@ -21,6 +19,11 @@ const asymmetricSteer =
   (adjustmentRate: number) =>
   ({ e, u }: ChickenFarmSteerParams) =>
     e < 0 ? u * (1 - adjustmentRate) : u;
+
+const symmetricSteer =
+  (adjustmentRate: number) =>
+  ({ e, u }: ChickenFarmSteerParams) =>
+    e < 0 ? u * (1 - adjustmentRate) : e > 0 ? u / (1 - adjustmentRate) : u;
 
 const coalesceNaN = (x: number, defaultValue: number) => (isNaN(x) ? defaultValue : x);
 
@@ -39,14 +42,12 @@ const pidSteer = (
 export interface SimulationProviderProps {
   debounceDelayMs: number;
   period: number;
-  samples: number;
   passes: number;
 }
 
 export const SimulationProvider: React.FC<SimulationProviderProps> = ({
   debounceDelayMs,
   period,
-  samples,
   passes,
   children
 }) => {
@@ -54,22 +55,30 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
   const [data, setData] = useState<ChickenFarmDatum[]>([]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    setTimeout(() => {
-      if (cancelled) {
-        return;
-      }
+    let timeoutId = setTimeout(() => {
+      const startTime = new Date();
 
       setData([]);
 
       try {
-        const { selectedSteer, asymmetricAdjustmentRate, pidKp, pidKi, pidKd, ...params } =
-          parseSimulationKnobs(state);
+        const {
+          periods,
+          selectedSteer,
+          asymmetricAdjustmentRate,
+          symmetricAdjustmentRate,
+          pidKp,
+          pidKi,
+          pidKd,
+          ...params
+        } = parseSimulationKnobs(state);
+
+        const samples = periods * period + 1;
 
         const steer =
           selectedSteer === "asymmetric"
             ? asymmetricSteer(asymmetricAdjustmentRate)
+            : selectedSteer === "symmetric"
+            ? symmetricSteer(symmetricAdjustmentRate)
             : pidSteer(period, pidKp, pidKi, pidKd);
 
         const farm = new ChickenFarm({ period, steer, ...params });
@@ -77,48 +86,43 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
         let collectedData: ChickenFarmDatum[] = [];
         let pass = 1;
 
-        const scheduleOnePass = () => {
+        const scheduleOnePass = () =>
           setTimeout(() => {
-            const samplesThisPass = Math.round((pass / passes) * samples) - collectedData.length;
-
-            if (cancelled) {
-              return;
-            }
+            const samplesThisPass =
+              Math.round((pass / passes) ** 2 * samples) - collectedData.length;
 
             try {
               collectedData = [
                 ...collectedData,
                 ...collectSamples(samplesThisPass, () => farm.farm())
               ];
+
+              setData(collectedData);
+
+              if (pass++ < passes) {
+                timeoutId = scheduleOnePass();
+              } else {
+                const endTime = new Date();
+                const durationMs = endTime.getTime() - startTime.getTime();
+                console.log(`Simulation took ${durationMs / 1000} seconds.`);
+                console.log(collectedData);
+              }
             } catch (error) {
               console.error(error);
             }
-
-            setData(collectedData);
-
-            if (pass++ < passes) {
-              scheduleOnePass();
-            } else {
-              console.log(collectedData);
-            }
           }, 0);
-        };
 
-        scheduleOnePass();
+        timeoutId = scheduleOnePass();
       } catch (error) {
         console.error(error);
       }
     }, debounceDelayMs);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [debounceDelayMs, passes, period, samples, state]);
+    return () => clearTimeout(timeoutId);
+  }, [debounceDelayMs, passes, period, state]);
 
   return (
-    <SimulationContext.Provider value={{ samples, period, data }}>
-      {children}
-    </SimulationContext.Provider>
+    <SimulationContext.Provider value={{ period, data }}>{children}</SimulationContext.Provider>
   );
 };
 

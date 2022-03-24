@@ -1,12 +1,13 @@
 import { addPair, addToken, box, calculateRatio, Pair, panic, subToken, ZEROES } from "../utils";
 import { ChickenBond, ChickenBondCurve } from "./ChickenBond";
 
-export type ChickenMove = "in" | "out";
-export type ChickenState = ChickenMove | "cooped";
+export type ChickenMove = "in" | "out" | "re";
+export type ChickenState = "in" | "out" | "cooped";
 
 export interface Chicken<T extends ChickenState = ChickenState> {
   state: T;
   bond: ChickenBond;
+  phoenix?: Chicken<T>;
 }
 
 export interface ChickenFarmStats {
@@ -115,7 +116,7 @@ const validateHatch = (x: unknown): number =>
     : panic("hatch() must return a number or an array of numbers");
 
 const validateMove = (x: unknown): ChickenMove =>
-  x === "in" || x === "out" ? x : panic("move() must return either 'in' or 'out'");
+  x === "in" || x === "out" || x === "re" ? x : panic("move() must return either 'in' or 'out'");
 
 export class ChickenFarm {
   readonly params: Readonly<ChickenFarmParams>;
@@ -125,6 +126,7 @@ export class ChickenFarm {
   private _u: number;
   private _restIn: Pair;
   private _stats: ChickenFarmStats;
+  private _phoenices: Chicken[] = [];
 
   constructor(params: Readonly<ChickenFarmParams>) {
     this.params = params;
@@ -159,19 +161,35 @@ export class ChickenFarm {
     const uNext = validateSteer(this.params.steer(steerParams));
 
     this.population.push(
+      ...this._phoenices.map<Chicken>(phoenix => ({
+        state: "cooped",
+        bond: new ChickenBond(this.params.curve, k, spot * phoenix.bond.sTOKEN),
+        phoenix
+      })),
+
       ...box(this.params.hatch(steerParams)).map<Chicken>(x => ({
         state: "cooped",
         bond: new ChickenBond(this.params.curve, k, validateHatch(x))
       }))
     );
 
+    this._phoenices = [];
+
     this.population.forEach(chicken => {
       if (chicken.state === "cooped") {
         chicken.bond._poke(k, u, polRatio);
 
         const retMove = this.params.move({ ...steerParams, bond: chicken.bond });
+
         if (retMove != null) {
-          chicken.state = validateMove(retMove);
+          const move = validateMove(retMove);
+
+          if (move === "re") {
+            this._phoenices.push(chicken);
+            chicken.state = "in";
+          } else {
+            chicken.state = move;
+          }
         }
       }
     });

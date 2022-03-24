@@ -8,7 +8,7 @@ import { constantFarm } from "./examples/constant";
 
 import theme from "./theme";
 import { simulationDefaults } from "./knobs";
-import { collectSamples, csv, flatten } from "./utils";
+import { collectSamples, csv, flatten, lowpass } from "./utils";
 import { KnobsProvider } from "./context/KnobsProvider";
 import { SimulationProvider } from "./context/SimulationProvider";
 import { Knobs } from "./components/Knobs";
@@ -22,11 +22,11 @@ Object.assign(window, {
   constantFarm,
   csv,
   flatten,
+  lowpass,
   W: lambertW0
 });
 
 const period = 365;
-const samples = 4 * period + 1;
 
 const App = () => (
   <ThemeProvider theme={theme}>
@@ -37,7 +37,7 @@ const App = () => (
         <Knobs />
 
         <Box sx={{ flexGrow: 1, mt: 4 }}>
-          <SimulationProvider period={period} samples={samples} debounceDelayMs={200} passes={20}>
+          <SimulationProvider period={period} debounceDelayMs={200} passes={20}>
             <SimulationChart />
           </SimulationProvider>
         </Box>
