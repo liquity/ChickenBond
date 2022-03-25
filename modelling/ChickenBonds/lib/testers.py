@@ -357,6 +357,7 @@ class TesterSimpleToll(TesterInterface):
 
     def get_avg_outstanding_bond_age(self, chicks, iteration):
         bonded_chicks = self.get_bonded_chicks(chicks)
+        # bonded_chicks = list(filter(lambda chick: not chick.rebonder and not chick.lp, bonded_chicks))
         if not bonded_chicks:
             return 0
         total = sum(map(lambda chick: iteration - chick.bond_time, bonded_chicks))
@@ -605,23 +606,13 @@ class TesterSimpleToll(TesterInterface):
         return 1
 
     def regular_chicken_in(self, chicken, chick, claimable_amount, iteration):
-        # use actual stoken price instead of weighted average
-        stoken_price = self.get_stoken_spot_price(chicken)
-        # If the chicks profit are below their target_profit,
-        # do neither chicken-in nor chicken-up.
-        profit = claimable_amount * stoken_price - chick.bond_amount
-        target_profit = chick.bond_target_profit * chick.bond_amount
-        if profit <= target_profit:
-            self.chicken_in_locked += 1
+        chicken_in_time = self.get_optimal_apr_chicken_in_time(chicken)
+        # If the optimal point hasn’t been reached yet
+        if iteration - chick.bond_time < chicken_in_time:
             # except for bootstrappers
             if not self.is_bootstrap_chicken_in(chick, iteration):
-                """
-                print("\n \033[31mProfit not reached!\033[0m")
-                print(chick)
-                print(f"\033[34mprice:            {stoken_price:,.2f}\033[0m")
-                print(f"profit: {profit:,.2f}")
-                print(f"target_profit: {target_profit:,.2f}")
-                """
+                #print(f"chicken_in_time: {chicken_in_time:,.2f}")
+                #print(f"time gone:       {iteration - chick.bond_time:,.2f}")
                 return 0
 
         #print("\n --> Chickening in!")
