@@ -155,3 +155,9 @@ class AmmMockPrice(AmmInterface):
     def get_output_B_for_max_slippage(self, slippage, token_A_offset, token_B_offset):
         return self.token_B_balance()
 
+
+    def add_rewards(self, token_A_reward, token_B_reward):
+        if token_A_reward > 0:
+            self.fees_accrued_A = self.fees_accrued_A + token_A_reward
+        if token_B_reward > 0:
+            self.fees_accrued_B = self.fees_accrued_B + token_B_reward
