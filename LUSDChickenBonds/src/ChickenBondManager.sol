@@ -106,25 +106,27 @@ contract ChickenBondManager is Ownable {
     function chickenOut(uint256 _bondID) external {
         _requireCallerOwnsBond(_bondID);
 
-          /* In practice this assert should mostly hold. However, there could be edge cases where it doesn't: 
+        uint256 bondedLUSD = idToBondData[_bondID].lusdAmount;
+       
+        delete idToBondData[_bondID];
+        totalPendingLUSD -= bondedLUSD;  
+
+        /* In practice, there could be edge cases where the totalPendingLUSD is not fully backed:
         * - Heavy liquidations, and before yield has been converted
         * - Heavy loss-making liquidations, i.e. at <100% CR
         * - SP or Yearn vault hack that drains LUSD
         *
         * TODO: decide how to handle chickenOuts if/when the recorded totalPendingLUSD is not fully backed by actual 
-        * LUSD in Yearn / the SP.
-        */
-        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
-        
-        assert(lusdInYearn - _getAcquiredLUSDInYearn(lusdInYearn) >= totalPendingLUSD);
+        * LUSD in Yearn / the SP. */
 
-        uint256 bondedLUSD = idToBondData[_bondID].lusdAmount;
-        
-        delete idToBondData[_bondID];
-        totalPendingLUSD -= bondedLUSD;
+        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
+        /* Occasionally (e.g. when the system contains only one bonder) the withdrawable LUSD in Yearn 
+        * will be less than the bonded LUSD due to rounding error in the share calculation. Therefore,
+        * withdraw the lesser of the two quantities. */
+        uint256 lusdToWithdraw = Math.min(bondedLUSD, lusdInYearn); 
 
         uint256 yTokensBalanceOfCBM = yearnLUSDVault.balanceOf(address(this));
-        uint256 yTokensToSwapForLUSD = bondedLUSD * yTokensBalanceOfCBM / lusdInYearn;
+        uint256 yTokensToSwapForLUSD = lusdToWithdraw * yTokensBalanceOfCBM / lusdInYearn;
 
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
         yearnLUSDVault.withdraw(yTokensToSwapForLUSD);
@@ -144,8 +146,7 @@ contract ChickenBondManager is Ownable {
         _requireCallerOwnsBond(_bondID);
 
         BondData memory bond = idToBondData[_bondID];
-        
-        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
+        uint256 lusdInYearn = calcYearnLUSDVaultShareValue(); 
         uint256 backingRatio = _calcSystemBackingRatio(lusdInYearn);
         uint256 accruedSLUSD = _calcAccruedSLUSD(bond, backingRatio);
 
@@ -275,7 +276,6 @@ contract ChickenBondManager is Ownable {
         yearnLUSDVault.deposit(lusdBalanceDelta);
     }
 
-
     // --- Helper functions ---
 
     /* Placeholder functions for calculating LUSD to shift to/from Curve. They currently shift 10% of the acquired LUSD in the source pool
@@ -343,9 +343,8 @@ contract ChickenBondManager is Ownable {
         uint256 totalPendingLUSDCached = totalPendingLUSD;
 
         /* In principle, the acquired LUSD is always the delta between the LUSD deposited to Yearn and the total pending LUSD.
-        * When sLUSD supply == 0 (i.e. before the "first" chicken-in), this delta should be 0.  However in practice, due to rounding
-        * error in Yearn's share calculation (which our calcShareValue function accurately replicates), the delta can be negative.
-        * We assume that a negative delta always corresponds to 0 acquired LUSD.
+        * When sLUSD supply == 0 (i.e. before the "first" chicken-in), this delta should be 0. However in practice, due to rounding
+        * error in Yearn's share calculation the delta can be negative. We assume that a negative delta always corresponds to 0 acquired LUSD.
         *
         * TODO: Determine if this is the only situation whereby the delta can be negative. Potentially enforce some minimum 
         * chicken-in value so that acquired LUSD always more than covers any rounding error in the share value.
@@ -366,56 +365,14 @@ contract ChickenBondManager is Ownable {
 
     // Calculates the LUSD value of this contract's Yearn LUSD Vault yTokens held by the ChickenBondManager
     function calcYearnLUSDVaultShareValue() public view returns (uint256) {
-        uint256 lockedProfitDegradation = yearnLUSDVault.lockedProfitDegradation();
-        return calcShareValue(yearnLUSDVault, lockedProfitDegradation);
+        uint yTokensHeldByCBM = yearnLUSDVault.balanceOf(address(this));
+        return yTokensHeldByCBM * yearnLUSDVault.pricePerShare() / 1e18;
     }
 
     // Calculates the LUSD3CRV value of LUSD Curve Vault yTokens held by the ChickenBondManager
-    /* Due to a typo in the Yearn Curve vault ("degration" vs "degradation"), we need two separate getter functions for
-    * share value */
     function calcYearnCurveVaultShareValue() public view returns (uint256) {
-        uint256 lockedProfitDegradation = yearnCurveVault.lockedProfitDegration();
-        return calcShareValue(yearnCurveVault, lockedProfitDegradation);
-    }
-
-    /* Calculates the amount of Yearn Vault deposit token (either LUSD, or LUSD3CRV) that can be withdrawn for a given amount of yToken shares.
-    * This function replicates the logic found inside the internal Yearn Vault function _shareValue(shares). */
-    function calcShareValue(IYearnVault _yearnVault, uint256 _lockedProfitDegradation) public view returns (uint256) {
-        uint256 totalYTokens = _yearnVault.totalSupply();
-        if (totalYTokens == 0) {return 0;}
-
-        uint256 cbYTokens = _yearnVault.balanceOf(address(this));
-        IERC20 vaultDepositToken = IERC20(_yearnVault.token());
-        uint256 lastLockedProfit = _yearnVault.lockedProfit();
- 
-        uint256 vaultBalance = vaultDepositToken.balanceOf(address(_yearnVault));
-        uint256 strategyDebt = _yearnVault.totalDebt();
-        
-        uint currentLockedProfit;
-
-        // Replicate the vault's _calcLockedProfit() calculation
-        uint256 lockedFundsRatio = (block.timestamp - _yearnVault.lastReport()) * _lockedProfitDegradation;
-       
-        // Backwards-calculate the Vault's degration coefficient from the lockedProfitDegration
-        // TODO: Determine whether degradation coefficient is likely to change across vault migrations,
-        // or whether we can assume it will always be 1e18.
-        uint256 degradationCoefficient = _lockedProfitDegradation * 1e6 / 46;
-
-        if (lockedFundsRatio < degradationCoefficient) {
-            currentLockedProfit = lastLockedProfit - (
-                    lockedFundsRatio
-                    * lastLockedProfit
-                    / degradationCoefficient
-                );
-        } else {        
-            currentLockedProfit = 0;
-        }
-
-        uint totalVaultAssets = vaultBalance + strategyDebt;
-        uint freeFunds = totalVaultAssets - currentLockedProfit;
-        
-        uint shareValue = cbYTokens * freeFunds / totalYTokens;
-        return shareValue;
+        uint yTokensHeldByCBM = yearnCurveVault.balanceOf(address(this));
+        return yTokensHeldByCBM * yearnCurveVault.pricePerShare() / 1e18;
     }
 
     function _calcSystemBackingRatio(uint256 _lusdInYearn) public view returns (uint256) {
@@ -451,8 +408,11 @@ contract ChickenBondManager is Ownable {
     // --- External getter convenience functions ---
 
     function calcAccruedSLUSD(uint256 _bondID) external view returns (uint256) {
+         console.log("here0");
         BondData memory bond = idToBondData[_bondID];
+        console.log("here1");
         uint lusdInYearn = calcYearnLUSDVaultShareValue();
+         console.log("here2");
         return _calcAccruedSLUSD(bond, _calcSystemBackingRatio(lusdInYearn));
     }
 

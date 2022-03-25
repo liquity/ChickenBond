@@ -36,17 +36,21 @@ contract MockYearnVault is ERC20, Ownable {
         return _tokenAmount;
     }
 
-    function lockedProfit() public pure returns (uint256) {
-        return 0;
-    }
+    // function lockedProfit() public pure returns (uint256) {
+    //     return 0;
+    // }
 
-    function lockedProfitDegradation() public pure returns (uint256) {
-        return 0;
-    }
+    // function lockedProfitDegradation() public pure returns (uint256) {
+    //     return 0;
+    // }
 
-    // Some Yearn vaults have this typo ("degration" vs "degradation")
-    function lockedProfitDegration() public pure returns (uint256) {
-        return 0;
+    // // Some Yearn vaults have this typo ("degration" vs "degradation")
+    // function lockedProfitDegration() public pure returns (uint256) {
+    //     return 0;
+    // }
+
+    function pricePerShare() public pure returns (uint256) {
+        return 1;
     }
 
     function lastReport() public pure returns (uint256) {

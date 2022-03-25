@@ -54,9 +54,9 @@ contract BaseTest is DSTest, stdCheats {
         assertLe(diff, _margin);
     }
 
-    function assertGeWithMaxDelta(uint256 _x, uint256 _y, uint256 _delta) public {
-        uint diff = _x - _y;
-        assertLt(diff, _delta);
+    function assertGeAndWithinRange(uint256 _x, uint256 _y, uint _margin) public {
+        assertGe(_x, _y);
+        assertLe(_x - _y, _margin);
     }
 
     function abs(uint256 x, uint256 y) public returns (uint256) {
