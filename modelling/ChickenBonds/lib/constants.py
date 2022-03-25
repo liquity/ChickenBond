@@ -41,6 +41,7 @@ SD_NATURAL_RATE = 0.002                 # ToDo
 # -------------- Chicken Parameters ----------------
 CHICKEN_IN_GAMMA = (1.5, 0.1)           # Parameters of gamma distribution for random target return (Mean: 1.5 * 0.1)
 CHICKEN_OUT_PROBABILITY = 0.05          # Probability of a user randomly chicken out
+CHICKEN_IN_AMM_TAX = 1/100              # Tax to be used for sTOKEN AMM rewards
 
 # -------------- Price Parameters ----------------
 # Initial price of sLQTY quoted in LQTY, to make sure bootstrap is profitable

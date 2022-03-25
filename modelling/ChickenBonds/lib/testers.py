@@ -92,6 +92,7 @@ class TesterSimpleToll(TesterInterface):
         self.chicken_in_gamma_shape = CHICKEN_IN_GAMMA[0]
         self.chicken_in_gamma_scale = CHICKEN_IN_GAMMA[1]
         self.chicken_out_probability = CHICKEN_OUT_PROBABILITY
+        self.chicken_in_amm_tax = CHICKEN_IN_AMM_TAX
 
         self.rebonders = NUM_REBONDERS
         self.lps = NUM_LPS
@@ -393,7 +394,7 @@ class TesterSimpleToll(TesterInterface):
             # Check if chicken-in conditions are met and eventually chicken-in
             self.chicken_in(chicken, chick, iteration, data)
 
-        bonded_chicks = self.get_bonded_chicks(chicks)
+        #bonded_chicks = self.get_bonded_chicks(chicks)
         #print(f"Bonded Chicks fin: {len(bonded_chicks)}")
 
         """
@@ -466,7 +467,7 @@ class TesterSimpleToll(TesterInterface):
 
         amm_stoken_amount = bond_cap - claimable_amount
         # Forget about LQTY/ETH price for now
-        amm_token_amount = amm_stoken_amount * pol_ratio / 2
+        amm_token_amount = amm_stoken_amount * pol_ratio / 2 * (1 - self.chicken_in_amm_tax)
         amm_coll_amount = amm_token_amount
 
         """
@@ -490,6 +491,23 @@ class TesterSimpleToll(TesterInterface):
         chicken.amm.add_liquidity(chicken.pol_account, token_amount, coll_amount)
 
         return
+
+    def tax_and_chicken_in(self, chicken, chick, claimable_amount):
+        # Compute tax and deduct it from bond
+        tax_amount = chick.bond_amount * self.chicken_in_amm_tax
+        chick.bond_amount = chick.bond_amount - tax_amount
+
+        # Transfer tax amount
+        chicken.token.transfer(chicken.coop_account, chicken.stoken_amm.pool_account, tax_amount)
+        # Account for extra AMM revenue
+        chicken.stoken_amm.add_rewards(tax_amount, 0)
+
+        # Reduce claimable amount proportionally
+        claimable_amount = claimable_amount * (1 - self.chicken_in_amm_tax)
+        # Chicken in
+        chicken.chicken_in(chick, claimable_amount)
+
+        return claimable_amount
 
     def get_rebond_time(self, chicken):
         from scipy.special import lambertw
@@ -522,7 +540,7 @@ class TesterSimpleToll(TesterInterface):
             return 0
 
         #print("\n --> Chickening in!")
-        chicken.chicken_in(chick, claimable_amount)
+        claimable_amount = self.tax_and_chicken_in(chicken, chick, claimable_amount)
 
         # sell sTOKEN in the AMM
         chicken.stoken_amm.set_price_B(self.get_stoken_spot_price(chicken))
@@ -572,7 +590,7 @@ class TesterSimpleToll(TesterInterface):
             return 0
 
         #print("\n --> Chickening in!")
-        chicken.chicken_in(chick, claimable_amount)
+        claimable_amount = self.tax_and_chicken_in(chicken, chick, claimable_amount)
 
         # Provide liquidity to TOKEN/sTOKEN pool
         #print("\n \033[32mAdd liquidity!\033[0m \n")
@@ -607,7 +625,7 @@ class TesterSimpleToll(TesterInterface):
                 return 0
 
         #print("\n --> Chickening in!")
-        chicken.chicken_in(chick, claimable_amount)
+        claimable_amount = self.tax_and_chicken_in(chicken, chick, claimable_amount)
 
         return 1
 
