@@ -42,13 +42,15 @@ def log_chick_balances(chicken, chick):
     token_bal = chicken.token.balance_of(chick.account)
     stoken_bal = chicken.stoken.balance_of(chick.account)
     stoken_value = chicken.stoken.balance_of(chick.account) * chicken.amm.get_token_B_price()
+    amm_value = chicken.stoken_amm.get_value_in_token_A_of(chick.account)
     print("")
     print(f"User {chick.account}:")
-    print(f" - {chicken.token.symbol} balance: {token_bal:,.2f}")
-    print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
+    print(f" - {chicken.token.symbol} balance:  {token_bal:,.2f}")
+    print(f" - {chicken.token.symbol} bonded:   {chick.bond_amount:,.2f}")
     print(f" - {chicken.stoken.symbol} balance: {stoken_bal:,.2f}")
     print(f" - {chicken.stoken.symbol} value:   {stoken_value:,.2f}")
-    print(f" - Total value: {token_bal + chick.bond_amount + stoken_value:,.2f}")
+    print(f" - AMM value:     {amm_value:,.2f}")
+    print(f" - Total value: {token_bal + chick.bond_amount + stoken_value + amm_value:,.2f}")
     return
 
 def log_chicks(chicken, chicks, tokens):

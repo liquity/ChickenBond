@@ -613,13 +613,31 @@ class TesterSimpleToll(TesterInterface):
 
         # Provide liquidity to TOKEN/sTOKEN pool
         #print("\n \033[32mAdd liquidity!\033[0m \n")
+        # As we are using a mock AMM, avoid unrealistic high prices during bootstrap
+        if chicken.stoken_amm.token_B_balance() == 0:
+            chicken.stoken_amm.set_price_B(1)
+        liquidity_amount = chicken.stoken_amm.get_A_amount_for_liquidity(claimable_amount)
         token_liquidity_amount = min(
-            chicken.stoken_amm.get_A_amount_for_liquidity(claimable_amount) * 0.9999,
+            liquidity_amount * 0.9999, # to avoid rounding issues
             chicken.token.balance_of(chick.account)
         )
         if token_liquidity_amount > 0:
             chicken.stoken_amm.add_liquidity(chick.account, token_liquidity_amount, claimable_amount)
-        #print(chicken.stoken_amm)
+        """
+        if chick.account == 'chick_50':
+            print("")
+            print("-- LP")
+            print(chick)
+            print(f"claimable:    {claimable_amount:,.2f}")
+            print(f"liquidity:    {liquidity_amount:,.2f}")
+            print(f"balance:      {chicken.token.balance_of(chick.account):,.2f}")
+            print("\n \033[32mBalances after\033[0m")
+            print(f" - {chicken.token.symbol} balance: {chicken.token.balance_of(chick.account):,.2f}")
+            print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
+            print(f" - {chicken.stoken.symbol} balance: {chicken.stoken.balance_of(chick.account):,.2f}")
+            print(f" - {chicken.stoken_amm.lp_token.symbol} balance: {chicken.stoken_amm.lp_token.balance_of(chick.account):,.2f}")
+            print(chicken.stoken_amm)
+        """
 
         return 1
 
