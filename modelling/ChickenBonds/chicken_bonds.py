@@ -3,6 +3,7 @@ import numpy as np
 
 from lib.constants import *
 from lib.chicken import *
+from lib.controllers import *
 from lib.utils import *
 from lib.state import *
 from lib.user import *
@@ -41,6 +42,11 @@ def main(tester):
 
     chicken, chicks, borrower = deploy()
 
+    controller = AsymmetricController(
+        adjustment_rate=ACCRUAL_ADJUSTMENT_RATE,
+        init_output=INITIAL_ACCRUAL_PARAM
+    )
+
     data = init_data()
     natural_rate = INITIAL_NATURAL_RATE
     accrued_fees_A = 0
@@ -72,12 +78,18 @@ def main(tester):
         # Users chicken in and out
         tester.update_chicken(chicken, chicks, data, iteration)
 
+        # Controller feedback
+        avg_age = tester.get_avg_outstanding_bond_age(chicks, iteration)
+        controller_output = controller.feed(TARGET_AVERAGE_AGE - avg_age)
+        tester.set_accrual_param(controller_output)
+
         log_state(chicken, chicks, tester, LOG_LEVEL)
 
         new_row = state_to_row(
             chicken,
             tester,
             natural_rate,
+            avg_age,
             data,
             iteration
         )

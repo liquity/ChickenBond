@@ -146,6 +146,7 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
     #reserve_ratios = []
     rebond_times = []
     chicken_in_times = []
+    avg_age = []
     for d in range(len(data.index) // group):
         # Fair price
         fair_price = min(
@@ -201,6 +202,9 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
         )
         chicken_in_times.append(chicken_in_time)
 
+        # Average outstading bond age
+        avg_age.append(data['avg_age'][start_index + d * group])
+
     #fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - sTOKEN Price")
     fig = make_subplots(specs=[[{"secondary_y": True}]], subplot_titles=[f"{description} - sTOKEN Price"])
 
@@ -233,6 +237,11 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
 
     fig.add_trace(
         go.Scatter(y=chicken_in_times, name="Chicken in Time"),
+        secondary_y=True,
+    )
+
+    fig.add_trace(
+        go.Scatter(y=avg_age, name="Avg. Outstanding Bond Age"),
         secondary_y=True,
     )
 
