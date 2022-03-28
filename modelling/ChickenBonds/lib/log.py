@@ -51,6 +51,19 @@ def log_chick_balances(chicken, chick):
     print(f" - Total value: {token_bal + chick.bond_amount + stoken_value:,.2f}")
     return
 
+def log_stoken_balances(chicken, chicks):
+    chicks.sort(key = lambda c: c.account)
+    print("")
+    print(f"{chicken.stoken.symbol} balances:")
+    total_stoken = 0
+    for chick in chicks:
+        chick_bal = chicken.stoken.balance_of(chick.account)
+        if chick_bal > 0:
+            print(f"{chick.account}: {chick_bal:,.2f}")
+        total_stoken = total_stoken + chick_bal
+    print(f"Total : {total_stoken:,.2f}")
+    return
+
 def log_chicks(chicken, chicks, tokens):
     for chick in chicks:
         log_chick_balances(chicken, chick)
