@@ -15,7 +15,6 @@ def log_system(chicken, tester):
     print(f" - {stoken.symbol} supply:               {stoken.total_supply:,.2f}")
     if stoken.total_supply > 0:
         print(f" - Backing ratio (| no AMM): {chicken.get_pol_ratio_with_amm():,.2f}   |   {chicken.get_pol_ratio_no_amm():,.2f}")
-        print(f" - Reserve ratio (| no AMM): {chicken.get_reserve_ratio_with_amm():,.2f}   |   {chicken.get_reserve_ratio_no_amm():,.2f}")
 
     print("")
     print(f"Fair price:      {tester.get_fair_price(chicken):,.2f}")

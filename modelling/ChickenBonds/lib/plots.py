@@ -143,7 +143,6 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
     fair_prices = []
     redemption_prices = []
     spot_prices = []
-    #reserve_ratios = []
     rebond_times = []
     chicken_in_times = []
     avg_age = []
@@ -179,15 +178,6 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
         )
         redemption_prices.append(redemption_price)
 
-        """
-        # Reserve ratio
-        reserve_ratio = min(
-            data['reserve_ratio_no_amm'][start_index + d * group],
-            max_value # to avoid “zooming out too much with the initial spike”
-        )
-        reserve_ratios.append(reserve_ratio)
-        """
-
         # Rebond time
         rebond_time = min(
             data['rebond_time'][start_index + d * group],
@@ -222,13 +212,6 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
         go.Scatter(y=spot_prices, name="Market Price"),
         secondary_y=False,
     )
-
-    """
-    fig.add_trace(
-        go.Scatter(y=reserve_ratios, name="Reserve Ratio"),
-        secondary_y=False,
-    )
-    """
 
     fig.add_trace(
         go.Scatter(y=rebond_times, name="Rebond Time"),

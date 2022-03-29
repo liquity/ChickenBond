@@ -34,8 +34,6 @@ def state_to_row(
         "pol_ratio_with_amm": chicken.get_pol_ratio_with_amm(),
         "pol_ratio_no_amm": chicken.get_pol_ratio_no_amm(),
         "redemption_price": tester.get_pol_ratio(chicken),
-        "reserve_ratio_with_amm": chicken.get_reserve_ratio_with_amm(),
-        "reserve_ratio_no_amm": chicken.get_reserve_ratio_no_amm(),
         "fair_price": tester.get_fair_price(chicken),
         "rebond_time": tester.get_rebond_time(chicken),
         "chicken_in_time": tester.get_optimal_apr_chicken_in_time(chicken),

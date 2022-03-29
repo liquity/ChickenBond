@@ -63,9 +63,6 @@ class TesterInterface():
     def set_accrual_param(self, new_value):
         pass
 
-    def get_reserve_ratio(self, chicken):
-        pass
-
     def distribute_yield(self, chicken, chicks, iteration):
         pass
 
@@ -218,9 +215,6 @@ class TesterSimpleToll(TesterInterface):
 
     def get_pol_ratio(self, chicken):
         return chicken.get_pol_ratio_no_amm()
-
-    def get_reserve_ratio(self, chicken):
-        return chicken.get_reserve_ratio_no_amm()
 
     def get_optimal_apr_chicken_in_time(self, chicken):
         # market/fair price
