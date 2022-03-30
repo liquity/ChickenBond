@@ -31,6 +31,9 @@ class Chicken():
     def reserve_token_balance(self):
         return self.coop_token_balance() + self.pol_token_balance()
 
+    def permanent_bucket_value(self):
+        return self.amm.get_value_in_token_A_of(self.pol_account)
+
     def get_pol_ratio_no_amm(self):
         if self.stoken.total_supply == 0:
             return 1
@@ -40,7 +43,7 @@ class Chicken():
         if self.stoken.total_supply == 0:
             return 1
 
-        amm_value = self.amm.get_value_in_token_A_of(self.pol_account)
+        amm_value = self.permanent_bucket_value()
         return (self.pol_token_balance() + amm_value) / self.stoken.total_supply
 
     def bond(self, user, amount, target_profit, iteration):
@@ -74,37 +77,3 @@ class Chicken():
         user.bond_target_profit = 0
         return
 
-    """
-    # TODO: collateral
-    def borrow(self, user, token_amount):
-        stoken_amount = self.amm.get_input_amount(self.stoken, self.token, token_amount)
-        self.stoken.mint(user.account, stoken_amount)
-        #fees_before = self.amm.get_accrued_fees_in_token_A()
-        token_received = self.amm.swap_B_for_A(user.account, stoken_amount)
-        #print(f"\033[32m[Borrowing]\033[0m Swapped {stoken_amount:.2f} sTOKEN for {token_received:.2f} TOKEN")
-        #fees_after = self.amm.get_accrued_fees_in_token_A()
-        #print(f"Fees generated: {fees_after - fees_before:,.2f}")
-        self.outstanding_debt = self.outstanding_debt + token_received
-        return stoken_amount, token_received
-
-    # TODO: collateral
-    def repay_debt(self, user, amount):
-        if amount == 0 or amount > self.outstanding_debt:
-            amount = self.outstanding_debt
-        self.token.transfer(user.account, self._account, amount)
-        self.outstanding_debt = self.outstanding_debt - amount
-        return
-
-    def user_total_assets_value(self, user):
-        token_balance = self.token.balance_of(user.account)
-        stoken_balance = self.stoken.balance_of(user.account)
-
-        amm_token = self.amm.token_A_balance_of(user.account)
-        amm_stoken = self.amm.token_B_balance_of(user.account)
-
-        stoken_price = self.amm.get_token_B_price()
-
-        total_token = token_balance + amm_token
-        total_stoken = stoken_balance + amm_stoken
-        return total_token + total_stoken * stoken_price
-    """

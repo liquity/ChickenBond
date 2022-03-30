@@ -43,8 +43,8 @@ def main(tester):
     chicken, chicks, borrower = deploy()
 
     controller = AsymmetricController(
-        adjustment_rate=ACCRUAL_ADJUSTMENT_RATE,
-        init_output=INITIAL_ACCRUAL_PARAM
+        adjustment_rate=tester.accrual_adjustment_rate,
+        init_output=tester.accrual_param
     )
 
     data = init_data()
@@ -124,3 +124,4 @@ def main(tester):
 
 if __name__ == "__main__":
     main(TesterSimpleToll())
+    #main(TesterSticky())

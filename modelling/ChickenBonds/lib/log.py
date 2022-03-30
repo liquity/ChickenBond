@@ -65,6 +65,17 @@ def log_stoken_balances(chicken, chicks):
     print(f"Total : {total_stoken:,.2f}")
     return
 
+def log_bonds(chicks):
+    print("")
+    print(f"Bonds:")
+    total_bond = 0
+    for chick in list(filter(lambda chick: chick.bond_amount > 0, chicks)):
+        chick_bal = chick.bond_amount
+        print(f"{chick.account}: {chick_bal:,.2f} on day {chick.bond_time}")
+        total_bond = total_bond + chick_bal
+    print(f"Total : {total_bond:,.2f}")
+    return
+
 def log_chicks(chicken, chicks, tokens):
     for chick in chicks:
         log_chick_balances(chicken, chick)
