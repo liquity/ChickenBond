@@ -142,6 +142,9 @@ class TesterSimpleToll(TesterInterface):
     def get_chicks_with_stoken(self, chicken, chicks, threshold=0):
         return list(filter(lambda chick: chicken.stoken.balance_of(chick.account) > threshold, chicks))
 
+    def is_pre_chicken_in_phase(self, chicken, chicks):
+        return len(self.get_chicks_with_stoken(chicken, chicks)) == 0
+
     def get_bond_cap(self, bond_amount, pol_ratio):
         if pol_ratio == 0:
             return 999999999
@@ -301,7 +304,24 @@ class TesterSimpleToll(TesterInterface):
     def get_yield_amount(self, base_amount, yield_percentage):
         return base_amount * ((1 + yield_percentage) ** (1 / TIME_UNITS_PER_YEAR) - 1)
 
+    # Special case before the first chicken in (actually, when sTOKEN supply is zero)
+    # to avoid giving advantage to the first one
+    def distribute_yield_pre_chicken_in(self, chicken, chicks, iteration):
+        # Reserve generated yield
+        generated_yield = self.get_yield_amount(chicken.reserve_token_balance(), self.external_yield)
+        if generated_yield == 0:
+            return
+
+        chicken.token.mint(chicken.pol_account, generated_yield)
+        chicken.stoken.mint(chicken.pol_account, generated_yield/2)
+
+        #print(f"Yield to AMM: {generated_yield/2:,.2f}")
+        chicken.stoken_amm.add_liquidity(chicken.pol_account, generated_yield/2, generated_yield/2)
+        return
+
     def distribute_yield(self, chicken, chicks, iteration):
+        if self.is_pre_chicken_in_phase(chicken, chicks):
+            return self.distribute_yield_pre_chicken_in(chicken, chicks, iteration)
         # Reserve generated yield
         generated_yield = self.get_yield_amount(chicken.reserve_token_balance(), self.external_yield)
 
