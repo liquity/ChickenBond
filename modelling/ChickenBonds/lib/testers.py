@@ -236,7 +236,7 @@ class TesterSimpleToll(TesterInterface):
         if m <= r:
             return ITERATIONS
 
-        chicken_in_time = u * (r + math.sqrt(r * m)) / (m - r)
+        chicken_in_time = u * (r + math.sqrt((1 - self.chicken_in_amm_tax) * r * m)) / ((1 - self.chicken_in_amm_tax) * m - r)
 
         return min(ITERATIONS, chicken_in_time)
 
