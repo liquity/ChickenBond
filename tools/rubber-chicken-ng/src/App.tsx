@@ -120,7 +120,7 @@ const defaultMktDeviationPct = 0;
 const defaultNaturalRatePct = 0;
 const defaultBond = 100;
 
-const defaultFToll = `p => k => 1 - k / (k + 60 * p)`;
+const defaultFCurve = `p => k => k / (k + 60)`;
 const defaultFFairPremiumPct = `k => ${defaultFairPremiumPct}`;
 const defaultFMktDeviationPct = `k => ${defaultMktDeviationPct}`;
 const defaultFNaturalRatePct = `k => ${defaultNaturalRatePct}`;
@@ -134,7 +134,7 @@ const App = () => {
   const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
   const [fNaturalRatePctInput, setFNaturalRatePctInput] = useState(`${defaultFNaturalRatePct}`);
   const [bondInput, setBondInput] = useState(`${defaultBond}`);
-  const [fTollInput, setFTollInput] = useState(`${defaultFToll}`);
+  const [fCurveInput, setFCurveInput] = useState(`${defaultFCurve}`);
   const [useFunctions, setUseFunctions] = useState(false);
   const [rightAxis, setRightAxis] = useState<RightAxis>("arr");
   const [revertDummy, revert] = useReducer(() => ({}), {});
@@ -148,7 +148,7 @@ const App = () => {
     setNaturalRatePctInput(`${defaultNaturalRatePct}`);
     setFNaturalRatePctInput(`${defaultFNaturalRatePct}`);
     setBondInput(`${defaultBond}`);
-    setFTollInput(`${defaultFToll}`);
+    setFCurveInput(`${defaultFCurve}`);
     setUseFunctions(false);
   }, [revertDummy]);
 
@@ -227,11 +227,11 @@ const App = () => {
 
     try {
       // eslint-disable-next-line no-new-func
-      const f = new Function("k", `"use strict"; return ${fTollInput};`)()(p);
+      const f = new Function("k", `"use strict"; return ${fCurveInput};`)()(p);
 
-      return range.map(x => ({ x, y: f(x) }));
+      return range.map(x => ({ x, y: 1 - f(x) }));
     } catch {}
-  }, [fTollInput, fairPremiumSeries]);
+  }, [fCurveInput, fairPremiumSeries]);
 
   const capSeries = useMemo(() => {
     if (isNaN(bond) || !polRatioSeries || !fairPremiumSeries || !mktDeviationSeries) {
@@ -346,11 +346,11 @@ const App = () => {
                 onChange={e => setBondInput(e.target.value)}
               />
 
-              <Label sx={{ mt: 3 }}>Toll Curve</Label>
+              <Label sx={{ mt: 3 }}>Accrual Curve</Label>
               <Textarea
                 sx={!tollSeries ? { bg: "pink" } : {}}
-                value={fTollInput}
-                onChange={e => setFTollInput(e.target.value)}
+                value={fCurveInput}
+                onChange={e => setFCurveInput(e.target.value)}
               />
             </Box>
 
