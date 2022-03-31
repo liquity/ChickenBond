@@ -84,6 +84,11 @@ const rightAxisOptions = {
     label: "ROI"
   },
 
+  apr: {
+    name: "Annual Percentage Rate",
+    label: "APR"
+  },
+
   arr: {
     name: "Annualized Rate of Return",
     label: "ARR"
@@ -263,6 +268,17 @@ const App = () => {
     }));
   }, [bond, payoutSeries]);
 
+  const aprSeries = useMemo(() => {
+    if (!roiSeries) {
+      return undefined;
+    }
+
+    return roiSeries.map(({ x, y: roi }) => ({
+      x,
+      y: x !== 0 ? roi * (range[range.length - 1] / x) : -1 / 0
+    }));
+  }, [roiSeries]);
+
   const arrSeries = useMemo(() => {
     if (!roiSeries) {
       return undefined;
@@ -276,6 +292,7 @@ const App = () => {
 
   const rightAxisMap: { [k: string]: Series } = {
     roi: roiSeries,
+    apr: aprSeries?.filter(({ y }) => y >= -1),
     arr: arrSeries,
     toll: tollSeries
   };
@@ -289,6 +306,7 @@ const App = () => {
 
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
+  const maxApr = aprSeries?.reduce((a, b) => (a.y > b.y ? a : b));
   const maxArr = arrSeries?.reduce((a, b) => (a.y > b.y ? a : b));
 
   return (
@@ -436,7 +454,7 @@ const App = () => {
             containerComponent={
               <VictoryVoronoiContainer
                 voronoiDimension="x"
-                voronoiBlacklist={["maxArr"]}
+                voronoiBlacklist={["maxApr", "maxArr"]}
                 labels={({ datum }) =>
                   `${datum.childName}: ${
                     rightAxisLabelSet.has(datum.childName)
@@ -465,6 +483,25 @@ const App = () => {
             <VictoryAxis />
             <VictoryAxis dependentAxis />
             <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
+
+            {maxApr && (
+              <VictoryLine
+                name="maxApr"
+                style={{
+                  data: { strokeWidth: 1, stroke: "rgb(144, 164, 174)", strokeDasharray: "5,5" },
+                  labels: { fontWeight: "bold" }
+                }}
+                labels={[`Max APR ≈ ${Math.round(maxApr.y * 10000) / 100}%`]}
+                labelComponent={
+                  <VictoryLabel
+                    y={rightAxis === "toll" ? 458 : 430} // XXX
+                    dx={maxApr.x < range[range.length - 1] * 0.75 ? 5 : -5}
+                    textAnchor={maxApr.x < range[range.length - 1] * 0.75 ? "start" : "end"}
+                  />
+                }
+                x={() => maxApr.x}
+              />
+            )}
 
             {maxArr && (
               <VictoryLine
