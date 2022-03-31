@@ -257,7 +257,7 @@ class TesterSimpleToll(TesterInterface):
             return 0
         # optimal_time
         t = self.get_optimal_apr_chicken_in_time(chicken)
-        apr = (m/r * t / (t+u) - 1) * TIME_UNITS_PER_YEAR / t
+        apr = ((1 - self.chicken_in_amm_tax) * m/r * t / (t+u) - 1) * TIME_UNITS_PER_YEAR / t
         """
         print(f"backing ratio: {r:,.2f}")
         print(f"spot price:    {m:,.2f}")
