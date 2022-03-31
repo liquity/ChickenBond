@@ -410,12 +410,81 @@ t = \alpha \frac{p_r + \sqrt{p_f p_r}}{p_f-p_r}
 In terms of the $\lambda$ defined in \ref{sec:economics}:
 \begin{equation}
   \label{eq:optimal_chicken_in_2}
-t = \frac{\alpha \left(1 + \sqrt{\lambda} \right)}{\lambda - 1}
+t = \alpha \frac{1 + \sqrt{\lambda}}{\lambda - 1}
 \end{equation}
 
 Comparing \ref{eq:optimal_chicken_in_2} and \ref{eq:break_even_2}, we can immediately see that chicken in optimal time for APR is always strictly greater than break even time.
 
 Simulations show a very close result to result from previous section for optimal rebonding time.
+
+\paragraph{With tax to reward bTKN/TKN AMM}
+ Let’s call $\tau$ the tax applied to the initial bond amount before chickening in, then we would have:
+
+\[
+a(t) = \frac{s(t) \cdot p_f - b}{b} \frac{365}{t} = \frac{\frac{b(1-\tau)}{p_r} \frac{t}{t+\alpha} p_f - b}{b} \frac{365}{t}
+\]
+
+\begin{equation}
+  \label{eq:apr}
+a(t) = \left((1-\tau)\frac{p_f}{p_r} \frac{t}{t+\alpha} - 1\right) \frac{365}{t}
+\end{equation}
+
+we derive and equal to zero:
+
+(TODO: maybe we can skip the steps here, as they are quite repetitive)
+
+\[
+a'(t) = (1-\tau)\frac{p_f}{p_r} \frac{t + \alpha - t}{(t+\alpha)^2} \frac{365}{t} - \left((1-\tau)\frac{p_f}{p_r} \frac{t}{t+\alpha} - 1\right) \frac{365}{t^2}
+\]
+
+(we assume $t > 0$)
+
+\[
+a'(t) = 0 \iff (1-\tau)\frac{p_f}{p_r} \frac{\alpha}{(t+\alpha)^2} = \left((1-\tau)\frac{p_f}{p_r} \frac{t}{t+\alpha} - 1\right) \frac{1}{t}
+\]
+
+(we assume $p_r > 0$)
+
+\[
+a'(t) = 0 \iff (1-\tau) \alpha p_f t = (1-\tau) p_f t(t+\alpha)  - p_r(t+\alpha)^2
+\]
+
+\[
+a'(t) = 0 \iff 0 = (1-\tau)p_f t^2 - p_r(t^2+2\alpha t+\alpha^2)
+\]
+
+\[
+a'(t) = 0 \iff ((1-\tau)p_f-p_r)t^2  - 2\alpha p_r t - \alpha^2 p_r = 0
+\]
+
+And solving for $t$ (and getting the positive value):
+
+\[
+t = \frac{2\alpha p_r + \sqrt{(2\alpha p_r)^2 + 4((1-\tau)p_f-p_r) \alpha^2 p_r}}{2((1-\tau)p_f-p_r)}
+\]
+
+\[
+t = \frac{\alpha p_r + \sqrt{\alpha^2 p_r^2 + (1-\tau) \alpha^2 p_f p_r- \alpha^2 p_r^2}}{(1-\tau)p_f-p_r}
+\]
+
+\[
+t = \frac{\alpha p_r + \sqrt{(1-\tau) \alpha^2 p_f p_r}}{(1-\tau)p_f-p_r}
+\]
+
+\[
+t = \frac{\alpha p_r + \alpha \sqrt{(1-\tau)p_f p_r}}{(1-\tau)p_f-p_r}
+\]
+
+\begin{equation}
+  \label{eq:optimal_chicken_in_1}
+t = \alpha \frac{p_r + \sqrt{(1-\tau)p_f p_r}}{(1-\tau)p_f-p_r}
+\end{equation}
+
+In terms of the $\lambda$ defined in \ref{sec:economics}:
+\begin{equation}
+  \label{eq:optimal_chicken_in_2}
+t = \alpha \frac{1 + \sqrt{(1-\tau)\lambda}}{(1-\tau)\lambda - 1}
+\end{equation}
 
 \subsection{Estimating the fair price $p_f$}
 \subsubsection{Naive approach}
