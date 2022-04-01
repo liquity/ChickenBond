@@ -62,3 +62,33 @@ export const PID =
   (Ts: number, ePrev = 0, i = 0) =>
   (Kp: number, Ki: number, Kd: number, e: number) =>
     Kp * e + Ki * (i += e * Ts) + Kd * ((-ePrev + (ePrev = e)) / Ts);
+
+export const randomBinomial = (n: number, p: number) => {
+  if (!Number.isInteger(n) || n < 0) {
+    throw new Error("randomBinomial: n must be an integer >= 0");
+  }
+
+  if (p < 0 || p > 1) {
+    throw new Error("randomBinomial: p must be in range [0,1]");
+  }
+
+  if (n === 0 || p === 0) {
+    return 0;
+  }
+
+  if (p === 1) {
+    return n;
+  }
+
+  const logQ = Math.log(1 - p);
+  let x = 0;
+  let sum = 0;
+
+  for (;;) {
+    sum += Math.log(Math.random()) / (n - x);
+    if (sum < logQ) {
+      return x;
+    }
+    ++x;
+  }
+};

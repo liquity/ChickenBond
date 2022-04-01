@@ -29,17 +29,20 @@ export type SimulationKnobs = { [P in keyof ParsedSimulationKnobs]: string };
 
 export const simulationDefaults: SimulationKnobs = {
   periods: "4",
-  u0: "100",
-  in0: "[1000, 500]",
+  u0: "30",
+  in0: "[1, 1]",
   curve: "(dk, u) => dk / (dk + u)",
 
   grow: "() => 0.05",
 
   spot: `
-({ stats: s }) =>
-  (s.coop.TOKEN + s.in.TOKEN) / s.in.sTOKEN`.trim(),
+({ stats: s }) => (
+  s.coop.TOKEN +
+  s.in.TOKEN +
+  s.tollTOKEN * 0.5
+) / s.in.sTOKEN`.trim(),
 
-  point: "() => 60",
+  point: "() => 30",
 
   gauge: `
 ({ k, coop }) => coop
@@ -47,18 +50,20 @@ export const simulationDefaults: SimulationKnobs = {
   .reduce((a, b) => a + b, 0)
   / (coop.length || 1)`.trim(),
 
-  hatch: "() => 100",
+  hatch: `
+({ k }) => new Array(
+  randomBinomial(10, 0.998 ** k)
+).fill().map(() => 100 * random())`.trim(),
 
   move: `
-({ k, u, premium: p, bond: { k0 } }) =>
-  k >= Math.round(k0 + u / (
-    1 / W(Math.E / (1 + Math.max(p, 0))) - 1
-  )) ? "in" : null`.trim(),
+({ dArr }) => dArr < 0
+  ? (random() < 0.5 ? "re" : "in")
+  : null`.trim(),
 
   selectedSteer: "asymmetric",
 
-  asymmetricAdjustmentRate: "0.1",
-  symmetricAdjustmentRate: "0.1",
+  asymmetricAdjustmentRate: "0.01",
+  symmetricAdjustmentRate: "0.01",
 
   pidKp: "() => 1",
   pidKi: "() => 0",

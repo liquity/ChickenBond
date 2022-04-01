@@ -64,6 +64,7 @@ export interface ChickenFarmSteerParams extends ChickenFarmCommonParams {
 
 export interface ChickenFarmMoveParams extends ChickenFarmSteerParams {
   bond: ChickenBond;
+  dArr: number;
 }
 
 export interface ChickenFarmParams {
@@ -117,6 +118,11 @@ const validateHatch = (x: unknown): number =>
 
 const validateMove = (x: unknown): ChickenMove =>
   x === "in" || x === "out" || x === "re" ? x : panic("move() must return either 'in' or 'out'");
+
+const roi = (c: number, premium: number) => c * (1 + premium) - 1;
+
+const arr = (bond: { c: number; dk: number }, premium: number, period: number) =>
+  (1 + roi(bond.c, premium)) ** (period / bond.dk) - 1;
 
 export class ChickenFarm {
   readonly params: Readonly<ChickenFarmParams>;
@@ -177,9 +183,14 @@ export class ChickenFarm {
 
     this.population.forEach(chicken => {
       if (chicken.state === "cooped") {
-        chicken.bond._poke(k, u, polRatio);
+        const curr = chicken.bond._poke(k, u, polRatio);
+        const next = chicken.bond.peek(k + 1, u, polRatio);
 
-        const retMove = this.params.move({ ...steerParams, bond: chicken.bond });
+        const currArr = arr(curr, premium, this.params.period);
+        const nextArr = arr(next, premium, this.params.period);
+        const dArr = nextArr - currArr;
+
+        const retMove = this.params.move({ ...steerParams, bond: chicken.bond, dArr });
 
         if (retMove != null) {
           const move = validateMove(retMove);

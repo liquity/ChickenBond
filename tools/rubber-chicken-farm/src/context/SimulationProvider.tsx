@@ -105,7 +105,11 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
                 const endTime = new Date();
                 const durationMs = endTime.getTime() - startTime.getTime();
                 console.log(`Simulation took ${durationMs / 1000} seconds.`);
+                console.log("Data:");
                 console.log(collectedData);
+                console.log("Population:");
+                console.log(farm.population);
+                console.log("---------------------------------------------------------------------");
               }
             } catch (error) {
               console.error(error);

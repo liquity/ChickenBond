@@ -8,7 +8,7 @@ import { constantFarm } from "./examples/constant";
 
 import theme from "./theme";
 import { simulationDefaults } from "./knobs";
-import { collectSamples, csv, flatten, lowpass } from "./utils";
+import { collectSamples, csv, flatten, lowpass, randomBinomial } from "./utils";
 import { KnobsProvider } from "./context/KnobsProvider";
 import { SimulationProvider } from "./context/SimulationProvider";
 import { Knobs } from "./components/Knobs";
@@ -23,6 +23,9 @@ Object.assign(window, {
   csv,
   flatten,
   lowpass,
+  round: Math.round,
+  random: Math.random,
+  randomBinomial,
   W: lambertW0
 });
 

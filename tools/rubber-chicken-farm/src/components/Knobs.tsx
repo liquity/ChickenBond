@@ -54,13 +54,13 @@ export const Knobs: React.FC = () => {
           <Textarea rows={1} value={state.grow} onChange={e => set("grow", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>sTOKEN Market Price [TOKEN]</Label>
-          <Textarea rows={2} value={state.spot} onChange={e => set("spot", e.target.value)} />
+          <Textarea rows={5} value={state.spot} onChange={e => set("spot", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Bonding Inflow [TOKEN]</Label>
-          <Textarea rows={1} value={state.hatch} onChange={e => set("hatch", e.target.value)} />
+          <Textarea rows={3} value={state.hatch} onChange={e => set("hatch", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Chickening</Label>
-          <Textarea rows={4} value={state.move} onChange={e => set("move", e.target.value)} />
+          <Textarea rows={3} value={state.move} onChange={e => set("move", e.target.value)} />
         </Box>
 
         <Heading as="h4">Control</Heading>
