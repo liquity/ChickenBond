@@ -280,7 +280,7 @@ f_n(T) = b \left(\frac{p_f}{p_r} \frac{T}{T+n} \right)^{n}
 
 To find the maximum value of $f_n(T)$, we rewrite it as a function of $n$ given $T$ and take its derivative with respect to $n$:
 \[
-f_T'(n) = b \left(\frac{p_f}{p_r} \frac{T}{T+n}\right)^n \left(\ln\left(\frac{p_f}{p_r} \frac{T}{T+n}\right) - n \frac{\frac{p_f}{p_r} \frac{T}{(T+n)^2}}{\frac{p_f}{p_r} \frac{T}{T+n}}\right) = b \left(\frac{p_f}{p_r} \frac{T}{T+n}\right)^n \ln\left(\frac{p_f}{p_r} \frac{T}{T+n}\right) - \frac{n}{T+n}
+f_T'(n) = b \left(\frac{p_f}{p_r} \frac{T}{T+n}\right)^n \left(\ln\left(\frac{p_f}{p_r} \frac{T}{T+n}\right) - n \frac{\frac{p_f}{p_r} \frac{T}{(T+n)^2}}{\frac{p_f}{p_r} \frac{T}{T+n}}\right) = b \left(\frac{p_f}{p_r} \frac{T}{T+n}\right)^n \left(\ln\left(\frac{p_f}{p_r} \frac{T}{T+n}\right) - \frac{n}{T+n}\right)
 \]
 
 Then equating it to zero:
@@ -296,36 +296,36 @@ f_T'(n) = 0 \iff \ln\left(\frac{p_f}{p_r} \frac{T}{T+n}\right) = \frac{n}{T+n}
 Dividing by $e$ both sides:
 
 \[
-\frac{p_f}{re} \frac{T}{T+n} = e^{\frac{n}{T+n} - 1}
+\frac{p_f}{e p_r} \frac{T}{T+n} = e^{\frac{n}{T+n} - 1}
 \]
 
 \[
-\frac{p_f}{re} \frac{T}{T+n} = e^{\frac{-T}{T+n}}
+\frac{p_f}{e p_r} \frac{T}{T+n} = e^{\frac{-T}{T+n}}
 \]
 
 \[
-\frac{T}{T+n} e^{\frac{T}{T+n}} = \frac{p_f}{re} 
+\frac{T}{T+n} e^{\frac{T}{T+n}} = \frac{p_f}{e p_r} 
 \]
 
 And then, it has the form $z e^z = w$ from Lambert W function: \url{https://en.wikipedia.org/wiki/Lambert_W_function}, so:
 
 \[
-\frac{T}{T+n} = W\left(\frac{p_f}{re} \right)
+\frac{T}{T+n} = W\left(\frac{p_f}{e p_r} \right)
 \]
 
 \[
-1 + \frac{n}{T} = \frac{1}{W\left(\frac{p_f}{re} \right)}
+1 + \frac{n}{T} = \frac{1}{W\left(\frac{p_f}{e p_r} \right)}
 \]
 
 \[
-n = \frac{T}{W\left(\frac{p_f}{re} \right)} - 1
+n = \frac{T}{W\left(\frac{p_f}{e p_r} \right)} - 1
 \]
 
 To find the optimal rebonding time period $T_{opt}$, we divide the total considered period $T$ by the optimal number of rebonding events $n$, noting that $T$ an $T$ is thereby cancelled out.
 
 \begin{equation}
   \label{}
-T_{opt} = \frac{T}{n} = \frac{W\left(\frac{re}{p_f}\right)}{1 - W\left(\frac{re}{p_f}\right)}
+T_{opt} = \frac{T}{n} = \frac{W\left(\frac{e p_r}{p_f}\right)}{1 - W\left(\frac{e p_r}{p_f}\right)}
 \end{equation}
 
 We can write it in terms of premium $\lambda = \frac{p_f}{p_r}$
@@ -339,6 +339,107 @@ Note that as $\lambda > 1$, $\frac{e}{\lambda} < e$, so $0 < W(\frac{e}{\lambda}
 
 
 TODO: Prove that it’s greater than break even time?
+
+\paragraph{With rebonding and bTKN AMM tax}
+Let’s call $\tau$ the tax to be used as rewards for bTKN/TKN DEX pair.
+
+At time $t$, when the user chickens in and rebonds, the new bond amount $b'$ will be:
+\begin{equation}
+b'= p_f\frac{b(1-\tau)}{p_r}\frac{t}{t+1}
+\end{equation}
+
+From that point until the end there will be a period of $T-t$, where the outcome of the bond will be:
+\begin{equation}
+f_r = p_f\frac{b'(1-\tau)}{p_r}\frac{T-t}{T-t+1}
+\end{equation}
+
+So finally we have
+\begin{equation}
+  \label{eq:o-r}
+f_r = b\left(\frac{(1-\tau)p_f}{p_r}\right)^2\frac{t}{t+1}\frac{T-t}{T-t+1}
+\end{equation}
+
+Now we generalize the approach for $n$ regular rebonding events, expressing the resulting value in TKN for a given rebonding period $t$ with $f_n(t)$.
+
+\begin{equation}
+  \label{eq:n-rebond_1}
+f_n(t) = b \left(\frac{(1-\tau)p_f}{p_r}\right)^n \left(\frac{T}{T+n}\right)^{n-1} \frac{t - \frac{n}{n-1}T}{t - \frac{n}{n-1}T + 1}
+\end{equation}
+
+At $t=T$:
+
+\begin{equation}
+  \label{eq:n-rebond_2}
+f_n(T) = b \left(\frac{(1-\tau)p_f}{p_r}\right)^{n} \left(\frac{T}{T+n}\right)^{n-1} \frac{\frac{T}{n}}{\frac{T}{n} + 1}
+\end{equation}
+
+\begin{equation}
+  \label{eq:n-rebond_3}
+f_n(T) = b \left(\frac{(1-\tau)p_f}{p_r} \frac{T}{T+n} \right)^{n}
+\end{equation}
+
+To find the maximum value of $f_n(T)$, we rewrite it as a function of $n$ given $T$ and take its derivative with respect to $n$:
+
+(TODO: maybe we can skip the steps here, as they are quite repetitive)
+
+\[
+\begin{split}
+  f_T'(n) &= b \left(\frac{(1-\tau)p_f}{p_r} \frac{T}{T+n}\right)^n \left(\ln\left(\frac{(1-\tau)p_f}{p_r} \frac{T}{T+n}\right) - n \frac{\frac{(1-\tau)p_f}{p_r} \frac{T}{(T+n)^2}}{\frac{(1-\tau)p_f}{p_r} \frac{T}{T+n}}\right) \\
+  &= b \left(\frac{(1-\tau)p_f}{p_r} \frac{T}{T+n}\right)^n \left(\ln\left(\frac{(1-\tau)p_f}{p_r} \frac{T}{T+n}\right) - \frac{n}{T+n}\right)
+\end{split}
+\]
+
+Then equating it to zero:
+
+\[
+f_T'(n) = 0 \iff \ln\left(\frac{(1-\tau)p_f}{p_r} \frac{T}{T+n}\right) = \frac{n}{T+n}
+\]
+
+\[
+\frac{(1-\tau)p_f}{p_r} \frac{T}{T+n} = e^{\frac{n}{T+n}}
+\]
+
+Dividing by $e$ both sides:
+
+\[
+\frac{(1-\tau)p_f}{e p_r} \frac{T}{T+n} = e^{\frac{n}{T+n} - 1}
+\]
+
+\[
+\frac{(1-\tau)p_f}{e p_r} \frac{T}{T+n} = e^{\frac{-T}{T+n}}
+\]
+
+\[
+\frac{T}{T+n} e^{\frac{T}{T+n}} = \frac{(1-\tau)p_f}{e p_r} 
+\]
+
+And then, it has the form $z e^z = w$ from Lambert W function: \url{https://en.wikipedia.org/wiki/Lambert_W_function}, so:
+
+\[
+\frac{T}{T+n} = W\left(\frac{(1-\tau)p_f}{e p_r} \right)
+\]
+
+\[
+1 + \frac{n}{T} = \frac{1}{W\left(\frac{(1-\tau)p_f}{e p_r} \right)}
+\]
+
+\[
+n = \frac{T}{W\left(\frac{(1-\tau)p_f}{e p_r} \right)} - 1
+\]
+
+To find the optimal rebonding time period $T_{opt}$, we divide the total considered period $T$ by the optimal number of rebonding events $n$, noting that $T$ an $T$ is thereby cancelled out.
+
+\begin{equation}
+  \label{}
+T_{opt} = \frac{T}{n} = \frac{W\left(\frac{e p_r}{(1-\tau)p_f}\right)}{1 - W\left(\frac{e p_r}{(1-\tau)p_f}\right)}
+\end{equation}
+
+We can write it in terms of premium $\lambda = \frac{p_f}{p_r}$
+
+\begin{equation}
+  \label{eq:opt-rebonding}
+T_{opt} = \frac{W\left(\frac{e}{(1-\tau)\lambda}\right)}{1 - W\left(\frac{e}{(1-\tau)\lambda}\right)} = \frac{1}{\frac{1}{W\left(\frac{e}{(1-\tau)\lambda}\right)} - 1}
+\end{equation}
 
 \subsubsection{Approximating the optimal rebonding time}
 TODO: give some intuition why this is a good approximation. Is it because the APR is similar to the ARR for the considered time period? And apparently, maximizing the ARR yields the same result as the exact formula, as numerically verified by Dani.
