@@ -10,11 +10,16 @@ contract MainnetTestSetup is BaseTest {
     // Mainnet addresses
     address constant MAINNET_LUSD_TOKEN_ADDRESS = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address constant MAINNET_YEARN_LUSD_VAULT_ADDRESS = 0x378cb52b00F9D0921cb46dFc099CFf73b42419dC;
+    address constant MAINNET_YEARN_CURVE_VAULT_ADDRESS = 0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6;
+    address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
-    uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
+    // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
+    uint256 constant MAINNET_PINNED_BLOCK =  1648476300; 
+   
 
     function setUp() public {
-        pinBlock(MAINNET_PINNED_BLOCK);
+        // pinBlock(MAINNET_PINNED_BLOCK);
+        pinBlock(block.timestamp);
 
         accounts = new Accounts();
         createAccounts();
@@ -37,15 +42,9 @@ contract MainnetTestSetup is BaseTest {
         // Connect to deployed Yearn LUSD Vault
         yearnLUSDVault = IYearnVault(MAINNET_YEARN_LUSD_VAULT_ADDRESS);
 
-        /* Deploy external mock contracts for Yearn Curve vault and Curve pool. TODO: replace with 
-        * real deployed contracts, and write corresponding tests */
-        MockCurvePool mockCurvePool = new MockCurvePool("LUSD-3CRV Pool", "LUSD3CRV-f");
-        mockCurvePool.setAddresses(address(lusdToken));
-        curvePool = ICurvePool(address(mockCurvePool));
-
-        MockYearnVault mockYearnCurveVault = new MockYearnVault("Curve LUSD Pool yVault", "yvCurve-LUSD");
-        mockYearnCurveVault.setAddresses(address(curvePool));
-        yearnCurveVault = IYearnVault(address(mockYearnCurveVault));
+        // Connect to deployed LUSD-3CRV Curve pool, and Yearn LUSD-3CRV vault
+        curvePool = ICurvePool(MAINNET_CURVE_POOL_ADDRESS);
+        yearnCurveVault = IYearnVault(MAINNET_YEARN_CURVE_VAULT_ADDRESS);
 
         yearnRegistry = IYearnRegistry(MAINNET_YEARN_REGISTRY_ADDRESS);
 
@@ -72,6 +71,13 @@ contract MainnetTestSetup is BaseTest {
         console.log(block.timestamp, "block.timestamp");
         console.log(block.number, "block.number");
         console.log(lusdToken.totalSupply(), "Total LUSD supply");
+        console.log(address(lusdToken), "LUSDToken address");
+        console.log(address(yearnLUSDVault), "Yearn LUSD vault address");
+        console.log(address(yearnCurveVault), "Yearn Curve vault address");
+        console.log(address(curvePool), "Curve pool address");  
+        console.log(address(chickenBondManager), "ChickenBondManager address");  
+        console.log(address(sLUSDToken), "sLUSDToken address"); 
+        console.log(address(bondNFT), "BondNFT address");
     }
 
     function pinBlock(uint256 _blockTimestamp) public {

@@ -4,11 +4,13 @@ pragma solidity ^0.8.10;
 import "../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 
 interface ICurvePool is IERC20 { 
-    function add_liquidity(uint256 _LUSD3CRVAmount) external;
+    function add_liquidity(uint256[2] memory _amounts, uint256 _min_mint_amount) external;
 
-    function remove_liquidity(uint256 _LUSD3CRVAmount) external;
+    function remove_liquidity_one_coin(uint256 _burn_amount, int128 i, uint256 _min_received) external;
 
-    function calcLUSDToLUSD3CRV(uint256 _LUSD3CRVAmount) external pure returns (uint256);
+    function calc_withdraw_one_coin(uint256 _burn_amount, int128 i) external view returns (uint256);
 
-    function calcLUSD3CRVToLUSD(uint256 _LUSD3CRVAmount) external pure returns (uint256);
+    function calc_token_amount(uint256[2] memory _amounts, bool _is_deposit) external view returns (uint256);
+
+    function balances(uint256 arg0) external view returns (uint256);
 }

@@ -17,27 +17,32 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
         lusdToken = ILUSDToken(_lusdTokenAddress);
     }
 
-    function add_liquidity(uint256 _lusdAmount) external {
-        lusdToken.transferFrom(msg.sender, address(this), _lusdAmount);
+    function add_liquidity(uint256[2] memory _amounts, uint256 _min_mint_amount) external {
+        uint256 lusdAmount = _amounts[0];
+        lusdToken.transferFrom(msg.sender, address(this), lusdAmount);
        
-        uint256 lpShares = calcLUSDToLUSD3CRV(_lusdAmount);
+        uint256 lpShares = lusdAmount; // mock 1:1 shares:tokens
         _mint(msg.sender, lpShares);
     }
 
-    function remove_liquidity(uint256 _lpShares) external {
-        uint lusdAmount = calcLUSD3CRVToLUSD(_lpShares);
+    function remove_liquidity_one_coin(uint256 _burn_amount, int128 i, uint256 _min_received) external {
+        uint lusdAmount = _burn_amount; // mock 1:1 shares:tokens
         lusdToken.transfer(msg.sender, lusdAmount);
 
-        _burn(msg.sender, _lpShares);
+        _burn(msg.sender, _burn_amount);
     }
 
     /* Simplified LP shares calculators. Shares issued/burned 1:1 with deposited/withdrawn LUSD respectively.
     * In practice, the conversion will be more complicated and will depend on the pool proportions and sizes. */
-    function calcLUSDToLUSD3CRV(uint256 _lusdAmount) public pure returns (uint256) {
-        return _lusdAmount;
+    function calc_withdraw_one_coin(uint256 _burn_amount, int128 i) external view returns (uint256) {
+        return _burn_amount;
     }
 
-    function calcLUSD3CRVToLUSD(uint256 _LUSD3CRVAmount) public pure returns (uint256) {
-        return _LUSD3CRVAmount;
+    function calc_token_amount(uint256[2] memory _amounts, bool _is_deposit) external view returns (uint256) {
+        return _amounts[0];
+    }
+
+    function balances(uint256 arg0) external view returns (uint256) {
+        return 30e26; // artificial token balances of curve pool (30m for LUSD and 3CRV)
     }
 }
