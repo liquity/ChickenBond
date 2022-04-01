@@ -537,7 +537,7 @@ class TesterSimpleToll(TesterInterface):
             #print(f"redemption price: {pol_ratio}")
             return ITERATIONS
 
-        w = lambertw(math.exp(1) * pol_ratio / stoken_spot_price).real
+        w = lambertw(math.exp(1) * pol_ratio / (1 - self.chicken_in_amm_tax) / stoken_spot_price).real
         rebond_time = w / (1 - w)
         """
         print("")
