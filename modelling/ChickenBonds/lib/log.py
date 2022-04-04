@@ -71,9 +71,11 @@ def log_chicks(chicken, chicks, tokens):
         log_chick_balances(chicken, chick)
     return
 
-def log_state(chicken, chicks, tester, log_level=1):
+def log_state(chicken, chicks, tester, log_level=1, iteration=0):
     if log_level == 0:
         return
+    print(f"\n\033[31m  --> Iteration {iteration}")
+    print("  -------------------\033[0m\n")
     log_system(chicken, tester)
     log_amm(chicken)
     log_stoken_amm(chicken)
