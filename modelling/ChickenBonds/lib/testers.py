@@ -966,3 +966,55 @@ class TesterSticky(TesterBase):
             self.divert_to_amm(chicken, amm_token_amount, amm_coll_amount)
 
         return
+
+class TesterBuyback(TesterSimpleToll):
+    def __init__(self):
+        super().__init__()
+
+        self.name = "Buyback model"
+
+        self.plot_prefix = '2_0'
+        self.plot_file_description = 'buyback'
+
+        self.accrual_param = 1
+
+        self.pending_yield_account = 'yield_bucket'
+
+        return
+
+    def distribute_yield(self, chicken, chicks, iteration):
+        # Reserve generated yield
+        reserve_yield = self.get_yield_amount(chicken.reserve_token_balance(), self.external_yield)
+
+        # AMM generated yield
+        amm_yield = self.get_yield_amount(chicken.amm.get_value_in_token_A(), self.amm_yield)
+
+        generated_yield = reserve_yield + amm_yield
+
+        chicken.token.mint(self.pending_yield_account, generated_yield)
+
+        # not rebonders, not LPs, with availabel sTOKEN
+        buyers = list(filter(
+            lambda cb: cb[1] > 0 and not cb[0].rebonder and not cb[0].lp,
+            map(lambda chick: (chick, chicken.stoken.balance_of(chick.account)), chicks)
+        ))
+
+
+        for cb in buyers:
+            chick = cb[0]
+            stoken_balance = cb[1]
+
+            pending_balance = chicken.token.balance_of(self.pending_yield_account)
+            fair_price = self.get_fair_price(chicken)
+
+            buy_amount = min(
+                stoken_balance,
+                pending_balance / fair_price
+            )
+
+            # burn user bTKN
+            chicken.stoken.burn(chick.account, buy_amount)
+            # transfer yield to user
+            chicken.token.transfer(self.pending_yield_account, chick.account, buy_amount * fair_price)
+
+        return

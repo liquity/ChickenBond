@@ -125,3 +125,4 @@ def main(tester):
 if __name__ == "__main__":
     main(TesterSimpleToll())
     #main(TesterSticky())
+    main(TesterBuyback())
