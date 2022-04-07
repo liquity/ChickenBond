@@ -4,6 +4,18 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 
 contract ChickenBondManagerTest is BaseTest {
+
+    // --- Helpers ---
+
+    function createBondForUser(address _user, uint256 _bondAmount) public {
+        vm.startPrank(_user);
+        lusdToken.approve(address(chickenBondManager), _bondAmount);
+        chickenBondManager.createBond(_bondAmount);
+        vm.stopPrank();
+    }
+
+    // --- Tests ---
+
     function testSetupSetsBondNFTAddressInCBM() public {
         assertTrue(address(chickenBondManager.bondNFT()) == address(bondNFT));
     }
@@ -28,9 +40,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 backingRatioBefore = chickenBondManager.calcSystemBackingRatio();
 
         // A approves the system for LUSD transfer and creates the bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
+        createBondForUser(A,  25e18);
 
         // check backing ratio after has not changed
         uint256 backingRatioAfter = chickenBondManager.calcSystemBackingRatio();
@@ -39,10 +49,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondDoesNotChangeBackingRatio() public {
         // A approves the system for LUSD transfer and creates the bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
-        vm.stopPrank();
+        createBondForUser(A, 25e18);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
@@ -50,10 +57,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 backingRatio_1 = chickenBondManager.calcSystemBackingRatio();
         
         // B approves the system for LUSD transfer and creates the bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
-        vm.stopPrank();
+        createBondForUser(B,  25e18);
 
         // check backing ratio after has not changed
         uint256 backingRatio_2 = chickenBondManager.calcSystemBackingRatio();
@@ -73,9 +77,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 backingRatio_3 = chickenBondManager.calcSystemBackingRatio();
     
         // C creates bond
-        vm.startPrank(C);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
+       createBondForUser(C,  25e18);
 
         // Check backing ratio is unchanged by the last bond creation
         uint256 backingRatio_4 = chickenBondManager.calcSystemBackingRatio();
@@ -84,18 +86,12 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondSucceedsAfterAnotherBonderChickensIn() public {
         // A approves the system for LUSD transfer and creates the bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(20e18);
-        vm.stopPrank();
+        createBondForUser(A,  20e18);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
         // B approves the system for LUSD transfer and creates the bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(20e18);
-        vm.stopPrank();
+       createBondForUser(B,  20e18);
 
         vm.warp(block.timestamp + 1 days);
 
@@ -108,9 +104,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(totalAcquiredLUSD, 0);
 
         // C creates bond
-        vm.startPrank(C);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
+        createBondForUser(C,  25e18);
         
         uint256 bondID_C = bondNFT.totalMinted();
         (uint256 bondedLUSD_C, uint256 bondStartTime_C) = chickenBondManager.getBondData(bondID_C);
@@ -121,18 +115,12 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondSucceedsAfterAnotherBonderChickensOut() public {
         // A approves the system for LUSD transfer and creates the bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
-        vm.stopPrank();
+        createBondForUser(A,  25e18);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
         // B approves the system for LUSD transfer and creates the bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
-        vm.stopPrank();
+        createBondForUser(B,  25e18);
 
         // A chickens out
         vm.startPrank(A);
@@ -143,9 +131,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(totalPendingLUSD, 0);
 
         // C creates bond
-        vm.startPrank(C);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
+       createBondForUser(C,  25e18);
 
         vm.warp(block.timestamp + 600);
 
@@ -163,9 +149,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(totalPendingLUSDBefore == 0);
 
         // A approves the system for LUSD transfer and creates the bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
+        createBondForUser(A,  25e18);
 
         // Check totalPendingLUSD has increased by the correct amount
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
@@ -174,18 +158,13 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondIncreasesTotalPendingLUSD() public {
         // First, A creates an initial bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(25e18);
-        vm.stopPrank();
+        createBondForUser(A, 25e18);
   
         // Get initial pending LUSD
         uint256 pendingLUSDBefore = chickenBondManager.totalPendingLUSD();
        
         // B creates the bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), 100e18);
-        chickenBondManager.createBond(10e18);
+        createBondForUser(B, 10e18);
 
         vm.stopPrank();
         
@@ -199,10 +178,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 balanceBefore = lusdToken.balanceOf(A);
 
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
 
         // Check A balance has reduced by correct amount
         uint256 balanceAfter = lusdToken.balanceOf(A);
@@ -211,10 +187,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondRecordsBondData() public {
         // A creates bond #1
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
 
         // Confirm bond data for bond #2 is 0
         (uint256 B_bondedLUSD, uint256 B_bondStartTime) = chickenBondManager.getBondData(2);
@@ -224,10 +197,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 currentTime = block.timestamp;
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(B, 10e18);
 
         // Check bonded amount and bond start time are now recorded for B's bond
         (B_bondedLUSD, B_bondStartTime) = chickenBondManager.getBondData(2);
@@ -240,10 +210,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 tokenSupplyBefore = bondNFT.tokenSupply();
 
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
 
         // Check NFT token supply after has increased by 1
         uint256 tokenSupplyAfter = bondNFT.tokenSupply();
@@ -255,10 +222,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalMintedBefore = bondNFT.totalMinted();
 
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
 
         // Check total minted after has increased by 1
         uint256 totalMintedAfter = bondNFT.totalMinted();
@@ -267,19 +231,13 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondIncreasesTheBondNFTSupplyByOne() public {
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
         
         // Get NFT token supply before
         uint256 tokenSupplyBefore = bondNFT.tokenSupply();
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(B,  10e18);
 
         // Check NFT token supply after has increased by 1
         uint256 tokenSupplyAfter = bondNFT.tokenSupply();
@@ -288,19 +246,13 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondIncreasesTheBondNFTTotalMintedByOne() public {
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
         
         // Get NFT total minted before
         uint256 totalMintedBefore = bondNFT.totalMinted();
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+       createBondForUser(B, 10e18);
 
         // Check NFT total minted after has increased by 1
         uint256 totalMintedAfter = bondNFT.totalMinted();
@@ -313,10 +265,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(A_NFTBalanceBefore, 0);
 
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
         
         // Check A now has one NFT
         uint256 A_NFTBalanceAfter = bondNFT.balanceOf(A);
@@ -329,10 +278,7 @@ contract ChickenBondManagerTest is BaseTest {
         address ownerOfID2Before = bondNFT.ownerOf(2);
        
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
 
         // Check tokenSupply == 1 and A has NFT id #1
         assertEq(bondNFT.totalMinted(),  1);
@@ -340,10 +286,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(ownerOfID1, A);
         
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(B, 10e18);
 
         // Check owner of NFT id #2 is B
         address ownerOfID2After = bondNFT.ownerOf(2);
@@ -355,10 +298,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 yearnVaultBalanceBefore = lusdToken.balanceOf(address(yearnLUSDVault));
 
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), 10e18);
-        chickenBondManager.createBond(10e18);
-        vm.stopPrank();
+        createBondForUser(A, 10e18);
 
         uint256 yearnVaultBalanceAfter = lusdToken.balanceOf(address(yearnLUSDVault));
 
@@ -379,15 +319,9 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         // Get B's bondID
         uint256 B_bondID = bondNFT.totalMinted();
@@ -409,18 +343,12 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         uint256 currentTime = block.timestamp;
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -444,15 +372,9 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bond
         uint256 bondAmount = 171e17;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -472,15 +394,9 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         // Since B was the last bonder, his bond ID is the current total minted
         uint256 B_bondID = bondNFT.totalMinted();
@@ -501,15 +417,9 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         // Since B was the last bonder, his bond ID is the current total minted
         uint256 B_bondID = bondNFT.totalMinted();
@@ -530,15 +440,9 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -561,15 +465,9 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bond
         uint256 bondAmount = 37432e15;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -592,10 +490,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         uint256 A_bondID = bondNFT.totalMinted();
 
@@ -613,15 +508,9 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -637,10 +526,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         uint256 A_bondID = bondNFT.totalMinted();
 
@@ -655,9 +541,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+        createBondForUser(A, bondAmount);
 
         uint256 A_bondID = bondNFT.totalMinted();
 
@@ -672,13 +556,12 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 30 days);
 
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
         //B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+        createBondForUser(B, bondAmount);
 
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -697,9 +580,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         uint256 A_bondID = bondNFT.totalMinted();
 
@@ -713,13 +594,12 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 30 days);
 
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
         //B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
 
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -737,9 +617,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
@@ -754,13 +632,12 @@ contract ChickenBondManagerTest is BaseTest {
         // --- Test subsequent bond ---
 
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(bondID_A);
         vm.stopPrank();
 
         //B creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         uint256 bondID_B = bondNFT.totalMinted();
 
@@ -770,14 +647,11 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(newAccruedSLUSD_B > accruedSLUSD_B);
     }
 
-    function testCalcSLUSDAccrualIReturns0AfterBonderChickenOut() public {
+    function testCalcSLUSDAccrualReturns0AfterBonderChickenOut() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
         vm.warp(block.timestamp + 30 days);
@@ -787,21 +661,19 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(A_accruedSLUSDBefore, 0);
 
         // A chickens out
+        vm.startPrank(A);
         chickenBondManager.chickenOut(A_bondID);
+        vm.stopPrank();
 
         // Check A's accrued SLUSD is 0
         uint256 A_accruedSLUSDAfter = chickenBondManager.calcAccruedSLUSD(A_bondID);
         assertEq(A_accruedSLUSDAfter, 0);
 
         // A, B create bonds
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+        createBondForUser(A, bondAmount);
         A_bondID = bondNFT.totalMinted();
-        vm.stopPrank();
-
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+        
+        createBondForUser(B, bondAmount);
         uint256 B_bondID = bondNFT.totalMinted();
 
         vm.warp(block.timestamp + 30 days);
@@ -811,6 +683,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(B_accruedSLUSDBefore, 0);
 
         // B chickens out
+        vm.startPrank(B);
         chickenBondManager.chickenOut(B_bondID);
 
         // Check B's accrued sLUSD == 0
@@ -822,10 +695,7 @@ contract ChickenBondManagerTest is BaseTest {
           // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         uint256 unusedBondID = bondNFT.totalMinted() + 1;
 
@@ -846,19 +716,13 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
     
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
         
         uint256 backingRatio_2 = chickenBondManager.calcSystemBackingRatio();
         assertEq(backingRatio_2, 1e18);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         uint256 backingRatio_3 = chickenBondManager.calcSystemBackingRatio();
         assertEq(backingRatio_3, 1e18);
@@ -872,15 +736,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         vm.warp(block.timestamp + _interval);
       
         uint256 A_bondID = bondNFT.totalMinted();
 
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
     }
 
@@ -888,20 +751,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         tip(address(sLUSDToken), B, 5e18);
 
         uint256 currentTime = block.timestamp;
 
        // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -928,15 +785,10 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
        
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -950,6 +802,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 B_accruedSLUSD = chickenBondManager.calcAccruedSLUSD(B_bondID);
         
         // B chickens in
+        vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
         // Check B's sLUSD balance has increased by correct amount
@@ -961,15 +814,10 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
        
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -980,6 +828,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 B_LUSDBalanceBefore = lusdToken.balanceOf(B);
     
         // B chickens in
+        vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
         // Check B's LUSD balance has increased by correct amount
@@ -992,15 +841,10 @@ contract ChickenBondManagerTest is BaseTest {
          // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
        
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -1011,6 +855,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
 
         // B chickens in
+        vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
         // Check total pending LUSD has increased by correct amount
@@ -1022,15 +867,10 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
        
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -1041,6 +881,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
 
         // B chickens in
+        vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
         // Check total acquired LUSD has increased by correct amount
@@ -1052,15 +893,10 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
        
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -1070,6 +906,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 nftTokenSupplyBefore = bondNFT.tokenSupply();
 
         // B chickens in
+        vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
         uint256 nftTokenSupplyAfter = bondNFT.tokenSupply();
@@ -1080,15 +917,10 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
        
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -1098,6 +930,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 nftTotalMintedBefore = bondNFT.totalMinted();
 
         // B chickens in
+        vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
         uint256 nftTotalMintedAfter = bondNFT.totalMinted();
@@ -1108,15 +941,10 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
         
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
         
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -1129,6 +957,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 B_bondNFTBalanceBefore = bondNFT.balanceOf(B);
  
         // B chickens in
+        vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
         
         // Check B's NFT balance decreases by 1
@@ -1140,15 +969,10 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+        createBondForUser(B, bondAmount);
        
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -1160,6 +984,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bondOwnerBefore, B);
 
         // B chickens in
+        vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
         // Expert revert when we check for the owner of a non-existent token
@@ -1171,10 +996,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         uint256 A_bondID = bondNFT.totalMinted();
         uint256 nonexistentBondID = bondNFT.totalMinted() + 1;
@@ -1200,15 +1022,10 @@ contract ChickenBondManagerTest is BaseTest {
          // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(B, bondAmount);
        
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -1231,9 +1048,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1244,6 +1059,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Check A's sLUSD balance is non-zero
@@ -1271,9 +1087,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1284,6 +1098,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Check A's sLUSD balance is non-zero
@@ -1314,9 +1129,7 @@ contract ChickenBondManagerTest is BaseTest {
          // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
     
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1327,6 +1140,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Check A's sLUSD balance is non-zero
@@ -1357,9 +1171,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1370,6 +1182,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Check A's sLUSD balance is non-zero
@@ -1405,9 +1218,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
        
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1418,6 +1229,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Check A's sLUSD balance is non-zero
@@ -1461,9 +1273,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
        
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1474,6 +1284,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
       
         // Check A's sLUSD balance is non-zero
@@ -1510,9 +1321,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1520,6 +1329,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 A_bondID = bondNFT.totalMinted();
 
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // A transfers some sLUSD to B
@@ -1548,9 +1358,7 @@ contract ChickenBondManagerTest is BaseTest {
          // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1558,6 +1366,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 A_bondID = bondNFT.totalMinted();
 
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Check B's sLUSD balance is zero
@@ -1574,10 +1383,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1604,15 +1410,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // check total acquired LUSD > 0
@@ -1635,15 +1440,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // get CBM's recorded total acquired LUSD before
@@ -1668,20 +1472,16 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 25e18;
 
         // B and A create bonds
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Get pending LUSD before
@@ -1701,15 +1501,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 25e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Get acquired LUSD in Yearn before
@@ -1727,15 +1526,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 25e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Get CBM's view of LUSD in Yearn  
@@ -1753,15 +1551,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 25e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // Get CBM's view of LUSD in Curve before
@@ -1791,15 +1588,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // check total acquired LUSD > 0
@@ -1827,15 +1623,14 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // check total acquired LUSD > 0
@@ -1863,20 +1658,16 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
 
         // B and A create bonds
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // check total acquired LUSD > 0
@@ -1905,20 +1696,16 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
 
         // B and A create bonds
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // check total acquired LUSD > 0
@@ -1945,20 +1732,16 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
 
         // B and A create bonds
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // check total acquired LUSD > 0
@@ -1986,20 +1769,16 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
 
         // B and A create bonds
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
+       createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
       
         // A chickens in
+        vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
         // check total acquired LUSD > 0
@@ -2153,10 +1932,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
         
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
@@ -2172,10 +1948,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(lusdVaultshareValue_2, lusdVaultshareValue_1);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         // Get share value 3
         uint256 lusdVaultshareValue_3 = chickenBondManager.calcYearnLUSDVaultShareValue();
@@ -2191,7 +1964,6 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(bondID_A);
-
         
         // Get share value 5
         uint256 lusdVaultshareValue_5 = chickenBondManager.calcYearnLUSDVaultShareValue();
@@ -2210,10 +1982,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
         
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
@@ -2229,10 +1998,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(yTokensYearnLUSD_2, yTokensYearnLUSD_1);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         // Get total yTokens  3
         uint256 yTokensYearnLUSD_3 = chickenBondManager.calcYearnLUSDVaultShareValue();
@@ -2266,10 +2032,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
         
         // A creates bond
-        vm.startPrank(A);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(A, bondAmount);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
@@ -2285,10 +2048,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(CBMyTokensYearnLUSD_2, CBMyTokensYearnLUSD_1);
 
         // B creates bond
-        vm.startPrank(B);
-        lusdToken.approve(address(chickenBondManager), bondAmount);
-        chickenBondManager.createBond(bondAmount);
-        vm.stopPrank();
+        createBondForUser(B, bondAmount);
 
         // Get CBM yTokens 3
         uint256 CBMyTokensYearnLUSD_3 = yearnLUSDVault.balanceOf(address(chickenBondManager));
