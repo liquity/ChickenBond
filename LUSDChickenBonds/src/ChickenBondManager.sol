@@ -186,7 +186,6 @@ contract ChickenBondManager is Ownable {
         /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
         Current approach leaves redemption fees in the acquired bucket. */
         uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
-    
         // Calculate redemption fraction to withdraw, given that we leave the fee inside the system
         uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - calcRedemptionFeePercentage()) / 1e18;
 
@@ -195,17 +194,17 @@ contract ChickenBondManager is Ownable {
       
         uint256 lusdToWithdrawFromYearn = _getAcquiredLUSDInYearn(lusdInYearn) * fractionOfAcquiredLUSDToWithdraw / 1e18;
         uint256 yTokensToWithdrawFromLUSDVault = calcYTokensToBurn(yearnLUSDVault, lusdToWithdrawFromYearn, lusdInYearn);
-
+        
         // Since 100% of the Curve liquidity is "acquired", just get the yTokens directly
         uint256 yTokensToWithdrawFromCurveVault = yearnCurveVault.balanceOf(address(this)) * fractionOfAcquiredLUSDToWithdraw / 1e18;
 
         // The LUSD and LUSD3CRV deltas from SP/Curve withdrawals are the amounts to send to the redeemer
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
         uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
-
+     
         if (yTokensToWithdrawFromLUSDVault > 0) {yearnLUSDVault.withdraw(yTokensToWithdrawFromLUSDVault);} // obtain LUSD from Yearn
         if (yTokensToWithdrawFromCurveVault > 0) {yearnCurveVault.withdraw(yTokensToWithdrawFromCurveVault);} // obtain LUSD3CRV from Yearn
-       
+     
         uint256 LUSD3CRVDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
         if (LUSD3CRVDelta > 0) {curvePool.remove_liquidity_one_coin(LUSD3CRVDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);} // obtain LUSD from Curve
     
