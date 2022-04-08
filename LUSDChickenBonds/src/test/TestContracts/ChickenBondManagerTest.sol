@@ -1294,6 +1294,8 @@ contract ChickenBondManagerTest is BaseTest {
         // A transfers his LUSD to B
         uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
         sLUSDToken.transfer(B, sLUSDBalance);
+        vm.stopPrank();
+
         assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
         assertEq(sLUSDToken.totalSupply(), sLUSDToken.balanceOf(B));
 
@@ -1309,6 +1311,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(B);
         assertEq(sLUSDToRedeem, sLUSDToken.totalSupply() * redemptionFraction / 1e18);
         chickenBondManager.redeem(sLUSDToRedeem);
+        vm.stopPrank();
 
         // Check acquired LUSD in curve after has reduced by correct fraction
         uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
@@ -1333,7 +1336,6 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(A_bondID);
 
         // A transfers some sLUSD to B
-        vm.startPrank(A);
         uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
         sLUSDToken.transfer(B, sLUSDBalance);
         assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
@@ -1368,7 +1370,8 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
-
+        vm.stopPrank();
+        
         // Check B's sLUSD balance is zero
         uint256 B_sLUSDBalance = sLUSDToken.balanceOf(B);
         assertEq(B_sLUSDBalance, 0);
