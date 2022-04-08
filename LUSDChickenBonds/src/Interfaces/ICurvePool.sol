@@ -13,4 +13,6 @@ interface ICurvePool is IERC20 {
     function calc_token_amount(uint256[2] memory _amounts, bool _is_deposit) external view returns (uint256);
 
     function balances(uint256 arg0) external view returns (uint256);
+
+    function totalSupply() external view returns (uint256);
 }
