@@ -59,7 +59,7 @@ contract BaseTest is DSTest, stdCheats {
         assertLe(_x - _y, _margin);
     }
 
-    function abs(uint256 x, uint256 y) public returns (uint256) {
+    function abs(uint256 x, uint256 y) public pure returns (uint256) {
         return x > y ? x - y : y - x;
     }
 }

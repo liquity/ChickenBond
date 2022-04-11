@@ -3,7 +3,7 @@ import "../../SLUSDToken.sol";
 
 contract SLUSDTokenTester is SLUSDToken {
 
-    constructor(string memory name_, string memory symbol_) public SLUSDToken(name_, symbol_) {}
+    constructor(string memory name_, string memory symbol_) SLUSDToken(name_, symbol_) {}
 
     function unprotectedMint(address _account, uint256 _amount) external {
         // No check on caller here

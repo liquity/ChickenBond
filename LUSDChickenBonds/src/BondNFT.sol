@@ -13,7 +13,7 @@ contract BondNFT is ERC721, Ownable {
     uint256 public tokenSupply; // Total outstanding supply - increases by 1 upon mint, decreases by 1 upon burn.
     uint256 public totalMinted; // Tracks the total ever minted. Used for assigning a unique ID to each new mint.
 
-    constructor(string memory name_, string memory symbol_) public ERC721(name_, symbol_) {}
+    constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_) {}
 
     function setAddresses(address _chickenBondManagerAddress) external onlyOwner {
         chickenBondManagerAddress = _chickenBondManagerAddress;
