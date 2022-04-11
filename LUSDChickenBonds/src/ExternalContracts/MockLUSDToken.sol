@@ -52,9 +52,8 @@ contract MockLUSDToken is IERC20 {
         address _troveManagerAddress,
         address _stabilityPoolAddress,
         address _borrowerOperationsAddress
-    ) 
-        public 
-    {  
+    )
+    {
 
         troveManagerAddress = _troveManagerAddress;
         emit TroveManagerAddressChanged(_troveManagerAddress);
@@ -173,8 +172,8 @@ contract MockLUSDToken is IERC20 {
         }
     }
     
-    function _buildDomainSeparator(bytes32 typeHash, bytes32 name, bytes32 version) private view returns (bytes32) {
-        return keccak256(abi.encode(typeHash, name, version, _chainID(), address(this)));
+    function _buildDomainSeparator(bytes32 _typeHash, bytes32 _name, bytes32 _version) private view returns (bytes32) {
+        return keccak256(abi.encode(_typeHash, _name, _version, _chainID(), address(this)));
     }
 
     // --- Internal operations ---
@@ -254,23 +253,23 @@ contract MockLUSDToken is IERC20 {
 
     // --- Optional functions ---
 
-    function name() external view  returns (string memory) {
+    function name() external pure returns (string memory) {
         return _NAME;
     }
 
-    function symbol() external view  returns (string memory) {
+    function symbol() external pure returns (string memory) {
         return _SYMBOL;
     }
 
-    function decimals() external view  returns (uint8) {
+    function decimals() external pure returns (uint8) {
         return _DECIMALS;
     }
 
-    function version() external view  returns (string memory) {
+    function version() external pure returns (string memory) {
         return _VERSION;
     }
 
-    function permitTypeHash() external view  returns (bytes32) {
+    function permitTypeHash() external pure returns (bytes32) {
         return _PERMIT_TYPEHASH;
     }
 }

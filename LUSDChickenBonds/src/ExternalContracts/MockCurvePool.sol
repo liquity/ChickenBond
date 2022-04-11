@@ -17,7 +17,7 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
         lusdToken = ILUSDToken(_lusdTokenAddress);
     }
 
-    function add_liquidity(uint256[2] memory _amounts, uint256 _min_mint_amount) external {
+    function add_liquidity(uint256[2] memory _amounts, uint256) external {
         uint256 lusdAmount = _amounts[0];
         lusdToken.transferFrom(msg.sender, address(this), lusdAmount);
        
@@ -25,7 +25,7 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
         _mint(msg.sender, lpShares);
     }
 
-    function remove_liquidity_one_coin(uint256 _burn_amount, int128 i, uint256 _min_received) external {
+    function remove_liquidity_one_coin(uint256 _burn_amount, int128, uint256) external {
         uint lusdAmount = _burn_amount; // mock 1:1 shares:tokens
         lusdToken.transfer(msg.sender, lusdAmount);
 
@@ -34,19 +34,19 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
 
     /* Simplified LP shares calculators. Shares issued/burned 1:1 with deposited/withdrawn LUSD respectively.
     * In practice, the conversion will be more complicated and will depend on the pool proportions and sizes. */
-    function calc_withdraw_one_coin(uint256 _burn_amount, int128 i) external view returns (uint256) {
+    function calc_withdraw_one_coin(uint256 _burn_amount, int128) external pure returns (uint256) {
         return _burn_amount;
     }
 
-    function calc_token_amount(uint256[2] memory _amounts, bool _is_deposit) external view returns (uint256) {
+    function calc_token_amount(uint256[2] memory _amounts, bool) external pure returns (uint256) {
         return _amounts[0];
     }
 
-    function balances(uint256 arg0) external view returns (uint256) {
+    function balances(uint256) external pure returns (uint256) {
         return 30e26; // artificial token balances of curve pool (30m for LUSD and 3CRV)
     }
 
-    function totalSupply() public view override (ICurvePool, ERC20) returns (uint256) {
+    function totalSupply() public pure override (ICurvePool, ERC20) returns (uint256) {
         return 30e26; // artificial total share token supply balance
     }
 }
