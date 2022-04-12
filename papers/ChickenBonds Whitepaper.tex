@@ -27,7 +27,7 @@
 
 \title{\textbf{ChickenBonds: Self-Bootstrapping Treasury}}
 \author{Liquity Team}
-\date{April 5, 2021}
+\date{April 12, 2021}
 
 \maketitle
 
@@ -45,7 +45,17 @@ ChickenBonds are versatile and can be used by protocols to obtain DEX liquidity 
 \tableofcontents
 
 \section{Introduction}
-TODO
+DeFi summer 2020 has led to an abundance of DeFi projects, making it increasingly competitive to maintain liquid markets for new protocol tokens. Many projects have faced excessive costs of obtaining liquidity from providers looking for the best short-term yield farming opportunities. Such capital lacks stickiness and moves on as higher-yield options become available. Protocols are thus only renting temporary liquidity from users at high costs.
+
+More recently, DeFi 2.0 protocols such as Olympus Pro, Ondo and Tokemak have started offering alternative ways to acquire liquidity, which are more similar to leasing or buying. While tackling the issue of stickiness, they are still costly and may not be affordable for all projects.
+
+Chicken Bonds is a major innovation in liquidity acquisition technology and offers strong benefits to DeFi protocols and bond holders, while minimizing risk:
+
+\begin{itemize}
+    \item \textit{Cost-free liquidity accumulation for projects}. Rather than purchasing or renting liquidity, the system freely acquires treasury assets over time. Liquidity acquisition is incentivized by the amplified yields that are attainable by bond holders, enabled by the novel bonding dynamics.
+    \item \textit{Risk-free bonding for users}. Bond holders may “chicken out” and withdraw their deposited principal at any time, in lieu of converting it to derivative tokens. Therefore bonding is fully reversible and bond holders are not locked into any commitment to the protocol.
+    \item \textit{System stability and resilience}. The Chicken Bonds derivative token bTKN has a hard price floor supported by a direct redemption mechanism. Most of the time, bTKN will in fact trade at a premium above this price floor due to amplified ("boosted") yield earned by the underlying liquidity. Though the premium may vary, the bonding rules guarantee that the price floor can only increase over time. As such, the Chicken Bonds boosted token does not suffer from the high volatility and strong reflexivity inherent to secondary tokens issued by other bonding protocols
+\end{itemize}
 
 \section{Treasury}
 The protocol operates a \textit{Treasury R} consisting of three logical parts ("buckets"):  \textit{Pending Bucket}, \textit{Acquired Bucket} and \textit{Permanent Bucket}.
