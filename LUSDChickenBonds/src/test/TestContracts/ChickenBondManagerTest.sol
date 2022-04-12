@@ -116,7 +116,7 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(C,  25e18);
         
         uint256 bondID_C = bondNFT.totalMinted();
-        (uint256 bondedLUSD_C, uint256 bondStartTime_C) = chickenBondManager.getBondData(bondID_C);
+        (, uint256 bondStartTime_C) = chickenBondManager.getBondData(bondID_C);
 
         // assertEq(bondedLUSD_C, 25e18);
         assertEq(bondStartTime_C, block.timestamp);
@@ -150,7 +150,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bondStartTime_C, block.timestamp - 600);
     }
 
-    function testFirstCreateBondIncreasesTotalPendingLUSD(uint _bondAmount) public {
+    function testFirstCreateBondIncreasesTotalPendingLUSD(uint) public {
         // Get initial pending LUSD
         uint256 totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
         
@@ -169,9 +169,6 @@ contract ChickenBondManagerTest is BaseTest {
         // First, A creates an initial bond
         createBondForUser(A, 25e18);
   
-        // Get initial pending LUSD
-        uint256 pendingLUSDBefore = chickenBondManager.totalPendingLUSD();
-       
         // B creates the bond
         createBondForUser(B, 10e18);
 
@@ -284,8 +281,8 @@ contract ChickenBondManagerTest is BaseTest {
      function testCreateBondMintsBondNFTWithCorrectIDToBonder() public {
         // Expect revert when checking the owner of id #2, since it hasnt been minted
         vm.expectRevert("ERC721: owner query for nonexistent token");
-        address ownerOfID2Before = bondNFT.ownerOf(2);
-       
+        bondNFT.ownerOf(2);
+
         // A creates bond
         createBondForUser(A, 10e18);
 
@@ -959,8 +956,6 @@ contract ChickenBondManagerTest is BaseTest {
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
-        uint256 nftTokenSupplyBefore = bondNFT.totalMinted();
 
         // Get B's NFT balance before
         uint256 B_bondNFTBalanceBefore = bondNFT.balanceOf(B);
@@ -998,7 +993,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Expert revert when we check for the owner of a non-existent token
         vm.expectRevert("ERC721: owner query for nonexistent token");
-        address bondOwnerAfter = bondNFT.ownerOf(B_bondID);
+        bondNFT.ownerOf(B_bondID);
     }
 
     function testChickenInRevertsWhenCallerIsNotABonder() public {
@@ -1008,7 +1003,6 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(A, bondAmount);
 
         uint256 A_bondID = bondNFT.totalMinted();
-        uint256 nonexistentBondID = bondNFT.totalMinted() + 1;
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1400,8 +1394,6 @@ contract ChickenBondManagerTest is BaseTest {
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-
-        uint256 A_bondID = bondNFT.totalMinted();
 
         // confirm acquired LUSD is 0
         assertEq(chickenBondManager.getTotalAcquiredLUSD(), 0);
@@ -2182,7 +2174,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCalcYearnLUSDShareValueGivesCorrectAmountAtFirstDepositFullWithdrawal() public {
         // Assume  10 wei < deposit < availableDepositLimit  (For very tiny deposits <10wei, the Yearn vault share calculation can  round to 0).
-        uint256 availableDepositLimit = yearnLUSDVault.availableDepositLimit();
+        // uint256 availableDepositLimit = yearnLUSDVault.availableDepositLimit();
         // vm.assume(_depositAmount < availableDepositLimit && _depositAmount > 10);
 
         uint _depositAmount = 6013798781155418312;

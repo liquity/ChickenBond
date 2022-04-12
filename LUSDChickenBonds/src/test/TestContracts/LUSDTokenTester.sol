@@ -8,10 +8,12 @@ contract LUSDTokenTester is MockLUSDToken {
         address _troveManagerAddress,
         address _stabilityPoolAddress,
         address _borrowerOperationsAddress
-    ) 
-    public MockLUSDToken(_troveManagerAddress,
-                      _stabilityPoolAddress,
-                      _borrowerOperationsAddress) {}
+    )
+    MockLUSDToken(
+        _troveManagerAddress,
+        _stabilityPoolAddress,
+        _borrowerOperationsAddress
+    ) {}
     
     function unprotectedMint(address _account, uint256 _amount) external {
         // No check on caller here

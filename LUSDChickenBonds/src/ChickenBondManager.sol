@@ -44,7 +44,7 @@ contract ChickenBondManager is Ownable {
 
     // --- constructor ---
 
-   constructor
+    constructor
     (
         address _bondNFTAddress, 
         address _lusdTokenAddress, 
@@ -53,8 +53,7 @@ contract ChickenBondManager is Ownable {
         address _yearnCurveVaultAddress,
         address _sLUSDTokenAddress,
         address _yearnRegistryAddress
-    ) 
-        public onlyOwner 
+    )
     {
         bondNFT = IBondNFT(_bondNFTAddress);
         lusdToken = ILUSDToken(_lusdTokenAddress);
@@ -309,12 +308,12 @@ contract ChickenBondManager is Ownable {
     * Simple alternative:  make the outer shift function revert if the resulting LUSD spot price on Curve has crossed the boundary.
     * Advantage: reduces complexity / bug surface area, and moves the burden of a correct LUSD quantity calculation to the front-end.
     */
-    function _calcLUSDToShiftToCurve() public returns (uint256) {  
+    function _calcLUSDToShiftToCurve() public view returns (uint256) {
         uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
         return  _getAcquiredLUSDInYearn(lusdInYearn) / 10;
     }
 
-    function _calcLUSDToShiftToSP() public returns (uint256) {
+    function _calcLUSDToShiftToSP() public view returns (uint256) {
         return getAcquiredLUSDInCurve() / 10;
     }
 
@@ -371,7 +370,7 @@ contract ChickenBondManager is Ownable {
         * TODO: Determine if this is the only situation whereby the delta can be negative. Potentially enforce some minimum 
         * chicken-in value so that acquired LUSD always more than covers any rounding error in the share value.
         */
-        uint256 acquiredLUSDInYearn = _lusdInYearn > totalPendingLUSD ? _lusdInYearn - totalPendingLUSD : 0;
+        uint256 acquiredLUSDInYearn = _lusdInYearn > totalPendingLUSDCached ? _lusdInYearn - totalPendingLUSDCached : 0;
         assert(acquiredLUSDInYearn >= 0);
 
         return acquiredLUSDInYearn;
@@ -422,7 +421,7 @@ contract ChickenBondManager is Ownable {
     }
 
     // Internal getter for calculating the bond sLUSD cap based on bonded amount and backing ratio
-    function _calcBondSLUSDCap(uint256 _bondedAmount, uint256 _backingRatio) internal view returns (uint256) {
+    function _calcBondSLUSDCap(uint256 _bondedAmount, uint256 _backingRatio) internal pure returns (uint256) {
         // TODO: potentially refactor this -  i.e. have a (1 / backingRatio) function for more precision
         return _bondedAmount * 1e18 / _backingRatio;
     }
