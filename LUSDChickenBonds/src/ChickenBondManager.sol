@@ -40,6 +40,7 @@ contract ChickenBondManager is Ownable {
     uint256 constant MAX_UINT256 = type(uint256).max;
     uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
     int128 constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0; 
+    int128 constant INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL = 1;
 
     // --- constructor ---
 
@@ -219,13 +220,14 @@ contract ChickenBondManager is Ownable {
         lusdToken.transfer(msg.sender, lusdBalanceDelta);
     }
 
-    function shiftLUSDFromSPToCurve() external {
-        // Calculate the LUSD to pull from the Yearn LUSD vault
-        uint256 lusdToShift = _calcLUSDToShiftToCurve();
-        _requireNonZeroAmount(lusdToShift);
+    function shiftLUSDFromSPToCurve(uint256 _lusdToShift) external {
+        _requireNonZeroAmount(_lusdToShift);
+
+        uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
+        require(initialCurveSpotPrice > 1e18, "CBM: Curve spot must be > 1.0 before SP->Curve shift");
 
         uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
-        uint256 yTokensToBurn = calcYTokensToBurn(yearnLUSDVault, lusdToShift, lusdInYearn);
+        uint256 yTokensToBurn = calcYTokensToBurn(yearnLUSDVault, _lusdToShift, lusdInYearn);
 
         // Convert yTokens to LUSD
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
@@ -245,16 +247,19 @@ contract ChickenBondManager is Ownable {
         // Deposit the received LUSD3CRV-f to Yearn Curve vault
         yearnCurveVault.deposit(LUSD3CRVBalanceDelta);
 
-        // TODO: Require final Curve LUSD spot price >= 1.0
-   }
+        // Ensure the SP->Curve shift has decreased the Curve spot price to not less than 1.0
+        uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
+        require(finalCurveSpotPrice < initialCurveSpotPrice && finalCurveSpotPrice >=  1e18, "CBM: SP->Curve shift must decrease spot price to >= 1.0");
+    }
+   
+   function shiftLUSDFromCurveToSP(uint256 _lusdToShift) external {
+        _requireNonZeroAmount(_lusdToShift);
 
-   function shiftLUSDFromCurveToSP() external {
-        // Calculate LUSD to pull from Curve
-        uint256 lusdToShift = _calcLUSDToShiftToSP();
-        _requireNonZeroAmount(lusdToShift);
-        
+        uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
+        require(initialCurveSpotPrice < 1e18, "CBM: Curve spot must be < 1.0 before Curve->SP shift");
+
         //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
-        uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([lusdToShift, 0], false);
+        uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([_lusdToShift, 0], false);
 
         //Calculate yTokens to swap for LUSD3CRV-f 
         uint256 LUSD3CRVfInYearn = calcYearnCurveVaultShareValue();
@@ -282,10 +287,18 @@ contract ChickenBondManager is Ownable {
         // Deposit the received LUSD to Yearn LUSD vault
         yearnLUSDVault.deposit(lusdBalanceDelta);
 
-        // TODO: Require final Curve LUSD spot price <= 1.0
+        // Ensure the Curve->SP shift has increased the Curve spot price to not more than 1.0
+        uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
+        require(finalCurveSpotPrice > initialCurveSpotPrice && finalCurveSpotPrice <=  1e18, "CBM: Curve->SP shift must increase spot price to <= 1.0");
+    
     }
 
     // --- Helper functions ---
+
+    function _getCurveLUSDSpotPrice() public returns (uint256) {
+        // Get the Curve spot price of LUSD: the amount of 3CRV that would be received by swapping 1 LUSD 
+        return curvePool.get_dy_underlying(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
+    }
 
     /* Placeholder functions for calculating LUSD to shift to/from Curve. They currently shift 10% of the acquired LUSD in the source pool
     * to the destination pool.

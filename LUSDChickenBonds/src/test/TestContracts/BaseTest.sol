@@ -23,10 +23,13 @@ contract BaseTest is DSTest, stdCheats {
     
     // Integrations 
     IERC20 lusdToken;
+    IERC20 _3crvToken;
     ICurvePool curvePool;
     IYearnVault yearnLUSDVault;
     IYearnVault yearnCurveVault;
     IYearnRegistry yearnRegistry;
+
+    address yearnGovernanceAddress;
 
     address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
     address constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
@@ -39,6 +42,7 @@ contract BaseTest is DSTest, stdCheats {
     address public A;
     address public B;
     address public C;
+    address public D;
 
     function createAccounts() public {
         address[10] memory tempAccounts;

@@ -9,13 +9,14 @@ import  "../../ExternalContracts/MockCurvePool.sol";
 contract MainnetTestSetup is BaseTest {
     // Mainnet addresses
     address constant MAINNET_LUSD_TOKEN_ADDRESS = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
+    address constant MAINNET_3CRV_TOKEN_ADDRESS = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
     address constant MAINNET_YEARN_LUSD_VAULT_ADDRESS = 0x378cb52b00F9D0921cb46dFc099CFf73b42419dC;
     address constant MAINNET_YEARN_CURVE_VAULT_ADDRESS = 0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6;
     address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
+    address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
     uint256 constant MAINNET_PINNED_BLOCK =  1648476300; 
-   
 
     function setUp() public {
         // pinBlock(MAINNET_PINNED_BLOCK);
@@ -27,7 +28,9 @@ contract MainnetTestSetup is BaseTest {
         // Grab deployed mainnet LUSDToken
         lusdToken = IERC20(MAINNET_LUSD_TOKEN_ADDRESS);
 
-        (A, B, C) = (accountsList[0], accountsList[1], accountsList[2]);
+        _3crvToken = IERC20(MAINNET_3CRV_TOKEN_ADDRESS);
+
+        (A, B, C, D) = (accountsList[0], accountsList[1], accountsList[2], accountsList[3]);
        
         // Give some LUSD to test accounts
         tip(address(lusdToken), A, 100e18);
@@ -47,6 +50,8 @@ contract MainnetTestSetup is BaseTest {
         yearnCurveVault = IYearnVault(MAINNET_YEARN_CURVE_VAULT_ADDRESS);
 
         yearnRegistry = IYearnRegistry(MAINNET_YEARN_REGISTRY_ADDRESS);
+
+        yearnGovernanceAddress = MAINNET_YEARN_GOVERNANCE_ADDRESS;
 
         // Deploy core ChickenBonds system
         sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");

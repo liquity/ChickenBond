@@ -14,6 +14,15 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
     }
 
+    function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
+        tip(address(lusdToken), _user, _lusdDeposit); 
+        assertGe(lusdToken.balanceOf(_user), _lusdDeposit);
+        vm.startPrank(_user);
+        lusdToken.approve(address(curvePool), _lusdDeposit);
+        curvePool.add_liquidity([_lusdDeposit, 0], 0);
+        vm.stopPrank();
+    }
+
     // --- Tests ---
 
     function testSetupSetsBondNFTAddressInCBM() public {
@@ -810,7 +819,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_sLUSDBalanceAfter, B_sLUSDBalanceBefore + B_accruedSLUSD);
     }
 
-     function testChickenInIncreasesBondHolderLUSDBalance() public {
+    function testChickenInIncreasesBondHolderLUSDBalance() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1016,7 +1025,7 @@ contract ChickenBondManagerTest is BaseTest {
         // B tries to chicken out a non-existent bond
         vm.expectRevert("ERC721: owner query for nonexistent token");
         chickenBondManager.chickenIn(37);   
-   }
+    }
 
     function testChickenInRevertsWhenBonderChickensInBondTheyDontOwn() public { 
          // A creates bond
@@ -1300,7 +1309,8 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(sLUSDToken.totalSupply(), sLUSDToken.balanceOf(B));
 
         // A shifts some LUSD from SP to Curve
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
        
         // Get acquired LUSD in Curve before
         uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
@@ -1371,7 +1381,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
-        
+
         // Check B's sLUSD balance is zero
         uint256 B_sLUSDBalance = sLUSDToken.balanceOf(B);
         assertEq(B_sLUSDBalance, 0);
@@ -1408,12 +1418,112 @@ contract ChickenBondManagerTest is BaseTest {
 
     // --- shiftLUSDFromSPToCurve tests -
 
+    function testShiftLUSDFromSPToCurveRevertsForZeroAmount() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // check total acquired LUSD > 0
+        uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        // Attempt to shift 0 LUSD
+        vm.expectRevert("CBM: Amount must be > 0");
+        chickenBondManager.shiftLUSDFromSPToCurve(0);
+    }
+
+    function testShiftLUSDFromSPToCurveRevertsWhenCurvePriceLessThan1() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // Whale deposits to Curve pool and LUSD spot price drops < 1.0
+        depositLUSDToCurveForUser(C, 200_000_000e18); // deposit 200m LUSD
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
+
+        // Attempt to shift 10% of acquired LUSD in Yearn
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn()  / 10;
+        assertGt(lusdToShift, 0);
+        
+        // Try to shift the LUSD
+        vm.expectRevert("CBM: Curve spot must be > 1.0 before SP->Curve shift");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+    }
+
+    function testShiftLUSDFromSPToCurveRevertsWhenShiftWouldDropCurvePriceBelow1() public {
+        // TODO: Artificially raise Yearn LUSD vault deposit limit to accommodate sufficient LUSD for the test
+        vm.startPrank(yearnGovernanceAddress);
+        yearnLUSDVault.setDepositLimit(1e27);
+        vm.stopPrank();
+        
+        // A creates bond
+        uint256 bondAmount = 500_000_000e18; // 500m 
+
+        tip(address(lusdToken), A, bondAmount);
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+       
+        // 1 year passes
+        vm.warp(block.timestamp + 365 days);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // Check initial price > 1.0
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+
+        // --- First check that the amount to shift *would* drop the curve price below 1.0, by having a whale
+        // deposit it, checking Curve price, then withdrawing it again --- ///
+       
+        uint256 lusdAmount = 200_000_000e18;
+
+        // Whale deposits to Curve pool and LUSD spot price drops < 1.0
+        depositLUSDToCurveForUser(C, lusdAmount); // deposit 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
+
+        //Whale withdraws their LUSD deposit, and LUSD spot price rises > 1.0 again
+        vm.startPrank(C);
+        uint256 whaleLPShares = curvePool.balanceOf(C);
+        curvePool.remove_liquidity_one_coin(whaleLPShares, 0, 0);
+        vm.stopPrank();
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+
+        // --- Now, attempt the shift that would drop the price below 1.0 --- 
+        vm.expectRevert("CBM: SP->Curve shift must decrease spot price to >= 1.0");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdAmount);
+    }
+
     // CBM system trackers
     function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInCBM() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
@@ -1430,8 +1540,9 @@ contract ChickenBondManagerTest is BaseTest {
         // Get total LUSD in CBM before
         uint256 CBM_lusdBalanceBefore = lusdToken.balanceOf(address(chickenBondManager));
 
-        // Shift LUSD from SP to Curve
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        // Shift 10% of LUSD in SP 
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         
         // Check total LUSD in CBM has not changed
         uint256 CBM_lusdBalanceAfter = lusdToken.balanceOf(address(chickenBondManager));
@@ -1457,8 +1568,9 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
         assertGt(totalAcquiredLUSDBefore, 0);
 
-        // Shift LUSD from SP to Curve
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        // Shift 10% of LUSD in SP 
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // check CBM's recorded total acquire LUSD hasn't changed
         uint256 totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
@@ -1491,8 +1603,9 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
         assertTrue(totalPendingLUSDBefore > 0);
 
-        // Shift LUSD from SP to Curve
-        chickenBondManager.shiftLUSDFromSPToCurve();
+       // Shift 10% of LUSD in SP 
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check pending LUSD After has not changed 
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
@@ -1517,8 +1630,9 @@ contract ChickenBondManagerTest is BaseTest {
         // Get acquired LUSD in Yearn before
         uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
 
-        // Shift LUSD from SP to Curve
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        // Shift 10% of LUSD in SP 
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check acquired LUSD in Yearn has decreased
         uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
@@ -1542,8 +1656,9 @@ contract ChickenBondManagerTest is BaseTest {
         // Get CBM's view of LUSD in Yearn  
         uint256 lusdInYearnBefore = chickenBondManager.calcYearnLUSDVaultShareValue();
 
-        // Shift LUSD from SP to Curve
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        // Shift 10% of LUSD in SP 
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check CBM's view of LUSD in Yearn has decreased
         uint256 lusdInYearnAfter = chickenBondManager.calcYearnLUSDVaultShareValue();
@@ -1567,13 +1682,17 @@ contract ChickenBondManagerTest is BaseTest {
         // Get CBM's view of LUSD in Curve before
         uint256 lusdInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
 
-        // Shift LUSD from SP to Curve
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        // Shift 10% of LUSD in SP 
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check CBM's view of LUSD in Curve has inccreased
         uint256 lusdInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
         assertTrue(lusdInCurveAfter > lusdInCurveBefore);
     }
+
+
+
 
     // Actual Yearn and Curve balance tests
     // function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInYearnAndCurve() public {}
@@ -1586,6 +1705,129 @@ contract ChickenBondManagerTest is BaseTest {
    
 
     // --- shiftLUSDFromCurveToSP tests ---
+
+    function testShiftLUSDFromCurveToSPRevertsForZeroAmount() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+    
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
+
+        // Attempt to shift 0 LUSD
+        vm.expectRevert("CBM: Amount must be > 0");
+        chickenBondManager.shiftLUSDFromCurveToSP(0);
+    }
+
+    function testShiftLUSDFromCurveToSPRevertsWhenCurvePriceGreaterThan1() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+       
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+    
+        // Check spot price is > 1.0
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+
+        // Attempt to shift 10% of acquired LUSD in Yearn
+        lusdToShift = chickenBondManager.getAcquiredLUSDInYearn()  / 10;
+        assertGt(lusdToShift, 0);
+        
+        // Try to shift the LUSD
+        vm.expectRevert("CBM: Curve spot must be < 1.0 before Curve->SP shift");
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
+    }
+
+    function testShiftLUSDFromCurveToSPRevertsWhenShiftWouldRaiseCurvePriceAbove1() public {
+        // TODO: Artificially raise Yearn LUSD vault deposit limit to accommodate sufficient LUSD for the test
+        vm.startPrank(yearnGovernanceAddress);
+        yearnLUSDVault.setDepositLimit(1e27);
+        vm.stopPrank();
+       
+        // A creates bond
+        uint256 bondAmount = 500_000_000e18; // 500m 
+
+        tip(address(lusdToken), A, bondAmount);
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+       
+        // 1 year passes
+        vm.warp(block.timestamp + 365 days);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        /* Put some 3CRV in Curve, so that the subsequent SP->Curve shift can move enough LUSD to Curve without crossing 
+        the 1.0 price boundary */
+        uint256 _3crvDeposit = 300_000_000e18;
+        tip(address(_3crvToken), D, _3crvDeposit);
+        assertGe(_3crvToken.balanceOf(D), _3crvDeposit);
+        vm.startPrank(D);
+        _3crvToken.approve(address(curvePool), _3crvDeposit);
+        curvePool.add_liquidity([0, _3crvDeposit], 0);
+        vm.stopPrank();
+
+        // Put some initial LUSD in Curve from CBM: shift LUSD from SP to Curve
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        uint256 lusdToShift = 200_000_000e18; // shift 200m
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        // Check initial price > 1.0
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+
+        // First, have a whale deposit to the Curve Pool to make the price < 1.0
+        uint256 lusdAmount = 200_000_000e18;
+        depositLUSDToCurveForUser(C, lusdAmount); // deposit 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
+    
+
+        uint256 lusdInYearn = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 lusdInCurve = chickenBondManager.getAcquiredLUSDInCurve();
+
+        // Now, attempt to shift the same amount, which would raise the price back above 1.0, and expect it to fail
+        vm.expectRevert("CBM: Curve->SP shift must increase spot price to <= 1.0");
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdAmount);
+    }
 
     function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInCBM() public {
         // A creates bond
@@ -1600,6 +1842,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
 
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
@@ -1607,14 +1850,23 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Put some initial LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
     
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
+
         // Get total LUSD in CBM before
         uint256 CBM_lusdBalanceBefore = lusdToken.balanceOf(address(chickenBondManager));
 
         // Shift LUSD from Curve to SP
-        chickenBondManager.shiftLUSDFromCurveToSP();
+        lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
         
         // Check total LUSD in CBM has not changed
         uint256 CBM_lusdBalanceAfter = lusdToken.balanceOf(address(chickenBondManager));
@@ -1635,6 +1887,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
 
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
@@ -1642,15 +1895,24 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
 
         // get CBM's recorded total acquired LUSD before
         uint256 totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSDBefore > 0);
 
         // Shift LUSD from Curve to SP
-        chickenBondManager.shiftLUSDFromCurveToSP();
+        lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // check CBM's recorded total acquire LUSD hasn't changed
         uint256 totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
@@ -1672,6 +1934,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
 
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
@@ -1679,15 +1942,24 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
 
         // Get pending LUSD before
         uint256 totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
         assertTrue(totalPendingLUSDBefore > 0);
 
         // Shift LUSD from Curve to SP
-        chickenBondManager.shiftLUSDFromCurveToSP();
+        lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check pending LUSD After has not changed 
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
@@ -1710,6 +1982,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
 
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
@@ -1717,14 +1990,24 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
 
         // Get acquired LUSD in Yearn Before
         uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
 
         // Shift LUSD from Curve to SP
-        chickenBondManager.shiftLUSDFromCurveToSP();
+        lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check acquired LUSD in Yearn Increases
         uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
@@ -1737,7 +2020,7 @@ contract ChickenBondManagerTest is BaseTest {
         // B and A create bonds
         createBondForUser(B, bondAmount);
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
        
         // 10 minutes passes
@@ -1746,6 +2029,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
 
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
@@ -1753,14 +2037,23 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
 
         // Get LUSD in Yearn Before
         uint256 lusdInYearnBefore = chickenBondManager.calcYearnLUSDVaultShareValue();
 
         // Shift LUSD from Curve to SP
-        chickenBondManager.shiftLUSDFromCurveToSP();
+        lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check LUSD in Yearn Increases
         uint256 lusdInYearnAfter = chickenBondManager.calcYearnLUSDVaultShareValue();
@@ -1783,6 +2076,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
 
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
@@ -1790,20 +2084,28 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
-        chickenBondManager.shiftLUSDFromSPToCurve();
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
 
         // Get acquired LUSD in Curve Before
         uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
 
         // Shift LUSD from Curve to SP
-        chickenBondManager.shiftLUSDFromCurveToSP();
+        lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check LUSD in Curve Decreases
         uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
         assertTrue(acquiredLUSDInCurveAfter < acquiredLUSDInCurveBefore);
     }
-
 
     // Actual Yearn and Curve balance tests
 
@@ -1930,7 +2232,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertGeAndWithinRange(lusdToken.balanceOf(address(chickenBondManager)), CBMShareLUSDValue, 1e9);
     }
     
-     // Test calculated share value does not change over time, ceteris paribus
+    // Test calculated share value does not change over time, ceteris paribus
     function testCalcYearnLUSDShareValueDoesNotChangeOverTimeAllElseEqual() public { 
         uint256 bondAmount = 10e18;
         

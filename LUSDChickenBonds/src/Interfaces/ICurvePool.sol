@@ -15,4 +15,6 @@ interface ICurvePool is IERC20 {
     function balances(uint256 arg0) external view returns (uint256);
 
     function totalSupply() external view returns (uint256);
+
+    function get_dy_underlying(int128 i,int128 j, uint256 dx) external view returns (uint256);
 }

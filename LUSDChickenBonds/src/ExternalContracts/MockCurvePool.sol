@@ -49,4 +49,8 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
     function totalSupply() public view override (ICurvePool, ERC20) returns (uint256) {
         return 30e26; // artificial total share token supply balance
     }
+
+    function get_dy_underlying(int128 i,int128 j, uint256 dx) external view returns (uint256) {
+        return dx; // Artificial LUSD-3CRV spot price of 1.0
+    }
 }

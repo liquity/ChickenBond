@@ -21,4 +21,6 @@ interface IYearnVault is IERC20 {
     function pricePerShare() external view returns (uint256);
 
     function name() external view returns (string memory);
+
+    function setDepositLimit(uint256 limit) external;
 }
