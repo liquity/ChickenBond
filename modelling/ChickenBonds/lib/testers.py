@@ -63,9 +63,6 @@ class TesterInterface():
     def set_accrual_param(self, new_value):
         pass
 
-    def get_reserve_ratio(self, chicken):
-        pass
-
     def distribute_yield(self, chicken, chicks, iteration):
         pass
 
@@ -145,6 +142,9 @@ class TesterSimpleToll(TesterInterface):
     def get_chicks_with_stoken(self, chicken, chicks, threshold=0):
         return list(filter(lambda chick: chicken.stoken.balance_of(chick.account) > threshold, chicks))
 
+    def is_pre_chicken_in_phase(self, chicken, chicks):
+        return len(self.get_chicks_with_stoken(chicken, chicks)) == 0
+
     def get_bond_cap(self, bond_amount, pol_ratio):
         if pol_ratio == 0:
             return 999999999
@@ -219,24 +219,29 @@ class TesterSimpleToll(TesterInterface):
     def get_pol_ratio(self, chicken):
         return chicken.get_pol_ratio_no_amm()
 
-    def get_reserve_ratio(self, chicken):
-        return chicken.get_reserve_ratio_no_amm()
-
     def get_optimal_apr_chicken_in_time(self, chicken):
-        """
-        p = self.get_premium(chicken)
-        r = self.get_pol_ratio(chicken)
-        if p == 0:
-            return 0
-        return (r + math.sqrt(r * (r+p))) / p
-        """
+        # market/fair price
         m = self.get_stoken_spot_price(chicken)
+        # backing ratio
         r = self.get_pol_ratio(chicken)
+        # accrual param
         u = self.accrual_param
-        if m <= r:
+        # market/fair price with tax applied
+        t = (1 - self.chicken_in_amm_tax) * m
+
+        if t <= r:
             return ITERATIONS
 
-        chicken_in_time = u * (r + math.sqrt((1 - self.chicken_in_amm_tax) * r * m)) / ((1 - self.chicken_in_amm_tax) * m - r)
+        """
+        print(f"fair price:    {m:,.2f}")
+        print(f"backing ratio: {r:,.2f}")
+        print(f"accrual param: {u:,.2f}")
+        print(f"reduced p_f:   {t:,.2f}")
+        """
+
+        chicken_in_time = u * (r + math.sqrt(t * r)) / (t - r)
+
+        assert chicken_in_time > 0
 
         return min(ITERATIONS, chicken_in_time)
 
@@ -299,7 +304,24 @@ class TesterSimpleToll(TesterInterface):
     def get_yield_amount(self, base_amount, yield_percentage):
         return base_amount * ((1 + yield_percentage) ** (1 / TIME_UNITS_PER_YEAR) - 1)
 
+    # Special case before the first chicken in (actually, when sTOKEN supply is zero)
+    # to avoid giving advantage to the first one
+    def distribute_yield_pre_chicken_in(self, chicken, chicks, iteration):
+        # Reserve generated yield
+        generated_yield = self.get_yield_amount(chicken.reserve_token_balance(), self.external_yield)
+        if generated_yield == 0:
+            return
+
+        chicken.token.mint(chicken.pol_account, generated_yield)
+        chicken.stoken.mint(chicken.pol_account, generated_yield/2)
+
+        #print(f"Yield to AMM: {generated_yield/2:,.2f}")
+        chicken.stoken_amm.add_liquidity(chicken.pol_account, generated_yield/2, generated_yield/2)
+        return
+
     def distribute_yield(self, chicken, chicks, iteration):
+        if self.is_pre_chicken_in_phase(chicken, chicks):
+            return self.distribute_yield_pre_chicken_in(chicken, chicks, iteration)
         # Reserve generated yield
         generated_yield = self.get_yield_amount(chicken.reserve_token_balance(), self.external_yield)
 
@@ -532,17 +554,19 @@ class TesterSimpleToll(TesterInterface):
         from scipy.special import lambertw
         stoken_spot_price = self.get_stoken_spot_price(chicken)
         pol_ratio = self.get_pol_ratio(chicken)
-        if stoken_spot_price == 0 or pol_ratio >= stoken_spot_price:
+        reduced_spot_price = (1 - self.chicken_in_amm_tax) * stoken_spot_price
+        if stoken_spot_price == 0 or pol_ratio >= reduced_spot_price:
             #print(f"stoken price:     {stoken_spot_price}")
             #print(f"redemption price: {pol_ratio}")
             return ITERATIONS
 
-        w = lambertw(math.exp(1) * pol_ratio / stoken_spot_price).real
+        w = lambertw(math.exp(1) * pol_ratio / reduced_spot_price).real
         rebond_time = w / (1 - w)
         """
         print("")
         print(f"stoken price:     {stoken_spot_price}")
         print(f"redemption price: {pol_ratio}")
+        print(f"price with tax:   {reduced_spot_price}")
         print(f"lambda:           {stoken_spot_price/pol_ratio}")
         print(f"lambertW:         {w}")
         print(f"\033[34mrebond_time:      {rebond_time:,.2f}\033[0m")
@@ -689,7 +713,8 @@ class TesterSimpleToll(TesterInterface):
             print(f"new ratio:        {(chick.bond_amount - 2*amm_token_amount) / claimable_amount:,.2f}")
         """
 
-        if chick.rebonder:
+        # if for some reason bond amount goes below lower limit, it’s better to do a regular chicken in and start over
+        if chick.rebonder and chick.bond_amount > BOND_AMOUNT[0]:
             # Rebond
             #print("\n \033[33m--> Rebonding!\033[0m")
             new_chicken_in = self.rebond(chicken, chick, claimable_amount, iteration)

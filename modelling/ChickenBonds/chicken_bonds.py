@@ -54,14 +54,11 @@ def main(tester):
 
     print(f"\n  --> Model: {tester.name}")
     print('  ------------------------------------------------------\n')
-    log_state(chicken, chicks, tester, LOG_LEVEL)
+    log_state(chicken, chicks, tester, LOG_LEVEL, 0)
 
     tester.init(chicks)
 
     for iteration in range(ITERATIONS):
-        #print(f"\n\033[31m  --> Iteration {iteration}")
-        #print("  -------------------\033[0m\n")
-
         natural_rate = tester.get_natural_rate(natural_rate, iteration)
         chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(chicken.stoken_amm, accrued_fees_A, accrued_fees_B)
         chicken.amm_average_apr = get_amm_average_apr(data, iteration)
@@ -83,7 +80,7 @@ def main(tester):
         controller_output = controller.feed(TARGET_AVERAGE_AGE - avg_age)
         tester.set_accrual_param(controller_output)
 
-        log_state(chicken, chicks, tester, LOG_LEVEL)
+        log_state(chicken, chicks, tester, LOG_LEVEL, iteration)
 
         new_row = state_to_row(
             chicken,
@@ -107,7 +104,7 @@ def main(tester):
     else:
         plot_interval[1] = ITERATIONS
 
-    log_state(chicken, chicks, tester, 1)
+    log_state(chicken, chicks, tester, 1, 'END')
 
     plot_charts(
         chicken,

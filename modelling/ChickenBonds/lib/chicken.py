@@ -43,17 +43,6 @@ class Chicken():
         amm_value = self.amm.get_value_in_token_A_of(self.pol_account)
         return (self.pol_token_balance() + amm_value) / self.stoken.total_supply
 
-    def get_reserve_ratio_no_amm(self):
-        if self.stoken.total_supply == 0:
-            return 1
-        return self.reserve_token_balance() / self.stoken.total_supply
-
-    def get_reserve_ratio_with_amm(self):
-        if self.stoken.total_supply == 0:
-            return 1
-        amm_value = self.amm.get_value_in_token_A_of(self.pol_account)
-        return (self.reserve_token_balance() + amm_value) / self.stoken.total_supply
-
     def bond(self, user, amount, target_profit, iteration):
         assert user.bond_amount == 0
         self.token.transfer(user.account, self.coop_account, amount)

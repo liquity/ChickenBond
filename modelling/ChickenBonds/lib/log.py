@@ -15,7 +15,6 @@ def log_system(chicken, tester):
     print(f" - {stoken.symbol} supply:               {stoken.total_supply:,.2f}")
     if stoken.total_supply > 0:
         print(f" - Backing ratio (| no AMM): {chicken.get_pol_ratio_with_amm():,.2f}   |   {chicken.get_pol_ratio_no_amm():,.2f}")
-        print(f" - Reserve ratio (| no AMM): {chicken.get_reserve_ratio_with_amm():,.2f}   |   {chicken.get_reserve_ratio_no_amm():,.2f}")
 
     print("")
     print(f"Fair price:      {tester.get_fair_price(chicken):,.2f}")
@@ -71,9 +70,11 @@ def log_chicks(chicken, chicks, tokens):
         log_chick_balances(chicken, chick)
     return
 
-def log_state(chicken, chicks, tester, log_level=1):
+def log_state(chicken, chicks, tester, log_level=1, iteration=0):
     if log_level == 0:
         return
+    print(f"\n\033[31m  --> Iteration {iteration}")
+    print("  -------------------\033[0m\n")
     log_system(chicken, tester)
     log_amm(chicken)
     log_stoken_amm(chicken)
