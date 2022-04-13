@@ -1,6 +1,6 @@
 from functools import reduce
 
-def log_system(chicken):
+def log_system(chicken, tester):
     token = chicken.token
     stoken = chicken.stoken
     coop_bal = chicken.coop_token_balance()
@@ -9,31 +9,60 @@ def log_system(chicken):
     print(f"")
     print("Chicken Bonds state")
     #print(f" - Outstanding debt: {chicken.outstanding_debt:,.2f}")
-    print(f" - Coop {token.symbol}:       {coop_bal:,.2f}")
-    print(f" - POL {token.symbol}:        {pol_bal:,.2f}")
-    print(f" - AMM {token.symbol} value:  {amm_value:,.2f}")
-    print(f" - {stoken.symbol} supply:    {stoken.total_supply:,.2f}")
+    print(f" - Pending {token.symbol}:               {coop_bal:,.2f}")
+    print(f" - Acquired {token.symbol}:              {pol_bal:,.2f}")
+    print(f" - Permanent (DEX) {token.symbol} value: {amm_value:,.2f}")
+    print(f" - {stoken.symbol} supply:               {stoken.total_supply:,.2f}")
     if stoken.total_supply > 0:
-        print(f" - POL ratio     (| no AMM): {(pol_bal + amm_value) / stoken.total_supply:,.2f}   |   {pol_bal / stoken.total_supply:,.2f}")
-        print(f" - Reserve ratio (| no AMM): {(coop_bal + pol_bal + amm_value) / stoken.total_supply:,.2f}   |   {(coop_bal + pol_bal) / stoken.total_supply:,.2f}")
+        print(f" - Backing ratio (| no AMM): {chicken.get_pol_ratio_with_amm():,.2f}   |   {chicken.get_pol_ratio_no_amm():,.2f}")
+
+    print("")
+    print(f"Fair price:      {tester.get_fair_price(chicken):,.2f}")
+    print(f"Rebond Time:     {tester.get_rebond_time(chicken):,.2f}")
+    print(f"Chicken in Time: {tester.get_optimal_apr_chicken_in_time(chicken):,.2f}")
+    return
+
+def log_amm_pool(amm, name):
     print(f"")
-    print(f"AMM pool:")
-    print(f"{chicken.amm}")
+    print(f"{name} pool:")
+    print(f"{amm}")
+    return
+
+def log_amm(chicken):
+    log_amm_pool(chicken.amm, "AMM")
     print(f" - AMM APR: {chicken.amm_iteration_apr:.3%}")
-    print(f"")
+    return
+
+def log_stoken_amm(chicken):
+    log_amm_pool(chicken.stoken_amm, "sTOKEN AMM")
     return
 
 def log_chick_balances(chicken, chick):
     token_bal = chicken.token.balance_of(chick.account)
     stoken_bal = chicken.stoken.balance_of(chick.account)
     stoken_value = chicken.stoken.balance_of(chick.account) * chicken.amm.get_token_B_price()
+    amm_value = chicken.stoken_amm.get_value_in_token_A_of(chick.account)
+    print("")
     print(f"User {chick.account}:")
-    print(f" - {chicken.token.symbol} balance: {token_bal:,.2f}")
-    print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
+    print(f" - {chicken.token.symbol} balance:  {token_bal:,.2f}")
+    print(f" - {chicken.token.symbol} bonded:   {chick.bond_amount:,.2f}")
     print(f" - {chicken.stoken.symbol} balance: {stoken_bal:,.2f}")
     print(f" - {chicken.stoken.symbol} value:   {stoken_value:,.2f}")
-    print(f" - Total value: {token_bal + chick.bond_amount + stoken_value:,.2f}")
+    print(f" - AMM value:     {amm_value:,.2f}")
+    print(f" - Total value: {token_bal + chick.bond_amount + stoken_value + amm_value:,.2f}")
+    return
+
+def log_stoken_balances(chicken, chicks):
+    chicks.sort(key = lambda c: c.account)
     print("")
+    print(f"{chicken.stoken.symbol} balances:")
+    total_stoken = 0
+    for chick in chicks:
+        chick_bal = chicken.stoken.balance_of(chick.account)
+        if chick_bal > 0:
+            print(f"{chick.account}: {chick_bal:,.2f}")
+        total_stoken = total_stoken + chick_bal
+    print(f"Total : {total_stoken:,.2f}")
     return
 
 def log_chicks(chicken, chicks, tokens):
@@ -41,9 +70,14 @@ def log_chicks(chicken, chicks, tokens):
         log_chick_balances(chicken, chick)
     return
 
-def log_state(chicken, chicks, log_level=1):
+def log_state(chicken, chicks, tester, log_level=1, iteration=0):
     if log_level == 0:
         return
-    log_system(chicken)
+    print(f"\n\033[31m  --> Iteration {iteration}")
+    print("  -------------------\033[0m\n")
+    log_system(chicken, tester)
+    log_amm(chicken)
+    log_stoken_amm(chicken)
     #log_chicks(chicken, chicks)
+    print("")
     return

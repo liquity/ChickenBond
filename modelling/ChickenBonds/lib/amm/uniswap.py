@@ -16,7 +16,8 @@ class UniswapPool(AmmInterface):
     def add_liquidity(self, account, token_A_amount, max_token_B_amount):
         total_liquidity = self.get_total_liquidity()
         if total_liquidity == 0: # initial liquidity
-            assert token_A_amount > 1.0
+            #print(f"token_A_amount: {token_A_amount:,.2f}")
+            assert token_A_amount > 0.1
 
             self.token_A.transfer(account, self.pool_account, token_A_amount)
             self.token_B.transfer(account, self.pool_account, max_token_B_amount)
@@ -37,13 +38,41 @@ class UniswapPool(AmmInterface):
             self.lp_token.mint(account, liquidity_minted)
         return
 
+    """
     def add_liquidity_single_A(self, account, token_A_amount, max_slippage):
         # TODO: Max slippage
         token_A_pol = self.token_A_balance()
-        amount_to_add = token_A_pol + token_A_amount - sqrt(token_A_pol * (token_A_pol + token_A_amount))
+        amount_to_add = token_A_pol + token_A_amount - math.sqrt(token_A_pol * (token_A_pol + token_A_amount))
         amount_to_swap = token_A_amount - amount_to_add
         token_B_amount = self.swap_A_for_B(account, amount_to_swap)
         return self.add_liquidity(account, amount_to_add, token_B_amount)
+    """
+
+    def add_liquidity_single_A(self, account, token_A_amount, max_slippage):
+        initial_value_in_A = self.get_value_in_token_A()
+        assert initial_value_in_A > 0
+        total_liquidity = self.get_total_liquidity()
+
+        self.token_A.transfer(account, self.pool_account, token_A_amount)
+
+        final_value_in_A = self.get_value_in_token_A()
+        liquidity_minted = final_value_in_A * total_liquidity / initial_value_in_A
+
+        self.lp_token.mint(account, liquidity_minted)
+        return
+
+    def add_liquidity_single_B(self, account, token_B_amount, max_slippage):
+        initial_value_in_B = self.get_value_in_token_B()
+        assert initial_value_in_B > 0
+        total_liquidity = self.get_total_liquidity()
+
+        self.token_B.transfer(account, self.pool_account, token_B_amount)
+
+        final_value_in_B = self.get_value_in_token_B()
+        liquidity_minted = final_value_in_B * total_liquidity / initial_value_in_B
+
+        self.lp_token.mint(account, liquidity_minted)
+        return
 
     def get_output_amount(self, input_token_balance, output_token_balance, input_amount, D=None):
         if input_amount == 0.0:

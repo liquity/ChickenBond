@@ -75,13 +75,18 @@ const Tooltip = ({ datum, text, style, ...props }: VictoryTooltipProps) => (
 const seriesMax = (series?: Array<{ x: number; y: number | null }>) =>
   series?.reduce((a, b) => Math.max(Math.abs(b.y ?? a), a), 0.1) ?? 0.1;
 
-const numSamples = 201;
+const numSamples = 366;
 const range = [...Array(numSamples).keys()];
 
 const rightAxisOptions = {
   roi: {
     name: "Return on Investment",
     label: "ROI"
+  },
+
+  apr: {
+    name: "Annual Percentage Rate",
+    label: "APR"
   },
 
   arr: {
@@ -115,7 +120,7 @@ const defaultMktDeviationPct = 0;
 const defaultNaturalRatePct = 0;
 const defaultBond = 100;
 
-const defaultFToll = `p => k => 1 - k / (k + ${range[range.length - 1] / 8} * p)`;
+const defaultFCurve = `p => k => k / (k + 60)`;
 const defaultFFairPremiumPct = `k => ${defaultFairPremiumPct}`;
 const defaultFMktDeviationPct = `k => ${defaultMktDeviationPct}`;
 const defaultFNaturalRatePct = `k => ${defaultNaturalRatePct}`;
@@ -129,7 +134,7 @@ const App = () => {
   const [naturalRatePctInput, setNaturalRatePctInput] = useState(`${defaultNaturalRatePct}`);
   const [fNaturalRatePctInput, setFNaturalRatePctInput] = useState(`${defaultFNaturalRatePct}`);
   const [bondInput, setBondInput] = useState(`${defaultBond}`);
-  const [fTollInput, setFTollInput] = useState(`${defaultFToll}`);
+  const [fCurveInput, setFCurveInput] = useState(`${defaultFCurve}`);
   const [useFunctions, setUseFunctions] = useState(false);
   const [rightAxis, setRightAxis] = useState<RightAxis>("arr");
   const [revertDummy, revert] = useReducer(() => ({}), {});
@@ -143,7 +148,7 @@ const App = () => {
     setNaturalRatePctInput(`${defaultNaturalRatePct}`);
     setFNaturalRatePctInput(`${defaultFNaturalRatePct}`);
     setBondInput(`${defaultBond}`);
-    setFTollInput(`${defaultFToll}`);
+    setFCurveInput(`${defaultFCurve}`);
     setUseFunctions(false);
   }, [revertDummy]);
 
@@ -222,11 +227,11 @@ const App = () => {
 
     try {
       // eslint-disable-next-line no-new-func
-      const f = new Function("k", `"use strict"; return ${fTollInput};`)()(p);
+      const f = new Function("k", `"use strict"; return ${fCurveInput};`)()(p);
 
-      return range.map(x => ({ x, y: f(x) }));
+      return range.map(x => ({ x, y: 1 - f(x) }));
     } catch {}
-  }, [fTollInput, fairPremiumSeries]);
+  }, [fCurveInput, fairPremiumSeries]);
 
   const capSeries = useMemo(() => {
     if (isNaN(bond) || !polRatioSeries || !fairPremiumSeries || !mktDeviationSeries) {
@@ -263,6 +268,17 @@ const App = () => {
     }));
   }, [bond, payoutSeries]);
 
+  const aprSeries = useMemo(() => {
+    if (!roiSeries) {
+      return undefined;
+    }
+
+    return roiSeries.map(({ x, y: roi }) => ({
+      x,
+      y: x !== 0 ? roi * (range[range.length - 1] / x) : -1 / 0
+    }));
+  }, [roiSeries]);
+
   const arrSeries = useMemo(() => {
     if (!roiSeries) {
       return undefined;
@@ -276,6 +292,7 @@ const App = () => {
 
   const rightAxisMap: { [k: string]: Series } = {
     roi: roiSeries,
+    apr: aprSeries?.filter(({ y }) => y >= -1),
     arr: arrSeries,
     toll: tollSeries
   };
@@ -289,6 +306,7 @@ const App = () => {
 
   const percent = (y: number) => `${Math.round((y * 10000) / scale) / 100}%`;
 
+  const maxApr = aprSeries?.reduce((a, b) => (a.y > b.y ? a : b));
   const maxArr = arrSeries?.reduce((a, b) => (a.y > b.y ? a : b));
 
   return (
@@ -328,11 +346,11 @@ const App = () => {
                 onChange={e => setBondInput(e.target.value)}
               />
 
-              <Label sx={{ mt: 3 }}>Toll Curve</Label>
+              <Label sx={{ mt: 3 }}>Accrual Curve</Label>
               <Textarea
                 sx={!tollSeries ? { bg: "pink" } : {}}
-                value={fTollInput}
-                onChange={e => setFTollInput(e.target.value)}
+                value={fCurveInput}
+                onChange={e => setFCurveInput(e.target.value)}
               />
             </Box>
 
@@ -436,7 +454,7 @@ const App = () => {
             containerComponent={
               <VictoryVoronoiContainer
                 voronoiDimension="x"
-                voronoiBlacklist={["maxArr"]}
+                voronoiBlacklist={["maxApr", "maxArr"]}
                 labels={({ datum }) =>
                   `${datum.childName}: ${
                     rightAxisLabelSet.has(datum.childName)
@@ -465,6 +483,25 @@ const App = () => {
             <VictoryAxis />
             <VictoryAxis dependentAxis />
             <VictoryAxis dependentAxis orientation="right" tickFormat={percent} />
+
+            {maxApr && (
+              <VictoryLine
+                name="maxApr"
+                style={{
+                  data: { strokeWidth: 1, stroke: "rgb(144, 164, 174)", strokeDasharray: "5,5" },
+                  labels: { fontWeight: "bold" }
+                }}
+                labels={[`Max APR ≈ ${Math.round(maxApr.y * 10000) / 100}%`]}
+                labelComponent={
+                  <VictoryLabel
+                    y={rightAxis === "toll" ? 458 : 430} // XXX
+                    dx={maxApr.x < range[range.length - 1] * 0.75 ? 5 : -5}
+                    textAnchor={maxApr.x < range[range.length - 1] * 0.75 ? "start" : "end"}
+                  />
+                }
+                x={() => maxApr.x}
+              />
+            )}
 
             {maxArr && (
               <VictoryLine

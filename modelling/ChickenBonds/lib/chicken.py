@@ -1,7 +1,8 @@
 from lib.amm.uniswap import *
+from lib.amm.amm_mock_price import *
 
 class Chicken():
-    def __init__(self, coll_token, token, stoken, coop_account, pol_account, amm_account, amm_fee):
+    def __init__(self, coll_token, token, stoken, coop_account, pol_account, amm_account, amm_fee, stoken_amm_account, stoken_amm_fee):
         self.coll_token = coll_token
         self.token = token
         self.stoken = stoken
@@ -9,9 +10,10 @@ class Chicken():
         self.coop_account = coop_account
         self.pol_account = pol_account
 
-        self.amm = UniswapPool(amm_account, token, stoken, amm_fee)
+        self.amm = UniswapPool(amm_account, token, coll_token, amm_fee)
         #self.amm = ConstantPricePool(amm_account, token, stoken, amm_fee)
         #self.amm = StableSwapPool(amm_account, token, stoken, amm_fee, amplification_factor)
+        self.stoken_amm = AmmMockPrice(stoken_amm_account, token, stoken, stoken_amm_fee)
 
         self.amm_iteration_apr = 0.0
         self.amm_average_apr = 0.0
@@ -28,6 +30,18 @@ class Chicken():
 
     def reserve_token_balance(self):
         return self.coop_token_balance() + self.pol_token_balance()
+
+    def get_pol_ratio_no_amm(self):
+        if self.stoken.total_supply == 0:
+            return 1
+        return self.pol_token_balance() / self.stoken.total_supply
+
+    def get_pol_ratio_with_amm(self):
+        if self.stoken.total_supply == 0:
+            return 1
+
+        amm_value = self.amm.get_value_in_token_A_of(self.pol_account)
+        return (self.pol_token_balance() + amm_value) / self.stoken.total_supply
 
     def bond(self, user, amount, target_profit, iteration):
         assert user.bond_amount == 0
