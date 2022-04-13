@@ -299,25 +299,7 @@ contract ChickenBondManager is Ownable {
         return curvePool.get_dy_underlying(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
     }
 
-    /* Placeholder functions for calculating LUSD to shift to/from Curve. They currently shift 10% of the acquired LUSD in the source pool
-    * to the destination pool.
-    * 
-    * TODO: replace with logic that calculates the LUSD quantity to shift based on a resulting Curve spot price that does not cross the 
-    boundary price of 1. Requires mathematical formula for quantity based on price (i.e. rearrange Curve spot price formula)
-    *
-    * Simple alternative:  make the outer shift function revert if the resulting LUSD spot price on Curve has crossed the boundary.
-    * Advantage: reduces complexity / bug surface area, and moves the burden of a correct LUSD quantity calculation to the front-end.
-    */
-    function _calcLUSDToShiftToCurve() public view returns (uint256) {
-        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
-        return  _getAcquiredLUSDInYearn(lusdInYearn) / 10;
-    }
-
-    function _calcLUSDToShiftToSP() public view returns (uint256) {
-        return getAcquiredLUSDInCurve() / 10;
-    }
-
-     // TODO: Determine the basis for the redemption fee formula. 5% constant fee is a placeholder.
+    // TODO: Determine the basis for the redemption fee formula. 5% constant fee is a placeholder.
     function calcRedemptionFeePercentage() public pure returns (uint256) {
         return 5e16;
     }
