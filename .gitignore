@@ -1,5 +1,9 @@
-cache/
-out/
+# Editor temp files
+*~
+
+# macOS Finder attribute files
+.DS_Store
+
 .idea
 *.aux
 *.log
