@@ -4,14 +4,18 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 
 contract ChickenBondManagerTest is BaseTest {
+    uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
 
     // --- Helpers ---
 
-    function createBondForUser(address _user, uint256 _bondAmount) public {
+    function createBondForUser(address _user, uint256 _bondAmount) public returns (uint256) {
         vm.startPrank(_user);
         lusdToken.approve(address(chickenBondManager), _bondAmount);
         chickenBondManager.createBond(_bondAmount);
         vm.stopPrank();
+
+        // bond ID
+        return bondNFT.totalMinted();
     }
 
     function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
@@ -21,6 +25,23 @@ contract ChickenBondManagerTest is BaseTest {
         lusdToken.approve(address(curvePool), _lusdDeposit);
         curvePool.add_liquidity([_lusdDeposit, 0], 0);
         vm.stopPrank();
+    }
+
+    function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
+    }
+
+    function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
+    }
+
+    function _calcAccruedSLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio) internal view returns (uint256) {
+        uint256 bondSLUSDCap = _lusdAmount * 1e18 / _backingRatio;
+
+        uint256 bondDuration = (block.timestamp - _startTime);
+
+        // TODO: replace with final sLUSD accrual formula. */
+        return bondSLUSDCap * bondDuration / (bondDuration + SECONDS_IN_ONE_MONTH);
     }
 
     // --- Tests ---
@@ -996,6 +1017,49 @@ contract ChickenBondManagerTest is BaseTest {
         bondNFT.ownerOf(B_bondID);
     }
 
+    function testChickenInChargesTax() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_startTime = block.timestamp;
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // B creates bond
+        uint256 B_startTime = block.timestamp;
+        uint256 B_bondID = createBondForUser(B, bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // B chickens in
+        vm.startPrank(B);
+        uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
+        chickenBondManager.chickenIn(B_bondID);
+        vm.stopPrank();
+
+        // check rewards contract has received rewards
+        assertEq(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), _getTaxForAmount(bondAmount), "Wrong tax diverted to rewards contract");
+        // check accrued amount is reduced by tax
+        assertApproximatelyEqual(sLUSDToken.balanceOf(B), _getTaxedAmount(_calcAccruedSLUSD(B_startTime, bondAmount, backingRatio)), 1000, "Wrong tax applied to B");
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // A chickens in
+        vm.startPrank(A);
+        backingRatio = chickenBondManager.calcSystemBackingRatio();
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // check rewards contract has received rewards
+        assertEq(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), 2 * _getTaxForAmount(bondAmount), "Wrong tax diverted to rewards contract");
+        // check accrued amount is reduced by tax
+        assertApproximatelyEqual(sLUSDToken.balanceOf(A), _getTaxedAmount(_calcAccruedSLUSD(A_startTime, bondAmount, backingRatio)), 1000, "Wrong tax applied to A");
+    }
+
     function testChickenInRevertsWhenCallerIsNotABonder() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -1327,7 +1391,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testRedeemChargesRedemptionFee() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 ROUNDING_ERROR = 1000;
+        uint256 ROUNDING_ERROR = 2000;
 
        createBondForUser(A, bondAmount);
 
@@ -1411,8 +1475,8 @@ contract ChickenBondManagerTest is BaseTest {
         vm.expectRevert("ERC20: burn amount exceeds balance");
         chickenBondManager.redeem(B_sLUSDBalance + 1);
 
-        /* Reverts on transfer rather than burn, since it tries to redeem more than the total SLUSD supply, and therefore tries 
-        * to withdraw more LUSD than is held by the system */
+        // Reverts on transfer rather than burn, since it tries to redeem more than the total SLUSD supply, and therefore tries
+        // to withdraw more LUSD than is held by the system
         // TODO: Fix. Seems to revert with no reason string (or not catch it)?
         // vm.expectRevert("ERC20: transfer amount exceeds balance");
         // chickenBondManager.redeem(B_sLUSDBalance + sLUSDToken.totalSupply());
@@ -1844,8 +1908,8 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        /* Put some 3CRV in Curve, so that the subsequent SP->Curve shift can move enough LUSD to Curve without crossing 
-        the 1.0 price boundary */
+        // Put some 3CRV in Curve, so that the subsequent SP->Curve shift can move enough LUSD to Curve without crossing
+        // the 1.0 price boundary
         uint256 _3crvDeposit = 300_000_000e18;
         tip(address(_3crvToken), D, _3crvDeposit);
         assertGe(_3crvToken.balanceOf(D), _3crvDeposit);

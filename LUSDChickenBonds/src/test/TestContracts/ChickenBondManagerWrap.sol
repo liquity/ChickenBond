@@ -14,7 +14,9 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             address _yearnLUSDVaultAddress,
             address _yearnCurveVaultAddress,
             address _sLUSDTokenAddress,
-            address _yearnRegistryAddress
+            address _yearnRegistryAddress,
+            address _sLUSDLPRewardsStaking,
+            uint256 _CHICKEN_IN_AMM_TAX
         )
         ChickenBondManager(
             _bondNFTAddress,
@@ -23,7 +25,9 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             _yearnLUSDVaultAddress,
             _yearnCurveVaultAddress,
             _sLUSDTokenAddress,
-            _yearnRegistryAddress
+            _yearnRegistryAddress,
+            _sLUSDLPRewardsStaking,
+            _CHICKEN_IN_AMM_TAX
         )
     {}
 

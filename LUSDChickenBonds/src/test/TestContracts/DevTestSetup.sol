@@ -10,6 +10,7 @@ import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
 import "./LUSDTokenTester.sol";
 
+
 contract DevTestSetup is BaseTest {
     function setUp() public {
         // Start tests at a non-zero timestamp
@@ -60,7 +61,11 @@ contract DevTestSetup is BaseTest {
 
         // TODO: choose conventional name and symbol for NFT contract 
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
-        
+
+        // Deploy LUSD/sLUSD AMM LP Rewards staking contract
+        IERC20 uniToken = new ERC20("Uniswap LP Token", "UNI"); // mock Uniswap LP token
+        sLUSDLPRewardsStaking = new Unipool(address(lusdToken), address(uniToken));
+
         chickenBondManager = new ChickenBondManagerWrap(
             address(bondNFT),
             address(lusdToken), 
@@ -68,7 +73,9 @@ contract DevTestSetup is BaseTest {
             address(yearnLUSDVault),
             address(yearnCurveVault),
             address(sLUSDToken),
-            address(yearnRegistry)
+            address(yearnRegistry),
+            address(sLUSDLPRewardsStaking),
+            CHICKEN_IN_AMM_TAX
         );
 
         bondNFT.setAddresses(address(chickenBondManager));

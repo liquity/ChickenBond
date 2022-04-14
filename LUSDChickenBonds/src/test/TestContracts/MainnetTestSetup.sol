@@ -5,6 +5,8 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
+import "uniswapV2/interfaces/IUniswapV2Factory.sol";
+
 
 contract MainnetTestSetup is BaseTest {
     // Mainnet addresses
@@ -15,6 +17,7 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
+    address constant MAINNET_UNISWAP_V2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
     uint256 constant MAINNET_PINNED_BLOCK =  1648476300; 
 
@@ -58,7 +61,12 @@ contract MainnetTestSetup is BaseTest {
 
         // TODO: choose conventional name and symbol for NFT contract 
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
-       
+
+        // Deploy LUSD/sLUSD AMM LP Rewards staking contract
+        IUniswapV2Factory uniswapV2Factory = IUniswapV2Factory(MAINNET_UNISWAP_V2_FACTORY_ADDRESS);
+        address uniswapPairAddress = uniswapV2Factory.createPair(address(lusdToken), address(sLUSDToken));
+        sLUSDLPRewardsStaking = new Unipool(address(lusdToken), uniswapPairAddress);
+
         chickenBondManager = new ChickenBondManagerWrap(
             address(bondNFT),
             address(lusdToken), 
@@ -66,7 +74,9 @@ contract MainnetTestSetup is BaseTest {
             address(yearnLUSDVault),
             address(yearnCurveVault),
             address(sLUSDToken),
-            address(yearnRegistry)
+            address(yearnRegistry),
+            address(sLUSDLPRewardsStaking),
+            CHICKEN_IN_AMM_TAX
         );
 
         bondNFT.setAddresses(address(chickenBondManager));
