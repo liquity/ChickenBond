@@ -8,7 +8,7 @@ import "../../../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
 import "../../SLUSDToken.sol";
 import "../../BondNFT.sol"; 
-import "../../ChickenBondManager.sol";
+import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/ICurvePool.sol";
 import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
@@ -17,7 +17,7 @@ contract BaseTest is DSTest, stdCheats {
     Accounts accounts;
 
     // Core ChickenBond contracts
-    ChickenBondManager chickenBondManager;
+    ChickenBondManagerWrap chickenBondManager;
     BondNFT bondNFT;
     SLUSDToken sLUSDToken;
     

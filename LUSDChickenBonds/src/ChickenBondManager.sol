@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "./utils/ChickenMath.sol";
 
 import "./Interfaces/IBondNFT.sol";
 import "./console.sol";
@@ -13,7 +14,7 @@ import "./Interfaces/IYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
 import "./Interfaces/IYearnRegistry.sol";
 
-contract ChickenBondManager is Ownable {
+contract ChickenBondManager is Ownable, ChickenMath {
 
     // ChickenBonds contracts
     IBondNFT public bondNFT;
@@ -35,12 +36,32 @@ contract ChickenBondManager is Ownable {
     }
 
     uint256 public totalPendingLUSD;
+    uint256 public lastRedemptionTime; // The timestamp of the latest redemption
+    uint256 public baseRedemptionRate; // The latest base redemption rate
     mapping (uint256 => BondData) public idToBondData;
 
     uint256 constant MAX_UINT256 = type(uint256).max;
     uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
     int128 constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0; 
     int128 constant INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL = 1;
+
+    uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
+    /*
+     * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
+     * Corresponds to (1 / ALPHA) in the Liquity white paper.
+     */
+    uint256 constant public BETA = 2;
+    /*
+     * TODO:
+     * Half-life of 12h. 12h = 720 min
+     * (1/2) = d^720 => d = (1/2)^(1/720)
+     */
+    uint256 constant public MINUTE_DECAY_FACTOR = 999037758833783000;
+
+    // --- events ---
+
+    event BaseRedemptionRateUpdated(uint256 _baseRedemptionRate);
+    event LastRedemptionTimeUpdated(uint256 _lastRedemptionFeeOpTime);
 
     // --- constructor ---
 
@@ -187,7 +208,10 @@ contract ChickenBondManager is Ownable {
         Current approach leaves redemption fees in the acquired bucket. */
         uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
         // Calculate redemption fraction to withdraw, given that we leave the fee inside the system
-        uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - calcRedemptionFeePercentage()) / 1e18;
+        uint256 redemptionFeePercentage = calcRedemptionFeePercentage();
+        uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
+        // Increase redemption base rate with the new redeemed amount
+        _updateRedemptionRateAndTime(redemptionFeePercentage, fractionOfSLUSDToRedeem);
 
         // Get the LUSD to withdraw from Yearn, and the corresponding yTokens
         uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
@@ -299,9 +323,33 @@ contract ChickenBondManager is Ownable {
         return curvePool.get_dy_underlying(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
     }
 
-    // TODO: Determine the basis for the redemption fee formula. 5% constant fee is a placeholder.
-    function calcRedemptionFeePercentage() public pure returns (uint256) {
-        return 5e16;
+    // Update the base redemption rate and the last redemption time (only if time passed >= decay interval. This prevents base rate griefing)
+    function _updateRedemptionRateAndTime(uint256 _decayedBaseRedemptionRate, uint256 _fractionOfSLUSDToRedeem) internal {
+        // Update the baseRate state variable
+        uint256 newBaseRedemptionRate = _decayedBaseRedemptionRate + _fractionOfSLUSDToRedeem / BETA;
+        newBaseRedemptionRate = Math.min(newBaseRedemptionRate, DECIMAL_PRECISION); // cap baseRate at a maximum of 100%
+        //assert(newBaseRedemptionRate <= DECIMAL_PRECISION); // This is already enforced in the line above
+        baseRedemptionRate = newBaseRedemptionRate;
+        emit BaseRedemptionRateUpdated(newBaseRedemptionRate);
+
+        uint256 timePassed = block.timestamp - lastRedemptionTime;
+
+        if (timePassed >= SECONDS_IN_ONE_MINUTE) {
+            lastRedemptionTime = block.timestamp;
+            emit LastRedemptionTimeUpdated(block.timestamp);
+        }
+    }
+
+    // Calc decayed redemption rate
+    function calcRedemptionFeePercentage() public view returns (uint256) {
+        uint256 minutesPassed = _minutesPassedSinceLastRedemption();
+        uint256 decayFactor = decPow(MINUTE_DECAY_FACTOR, minutesPassed);
+
+        return baseRedemptionRate * decayFactor / DECIMAL_PRECISION;
+    }
+
+    function _minutesPassedSinceLastRedemption() internal view returns (uint256) {
+        return (block.timestamp - lastRedemptionTime) / SECONDS_IN_ONE_MINUTE;
     }
 
     // Internal getter for calculating accrued LUSD based on BondData struct
