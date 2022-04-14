@@ -19,7 +19,9 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             uint256 _initialAccrualParameter,
             uint256 _minimumAccrualParameter,
             uint256 _accrualAdjustmentRate,
-            uint256 _accrualAdjustmentPeriodSeconds
+            uint256 _accrualAdjustmentPeriodSeconds,
+            address _sLUSDLPRewardsStaking,
+            uint256 _CHICKEN_IN_AMM_TAX
         )
         ChickenBondManager(
             _bondNFTAddress,
@@ -33,7 +35,9 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             _initialAccrualParameter,
             _minimumAccrualParameter,
             _accrualAdjustmentRate,
-            _accrualAdjustmentPeriodSeconds
+            _accrualAdjustmentPeriodSeconds,
+            _sLUSDLPRewardsStaking,
+            _CHICKEN_IN_AMM_TAX
         )
     {}
 
