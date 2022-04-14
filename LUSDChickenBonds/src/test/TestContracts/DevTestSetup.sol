@@ -61,7 +61,7 @@ contract DevTestSetup is BaseTest {
         // TODO: choose conventional name and symbol for NFT contract 
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
         
-        chickenBondManager = new ChickenBondManager(
+        chickenBondManager = new ChickenBondManagerWrap(
             address(bondNFT),
             address(lusdToken), 
             address(curvePool),
