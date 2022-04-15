@@ -35,6 +35,12 @@ contract BaseTest is DSTest, stdCheats {
     address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
     address constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
 
+    uint256 constant SECONDS_IN_ONE_DAY = 24 * 60 * 60;
+    uint256 constant SECONDS_IN_ONE_MONTH = 30 * SECONDS_IN_ONE_DAY;
+
+    // Seconds in one month as an 18 digit fixed-point number
+    uint256 constant INITIAL_ACCRUAL_PARAMETER = SECONDS_IN_ONE_MONTH * 1e18;
+
     Vm vm = Vm(CHEATCODE_ADDRESS);
 
     uint256 MAX_UINT256 = type(uint256).max;

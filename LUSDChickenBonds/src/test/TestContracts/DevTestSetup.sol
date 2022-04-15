@@ -62,13 +62,17 @@ contract DevTestSetup is BaseTest {
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
         
         chickenBondManager = new ChickenBondManagerWrap(
-            address(bondNFT),
-            address(lusdToken), 
-            address(curvePool),
-            address(yearnLUSDVault),
-            address(yearnCurveVault),
-            address(sLUSDToken),
-            address(yearnRegistry)
+            address(bondNFT),          // _bondNFTAddress
+            address(lusdToken),        // _lusdTokenAddress
+            address(curvePool),        // _curvePoolAddress
+            address(yearnLUSDVault),   // _yearnLUSDVaultAddress
+            address(yearnCurveVault),  // _yearnCurveVaultAddress
+            address(sLUSDToken),       // _sLUSDTokenAddress
+            address(yearnRegistry),    // _yearnRegistryAddress
+            SECONDS_IN_ONE_MONTH,      // _targetAverageAgeSeconds
+            INITIAL_ACCRUAL_PARAMETER, // _initialAccrualParameter
+            0,                         // _accrualAdjustmentRate
+            SECONDS_IN_ONE_DAY         // _accrualAdjustmentPeriodSeconds
         );
 
         bondNFT.setAddresses(address(chickenBondManager));
