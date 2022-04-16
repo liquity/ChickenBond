@@ -299,7 +299,7 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.createBond(0);
     }
 
-    function testCreateBondDoesNotChangePermanentLUSDBucket() public {
+    function testCreateBondDoesNotChangePermanentBuckets() public {
         uint256 bondAmount = 10e18;
 
         uint256 permanentLUSDYTokens_1 = chickenBondManager.yTokensPermanentLUSDVault();
@@ -326,18 +326,18 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(bondNFT_A);
         vm.stopPrank();
 
-        // Check permanent buckets are now non-zero
         uint256 permanentLUSDYTokens_3 = chickenBondManager.yTokensPermanentLUSDVault();
         uint256 permanentCurveYTokens_3 = chickenBondManager.yTokensPermanentCurveVault();
+        // Check permanent LUSD Bucket is non-zero
         assertGt(permanentLUSDYTokens_3, 0);
-        assertGt(permanentCurveYTokens_3, 0);
+        // Check permanent Curve bucket has not changed 
+        assertEq(permanentCurveYTokens_3, permanentCurveYTokens_2);
 
         // C creates bond
         createBondForUser(C, bondAmount);
 
         uint256 permanentLUSDYTokens_4 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_4 = chickenBondManager.yTokensPermanentCurveVault();
-
+        
         // Check permament buckets have not changed from C's new bond
         assertEq(permanentLUSDYTokens_4, permanentLUSDYTokens_3);
         assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
@@ -550,120 +550,64 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenOut(B_bondID);
     }
 
-    function testChickenInIncreasesPermanentLUSDBucket() public {
-        // A, B create bond
+    function testChickenOutDoesNotChangePermanentBuckets() public {
+        // A creates bond
         uint256 bondAmount = 10e18;
 
         createBondForUser(A, bondAmount);
-        uint256 A_bondID = bondNFT.totalMinted();
+        uint256 bondID_A = bondNFT.totalMinted();
 
-        // fast forward time
+        // time passes
         vm.warp(block.timestamp + 7 days);
-
-        createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-
+       
+        // Get permanent buckets
         uint256 permanentLUSDYTokens_1 = chickenBondManager.yTokensPermanentLUSDVault();
-
-        // A chickens in
-        vm.startPrank(A);
-        chickenBondManager.chickenIn(A_bondID);
-        vm.stopPrank();
-
-        uint256 permanentLUSDYTokens_2 = chickenBondManager.yTokensPermanentLUSDVault();
-        assertGt(permanentLUSDYTokens_2, permanentLUSDYTokens_1);
-
-        // C creates bond
-        createBondForUser(C, bondAmount);
-        uint256 C_bondID = bondNFT.totalMinted();
-
-        // fast forward time
-        vm.warp(block.timestamp + 7 days);
-
-        uint256 permanentLUSDYTokens_3 = chickenBondManager.yTokensPermanentLUSDVault();
-
-        // B chickens in
-        vm.startPrank(B);
-        chickenBondManager.chickenIn(B_bondID);
-        vm.stopPrank();
-
-        // Check permanent LUSD bucket has increased
-        uint256 permanentLUSDYTokens_4 = chickenBondManager.yTokensPermanentLUSDVault();
-        assertGt(permanentLUSDYTokens_4, permanentLUSDYTokens_3);
-
-        // fast forward time
-        vm.warp(block.timestamp + 7 days);
-
-        // C chickens in
-        vm.startPrank(C);
-        chickenBondManager.chickenIn(B_bondID);
-        vm.stopPrank();
-
-        uint256 permanentLUSDYTokens_5 = chickenBondManager.yTokensPermanentLUSDVault();
-
-        // Check permanent LUSD bucket has increased
-        uint256 permanentLUSDYTokens_6 = chickenBondManager.yTokensPermanentLUSDVault();
-        assertGt(permanentLUSDYTokens_6, permanentLUSDYTokens_5);
-    }
-
-     function testChickenInDoesNotChangePermanentLUSDBucket() public {
-        // A, B create bond
-        uint256 bondAmount = 10e18;
-
-        createBondForUser(A, bondAmount);
-        uint256 A_bondID = bondNFT.totalMinted();
-
-        // fast forward time
-        vm.warp(block.timestamp + 7 days);
-
-        createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-
         uint256 permanentCurveYTokens_1 = chickenBondManager.yTokensPermanentCurveVault();
 
-        // A chickens in
+        // A chickens out
         vm.startPrank(A);
-        chickenBondManager.chickenIn(A_bondID);
+        chickenBondManager.chickenOut(bondID_A);
         vm.stopPrank();
-
-        // Check permanent Curve bucket has not changed
+       
+        // Check permanent buckets haven't changed
+        uint256 permanentLUSDYTokens_2 = chickenBondManager.yTokensPermanentLUSDVault();
         uint256 permanentCurveYTokens_2 = chickenBondManager.yTokensPermanentCurveVault();
+        assertEq(permanentLUSDYTokens_2, permanentLUSDYTokens_1);
         assertEq(permanentCurveYTokens_2, permanentCurveYTokens_1);
 
-        // C creates bond
+        // B, C create bond
+        createBondForUser(B, bondAmount);
+        uint256 bondID_B = bondNFT.totalMinted();
         createBondForUser(C, bondAmount);
-        uint256 C_bondID = bondNFT.totalMinted();
+        uint256 bondID_C = bondNFT.totalMinted();
 
-        // fast forward time
+        // time passes
         vm.warp(block.timestamp + 7 days);
-
-        uint256 permanentCurveYTokens_3 = chickenBondManager.yTokensPermanentCurveVault();
 
         // B chickens in
         vm.startPrank(B);
-        chickenBondManager.chickenIn(B_bondID);
+        chickenBondManager.chickenIn(bondID_B);
         vm.stopPrank();
 
-        // Check permanent Curve bucket has not changed
-        uint256 permanentCurveYTokens_4 = chickenBondManager.yTokensPermanentCurveVault();
-        assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
+        // Get permanent buckets, check > 0
+        uint256 permanentLUSDYTokens_3 = chickenBondManager.yTokensPermanentLUSDVault();
+        uint256 permanentCurveYTokens_3 = chickenBondManager.yTokensPermanentCurveVault();
+        // Check LUSD permanent bucket has increased
+        assertGt(permanentLUSDYTokens_3, 0);
+        // Check Curve permanent bucket still be 0
+        assertEq(permanentCurveYTokens_3, 0);
 
-        // fast forward time
-        vm.warp(block.timestamp + 7 days);
-
-        // C chickens in
+        // C chickens out
         vm.startPrank(C);
-        chickenBondManager.chickenIn(B_bondID);
+        chickenBondManager.chickenOut(bondID_C);
         vm.stopPrank();
 
-        uint256 permanentCurveYTokens_5 = chickenBondManager.yTokensPermanentCurveVault();
-
-        // Check permanent Curve bucket has not changed
-        uint256 permanentCurveYTokens_6 = chickenBondManager.yTokensPermanentCurveVault();
-        assertEq(permanentCurveYTokens_6, permanentCurveYTokens_5);
+        // Check permanent bucekt haven't changed
+        uint256 permanentLUSDYTokens_4 = chickenBondManager.yTokensPermanentLUSDVault();
+        uint256 permanentCurveYTokens_4 = chickenBondManager.yTokensPermanentCurveVault();
+        assertEq(permanentLUSDYTokens_4, permanentLUSDYTokens_3);
+        assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
     }
-
-
 
     // --- calcsLUSD Accrual tests ---
 
@@ -1235,6 +1179,119 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(A);
         vm.expectRevert("CBM: Caller must own the bond");
         chickenBondManager.chickenIn(B_bondID);
+    }
+
+     function testChickenInIncreasesPermanentLUSDBucket() public {
+        // A, B create bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        createBondForUser(B, bondAmount);
+        uint256 B_bondID = bondNFT.totalMinted();
+
+        uint256 permanentLUSDYTokens_1 = chickenBondManager.yTokensPermanentLUSDVault();
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        uint256 permanentLUSDYTokens_2 = chickenBondManager.yTokensPermanentLUSDVault();
+        assertGt(permanentLUSDYTokens_2, permanentLUSDYTokens_1);
+
+        // C creates bond
+        createBondForUser(C, bondAmount);
+        uint256 C_bondID = bondNFT.totalMinted();
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        uint256 permanentLUSDYTokens_3 = chickenBondManager.yTokensPermanentLUSDVault();
+
+        // B chickens in
+        vm.startPrank(B);
+        chickenBondManager.chickenIn(B_bondID);
+        vm.stopPrank();
+
+        // Check permanent LUSD bucket has increased
+        uint256 permanentLUSDYTokens_4 = chickenBondManager.yTokensPermanentLUSDVault();
+        assertGt(permanentLUSDYTokens_4, permanentLUSDYTokens_3);
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        uint256 permanentLUSDYTokens_5 = chickenBondManager.yTokensPermanentLUSDVault();
+
+        // C chickens in
+        vm.startPrank(C);
+        chickenBondManager.chickenIn(C_bondID);
+        vm.stopPrank();
+
+        // Check permanent LUSD bucket has increased
+        uint256 permanentLUSDYTokens_6 = chickenBondManager.yTokensPermanentLUSDVault();
+        assertGt(permanentLUSDYTokens_6, permanentLUSDYTokens_5);
+    }
+
+    function testChickenInDoesNotChangePermanentCurveBucket() public {
+        // A, B create bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        createBondForUser(B, bondAmount);
+        uint256 B_bondID = bondNFT.totalMinted();
+
+        uint256 permanentCurveYTokens_1 = chickenBondManager.yTokensPermanentCurveVault();
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // Check permanent Curve bucket has not changed
+        uint256 permanentCurveYTokens_2 = chickenBondManager.yTokensPermanentCurveVault();
+        assertEq(permanentCurveYTokens_2, permanentCurveYTokens_1);
+
+        // C creates bond
+        createBondForUser(C, bondAmount);
+        uint256 C_bondID = bondNFT.totalMinted();
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        uint256 permanentCurveYTokens_3 = chickenBondManager.yTokensPermanentCurveVault();
+
+        // B chickens in
+        vm.startPrank(B);
+        chickenBondManager.chickenIn(B_bondID);
+        vm.stopPrank();
+
+        // Check permanent Curve bucket has not changed
+        uint256 permanentCurveYTokens_4 = chickenBondManager.yTokensPermanentCurveVault();
+        assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        uint256 permanentCurveYTokens_5 = chickenBondManager.yTokensPermanentCurveVault();
+
+        // C chickens in
+        vm.startPrank(C);
+        chickenBondManager.chickenIn(C_bondID);
+        vm.stopPrank();
+
+        // Check permanent Curve bucket has not changed
+        uint256 permanentCurveYTokens_6 = chickenBondManager.yTokensPermanentCurveVault();
+        assertEq(permanentCurveYTokens_6, permanentCurveYTokens_5);
     }
 
     // --- redemption tests ---
