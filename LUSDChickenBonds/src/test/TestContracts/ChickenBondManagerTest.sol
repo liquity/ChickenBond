@@ -337,7 +337,8 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(C, bondAmount);
 
         uint256 permanentLUSDYTokens_4 = chickenBondManager.yTokensPermanentLUSDVault();
-        
+        uint256 permanentCurveYTokens_4 = chickenBondManager.yTokensPermanentCurveVault();
+
         // Check permament buckets have not changed from C's new bond
         assertEq(permanentLUSDYTokens_4, permanentLUSDYTokens_3);
         assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
@@ -899,7 +900,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_sLUSDBalanceAfter, B_sLUSDBalanceBefore + B_accruedSLUSD);
     }
 
-    function testChickenInIncreasesBondHolderLUSDBalance() public {
+    function testChickenInDoesNotChangeBondHolderLUSDBalance() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -920,9 +921,9 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
-        // Check B's LUSD balance has increased by correct amount
+        // Check B's sLUSD balance has increased by correct amount
         uint256 B_LUSDBalanceAfter = lusdToken.balanceOf(B);
-        assertGt(B_LUSDBalanceAfter, B_LUSDBalanceBefore);
+        assertEq(B_LUSDBalanceAfter, B_LUSDBalanceBefore);
     }
 
 
@@ -1527,9 +1528,9 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
-
+        // time passes
+        vm.warp(block.timestamp + 365 days);
+    
         // Confirm A's sLUSD balance is zero
         uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertTrue(A_sLUSDBalance == 0);
@@ -1551,27 +1552,39 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
         assertEq(sLUSDToken.totalSupply(), sLUSDToken.balanceOf(B));
 
+        console.log("A");
         // A shifts some LUSD from SP to Curve
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+<<<<<<< HEAD
 
+=======
+        console.log("B");
+>>>>>>> 1a0d591 (Enforce permanent:total ratio across SP->Curve shift)
         // Get acquired LUSD in Curve before
         uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 permanentLUSDInCurveBefore = chickenBondManager.getPermanentLUSDInCurve();
         assertGt(acquiredLUSDInCurveBefore, 0);
+<<<<<<< HEAD
 
+=======
+        assertGt(permanentLUSDInCurveBefore, 0);
+       
+>>>>>>> 1a0d591 (Enforce permanent:total ratio across SP->Curve shift)
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
         vm.startPrank(B);
         assertEq(sLUSDToRedeem, sLUSDToken.totalSupply() * redemptionFraction / 1e18);
         chickenBondManager.redeem(sLUSDToRedeem);
         vm.stopPrank();
-
+          console.log("C");
         // Check acquired LUSD in curve after has reduced by correct fraction
         uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
         uint256 expectedAcquiredLUSDInCurveAfter = acquiredLUSDInCurveBefore * fractionRemainingAfterRedemption / 1e18;
 
         assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1000);
     }
+    
 
     function testRedeemChargesRedemptionFee() public {
         // A creates bond
@@ -1968,7 +1981,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A creates bond
         uint256 bondAmount = 25e18;
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
@@ -1990,8 +2003,87 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(lusdInCurveAfter > lusdInCurveBefore);
     }
 
+    function testShiftLUSDFromSPToCurveChangesPermanentBucketsByTheSameAmount(uint256 bondAmount) public {
+        vm.assume(bondAmount < 1e24 && bondAmount > 1e18);
 
+        // A, B create bonds
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+        createBondForUser(B, bondAmount);
+        uint256 B_bondID = bondNFT.totalMinted();
+       
+        // time passes
+        vm.warp(block.timestamp + 30 days);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
 
+        // Get permanent LUSD in both pools before
+        uint256 permanentLUSDInCurve_1 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSDInYearn_1 = chickenBondManager.getPermanentLUSDInYearn();
+
+        // Shift 10% of LUSD in SP 
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
+        console.log(lusdToShift, "lusdToShift");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+
+        // Get permament LUSD in both pools after
+        uint256 permanentLUSDInCurve_2 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSDInYearn_2 = chickenBondManager.getPermanentLUSDInYearn();
+
+        // check SP permanent decrease approx == Curve permanent increase
+        uint256 permamentLUSDYearnDecrease_1 = permanentLUSDInYearn_1 - permanentLUSDInYearn_2;
+        uint256 permamentLUSDCurveIncrease_1 = permanentLUSDInCurve_2 - permanentLUSDInCurve_1;
+      
+        uint256 relativePermanentDelta = (permamentLUSDYearnDecrease_1 - permamentLUSDCurveIncrease_1) * 1e18 / permanentLUSDInYearn_1;
+
+        // Check that any discrepancy between the acquired SP decrease and the acquired Curve increase from shifting is <1% of 
+        // the initial permanent LUSD in the SP
+        // TODO: Why is this so high? Shifting Curve -> SP seems to somewhere lose up to 1% of the permanent bucket.
+        assertApproximatelyEqual(relativePermanentDelta, 0, 1e16);
+    }
+
+    function testShiftLUSDFromSPToCurveChangesAcquiredBucketsByTheSameAmount(uint256 bondAmount) public {
+        vm.assume(bondAmount < 1e24 && bondAmount > 1e18);
+
+        // A, B create bonds
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+        createBondForUser(B, bondAmount);
+        uint256 B_bondID = bondNFT.totalMinted();
+       
+        // time passes
+        vm.warp(block.timestamp + 30 days);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Get permanent LUSD in both pools before
+        uint256 acquiredLUSDInCurve_1 = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInYearn_1 = chickenBondManager.getAcquiredLUSDInYearn();
+
+        // Shift 10% of LUSD in SP 
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
+        console.log(lusdToShift, "lusdToShift");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+
+        // Get permament LUSD in both pools after
+        uint256 acquiredLUSDInCurve_2 = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInYearn_2 = chickenBondManager.getAcquiredLUSDInYearn();
+
+        // check SP permanent decrease approx == Curve permanent increase
+        uint256 acquiredLUSDYearnDecrease_1 = acquiredLUSDInYearn_1 - acquiredLUSDInYearn_2;
+        uint256 acquiredLUSDCurveIncrease_1 = acquiredLUSDInCurve_2 - acquiredLUSDInCurve_1;
+      
+        uint256 relativeAcquiredDelta = (acquiredLUSDYearnDecrease_1 - acquiredLUSDCurveIncrease_1) * 1e18 / acquiredLUSDInYearn_1;
+
+        // Check that any discrepancy between the acquired SP decrease and the acquired Curve increase from shifting is <0.01% of 
+        // the initial acquired LUSD in the SP
+        // TODO: Why is this so high? Shifting Curve -> SP seems to somewhere lose up to 1% of the permanent bucket.
+        assertApproximatelyEqual(relativeAcquiredDelta, 0, 1e14);
+    }
 
     // Actual Yearn and Curve balance tests
     // function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInYearnAndCurve() public {}
