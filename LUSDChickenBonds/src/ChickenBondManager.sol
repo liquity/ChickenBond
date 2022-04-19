@@ -210,7 +210,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         * withdraw the lesser of the two quantities. */
         uint256 lusdToWithdraw = Math.min(bond.lusdAmount, lusdInYearn);
 
-        uint256 yTokensToSwapForLUSD = calcYTokensToBurn(yearnLUSDVault, lusdToWithdraw, lusdInYearn);
+        uint256 yTokensToSwapForLUSD = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdraw, lusdInYearn);
 
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
         yearnLUSDVault.withdraw(yTokensToSwapForLUSD);
@@ -289,10 +289,10 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         assert ((lusdToAcquire + lusdToPermanent) <= taxedBondAmount);
 
-        uint256 yTokensToSwapForTaxLUSD = calcYTokensToBurn(yearnLUSDVault, taxAmount, lusdInYearn);
+        uint256 yTokensToSwapForTaxLUSD = calcCorrespondingYTokens(yearnLUSDVaultCached, taxAmount, lusdInYearn);
 
         // Record the yTokens that correspond to the permanent portion from this chicken-in. This implicitly decreases the acquired LUSD.
-        uint256 yTokensToPutInPermanent = calcYTokensToBurn(yearnLUSDVaultCached, lusdToPermanent, lusdInYearn);
+        uint256 yTokensToPutInPermanent = calcCorrespondingYTokens(yearnLUSDVaultCached, lusdToPermanent, lusdInYearn);
         yTokensPermanentLUSDVault += yTokensToPutInPermanent;
 
         sLUSDToken.mint(msg.sender, accruedSLUSD);
@@ -319,7 +319,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         uint256 lusd3CRVInCurve = calcTotalYearnCurveVaultShareValue();
       
         uint256 lusdToWithdrawFromYearn = _getAcquiredLUSDInYearn(lusdInYearn) * fractionOfAcquiredLUSDToWithdraw / 1e18;
-        uint256 yTokensToWithdrawFromLUSDVault = calcYTokensToBurn(yearnLUSDVault, lusdToWithdrawFromYearn, lusdInYearn);
+        uint256 yTokensToWithdrawFromLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdrawFromYearn, lusdInYearn);
         
         //  Since 100% of the Curve vault liquidity is "acquired + permanent", just get the acquired yTokens by subtracting permanent 
         uint256 yTokensAcquiredCurveVault = yearnCurveVault.balanceOf(address(this)) - yTokensPermanentCurveVault;
@@ -354,7 +354,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         require(initialCurveSpotPrice > 1e18, "CBM: Curve spot must be > 1.0 before SP->Curve shift");
 
         uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
-        uint256 yTokensToBurnFromLUSDVault = calcYTokensToBurn(yearnLUSDVault, _lusdToShift, lusdInYearn);
+        uint256 yTokensToBurnFromLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, _lusdToShift, lusdInYearn);
 
         /* Calculate and record the portion of yTokens burned from the permanent Yearn LUSD bucket, 
         assuming that burning yTokens decreases both the permanent and acquired Yearn LUSD buckets by the same factor. */
@@ -401,7 +401,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         //Calculate yTokens to swap for LUSD3CRV-f 
         uint256 LUSD3CRVfInYearn = calcTotalYearnCurveVaultShareValue();
-        uint256 yTokensToBurnFromCurveVault = calcYTokensToBurn(yearnCurveVault, LUSD3CRVfToBurn, LUSD3CRVfInYearn);
+        uint256 yTokensToBurnFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, LUSD3CRVfInYearn);
 
         /* Calculate and record the portion of yTokens burned from the permanent Yearn Curve bucket, 
         assuming that burning yTokens decreases both the permanent and acquired Yearn Curve buckets by the same factor. */
@@ -680,9 +680,10 @@ contract ChickenBondManager is Ownable, ChickenMath {
         return totalYTokensHeldByCBM * yearnCurveVault.pricePerShare() / 1e18;
     }
 
-    function calcYTokensToBurn(IYearnVault _yearnVault, uint256 _wantedTokenAmount, uint256 _tokensInVault) internal view returns (uint256) {
-        uint256 yTokensHeld = _yearnVault.balanceOf(address(this));
-        uint256 yTokensToBurn = yTokensHeld * _wantedTokenAmount / _tokensInVault;
+    // Returns the yTokens needed to make a partial withdrawal of the CBM's total vault deposit
+    function calcCorrespondingYTokens(IYearnVault _yearnVault, uint256 _wantedTokenAmount, uint256 _CBMTotalVaultDeposit) internal view returns (uint256) {
+        uint256 yTokensHeldByCBM = _yearnVault.balanceOf(address(this));
+        uint256 yTokensToBurn = yTokensHeldByCBM * _wantedTokenAmount / _CBMTotalVaultDeposit;
         return yTokensToBurn;
     }
 
