@@ -1552,7 +1552,6 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
         assertEq(sLUSDToken.totalSupply(), sLUSDToken.balanceOf(B));
 
-        console.log("A");
         // A shifts some LUSD from SP to Curve
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -1568,7 +1567,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(sLUSDToRedeem, sLUSDToken.totalSupply() * redemptionFraction / 1e18);
         chickenBondManager.redeem(sLUSDToRedeem);
         vm.stopPrank();
-          console.log("C");
+
         // Check acquired LUSD in curve after has reduced by correct fraction
         uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
         uint256 expectedAcquiredLUSDInCurveAfter = acquiredLUSDInCurveBefore * fractionRemainingAfterRedemption / 1e18;
@@ -2016,7 +2015,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Shift 10% of LUSD in SP 
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
-        console.log(lusdToShift, "lusdToShift");
+
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Get permament LUSD in both pools after
@@ -2057,7 +2056,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Shift 10% of LUSD in SP 
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
-        console.log(lusdToShift, "lusdToShift");
+       
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Get permament LUSD in both pools after
@@ -2539,7 +2538,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 permamentLUSDCurveDecrease_1 = permanentLUSDInCurve_1 - permanentLUSDInCurve_2;
       
         uint256 relativePermanentDelta = (permamentLUSDYearnIncrease_1 - permamentLUSDCurveDecrease_1) * 1e18 / permanentLUSDInYearn_1;
-        console.log(relativePermanentDelta, "relativePermanentDelta");
+       
         // Check that any discrepancy between the permanent SP decrease and the permanent Curve increase from shifting is <0.11% of 
         // the initial permanent LUSD in the SP
         // TODO: Why is this so high? Shifting Curve -> SP seems to somewhere lose up to 0.1% of the permanent bucket.
@@ -2601,7 +2600,6 @@ contract ChickenBondManagerTest is BaseTest {
       
         // Shifting Curve -> SP can sometimes actually lead to a small net increase in total acquired LUSD, so use abs() here
         uint256 relativeAcquiredDelta = abs(acquiredLUSDYearnIncrease_1, acquiredLUSDCurveDecrease_1) * 1e18 / acquiredLUSDInYearn_1;
-        console.log(relativeAcquiredDelta, "relativeAcquiredDelta");
 
         // Check that any discrepancy between the acquired SP decrease and the acquired Curve increase from shifting is 
         // < 1 billion'th of the initial acquired LUSD in the SP
