@@ -378,7 +378,6 @@ contract ChickenBondManager is Ownable, ChickenMath {
         uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
 
         // Deposit the received LUSD3CRV-f to Yearn Curve vault
-        uint256 yTokensForCurveVaultBeforeDeposit = yearnCurveVault.balanceOf(address(this));
         uint256 yTokensCurveVaultIncrease = yearnCurveVault.deposit(LUSD3CRVBalanceDelta);
 
         /* Calculate and record the portion of yTokens added to the the permanent Yearn Curve bucket, 
@@ -402,12 +401,18 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         //Calculate yTokens to swap for LUSD3CRV-f 
         uint256 LUSD3CRVfInYearn = calcTotalYearnCurveVaultShareValue();
-        uint256 yTokensToBurn = calcYTokensToBurn(yearnCurveVault, LUSD3CRVfToBurn, LUSD3CRVfInYearn);
+        uint256 yTokensToBurnFromCurveVault = calcYTokensToBurn(yearnCurveVault, LUSD3CRVfToBurn, LUSD3CRVfInYearn);
+
+        /* Calculate and record the portion of yTokens burned from the permanent Yearn Curve bucket, 
+        assuming that burning yTokens decreases both the permanent and acquired Yearn Curve buckets by the same factor. */
+        uint256 ratioPermanentToTotal = yTokensPermanentCurveVault * 1e18 / yearnCurveVault.balanceOf(address(this));
+        uint256 permanentYTokensBurned = yTokensToBurnFromCurveVault * ratioPermanentToTotal / 1e18;
+        yTokensPermanentCurveVault -= permanentYTokensBurned;
 
         // Convert yTokens to LUSD3CRV-f
         uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
 
-        yearnCurveVault.withdraw(yTokensToBurn);
+        yearnCurveVault.withdraw(yTokensToBurnFromCurveVault);
         uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
 
         // Assertion should hold in principle. In practice, there is usually minor rounding error
@@ -424,12 +429,20 @@ contract ChickenBondManager is Ownable, ChickenMath {
         // assert(lusdBalanceDelta == lusdToShift);
 
         // Deposit the received LUSD to Yearn LUSD vault
-        yearnLUSDVault.deposit(lusdBalanceDelta);
+        uint256 yTokensLUSDVaultIncrease = yearnLUSDVault.deposit(lusdBalanceDelta);
+
+        /* Calculate and record the portion of yTokens added to the the permanent Yearn Curve bucket, 
+        assuming that receipt of yTokens increases both the permanent and acquired Yearn Curve buckets by the same factor. */
+        uint256 permanentYTokensLUSDIncrease = yTokensLUSDVaultIncrease * ratioPermanentToTotal / 1e18;
+        yTokensPermanentLUSDVault += permanentYTokensLUSDIncrease;
 
         // Ensure the Curve->SP shift has increased the Curve spot price to not more than 1.0
         uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(finalCurveSpotPrice > initialCurveSpotPrice && finalCurveSpotPrice <=  1e18, "CBM: Curve->SP shift must increase spot price to <= 1.0");
+<<<<<<< HEAD
 
+=======
+>>>>>>> 2d28b28 (Add permament bucket to Curve->SP shifter)
     }
 
     // --- Helper functions ---

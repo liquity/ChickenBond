@@ -1556,21 +1556,12 @@ contract ChickenBondManagerTest is BaseTest {
         // A shifts some LUSD from SP to Curve
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
-<<<<<<< HEAD
-
-=======
-        console.log("B");
->>>>>>> 1a0d591 (Enforce permanent:total ratio across SP->Curve shift)
         // Get acquired LUSD in Curve before
         uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
         uint256 permanentLUSDInCurveBefore = chickenBondManager.getPermanentLUSDInCurve();
         assertGt(acquiredLUSDInCurveBefore, 0);
-<<<<<<< HEAD
-
-=======
         assertGt(permanentLUSDInCurveBefore, 0);
        
->>>>>>> 1a0d591 (Enforce permanent:total ratio across SP->Curve shift)
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
         vm.startPrank(B);
@@ -2038,7 +2029,7 @@ contract ChickenBondManagerTest is BaseTest {
       
         uint256 relativePermanentDelta = (permamentLUSDYearnDecrease_1 - permamentLUSDCurveIncrease_1) * 1e18 / permanentLUSDInYearn_1;
 
-        // Check that any discrepancy between the acquired SP decrease and the acquired Curve increase from shifting is <1% of 
+        // Check that any discrepancy between the permanent SP decrease and the permanent Curve increase from shifting is <1% of 
         // the initial permanent LUSD in the SP
         // TODO: Why is this so high? Shifting Curve -> SP seems to somewhere lose up to 1% of the permanent bucket.
         assertApproximatelyEqual(relativePermanentDelta, 0, 1e16);
@@ -2492,6 +2483,129 @@ contract ChickenBondManagerTest is BaseTest {
         // Check LUSD in Curve Decreases
         uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
         assertTrue(acquiredLUSDInCurveAfter < acquiredLUSDInCurveBefore);
+    }
+
+    function testShiftLUSDFromCurveToSPChangesPermanentBucketsByTheSameAmount(uint256 bondAmount) public {
+        vm.assume(bondAmount < 1e24 && bondAmount > 1e18);
+
+        // A, B create bonds
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+        createBondForUser(B, bondAmount);
+        uint256 B_bondID = bondNFT.totalMinted();
+       
+        // time passes
+        vm.warp(block.timestamp + 30 days);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // check total acquired LUSD > 0
+        uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
+
+        // Get permanent LUSD in both pools before
+        uint256 permanentLUSDInCurve_1 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSDInYearn_1 = chickenBondManager.getPermanentLUSDInYearn();
+
+        // Shift 10% of acqired LUSD in Curve 
+        lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10;
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
+
+        // Get permament LUSD in both pools after
+        uint256 permanentLUSDInCurve_2 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSDInYearn_2 = chickenBondManager.getPermanentLUSDInYearn();
+
+        // check SP permanent decrease approx == Curve permanent increase
+        uint256 permamentLUSDYearnIncrease_1 = permanentLUSDInYearn_2 - permanentLUSDInYearn_1;
+        uint256 permamentLUSDCurveDecrease_1 = permanentLUSDInCurve_1 - permanentLUSDInCurve_2;
+      
+        uint256 relativePermanentDelta = (permamentLUSDYearnIncrease_1 - permamentLUSDCurveDecrease_1) * 1e18 / permanentLUSDInYearn_1;
+        console.log(relativePermanentDelta, "relativePermanentDelta");
+        // Check that any discrepancy between the permanent SP decrease and the permanent Curve increase from shifting is <0.11% of 
+        // the initial permanent LUSD in the SP
+        // TODO: Why is this so high? Shifting Curve -> SP seems to somewhere lose up to 0.1% of the permanent bucket.
+        assertApproximatelyEqual(relativePermanentDelta, 0, 1e15);
+    }
+
+    function testShiftLUSDFromCurveToSPChangesAcquiredBucketsByTheSameAmount(uint256 bondAmount) public {
+        vm.assume(bondAmount < 1e24 && bondAmount > 1e18);
+
+        // A, B create bonds
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+        createBondForUser(B, bondAmount);
+        uint256 B_bondID = bondNFT.totalMinted();
+       
+        // time passes
+        vm.warp(block.timestamp + 30 days);
+      
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // check total acquired LUSD > 0
+        uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertTrue(totalAcquiredLUSD > 0);
+
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, 2000_000_000e18); // C deposits 200m LUSD
+        curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertLt(curveSpotPrice, 1e18);
+
+        // Get acquired LUSD in both pools before
+        uint256 acquiredLUSDInCurve_1 = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInYearn_1 = chickenBondManager.getAcquiredLUSDInYearn();
+
+        // Shift 10% of acqired LUSD in Curve 
+        lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10;
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
+
+        // Get permament LUSD in both pools after
+        uint256 acquiredLUSDInCurve_2 = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInYearn_2 = chickenBondManager.getAcquiredLUSDInYearn();
+
+        // check SP permanent decrease approx == Curve permanent increase
+        uint256 acquiredLUSDYearnIncrease_1 = acquiredLUSDInYearn_2 - acquiredLUSDInYearn_1;
+        uint256 acquiredLUSDCurveDecrease_1 = acquiredLUSDInCurve_1 - acquiredLUSDInCurve_2;
+      
+        // Shifting Curve -> SP can sometimes actually lead to a small net increase in total acquired LUSD, so use abs() here
+        uint256 relativeAcquiredDelta = abs(acquiredLUSDYearnIncrease_1, acquiredLUSDCurveDecrease_1) * 1e18 / acquiredLUSDInYearn_1;
+        console.log(relativeAcquiredDelta, "relativeAcquiredDelta");
+
+        // Check that any discrepancy between the acquired SP decrease and the acquired Curve increase from shifting is 
+        // < 1 billion'th of the initial acquired LUSD in the SP
+        assertApproximatelyEqual(relativeAcquiredDelta, 0, 1e9);
     }
 
     // Actual Yearn and Curve balance tests
