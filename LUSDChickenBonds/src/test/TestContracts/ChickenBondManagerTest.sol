@@ -1324,6 +1324,64 @@ contract ChickenBondManagerTest is BaseTest {
         assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1000);
     }
 
+    function testRedeemChargesRedemptionFee() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+        uint256 ROUNDING_ERROR = 1000;
+
+       createBondForUser(A, bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // Confirm A's sLUSD balance is zero
+        uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance == 0);
+
+        uint256 A_bondID = bondNFT.totalMinted();
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's sLUSD balance is non-zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        uint256 B_LUSDBalanceBefore = lusdToken.balanceOf(B);
+        uint256 backingRatio0 = chickenBondManager.calcSystemBackingRatio();
+
+        //assertEq(chickenBondManager.getTotalAcquiredLUSD(), sLUSDToken.totalSupply());
+        assertEq(chickenBondManager.calcRedemptionFeePercentage(), 0);
+        // B redeems
+        uint256 sLUSDToRedeem = sLUSDBalance / 2;
+        vm.startPrank(B);
+        chickenBondManager.redeem(sLUSDToRedeem);
+
+        uint256 B_LUSDBalanceAfter1 = lusdToken.balanceOf(B);
+        uint256 backingRatio1 = chickenBondManager.calcSystemBackingRatio();
+
+        // Check B's LUSD Balance has increased by exactly redemption amount:
+        // backing ratio was 1, and redemption fee was still zero
+        assertTrue(isMaxError(B_LUSDBalanceAfter1 - B_LUSDBalanceBefore, sLUSDToRedeem, ROUNDING_ERROR));
+        assertTrue(isMaxError(backingRatio0, backingRatio1, ROUNDING_ERROR));
+
+        // B redeems again
+        chickenBondManager.redeem(sLUSDToRedeem);
+        uint256 B_LUSDBalanceAfter2 = lusdToken.balanceOf(B);
+        uint256 backingRatio2 = chickenBondManager.calcSystemBackingRatio();
+        // Check B's LUSD Balance has increased by less than redemption amount
+        // backing ratio was 1, but redemption fee was non zero
+        assertTrue(!isMaxError(B_LUSDBalanceAfter2 - B_LUSDBalanceAfter2, sLUSDToRedeem, ROUNDING_ERROR));
+        // Now backing ratio should have increased
+        assertTrue(!isMaxError(backingRatio1, backingRatio2, ROUNDING_ERROR));
+    }
+
     function testRedeemRevertsWhenCallerHasInsufficientSLUSD() public {
         // A creates bond
         uint256 bondAmount = 10e18;
