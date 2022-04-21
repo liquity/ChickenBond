@@ -12,10 +12,9 @@ import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/ICurvePool.sol";
 import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import "./TestHelpers.sol";
 
 
-contract BaseTest is DSTest, stdCheats, TestHelpers {
+contract BaseTest is DSTest, stdCheats {
     Accounts accounts;
 
     // Core ChickenBond contracts
@@ -58,6 +57,11 @@ contract BaseTest is DSTest, stdCheats, TestHelpers {
     function assertApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin) public {
         uint256 diff = abs(_x, _y);
         assertLe(diff, _margin);
+    }
+
+    function assertNotApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin) public {
+        uint256 diff = abs(_x, _y);
+        assertGt(diff, _margin);
     }
 
     function assertGeAndWithinRange(uint256 _x, uint256 _y, uint _margin) public {
