@@ -1368,8 +1368,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Check B's LUSD Balance has increased by exactly redemption amount:
         // backing ratio was 1, and redemption fee was still zero
-        assertTrue(isMaxError(B_LUSDBalanceAfter1 - B_LUSDBalanceBefore, sLUSDToRedeem, ROUNDING_ERROR));
-        assertTrue(isMaxError(backingRatio0, backingRatio1, ROUNDING_ERROR));
+        assertApproximatelyEqual(B_LUSDBalanceAfter1 - B_LUSDBalanceBefore, sLUSDToRedeem, ROUNDING_ERROR);
+        assertApproximatelyEqual(backingRatio0, backingRatio1, ROUNDING_ERROR);
 
         // B redeems again
         chickenBondManager.redeem(sLUSDToRedeem);
@@ -1377,9 +1377,9 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 backingRatio2 = chickenBondManager.calcSystemBackingRatio();
         // Check B's LUSD Balance has increased by less than redemption amount
         // backing ratio was 1, but redemption fee was non zero
-        assertTrue(!isMaxError(B_LUSDBalanceAfter2 - B_LUSDBalanceAfter2, sLUSDToRedeem, ROUNDING_ERROR));
+        assertNotApproximatelyEqual(B_LUSDBalanceAfter2 - B_LUSDBalanceAfter2, sLUSDToRedeem, ROUNDING_ERROR);
         // Now backing ratio should have increased
-        assertTrue(!isMaxError(backingRatio1, backingRatio2, ROUNDING_ERROR));
+        assertNotApproximatelyEqual(backingRatio1, backingRatio2, ROUNDING_ERROR);
     }
 
     function testRedeemRevertsWhenCallerHasInsufficientSLUSD() public {
