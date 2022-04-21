@@ -17,6 +17,7 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             address _yearnRegistryAddress,
             uint256 _targetAverageAgeSeconds,
             uint256 _initialAccrualParameter,
+            uint256 _minimumAccrualParameter,
             uint256 _accrualAdjustmentRate,
             uint256 _accrualAdjustmentPeriodSeconds
         )
@@ -30,6 +31,7 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             _yearnRegistryAddress,
             _targetAverageAgeSeconds,
             _initialAccrualParameter,
+            _minimumAccrualParameter,
             _accrualAdjustmentRate,
             _accrualAdjustmentPeriodSeconds
         )

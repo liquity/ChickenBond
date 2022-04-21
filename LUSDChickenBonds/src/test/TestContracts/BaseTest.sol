@@ -40,6 +40,8 @@ contract BaseTest is DSTest, stdCheats {
 
     // Seconds in one month as an 18 digit fixed-point number
     uint256 constant INITIAL_ACCRUAL_PARAMETER = SECONDS_IN_ONE_MONTH * 1e18;
+    uint256 constant MINIMUM_ACCRUAL_PARAMETER = INITIAL_ACCRUAL_PARAMETER / 1000;
+    uint256 constant ACCRUAL_ADJUSTMENT_RATE = 1e16; // 1% (0.01)
 
     Vm vm = Vm(CHEATCODE_ADDRESS);
 

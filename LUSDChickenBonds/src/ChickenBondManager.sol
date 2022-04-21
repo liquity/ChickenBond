@@ -66,6 +66,9 @@ contract ChickenBondManager is Ownable, ChickenMath {
     // Average outstanding bond age above which the controller will adjust `accrualParameter` in order to speed up accrual.
     uint256 public immutable targetAverageAgeSeconds;
 
+    // Stop adjusting `accrualParameter` when this value is reached.
+    uint256 public immutable minimumAccrualParameter;
+
     // Number between 0 and 1. `accrualParameter` is multiplied by this every time there's an adjustment.
     uint256 public immutable accrualAdjustmentMultiplier;
 
@@ -99,6 +102,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         address _yearnRegistryAddress,
         uint256 _targetAverageAgeSeconds,
         uint256 _initialAccrualParameter,
+        uint256 _minimumAccrualParameter,
         uint256 _accrualAdjustmentRate,
         uint256 _accrualAdjustmentPeriodSeconds
     )
@@ -114,6 +118,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         deploymentTimestamp = block.timestamp;
         targetAverageAgeSeconds = _targetAverageAgeSeconds;
         accrualParameter = _initialAccrualParameter;
+        minimumAccrualParameter = _minimumAccrualParameter;
         accrualAdjustmentMultiplier = 1e18 - _accrualAdjustmentRate;
         accrualAdjustmentPeriodSeconds = _accrualAdjustmentPeriodSeconds;
     
@@ -434,6 +439,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
         if (
             // There hasn't been enough time since the last update to warrant another update
             updatedAccrualAdjustmentCount == _storedAccrualAdjustmentCount ||
+            // or `accrualParameter` is already bottomed-out
+            _storedAccrualParameter == minimumAccrualParameter ||
             // or there are no outstanding bonds (avoid division by zero)
             totalPendingLUSD == 0
         ) {
@@ -456,7 +463,10 @@ contract ChickenBondManager is Ownable, ChickenMath {
             adjustmentCountWhenTargetIsExceeded - 1
         );
 
-        updatedAccrualParameter = _storedAccrualParameter * decPow(accrualAdjustmentMultiplier, numberOfAdjustments) / 1e18;
+        updatedAccrualParameter = Math.max(
+            _storedAccrualParameter * decPow(accrualAdjustmentMultiplier, numberOfAdjustments) / 1e18,
+            minimumAccrualParameter
+        );
     }
 
     function _updateAccrualParameter() internal returns (uint256) {

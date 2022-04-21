@@ -71,7 +71,8 @@ contract DevTestSetup is BaseTest {
             address(yearnRegistry),    // _yearnRegistryAddress
             SECONDS_IN_ONE_MONTH,      // _targetAverageAgeSeconds
             INITIAL_ACCRUAL_PARAMETER, // _initialAccrualParameter
-            0,                         // _accrualAdjustmentRate
+            MINIMUM_ACCRUAL_PARAMETER, // _minimumAccrualParameter
+            ACCRUAL_ADJUSTMENT_RATE,   // _accrualAdjustmentRate
             SECONDS_IN_ONE_DAY         // _accrualAdjustmentPeriodSeconds
         );
 
