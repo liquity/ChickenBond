@@ -17,16 +17,16 @@ import "./Interfaces/IYearnRegistry.sol";
 contract ChickenBondManager is Ownable, ChickenMath {
 
     // ChickenBonds contracts
-    IBondNFT public bondNFT;
+    IBondNFT immutable public bondNFT;
 
-    ISLUSDToken public sLUSDToken;
-    ILUSDToken public lusdToken;
+    ISLUSDToken immutable public sLUSDToken;
+    ILUSDToken immutable public lusdToken;
 
     // External contracts
-    ICurvePool curvePool;
-    IYearnVault yearnLUSDVault;
-    IYearnVault yearnCurveVault;
-    IYearnRegistry yearnRegistry;
+    ICurvePool immutable public curvePool;
+    IYearnVault immutable public yearnLUSDVault;
+    IYearnVault immutable public yearnCurveVault;
+    IYearnRegistry immutable public yearnRegistry;
 
     // --- Data structures ---
 
@@ -40,6 +40,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
     uint256 public baseRedemptionRate; // The latest base redemption rate
     mapping (uint256 => BondData) public idToBondData;
 
+    // constants
     uint256 constant MAX_UINT256 = type(uint256).max;
     uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
     int128 constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0; 
