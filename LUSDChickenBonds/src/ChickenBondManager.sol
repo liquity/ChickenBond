@@ -366,7 +366,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     // --- Helper functions ---
 
-    function _getCurveLUSDSpotPrice() public returns (uint256) {
+    function _getCurveLUSDSpotPrice() public view returns (uint256) {
         // Get the Curve spot price of LUSD: the amount of 3CRV that would be received by swapping 1 LUSD
         return curvePool.get_dy_underlying(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
     }
