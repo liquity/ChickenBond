@@ -471,13 +471,11 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     function calcAccruedSLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
-        uint lusdInYearn = calcYearnLUSDVaultShareValue();
-        return _calcAccruedSLUSD(bond, _calcSystemBackingRatio(lusdInYearn));
+        return _calcAccruedSLUSD(bond, calcSystemBackingRatio());
     }
 
     function calcBondSLUSDCap(uint256 _bondID) external view returns (uint256) {
-        uint lusdInYearn = calcYearnLUSDVaultShareValue();
-        uint256 backingRatio = _calcSystemBackingRatio(lusdInYearn);
+        uint256 backingRatio = calcSystemBackingRatio();
        
         BondData memory bond = idToBondData[_bondID];
 
@@ -494,8 +492,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
         return _getAcquiredLUSDInYearn(lusdInYearn);
     }
 
-    function calcSystemBackingRatio() external view returns (uint256) {
-        uint lusdInYearn = calcYearnLUSDVaultShareValue();
+    function calcSystemBackingRatio() public view returns (uint256) {
+        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
         return _calcSystemBackingRatio(lusdInYearn);
     }
 }
