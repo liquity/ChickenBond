@@ -263,15 +263,11 @@ contract ChickenBondManager is Ownable, ChickenMath {
         BondData memory bond = idToBondData[_bondID];
         (uint256 taxAmount, uint256 taxedBondAmount) = _getTaxedBond(bond.lusdAmount);
 
-<<<<<<< HEAD
         if (sLUSDToken.totalSupply() == 0) {
             _firstChickenIn();
         }
 
-        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
-=======
         uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
->>>>>>> 3ac8278 (Implement permanent bucket)
         uint256 backingRatio = _calcSystemBackingRatio(lusdInYearn);
         uint256 accruedSLUSD = _calcAccruedSLUSD(bond.startTime, taxedBondAmount, backingRatio, updatedAccrualParameter);
         IYearnVault yearnLUSDVaultCached = yearnLUSDVault;
@@ -648,13 +644,14 @@ contract ChickenBondManager is Ownable, ChickenMath {
     }
 
     function getAcquiredLUSDInCurve() public view returns (uint256) {
-        uint256 permanentLUSDInCurve = getPermanentLUSDInCurve();
+        uint256 permanentLUSD3CRVInYearn = yTokensPermanentCurveVault * yearnCurveVault.pricePerShare() / 1e18;
         uint256 lusd3CRVInYearn = calcTotalYearnCurveVaultShareValue();
+       
         uint256 acquiredLUSDInCurve;
 
         // Get the LUSD value of the LUSD-3CRV tokens 
-        if (lusd3CRVInYearn > permanentLUSDInCurve) {
-            acquiredLUSDInCurve = curvePool.calc_withdraw_one_coin((lusd3CRVInYearn - permanentLUSDInCurve), INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL);
+        if (lusd3CRVInYearn > permanentLUSD3CRVInYearn) {
+            acquiredLUSDInCurve = curvePool.calc_withdraw_one_coin((lusd3CRVInYearn - permanentLUSD3CRVInYearn), INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL);
         }
 
         return acquiredLUSDInCurve;
@@ -665,7 +662,15 @@ contract ChickenBondManager is Ownable, ChickenMath {
     }
 
     function getPermanentLUSDInCurve() public view returns (uint256) {
-        return yTokensPermanentCurveVault * yearnCurveVault.pricePerShare() / 1e18;
+        uint256 permanentLUSD3CRVInYearn = yTokensPermanentCurveVault * yearnCurveVault.pricePerShare() / 1e18;
+        
+        uint256 permanentLUSDInCurve;
+        
+        if (permanentLUSD3CRVInYearn > 0) {
+            permanentLUSDInCurve = curvePool.calc_withdraw_one_coin(permanentLUSD3CRVInYearn, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL);
+        }
+        
+        return permanentLUSDInCurve;
     }
 
     // Calculates the LUSD value of this contract's Yearn LUSD Vault yTokens held by the ChickenBondManager
@@ -739,9 +744,17 @@ contract ChickenBondManager is Ownable, ChickenMath {
         return _getTotalAcquiredLUSD(lusdInYearn);
     }
 
-    function getAcquiredLUSDInYearn() external view returns (uint256) {
+    function getAcquiredLUSDInYearn() public view returns (uint256) {
         uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
         return _getAcquiredLUSDInYearn(lusdInYearn);
+    }
+
+    function getOwnedLUSDInSP() external view returns (uint256) {
+        return getAcquiredLUSDInYearn() + getPermanentLUSDInYearn();
+    }
+
+    function getOwnedLUSDInCurve() external view returns (uint256) {
+        return getAcquiredLUSDInCurve() + getPermanentLUSDInCurve();
     }
 
     function calcSystemBackingRatio() public view returns (uint256) {

@@ -34,6 +34,7 @@ contract BaseTest is DSTest, stdCheats {
     IUnipool sLUSDLPRewardsStaking;
 
     address yearnGovernanceAddress;
+    address liquitySPAddress;
 
     uint256 CHICKEN_IN_AMM_TAX = 1e16; // 1%
 
@@ -145,5 +146,8 @@ contract BaseTest is DSTest, stdCheats {
 
     function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
         return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
+    
+    function diffOrZero(uint256 x, uint256 y) public pure returns (uint256) {
+        return x > y ? x - y : 0;
     }
 }

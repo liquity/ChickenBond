@@ -11,6 +11,7 @@ import  "../../ExternalContracts/MockCurvePool.sol";
 contract MainnetTestSetup is BaseTest {
     // Mainnet addresses
     address constant MAINNET_LUSD_TOKEN_ADDRESS = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
+    address constant MAINNET_LIQUITY_SP_ADDRESS = 0x66017D22b0f8556afDd19FC67041899Eb65a21bb;
     address constant MAINNET_3CRV_TOKEN_ADDRESS = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
     address constant MAINNET_YEARN_LUSD_VAULT_ADDRESS = 0x378cb52b00F9D0921cb46dFc099CFf73b42419dC;
     address constant MAINNET_YEARN_CURVE_VAULT_ADDRESS = 0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6;
@@ -55,6 +56,7 @@ contract MainnetTestSetup is BaseTest {
         yearnRegistry = IYearnRegistry(MAINNET_YEARN_REGISTRY_ADDRESS);
 
         yearnGovernanceAddress = MAINNET_YEARN_GOVERNANCE_ADDRESS;
+        liquitySPAddress = MAINNET_LIQUITY_SP_ADDRESS;
 
         // Deploy core ChickenBonds system
         sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
