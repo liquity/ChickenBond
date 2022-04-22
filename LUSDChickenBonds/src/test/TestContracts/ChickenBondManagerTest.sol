@@ -1869,10 +1869,6 @@ contract ChickenBondManagerTest is BaseTest {
         depositLUSDToCurveForUser(C, lusdAmount); // deposit 200m LUSD
         curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertLt(curveSpotPrice, 1e18);
-    
-
-        uint256 lusdInYearn = chickenBondManager.getAcquiredLUSDInYearn();
-        uint256 lusdInCurve = chickenBondManager.getAcquiredLUSDInCurve();
 
         // Now, attempt to shift the same amount, which would raise the price back above 1.0, and expect it to fail
         vm.expectRevert("CBM: Curve->SP shift must increase spot price to <= 1.0");
@@ -2428,7 +2424,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 1e6);
 
         // Check CBM yTokens 5 == CBM yTokens 6
-         uint256 CBMyTokensYearnLUSD_6 = yearnLUSDVault.balanceOf(address(chickenBondManager));
+        uint256 CBMyTokensYearnLUSD_6 = yearnLUSDVault.balanceOf(address(chickenBondManager));
         assertEq(CBMyTokensYearnLUSD_6, CBMyTokensYearnLUSD_5);
     }
 
