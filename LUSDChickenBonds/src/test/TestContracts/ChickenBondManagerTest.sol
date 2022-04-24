@@ -3111,6 +3111,32 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(lpTokensReceived, 0);
     }
 
+    function testCurveImmediateDepositAndWithdrawalLossIsBounded(uint256 _depositAmount) public {
+        vm.assume(_depositAmount < 1e27 && _depositAmount > 1e18); // deposit in range [1, 1bil] LUSD
+
+        // uint256 _depositAmount = 10e18;
+
+        // Tip CBM some LUSD 
+        tip(address(lusdToken), address(chickenBondManager), _depositAmount);
+
+        // Artificially deposit LUSD to Curve, as CBM
+        vm.startPrank(address(chickenBondManager));
+        curvePool.add_liquidity([_depositAmount, 0], 0);
+        assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0);
+
+        // Artifiiually withdraw all the share value as CBM  
+        uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
+        curvePool.remove_liquidity_one_coin(cbmShares, 0, 0);
+
+        uint256 cbmLUSDBalAfter = lusdToken.balanceOf(address(chickenBondManager));
+        uint256 curveRelativeDepositLoss = diffOrZero(_depositAmount, cbmLUSDBalAfter) * 1e18 / _depositAmount;
+        
+        console.log(curveRelativeDepositLoss, "curveRelativeDepositLoss");
+        // Check that simple Curve LUSD deposit->withdraw loses between [0.01%, 1%] of initial deposit.
+        assertLt(curveRelativeDepositLoss, 1e16);
+        assertGt(curveRelativeDepositLoss, 1e14);
+    }
+
     // --- Controller tests ---
 
     function testControllerAccrualParameterStartsAtTheInitialValue(uint256 _interval) public {
