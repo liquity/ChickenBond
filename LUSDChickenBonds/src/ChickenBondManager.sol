@@ -290,7 +290,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         // Record the yTokens that correspond to the permanent portion from this chicken-in. This implicitly decreases the acquired LUSD.
         uint256 yTokensToPutInPermanent = calcCorrespondingYTokens(yearnLUSDVaultCached, lusdToPermanent, lusdInYearn);
         yTokensPermanentLUSDVault += yTokensToPutInPermanent;
-
+    
         sLUSDToken.mint(msg.sender, accruedSLUSD);
         bondNFT.burn(_bondID);
 
@@ -351,11 +351,14 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
         uint256 yTokensToBurnFromLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, _lusdToShift, lusdInYearn);
-
+          
         /* Calculate and record the portion of yTokens burned from the permanent Yearn LUSD bucket, 
         assuming that burning yTokens decreases both the permanent and acquired Yearn LUSD buckets by the same factor. */
-        uint256 ratioPermanentToTotal = yTokensPermanentLUSDVault * 1e18 / yearnLUSDVault.balanceOf(address(this));
-        uint256 permanentYTokensBurned = yTokensToBurnFromLUSDVault * ratioPermanentToTotal / 1e18;
+        uint256 yTokensPendingLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, totalPendingLUSD, lusdInYearn);
+        uint256 yTokensOwnedLUSDVault = yearnLUSDVault.balanceOf(address(this)) - yTokensPendingLUSDVault;
+        uint256 ratioPermanentToOwned = yTokensPermanentLUSDVault * 1e18 / yTokensOwnedLUSDVault;
+
+        uint256 permanentYTokensBurned = yTokensToBurnFromLUSDVault * ratioPermanentToOwned / 1e18;
         yTokensPermanentLUSDVault -= permanentYTokensBurned;
 
         // Convert yTokens to LUSD
@@ -378,7 +381,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         /* Calculate and record the portion of yTokens added to the the permanent Yearn Curve bucket, 
         assuming that receipt of yTokens increases both the permanent and acquired Yearn Curve buckets by the same factor. */
-        uint256 permanentYTokensCurveIncrease = yTokensCurveVaultIncrease * ratioPermanentToTotal / 1e18;
+        uint256 permanentYTokensCurveIncrease = yTokensCurveVaultIncrease * ratioPermanentToOwned / 1e18;
         yTokensPermanentCurveVault += permanentYTokensCurveIncrease;
 
         // Ensure the SP->Curve shift has decreased the Curve spot price to not less than 1.0
@@ -401,8 +404,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         /* Calculate and record the portion of yTokens burned from the permanent Yearn Curve bucket, 
         assuming that burning yTokens decreases both the permanent and acquired Yearn Curve buckets by the same factor. */
-        uint256 ratioPermanentToTotal = yTokensPermanentCurveVault * 1e18 / yearnCurveVault.balanceOf(address(this));
-        uint256 permanentYTokensBurned = yTokensToBurnFromCurveVault * ratioPermanentToTotal / 1e18;
+        uint256 ratioPermanentToOwned = yTokensPermanentCurveVault * 1e18 / yearnCurveVault.balanceOf(address(this));  // All funds in Curve are owned
+        uint256 permanentYTokensBurned = yTokensToBurnFromCurveVault * ratioPermanentToOwned / 1e18;
         yTokensPermanentCurveVault -= permanentYTokensBurned;
 
         // Convert yTokens to LUSD3CRV-f
@@ -429,7 +432,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         /* Calculate and record the portion of yTokens added to the the permanent Yearn Curve bucket, 
         assuming that receipt of yTokens increases both the permanent and acquired Yearn Curve buckets by the same factor. */
-        uint256 permanentYTokensLUSDIncrease = yTokensLUSDVaultIncrease * ratioPermanentToTotal / 1e18;
+        uint256 permanentYTokensLUSDIncrease = yTokensLUSDVaultIncrease * ratioPermanentToOwned / 1e18;
         yTokensPermanentLUSDVault += permanentYTokensLUSDIncrease;
 
         // Ensure the Curve->SP shift has increased the Curve spot price to not more than 1.0

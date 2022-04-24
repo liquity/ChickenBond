@@ -1461,10 +1461,12 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(B_LUSDBalanceAfter > B_LUSDBalanceBefore);
     }
 
-    function testRedeemDecreasesAcquiredLUSDInYearnByCorrectFraction() public {
-        uint256 redemptionFraction = 5e17; // 50%
+    function testRedeemDecreasesAcquiredLUSDInYearnByCorrectFraction(uint256 redemptionFraction) public {
+        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9); 
+        // uint256 redemptionFraction = 5e17; // 50%
         uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage();
-        uint256 expectedFractionRemainingAfterRedemption = redemptionFraction * (1e18 + percentageFee) / 1e18;
+        // 1-r(1-f).  Fee is left inside system
+        uint256 expectedFractionRemainingAfterRedemption = 1e18 - (redemptionFraction * (1e18 - percentageFee)) / 1e18;
         // Ensure the expected remaining is between 0 and 100%
         assertTrue(expectedFractionRemainingAfterRedemption > 0 && expectedFractionRemainingAfterRedemption < 1e18);
 
@@ -1515,13 +1517,18 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
         uint256 expectedAcquiredLUSDInYearnAfter = acquiredLUSDInYearnBefore * expectedFractionRemainingAfterRedemption / 1e18;
 
-        assertApproximatelyEqual(acquiredLUSDInYearnAfter, expectedAcquiredLUSDInYearnAfter, 1000);
+        assertApproximatelyEqual(acquiredLUSDInYearnAfter, expectedAcquiredLUSDInYearnAfter, 1e9);
     }
 
-    function testRedeemDecreasesAcquiredLUSDInCurveByCorrectFraction() public {
-        uint256 redemptionFraction = 5e17; // 50%
+    function testRedeemDecreasesAcquiredLUSDInCurveByCorrectFraction(uint256 redemptionFraction) public {
+        // Fraction between 1 billion'th, and 100%.  If amount is too tiny, redemption can revert due to attempts to
+        // withdraw 0 LUSDfrom Yearn (due to rounding in share calc).
+        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9); 
+
+        // uint256 redemptionFraction = 1e9; // 50%
         uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage();
-        uint256 fractionRemainingAfterRedemption = redemptionFraction * (1e18 + percentageFee) / 1e18;
+        // 1-r(1-f).  Fee is left inside system
+        uint256 expectedFractionRemainingAfterRedemption = 1e18 - (redemptionFraction * (1e18 - percentageFee)) / 1e18;
 
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -1570,9 +1577,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Check acquired LUSD in curve after has reduced by correct fraction
         uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 expectedAcquiredLUSDInCurveAfter = acquiredLUSDInCurveBefore * fractionRemainingAfterRedemption / 1e18;
+        uint256 expectedAcquiredLUSDInCurveAfter = acquiredLUSDInCurveBefore * expectedFractionRemainingAfterRedemption / 1e18;
 
-        assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1000);
+        console.log(acquiredLUSDInCurveBefore, "acquiredLUSDInCurveBefore");
+        console.log(acquiredLUSDInCurveAfter, "acquiredLUSDInCurveAfter");
+        console.log(expectedAcquiredLUSDInCurveAfter, "expectedAcquiredLUSDInCurveAfter");
+        assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1e9);
     }
     
 
@@ -2414,8 +2424,9 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
         assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
     }
-
+ 
     // CBM Yearn and Curve trackers
+
     function testShiftLUSDFromCurveToSPIncreasesCBMAcquiredLUSDInYearnTracker() public {
         uint256 bondAmount = 10e18;
 
@@ -2432,18 +2443,21 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
-
+    
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
-        assertTrue(totalAcquiredLUSD > 0);
 
         // Put some initial LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10; // shift 10% of LUSD in SP
+
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
-        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
-
-
+      
+        uint256 permanentYearnAfterShift = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 permanentCurveAfterShift = chickenBondManager.getPermanentLUSDInCurve();
+        assertGt(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        assertGt(chickenBondManager.getAcquiredLUSDInYearn(), 0);
+       
         uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertGt(curveSpotPrice, 1e18);
         // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
@@ -2453,13 +2467,16 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Get acquired LUSD in Yearn Before
         uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
+        assertGt(acquiredLUSDInYearnBefore, 0);
 
         // Shift LUSD from Curve to SP
         lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+      
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
-
+       
         // Check acquired LUSD in Yearn Increases
         uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
+       
         assertGt(acquiredLUSDInYearnAfter, acquiredLUSDInYearnBefore);
     }
 

@@ -150,4 +150,15 @@ contract BaseTest is DSTest, stdCheats {
     function diffOrZero(uint256 x, uint256 y) public pure returns (uint256) {
         return x > y ? x - y : 0;
     }
+
+    function logCBMBuckets(string memory _logHeadingText) public {
+        console.log(_logHeadingText);
+        console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
+        console.log(chickenBondManager.getAcquiredLUSDInYearn(), "Acquired LUSD in Yearn");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
+        console.log(chickenBondManager.getPermanentLUSDInYearn(), "Permanent LUSD in Yearn");
+        console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
+        console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
+        console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");
+    }
 }
