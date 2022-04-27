@@ -101,6 +101,7 @@ contract MainnetTestSetup is BaseTest {
         console.log(address(chickenBondManager), "ChickenBondManager address");
         console.log(address(sLUSDToken), "sLUSDToken address");
         console.log(address(bondNFT), "BondNFT address");
+        console.log(address(sLUSDLPRewardsStaking), "Rewards staking address");
     }
 
     function pinBlock(uint256 _blockTimestamp) public {
