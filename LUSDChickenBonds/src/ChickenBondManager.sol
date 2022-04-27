@@ -48,6 +48,24 @@ contract ChickenBondManager is Ownable, ChickenMath {
         address yearnRegistryAddress;
         address sLUSDLPRewardsStakingAddress;
     }
+    
+    /* Used to hold, return and assign variables inside the redeem() function, in order to avoid the error:
+    "CompilerError: Stack too deep". */
+    struct LocalVarsRedemption {
+        uint256 fractionOfSLUSDToRedeem;
+        uint256 redemptionFeePercentage;
+        uint256 fractionOfAcquiredLUSDToWithdraw;
+        uint256 lusdInYearn;
+        uint256 lusd3CRVInCurve;
+        uint256 lusdToWithdrawFromYearn;
+        uint256 yTokensToWithdrawFromLUSDVault;
+        uint256 yTokensAcquiredCurveVault;
+        uint256 yTokensToWithdrawFromCurveVault;
+        uint256 lusdBalanceBefore;
+        uint256 LUSD3CRVBalanceBefore;
+        uint256 LUSD3CRVDelta;
+        uint256 lusdBalanceDelta;
+    }
 
     struct BondData {
         uint256 lusdAmount;
@@ -301,46 +319,48 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function redeem(uint256 _sLUSDToRedeem) external {
         _requireNonZeroAmount(_sLUSDToRedeem);
 
+        LocalVarsRedemption memory vars; 
+        
         /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
         Current approach leaves redemption fees in the acquired bucket. */
-        uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
+        vars.fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
         // Calculate redemption fraction to withdraw, given that we leave the fee inside the system
-        uint256 redemptionFeePercentage = calcRedemptionFeePercentage();
-        uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
+        vars.redemptionFeePercentage = calcRedemptionFeePercentage();
+        vars.fractionOfAcquiredLUSDToWithdraw = vars.fractionOfSLUSDToRedeem * (1e18 - vars.redemptionFeePercentage) / 1e18;
         // Increase redemption base rate with the new redeemed amount
-        _updateRedemptionRateAndTime(redemptionFeePercentage, fractionOfSLUSDToRedeem);
+        _updateRedemptionRateAndTime(vars.redemptionFeePercentage, vars.fractionOfSLUSDToRedeem);
 
         // Get the LUSD to withdraw from Yearn LUSD Vault, and the corresponding yTokens
-        uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
-        uint256 lusd3CRVInCurve = calcTotalYearnCurveVaultShareValue();
-      
-        uint256 lusdToWithdrawFromYearn = _getAcquiredLUSDInYearn(lusdInYearn) * fractionOfAcquiredLUSDToWithdraw / 1e18;
-        uint256 yTokensToWithdrawFromLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdrawFromYearn, lusdInYearn);
+        vars.lusdInYearn = calcTotalYearnLUSDVaultShareValue();
+        vars.lusd3CRVInCurve = calcTotalYearnCurveVaultShareValue();
+
+        vars.lusdToWithdrawFromYearn = _getAcquiredLUSDInYearn(vars.lusdInYearn) * vars.fractionOfAcquiredLUSDToWithdraw / 1e18;
+        vars.yTokensToWithdrawFromLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, vars.lusdToWithdrawFromYearn, vars.lusdInYearn);
         
         //  Since 100% of the Curve vault liquidity is "acquired + permanent", just get the acquired yTokens by subtracting permanent 
-        uint256 yTokensAcquiredCurveVault = yearnCurveVault.balanceOf(address(this)) - yTokensPermanentCurveVault;
-        uint256 yTokensToWithdrawFromCurveVault = yTokensAcquiredCurveVault * fractionOfAcquiredLUSDToWithdraw / 1e18;
+        vars.yTokensAcquiredCurveVault = yearnCurveVault.balanceOf(address(this)) - yTokensPermanentCurveVault;
+        vars.yTokensToWithdrawFromCurveVault = vars.yTokensAcquiredCurveVault * vars.fractionOfAcquiredLUSDToWithdraw / 1e18;
 
         // The LUSD deltas from SP/Curve withdrawals are the amounts to send to the redeemer
-        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
+        vars.lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        vars.LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
      
         // Redemptions draw LUSD purely from the acquired bucket
-        if (yTokensToWithdrawFromLUSDVault > 0) {yearnLUSDVault.withdraw(yTokensToWithdrawFromLUSDVault);} // obtain LUSD from Yearn
-        if (yTokensToWithdrawFromCurveVault > 0) {yearnCurveVault.withdraw(yTokensToWithdrawFromCurveVault);} // obtain LUSD3CRV from Yearn
-
-        uint256 LUSD3CRVDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
-        if (LUSD3CRVDelta > 0) {curvePool.remove_liquidity_one_coin(LUSD3CRVDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);} // obtain LUSD from Curve
-
-        uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-
-        _requireNonZeroAmount(lusdBalanceDelta);
+        if (vars.yTokensToWithdrawFromLUSDVault > 0) {yearnLUSDVault.withdraw(vars.yTokensToWithdrawFromLUSDVault);} // obtain LUSD from Yearn
+        if (vars.yTokensToWithdrawFromCurveVault > 0) {yearnCurveVault.withdraw(vars.yTokensToWithdrawFromCurveVault);} // obtain LUSD3CRV from Yearn
+     
+        vars.LUSD3CRVDelta = curvePool.balanceOf(address(this)) - vars.LUSD3CRVBalanceBefore;
+        if (vars.LUSD3CRVDelta > 0) {curvePool.remove_liquidity_one_coin(vars.LUSD3CRVDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);} // obtain LUSD from Curve
+    
+        vars.lusdBalanceDelta = lusdToken.balanceOf(address(this)) - vars.lusdBalanceBefore;
+    
+        _requireNonZeroAmount(vars.lusdBalanceDelta);
 
         // Burn the redeemed sLUSD
         sLUSDToken.burn(msg.sender, _sLUSDToRedeem);
 
         // Send the LUSD to the redeemer
-        lusdToken.transfer(msg.sender, lusdBalanceDelta);
+        lusdToken.transfer(msg.sender, vars.lusdBalanceDelta);
     }
 
     function shiftLUSDFromSPToCurve(uint256 _lusdToShift) external {
@@ -385,7 +405,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
         yTokensPermanentCurveVault += permanentYTokensCurveIncrease;
 
         // Ensure the SP->Curve shift has decreased the Curve spot price to not less than 1.0
-        uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
+        uint256 finalCurveSpotPrice;
+    
         require(finalCurveSpotPrice < initialCurveSpotPrice && finalCurveSpotPrice >=  1e18, "CBM: SP->Curve shift must decrease spot price to >= 1.0");
     }
 
