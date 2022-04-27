@@ -1,6 +1,6 @@
 pragma solidity ^0.8.10;
 
-import "./DevTestSetup.sol";
+import "./TestContracts/DevTestSetup.sol";
 
 
 contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
