@@ -223,6 +223,35 @@ contract ChickenBondManager is Ownable, ChickenMath {
         bondNFT.burn(_bondID);
     }
 
+    // transfer _yTokensToSwap to the LUSD/sLUSD AMM LP Rewards staking contract
+    function _transferToRewardsStakingContract(uint256 _yTokensToSwap) internal {
+        // Pull the tax amount from Yearn LUSD vault
+        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        yearnLUSDVault.withdraw(_yTokensToSwap);
+
+        uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+        if (lusdBalanceDelta == 0) { return; }
+
+        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal lusdToRefund.
+         * Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to floor division in the
+         * yToken calculation prior to withdrawal. */
+        lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        sLUSDLPRewardsStaking.pullRewardAmount(lusdBalanceDelta);
+        assert(lusdBalanceBefore - lusdToken.balanceOf(address(this)) == lusdBalanceDelta);
+    }
+
+    // Divert acquired yield to LUSD/sLUSD AMM LP rewards staking contract
+    // It happens on the very first chicken in event of the system, or any time that redemptions deplete sLUSD total supply to zero
+    function _firstChickenIn() internal {
+        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
+        uint256 lusdFromInitialYield = _getTotalAcquiredLUSD(lusdInYearn);
+        if (lusdFromInitialYield == 0) { return; }
+
+        uint256 yTokensToSwapForYieldLUSD = calcYTokensToBurn(yearnLUSDVault, lusdFromInitialYield, lusdInYearn);
+        if (yTokensToSwapForYieldLUSD == 0) { return; }
+        _transferToRewardsStakingContract(yTokensToSwapForYieldLUSD);
+    }
+
     function chickenIn(uint256 _bondID) external {
         _requireCallerOwnsBond(_bondID);
 
@@ -230,6 +259,10 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         BondData memory bond = idToBondData[_bondID];
         (uint256 taxAmount, uint256 taxedBondAmount) = _getTaxedBond(bond.lusdAmount);
+
+        if (sLUSDToken.totalSupply() == 0) {
+            _firstChickenIn();
+        }
 
         uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
         uint256 backingRatio = _calcSystemBackingRatio(lusdInYearn);
@@ -266,19 +299,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         bondNFT.burn(_bondID);
 
         // transfer the chicken in tax to the LUSD/sLUSD AMM LP Rewards staking contract
-
-        // Pull the tax amount from Yearn LUSD vault
-        lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        yearnLUSDVault.withdraw(yTokensToSwapForTaxLUSD);
-
-        lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-
-        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal lusdToRefund.
-         * Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to floor division in the
-         * yToken calculation prior to withdrawal. */
-        lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        sLUSDLPRewardsStaking.pullRewardAmount(lusdBalanceDelta);
-        assert(lusdBalanceBefore - lusdToken.balanceOf(address(this)) == lusdBalanceDelta);
+        _transferToRewardsStakingContract(yTokensToSwapForTaxLUSD);
     }
 
     function redeem(uint256 _sLUSDToRedeem) external {
@@ -632,8 +653,9 @@ contract ChickenBondManager is Ownable, ChickenMath {
         * i.e. before the first chickenIn. For now, return a backing ratio of 1. Note: Both quantities would be 0
         * also when the sLUSD supply is fully redeemed.
         */
-        if (totalSLUSDSupply == 0  && totalAcquiredLUSD == 0) {return 1e18;}
-        if (totalSLUSDSupply == 0) {return MAX_UINT256;}
+        //if (totalSLUSDSupply == 0  && totalAcquiredLUSD == 0) {return 1e18;}
+        //if (totalSLUSDSupply == 0) {return MAX_UINT256;}
+        if (totalSLUSDSupply == 0) {return 1e18;}
 
         return  totalAcquiredLUSD * 1e18 / totalSLUSDSupply;
     }

@@ -5,55 +5,6 @@ import "./BaseTest.sol";
 import "./QuickSort.sol";
 
 contract ChickenBondManagerTest is BaseTest {
-    uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
-
-    // --- Helpers ---
-
-    // Create a bond for `_user` using `_bondAmount` amount of LUSD, then return the bond's ID.
-    function createBondForUser(address _user, uint256 _bondAmount) public returns (uint256) {
-        vm.startPrank(_user);
-        lusdToken.approve(address(chickenBondManager), _bondAmount);
-        chickenBondManager.createBond(_bondAmount);
-        vm.stopPrank();
-
-        // bond ID
-        return bondNFT.totalMinted();
-    }
-
-    function chickenInForUser(address _user, uint256 _bondID) public {
-        vm.startPrank(_user);
-        chickenBondManager.chickenIn(_bondID);
-        vm.stopPrank();
-    }
-
-    function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
-        tip(address(lusdToken), _user, _lusdDeposit);
-        assertGe(lusdToken.balanceOf(_user), _lusdDeposit);
-        vm.startPrank(_user);
-        lusdToken.approve(address(curvePool), _lusdDeposit);
-        curvePool.add_liquidity([_lusdDeposit, 0], 0);
-        vm.stopPrank();
-    }
-
-    function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
-        return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
-    }
-
-    function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
-        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
-    }
-
-    function _calcAccruedSLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio) internal view returns (uint256) {
-        uint256 bondSLUSDCap = _lusdAmount * 1e18 / _backingRatio;
-
-        uint256 bondDuration = (block.timestamp - _startTime);
-
-        // TODO: replace with final sLUSD accrual formula. */
-        return bondSLUSDCap * bondDuration / (bondDuration + SECONDS_IN_ONE_MONTH);
-    }
-
-    // --- Tests ---
-
     function testSetupSetsBondNFTAddressInCBM() public {
         assertTrue(address(chickenBondManager.bondNFT()) == address(bondNFT));
     }
@@ -1051,7 +1002,12 @@ contract ChickenBondManagerTest is BaseTest {
         // check rewards contract has received rewards
         assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), _getTaxForAmount(bondAmount), 1, "Wrong tax diverted to rewards contract");
         // check accrued amount is reduced by tax
-        assertApproximatelyEqual(sLUSDToken.balanceOf(B), _getTaxedAmount(_calcAccruedSLUSD(B_startTime, bondAmount, backingRatio)), 1000, "Wrong tax applied to B");
+        assertApproximatelyEqual(
+            sLUSDToken.balanceOf(B),
+            _getTaxedAmount(chickenBondManager.calcAccruedSLUSD(B_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
+            1000,
+            "Wrong tax applied to B"
+        );
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
@@ -1065,7 +1021,12 @@ contract ChickenBondManagerTest is BaseTest {
         // check rewards contract has received rewards
         assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), 2 * _getTaxForAmount(bondAmount), 2, "Wrong tax diverted to rewards contract");
         // check accrued amount is reduced by tax
-        assertApproximatelyEqual(sLUSDToken.balanceOf(A), _getTaxedAmount(_calcAccruedSLUSD(A_startTime, bondAmount, backingRatio)), 1000, "Wrong tax applied to A");
+        assertApproximatelyEqual(
+            sLUSDToken.balanceOf(A),
+            _getTaxedAmount(chickenBondManager.calcAccruedSLUSD(A_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
+            1000,
+            "Wrong tax applied to A"
+        );
     }
 
     function testChickenInRevertsWhenCallerIsNotABonder() public {
