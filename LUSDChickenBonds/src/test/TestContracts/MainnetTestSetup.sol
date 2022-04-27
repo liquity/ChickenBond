@@ -60,18 +60,18 @@ contract MainnetTestSetup is BaseTest {
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
        
         chickenBondManager = new ChickenBondManagerWrap(
-            address(bondNFT),          // _bondNFTAddress
-            address(lusdToken),        // _lusdTokenAddress
-            address(curvePool),        // _curvePoolAddress
-            address(yearnLUSDVault),   // _yearnLUSDVaultAddress
-            address(yearnCurveVault),  // _yearnCurveVaultAddress
-            address(sLUSDToken),       // _sLUSDTokenAddress
-            address(yearnRegistry),    // _yearnRegistryAddress
-            SECONDS_IN_ONE_MONTH,      // _targetAverageAgeSeconds
-            INITIAL_ACCRUAL_PARAMETER, // _initialAccrualParameter
-            MINIMUM_ACCRUAL_PARAMETER, // _minimumAccrualParameter
-            ACCRUAL_ADJUSTMENT_RATE,   // _accrualAdjustmentRate
-            SECONDS_IN_ONE_DAY         // _accrualAdjustmentPeriodSeconds
+            address(bondNFT),                  // _bondNFTAddress
+            address(lusdToken),                // _lusdTokenAddress
+            address(curvePool),                // _curvePoolAddress
+            address(yearnLUSDVault),           // _yearnLUSDVaultAddress
+            address(yearnCurveVault),          // _yearnCurveVaultAddress
+            address(sLUSDToken),               // _sLUSDTokenAddress
+            address(yearnRegistry),            // _yearnRegistryAddress
+            TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds
+            INITIAL_ACCRUAL_PARAMETER,         // _initialAccrualParameter
+            MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
+            ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
+            ACCRUAL_ADJUSTMENT_PERIOD_SECONDS  // _accrualAdjustmentPeriodSeconds
         );
 
         bondNFT.setAddresses(address(chickenBondManager));

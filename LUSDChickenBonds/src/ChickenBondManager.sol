@@ -614,4 +614,9 @@ contract ChickenBondManager is Ownable, ChickenMath {
         uint lusdInYearn = calcYearnLUSDVaultShareValue();
         return _calcSystemBackingRatio(lusdInYearn);
     }
+
+    function calcUpdatedAccrualParameter() external view returns (uint256) {
+        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentCount);
+        return updatedAccrualParameter;
+    }
 }

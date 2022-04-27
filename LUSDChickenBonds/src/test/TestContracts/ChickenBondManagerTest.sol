@@ -2,15 +2,25 @@
 pragma solidity ^0.8.10;
 
 import "./BaseTest.sol";
+import "./ArbitraryBonds.sol";
 
 contract ChickenBondManagerTest is BaseTest {
 
     // --- Helpers ---
 
-    function createBondForUser(address _user, uint256 _bondAmount) public {
+    // Create a bond for `_user` using `_bondAmount` amount of LUSD, then return the bond's ID.
+    function createBondForUser(address _user, uint256 _bondAmount) public returns (uint256) {
         vm.startPrank(_user);
         lusdToken.approve(address(chickenBondManager), _bondAmount);
         chickenBondManager.createBond(_bondAmount);
+        vm.stopPrank();
+
+        return bondNFT.totalMinted();
+    }
+
+    function chickenInForUser(address _user, uint256 _bondID) public {
+        vm.startPrank(_user);
+        chickenBondManager.chickenIn(_bondID);
         vm.stopPrank();
     }
 
@@ -2489,5 +2499,229 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 lpTokensReceived = curvePool.calc_token_amount([_lusdAmount, 0], isDeposit);
 
         assertGt(lpTokensReceived, 0);
+    }
+
+    // --- Controller tests ---
+
+    function testControllerAccrualParameterStartsAtTheInitialValue(uint256 _interval) public {
+        uint256 interval = coerce(_interval, 0, 5200 weeks);
+
+        uint256 accrualParameter = chickenBondManager.accrualParameter();
+        assertEqDecimal(accrualParameter, INITIAL_ACCRUAL_PARAMETER, 18);
+
+        // Accrual parameter should stay constant even if time passes
+        vm.warp(block.timestamp + interval);
+
+        // Let some user interact with the system
+        createBondForUser(A, 100e18);
+
+        // Accrual parameter should still be the initial value
+        accrualParameter = chickenBondManager.accrualParameter();
+        assertEqDecimal(accrualParameter, INITIAL_ACCRUAL_PARAMETER, 18);
+    }
+
+    // "Time delta" refers to time elapsed since deployment of ChickenBondManager contract
+    function _calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(
+        // average of `bond.startTime - chickenBondManager.deploymentTime` for all active bonds
+        uint256 averageStartTimeDelta
+    ) internal pure returns (uint256) {
+        uint256 target = TARGET_AVERAGE_AGE_SECONDS;
+        uint256 adjustmentPeriod = ACCRUAL_ADJUSTMENT_PERIOD_SECONDS;
+
+        // Average age is "sampled" by the controller at the exact timestamps given by the formula:
+        // `deploymentTimestamp + n * adjustmentPeriod`, where `n` is integer >= 0.
+        // We use `ceilDiv` to calculate the time delta of the first such timestamp where the
+        // controller sees an average age that's _strictly_ higher than the target.
+        return adjustmentPeriod * Math.ceilDiv(averageStartTimeDelta + target + 1, adjustmentPeriod);
+    }
+
+    function testControllerDoesNotAdjustWhenAgeOfSingleBondIsBelowTarget(uint256 _interval) public {
+        uint256 interval = coerce(
+            _interval,
+            1, // wait at least 1s before chicken-in, otherwise `yearnLUSDVault.withdraw()` reverts
+            _calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(0) - 1
+        );
+
+        uint256 bondID = createBondForUser(A, 100e18);
+        vm.warp(block.timestamp + interval);
+        chickenInForUser(A, bondID);
+    
+        uint256 accrualParameter = chickenBondManager.accrualParameter();
+        assertEqDecimal(accrualParameter, INITIAL_ACCRUAL_PARAMETER, 18);
+    }
+
+    function testControllerDoesAdjustWhenAgeOfSingleBondIsAboveTarget(uint256 _interval) public {
+        uint256 interval = coerce(
+            _interval,
+            _calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(0),
+            5200 weeks
+        );
+
+        uint256 bondID = createBondForUser(A, 100e18);
+        vm.warp(block.timestamp + interval);
+        chickenInForUser(A, bondID);
+    
+        uint256 accrualParameter = chickenBondManager.accrualParameter();
+        assertLtDecimal(accrualParameter, INITIAL_ACCRUAL_PARAMETER, 18);
+    }
+
+    function testControllerAdjustsByAccrualAdjustmentRate(uint256 _interval, uint8 _periods) public {
+        uint256 interval = coerce(
+            _interval,
+            _calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(0) - ACCRUAL_ADJUSTMENT_PERIOD_SECONDS,
+            // Don't let `_interval` be too long or `accrualParameter` might bottom out
+            52 weeks
+        );
+
+        uint256 bondID = createBondForUser(A, 100e18);
+        vm.warp(block.timestamp + interval);
+        // Since there's been no user interaction that would update `accrualParameter`, use the read-only
+        // helper function to calculate its up-to-date value instead
+        uint256 accrualParameterBefore = chickenBondManager.calcUpdatedAccrualParameter();
+
+        // Wait some number of adjustment periods
+        vm.warp(block.timestamp + _periods * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS);
+
+        chickenInForUser(A, bondID);
+        uint256 accrualParameterAfter = chickenBondManager.accrualParameter();
+
+        uint256 expectedAdjustment = 1e18;
+        for (uint8 i = 0; i < _periods; ++i) {
+            expectedAdjustment = (expectedAdjustment * (1e18 - ACCRUAL_ADJUSTMENT_RATE) + 0.5e18) / 1e18;
+        }
+    
+        assertApproximatelyEqual(accrualParameterAfter, accrualParameterBefore * expectedAdjustment / 1e18, 1e9);
+    }
+
+    function testControllerStopsAdjustingOnceAverageAgeDropsBelowTarget(uint256 _interval) public {
+        uint256 interval = coerce(
+            _interval,
+        // In this test we will:
+        //   1. Create a bond.
+        //      ... Wait for `interval` seconds ...
+        //   2. Sample accrual parameter.
+        //      ... Wait one accrual adjustment period ...
+        //   3. Expect to see an adjusted accrual parameter.
+        //      For this to hold, `interval + ACCRUAL_ADJUSTMENT_PERIOD_SECONDS` must be at least
+        //      `_calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(0)`, hence the lower bound:
+            _calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(0) - ACCRUAL_ADJUSTMENT_PERIOD_SECONDS,
+        //   4. Create a second bond of the same size.
+        //      ... Wait one accrual adjustment period ...
+        //   5. Expect to see the same accrual parameter as in step #3 (unadjusted).
+        //      For this to hold, the average age of both bonds must fall below the target average age.
+        //
+        // The upper bounds for ages of bonds 1 & 2 as sampled by the controller (they will be lower
+        // in case adjustment period is not a divisor of the total waiting time):
+        //   age1 <= interval + 2 * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS
+        //   age2 <= ACCRUAL_ADJUSTMENT_PERIOD_SECONDS
+        //
+        // So the upper bound for average age is:
+        //   avgAge <= (interval + 3 * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS) / 2
+        //
+        // We want the average age to be <= the target. Rearranging:
+        //   (interval + 3 * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS) / 2 <= TARGET_AVERAGE_AGE_SECONDS
+        //   interval + 3 * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS <= 2 * TARGET_AVERAGE_AGE_SECONDS
+        //   interval <= 2 * TARGET_AVERAGE_AGE_SECONDS - 3 * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS
+        //
+        // Therefore this upper bound for `interval` should work in all cases:
+            2 * TARGET_AVERAGE_AGE_SECONDS - 3 * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS
+        );
+
+        createBondForUser(A, 100e18);
+        vm.warp(block.timestamp + interval);
+        uint256 accrualParameter1 = chickenBondManager.calcUpdatedAccrualParameter();
+
+        vm.warp(block.timestamp + ACCRUAL_ADJUSTMENT_PERIOD_SECONDS);
+        uint256 accrualParameter2 = chickenBondManager.calcUpdatedAccrualParameter();
+        assertLtDecimal(accrualParameter2, accrualParameter1, 18);
+
+        createBondForUser(B, 100e18);
+        vm.warp(block.timestamp + ACCRUAL_ADJUSTMENT_PERIOD_SECONDS);
+        uint256 accrualParameter3 = chickenBondManager.calcUpdatedAccrualParameter();
+        assertEqDecimal(accrualParameter3, accrualParameter2, 18);
+    }
+
+    function _coerceLUSDAmounts(ArbitraryBondParams[] memory _params, uint256 a, uint256 b) internal pure {
+        for (uint256 i = 0; i < _params.length; ++i) {
+            _params[i].lusdAmount = coerce(_params[i].lusdAmount, a, b);
+        }
+    }
+
+    function _coerceStartTimeDeltas(ArbitraryBondParams[] memory _params, uint256 a, uint256 b) internal pure {
+        for (uint256 i = 0; i < _params.length; ++i) {
+            _params[i].startTimeDelta = coerce(_params[i].startTimeDelta, a, b);
+        }
+    }
+
+    function _calcTotalLUSDAmount(ArbitraryBondParams[] memory _params) internal pure returns (uint256) {
+        uint256 total = 0;
+
+        for (uint256 i = 0; i < _params.length; ++i) {
+            total += _params[i].lusdAmount;
+        }
+
+        return total;
+    }
+
+    function _calcAverageStartTimeDelta(ArbitraryBondParams[] memory _params) internal returns (uint256) {
+        uint256 numerator = 0;
+        uint256 denominator = 0;
+
+        for (uint256 i = 0; i < _params.length; ++i) {
+            numerator += _params[i].lusdAmount * _params[i].startTimeDelta;
+            denominator += _params[i].lusdAmount;
+        }
+
+        assertGt(denominator, 0);
+        return numerator / denominator;
+    }
+
+    function testControllerStartsAdjustingWhenAverageAgeOfMultipleBondsStartsExceedingTarget(ArbitraryBondParams[] memory _params) public {
+        vm.assume(_params.length > 0);
+
+        _coerceLUSDAmounts(_params, 100e18, 1000e18);
+        _coerceStartTimeDeltas(_params, 0, TARGET_AVERAGE_AGE_SECONDS);
+
+        ISortedBonds sortedBonds = new ArbitraryBondsSortedByStartTimeDelta(_params);
+        ArbitraryBondParams[] memory params = sortedBonds.getParams();
+
+        uint256 deploymentTimestamp = chickenBondManager.deploymentTimestamp();
+        uint256 prevStartTimeDelta = 0;
+
+        // This test requires more LUSD than the others
+        tip(address(lusdToken), A, _calcTotalLUSDAmount(params));
+
+        for (uint256 i = 0; i < params.length; ++i) {
+            // Make sure we're not about to go back in time
+            assertGe(params[i].startTimeDelta, prevStartTimeDelta);
+            vm.warp(deploymentTimestamp + params[i].startTimeDelta);
+            createBondForUser(A, params[i].lusdAmount);
+
+            prevStartTimeDelta = params[i].startTimeDelta;
+        }
+
+        uint256 averageStartTimeDelta = _calcAverageStartTimeDelta(params);
+        uint256 finalTimeDelta = _calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(averageStartTimeDelta);
+
+        // There's a very low chance that we don't have 2 adjustment periods left until the target is exceeded.
+        // This can happen if the longest start time delta is close to its upper bound while the average start time delta
+        // is close to zero (e.g. because there's a large volume of older bonds vs. a small volume of newer bonds).
+        // Just discard such runs.
+        vm.assume(finalTimeDelta - 2 * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS >= prevStartTimeDelta);
+
+        // Time-travel to 2 periods before the controller is expected to make its first adjustment
+        vm.warp(deploymentTimestamp + finalTimeDelta - 2 * ACCRUAL_ADJUSTMENT_PERIOD_SECONDS);
+        uint256 accrualParameter1 = chickenBondManager.calcUpdatedAccrualParameter();
+        assertEqDecimal(accrualParameter1, INITIAL_ACCRUAL_PARAMETER, 18);
+
+        // Advance one period and expect to see no adjustment yet
+        vm.warp(block.timestamp + ACCRUAL_ADJUSTMENT_PERIOD_SECONDS);
+        uint256 accrualParameter2 = chickenBondManager.calcUpdatedAccrualParameter();
+        assertEqDecimal(accrualParameter2, accrualParameter1, 18);
+
+        // Advance one more period and expect to see a reduced accrual parameter
+        vm.warp(block.timestamp + ACCRUAL_ADJUSTMENT_PERIOD_SECONDS);
+        uint256 accrualParameter3 = chickenBondManager.calcUpdatedAccrualParameter();
+        assertLtDecimal(accrualParameter3, accrualParameter2, 18);
     }
 }
