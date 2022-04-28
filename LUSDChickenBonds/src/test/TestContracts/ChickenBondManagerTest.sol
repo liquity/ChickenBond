@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "./BaseTest.sol";
-import "./ArbitraryBonds.sol";
+import "./QuickSort.sol";
 
 contract ChickenBondManagerTest is BaseTest {
 
@@ -2641,6 +2641,11 @@ contract ChickenBondManagerTest is BaseTest {
         assertEqDecimal(accrualParameter3, accrualParameter2, 18);
     }
 
+    struct ArbitraryBondParams {
+        uint256 lusdAmount;
+        uint256 startTimeDelta;
+    }
+
     function _coerceLUSDAmounts(ArbitraryBondParams[] memory _params, uint256 a, uint256 b) internal pure {
         for (uint256 i = 0; i < _params.length; ++i) {
             _params[i].lusdAmount = coerce(_params[i].lusdAmount, a, b);
@@ -2650,6 +2655,20 @@ contract ChickenBondManagerTest is BaseTest {
     function _coerceStartTimeDeltas(ArbitraryBondParams[] memory _params, uint256 a, uint256 b) internal pure {
         for (uint256 i = 0; i < _params.length; ++i) {
             _params[i].startTimeDelta = coerce(_params[i].startTimeDelta, a, b);
+        }
+    }
+
+    function _sortStartTimeDeltas(ArbitraryBondParams[] memory _params) internal pure {
+        uint256[] memory startTimeDeltas = new uint256[](_params.length);
+
+        for (uint256 i = 0; i < _params.length; ++i) {
+            startTimeDeltas[i] = _params[i].startTimeDelta;
+        }
+
+        startTimeDeltas = QuickSort.sort(startTimeDeltas);
+
+        for (uint256 i = 0; i < _params.length; ++i) {
+            _params[i].startTimeDelta = startTimeDeltas[i];
         }
     }
 
@@ -2681,26 +2700,24 @@ contract ChickenBondManagerTest is BaseTest {
 
         _coerceLUSDAmounts(_params, 100e18, 1000e18);
         _coerceStartTimeDeltas(_params, 0, TARGET_AVERAGE_AGE_SECONDS);
-
-        ISortedBonds sortedBonds = new ArbitraryBondsSortedByStartTimeDelta(_params);
-        ArbitraryBondParams[] memory params = sortedBonds.getParams();
+        _sortStartTimeDeltas(_params);
 
         uint256 deploymentTimestamp = chickenBondManager.deploymentTimestamp();
         uint256 prevStartTimeDelta = 0;
 
         // This test requires more LUSD than the others
-        tip(address(lusdToken), A, _calcTotalLUSDAmount(params));
+        tip(address(lusdToken), A, _calcTotalLUSDAmount(_params));
 
-        for (uint256 i = 0; i < params.length; ++i) {
+        for (uint256 i = 0; i < _params.length; ++i) {
             // Make sure we're not about to go back in time
-            assertGe(params[i].startTimeDelta, prevStartTimeDelta);
-            vm.warp(deploymentTimestamp + params[i].startTimeDelta);
-            createBondForUser(A, params[i].lusdAmount);
+            assertGe(_params[i].startTimeDelta, prevStartTimeDelta);
+            vm.warp(deploymentTimestamp + _params[i].startTimeDelta);
+            createBondForUser(A, _params[i].lusdAmount);
 
-            prevStartTimeDelta = params[i].startTimeDelta;
+            prevStartTimeDelta = _params[i].startTimeDelta;
         }
 
-        uint256 averageStartTimeDelta = _calcAverageStartTimeDelta(params);
+        uint256 averageStartTimeDelta = _calcAverageStartTimeDelta(_params);
         uint256 finalTimeDelta = _calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(averageStartTimeDelta);
 
         // There's a very low chance that we don't have 2 adjustment periods left until the target is exceeded.
