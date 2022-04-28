@@ -5,7 +5,7 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
-import "uniswapV2/interfaces/IUniswapV2Factory.sol";
+import "../Dependencies/Uniswap/UniswapV2Factory.sol";
 
 
 contract MainnetTestSetup is BaseTest {
@@ -18,6 +18,7 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
     address constant MAINNET_UNISWAP_V2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address constant MAINNET_UNISWAP_V2_ROUTER_ADDRESS = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
     uint256 constant MAINNET_PINNED_BLOCK =  1648476300; 
 
@@ -76,6 +77,7 @@ contract MainnetTestSetup is BaseTest {
             address(sLUSDToken),
             address(yearnRegistry),
             address(sLUSDLPRewardsStaking),
+            MAINNET_UNISWAP_V2_ROUTER_ADDRESS,
             CHICKEN_IN_AMM_TAX
         );
 

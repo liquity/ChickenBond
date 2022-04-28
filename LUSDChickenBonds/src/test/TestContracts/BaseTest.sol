@@ -14,6 +14,7 @@ import "../../Interfaces/ICurvePool.sol";
 import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import "../../LPRewards/Interfaces/IUnipool.sol";
 import "../../LPRewards/Unipool.sol";
+import "../Dependencies/Uniswap/interfaces/IUniswapV2Factory.sol";
 
 
 contract BaseTest is DSTest, stdCheats {
@@ -32,6 +33,7 @@ contract BaseTest is DSTest, stdCheats {
     IYearnVault yearnCurveVault;
     IYearnRegistry yearnRegistry;
     IUnipool sLUSDLPRewardsStaking;
+    IUniswapV2Factory uniswapV2Factory;
 
     address yearnGovernanceAddress;
 
@@ -43,6 +45,7 @@ contract BaseTest is DSTest, stdCheats {
     Vm vm = Vm(CHEATCODE_ADDRESS);
 
     uint256 MAX_UINT256 = type(uint256).max;
+    uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
 
     address[] accountsList;
     address public A;
@@ -80,5 +83,43 @@ contract BaseTest is DSTest, stdCheats {
 
     function abs(uint256 x, uint256 y) public pure returns (uint256) {
         return x > y ? x - y : y - x;
+    }
+
+    // --- Helpers ---
+
+    function createBondForUser(address _user, uint256 _bondAmount) public returns (uint256) {
+        vm.startPrank(_user);
+        lusdToken.approve(address(chickenBondManager), _bondAmount);
+        chickenBondManager.createBond(_bondAmount);
+        vm.stopPrank();
+
+        // bond ID
+        return bondNFT.totalMinted();
+    }
+
+    function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
+        tip(address(lusdToken), _user, _lusdDeposit);
+        assertGe(lusdToken.balanceOf(_user), _lusdDeposit);
+        vm.startPrank(_user);
+        lusdToken.approve(address(curvePool), _lusdDeposit);
+        curvePool.add_liquidity([_lusdDeposit, 0], 0);
+        vm.stopPrank();
+    }
+
+    function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
+    }
+
+    function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
+    }
+
+    function _calcAccruedSLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio) internal view returns (uint256) {
+        uint256 bondSLUSDCap = _lusdAmount * 1e18 / _backingRatio;
+
+        uint256 bondDuration = (block.timestamp - _startTime);
+
+        // TODO: replace with final sLUSD accrual formula. */
+        return bondSLUSDCap * bondDuration / (bondDuration + SECONDS_IN_ONE_MONTH);
     }
 }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "uniswapV2-periphery/interfaces/IUniswapV2Router02.sol";
 import "./utils/ChickenMath.sol";
 
 import "./Interfaces/IBondNFT.sol";
@@ -30,6 +31,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
     IYearnVault immutable public yearnCurveVault;
     IYearnRegistry immutable public yearnRegistry;
     IUnipool immutable public sLUSDLPRewardsStaking;
+    IUniswapV2Router02 immutable public uniswapRouter;
 
     uint256 immutable public CHICKEN_IN_AMM_TAX;
 
@@ -81,6 +83,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         address _sLUSDTokenAddress,
         address _yearnRegistryAddress,
         address _sLUSDLPRewardsStaking,
+        address _uniswapRouter,
         uint256 _CHICKEN_IN_AMM_TAX
     )
     {
@@ -92,6 +95,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         yearnCurveVault = IYearnVault(_yearnCurveVaultAddress);
         yearnRegistry = IYearnRegistry(_yearnRegistryAddress);
         sLUSDLPRewardsStaking = IUnipool(_sLUSDLPRewardsStaking);
+        uniswapRouter = IUniswapV2Router02(_uniswapRouter);
         CHICKEN_IN_AMM_TAX = _CHICKEN_IN_AMM_TAX;
     
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure) 
@@ -100,6 +104,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
         lusdToken.approve(address(curvePool), MAX_UINT256);
         curvePool.approve(address(yearnCurveVault), MAX_UINT256);
         lusdToken.approve(address(sLUSDLPRewardsStaking), MAX_UINT256);
+        lusdToken.approve(address(uniswapRouter), MAX_UINT256);
+        sLUSDToken.approve(address(uniswapRouter), MAX_UINT256);
 
         // Check that the system is hooked up to the correct latest Yearn vaults
         assert(address(yearnLUSDVault) == yearnRegistry.latestVault(address(lusdToken)));
@@ -174,12 +180,75 @@ contract ChickenBondManager is Ownable, ChickenMath {
         bondNFT.burn(_bondID);
     }
 
+    // transfer _yTokensToSwap to the LUSD/sLUSD AMM LP Rewards staking contract
+    function _transferToRewardsStakingContract(uint256 _yTokensToSwap) internal {
+        // Pull the tax amount from Yearn LUSD vault
+        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        yearnLUSDVault.withdraw(_yTokensToSwap);
+
+        uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+        if (lusdBalanceDelta == 0) { return; }
+
+        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal lusdToRefund.
+         * Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to floor division in the
+         * yToken calculation prior to withdrawal. */
+        lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        sLUSDLPRewardsStaking.pullRewardAmount(lusdBalanceDelta);
+        assert(lusdBalanceBefore - lusdToken.balanceOf(address(this)) == lusdBalanceDelta);
+    }
+
+    // Divert acquired yield to LUSD/sLUSD AMM. It happens on the very first chicken in event of the system
+    function _firstChickenIn() internal {
+        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
+        uint256 lusdFromInitialYield = _getTotalAcquiredLUSD(lusdInYearn);
+        if (lusdFromInitialYield == 0) { return; }
+
+        // As sLUSD total supply is zero, the  pool must be empty, so we provide initial liquidity
+        // We get half of the generated LUSD, pair it with freshly minted sLUSD,
+        // and provide it as liquidity to the sLUSD/LUSD AMM pool.
+        // This way we keep the initial backing ratio of 1,
+        // as the amount of LUSD owned by the protocol and the total supply of sLUSD will match.
+        uint256 initialYieldForAMM = lusdFromInitialYield / 2;
+        uint256 initialYieldToKeep = lusdFromInitialYield - initialYieldForAMM;
+
+        // withdraw LUSD for the AMM
+        uint256 yTokensToSwapForYieldLUSD = calcYTokensToBurn(yearnLUSDVault, initialYieldForAMM, lusdInYearn);
+        if (yTokensToSwapForYieldLUSD == 0) { return; }
+        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        yearnLUSDVault.withdraw(yTokensToSwapForYieldLUSD);
+
+        uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+        if (lusdBalanceDelta == 0) { return; }
+
+        // Mint an equal amount of sLUSD
+        sLUSDToken.mint(address(this), initialYieldToKeep);
+
+        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal lusdToRefund.
+         * Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to floor division in the
+         * yToken calculation prior to withdrawal. */
+        uniswapRouter.addLiquidity(
+            address(sLUSDToken), // tokenA
+            address(lusdToken),  // tokenB
+            initialYieldToKeep,  // amountADesired
+            lusdBalanceDelta,    // amountBDesired
+            initialYieldToKeep,  // amountAMin
+            lusdBalanceDelta,    // amountBMin
+            address(this),       // to
+            type(uint256).max    // deadline
+        );
+    }
+
     function chickenIn(uint256 _bondID) external {
         _requireCallerOwnsBond(_bondID);
 
         BondData memory bond = idToBondData[_bondID];
         uint256 bondLUSDAmount = bond.lusdAmount;
         (uint256 taxAmount, uint256 taxedBondAmount) = _getTaxedBond(bondLUSDAmount);
+
+
+        if (sLUSDToken.totalSupply() == 0) {
+            _firstChickenIn();
+        }
 
         uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
         uint256 backingRatio = _calcSystemBackingRatio(lusdInYearn);
@@ -215,19 +284,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         bondNFT.burn(_bondID);
 
         // transfer the chicken in tax to the LUSD/sLUSD AMM LP Rewards staking contract
-
-        // Pull the tax amount from Yearn LUSD vault
-        lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        yearnLUSDVault.withdraw(yTokensToSwapForTaxLUSD);
-
-        lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-
-        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal lusdToRefund.
-         * Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to floor division in the
-         * yToken calculation prior to withdrawal. */
-        lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        sLUSDLPRewardsStaking.pullRewardAmount(lusdBalanceDelta);
-        assert(lusdBalanceBefore - lusdToken.balanceOf(address(this)) == lusdBalanceDelta);
+        _transferToRewardsStakingContract(yTokensToSwapForTaxLUSD);
     }
 
     function redeem(uint256 _sLUSDToRedeem) external {
@@ -479,13 +536,14 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function _calcSystemBackingRatio(uint256 _lusdInYearn) public view returns (uint256) {
         uint256 totalSLUSDSupply = sLUSDToken.totalSupply();
         uint256 totalAcquiredLUSD = _getTotalAcquiredLUSD(_lusdInYearn);
-    
+
         /* TODO: Determine how to define the backing ratio when there is 0 sLUSD and 0 totalAcquiredLUSD,
         * i.e. before the first chickenIn. For now, return a backing ratio of 1. Note: Both quantities would be 0
         * also when the sLUSD supply is fully redeemed.
         */
-        if (totalSLUSDSupply == 0  && totalAcquiredLUSD == 0) {return 1e18;}
-        if (totalSLUSDSupply == 0) {return MAX_UINT256;}
+        //if (totalSLUSDSupply == 0  && totalAcquiredLUSD == 0) {return 1e18;}
+        //if (totalSLUSDSupply == 0) {return MAX_UINT256;}
+        if (totalSLUSDSupply == 0) {return 1e18;}
 
         return  totalAcquiredLUSD * 1e18 / totalSLUSDSupply;
     }

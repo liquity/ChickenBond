@@ -4,48 +4,6 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 
 contract ChickenBondManagerTest is BaseTest {
-    uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
-
-    // --- Helpers ---
-
-    function createBondForUser(address _user, uint256 _bondAmount) public returns (uint256) {
-        vm.startPrank(_user);
-        lusdToken.approve(address(chickenBondManager), _bondAmount);
-        chickenBondManager.createBond(_bondAmount);
-        vm.stopPrank();
-
-        // bond ID
-        return bondNFT.totalMinted();
-    }
-
-    function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
-        tip(address(lusdToken), _user, _lusdDeposit); 
-        assertGe(lusdToken.balanceOf(_user), _lusdDeposit);
-        vm.startPrank(_user);
-        lusdToken.approve(address(curvePool), _lusdDeposit);
-        curvePool.add_liquidity([_lusdDeposit, 0], 0);
-        vm.stopPrank();
-    }
-
-    function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
-        return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
-    }
-
-    function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
-        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
-    }
-
-    function _calcAccruedSLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio) internal view returns (uint256) {
-        uint256 bondSLUSDCap = _lusdAmount * 1e18 / _backingRatio;
-
-        uint256 bondDuration = (block.timestamp - _startTime);
-
-        // TODO: replace with final sLUSD accrual formula. */
-        return bondSLUSDCap * bondDuration / (bondDuration + SECONDS_IN_ONE_MONTH);
-    }
-
-    // --- Tests ---
-
     function testSetupSetsBondNFTAddressInCBM() public {
         assertTrue(address(chickenBondManager.bondNFT()) == address(bondNFT));
     }

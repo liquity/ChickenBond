@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
+import "../Dependencies/Uniswap/UniswapV2Factory.sol";
+import "../Dependencies/Uniswap/UniswapV2Router.sol";
+
 import "./BaseTest.sol";
 // import "../../utils/console.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
@@ -66,15 +69,20 @@ contract DevTestSetup is BaseTest {
         IERC20 uniToken = new ERC20("Uniswap LP Token", "UNI"); // mock Uniswap LP token
         sLUSDLPRewardsStaking = new Unipool(address(lusdToken), address(uniToken));
 
+        // Uniswap contracts
+        uniswapV2Factory = new UniswapV2Factory(address(0));
+        UniswapV2Router uniswapRouter = new UniswapV2Router(address(uniswapV2Factory), address(new ERC20("Wrapped ETH", "WETH")));
+
         chickenBondManager = new ChickenBondManagerWrap(
             address(bondNFT),
-            address(lusdToken), 
+            address(lusdToken),
             address(curvePool),
             address(yearnLUSDVault),
             address(yearnCurveVault),
             address(sLUSDToken),
             address(yearnRegistry),
             address(sLUSDLPRewardsStaking),
+            address(uniswapRouter),
             CHICKEN_IN_AMM_TAX
         );
 

@@ -23,7 +23,7 @@ import "./Interfaces/IUnipool.sol";
 contract LPTokenWrapper is ILPTokenWrapper {
     using SafeERC20 for IERC20;
 
-    IERC20 public uniToken;
+    IERC20 internal _uniToken;
 
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
@@ -39,13 +39,13 @@ contract LPTokenWrapper is ILPTokenWrapper {
     function stake(uint256 amount) public virtual override {
         _totalSupply = _totalSupply + amount;
         _balances[msg.sender] = _balances[msg.sender] + amount;
-        uniToken.safeTransferFrom(msg.sender, address(this), amount);
+        _uniToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function withdraw(uint256 amount) public virtual override {
         _totalSupply = _totalSupply - amount;
         _balances[msg.sender] = _balances[msg.sender] - amount;
-        uniToken.safeTransfer(msg.sender, amount);
+        _uniToken.safeTransfer(msg.sender, amount);
     }
 }
 
@@ -98,7 +98,7 @@ contract Unipool is LPTokenWrapper, IUnipool {
         Address.isContract(_rewardTokenAddress);
         Address.isContract(_uniTokenAddress);
 
-        uniToken = IERC20(_uniTokenAddress);
+        _uniToken = IERC20(_uniTokenAddress);
         rewardToken = IERC20(_rewardTokenAddress);
 
         emit RewardTokenAddressChanged(_rewardTokenAddress);
@@ -203,6 +203,10 @@ contract Unipool is LPTokenWrapper, IUnipool {
         rewardToken.safeTransferFrom(msg.sender, address(this), _reward);
 
         emit RewardAdded(_reward, newPeriodFinish);
+    }
+
+    function uniToken() external view returns (address) {
+        return address(_uniToken);
     }
 
     // Adjusts end time for the program after periods of zero total supply

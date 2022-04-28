@@ -16,6 +16,7 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             address _sLUSDTokenAddress,
             address _yearnRegistryAddress,
             address _sLUSDLPRewardsStaking,
+            address _uniswapRouter,
             uint256 _CHICKEN_IN_AMM_TAX
         )
         ChickenBondManager(
@@ -27,6 +28,7 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             _sLUSDTokenAddress,
             _yearnRegistryAddress,
             _sLUSDLPRewardsStaking,
+            _uniswapRouter,
             _CHICKEN_IN_AMM_TAX
         )
     {}
