@@ -82,7 +82,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
     // Updated by operations that change the average outstanding bond age (createBond, chickenIn, chickenOut).
     // Used by `_calcUpdatedAccrualParameter` to tell whether it's time to perform adjustments, and if so, how many times
     // (in case the time elapsed since the last adjustment is more than one adjustment period).
-    uint256 public accrualAdjustmentCount;
+    uint256 public accrualAdjustmentPeriodCount;
 
     // --- events ---
 
@@ -431,36 +431,36 @@ contract ChickenBondManager is Ownable, ChickenMath {
         view
         returns (
             uint256 updatedAccrualParameter,
-            uint256 updatedAccrualAdjustmentCount
+            uint256 updatedAccrualAdjustmentPeriodCount
         )
     {
-        updatedAccrualAdjustmentCount = (block.timestamp - deploymentTimestamp) / accrualAdjustmentPeriodSeconds;
+        updatedAccrualAdjustmentPeriodCount = (block.timestamp - deploymentTimestamp) / accrualAdjustmentPeriodSeconds;
 
         if (
             // There hasn't been enough time since the last update to warrant another update
-            updatedAccrualAdjustmentCount == _storedAccrualAdjustmentCount ||
+            updatedAccrualAdjustmentPeriodCount == _storedAccrualAdjustmentCount ||
             // or `accrualParameter` is already bottomed-out
             _storedAccrualParameter == minimumAccrualParameter ||
             // or there are no outstanding bonds (avoid division by zero)
             totalPendingLUSD == 0
         ) {
-            return (_storedAccrualParameter, updatedAccrualAdjustmentCount);
+            return (_storedAccrualParameter, updatedAccrualAdjustmentPeriodCount);
         }
 
         uint256 averageStartTime = totalWeightedStartTimes / totalPendingLUSD;
-        uint256 adjustmentCountWhenTargetIsExceeded = Math.ceilDiv(
+        uint256 adjustmentPeriodCountWhenTargetIsExceeded = Math.ceilDiv(
             averageStartTime + targetAverageAgeSeconds + 1 - deploymentTimestamp,
             accrualAdjustmentPeriodSeconds
         );
 
-        if (updatedAccrualAdjustmentCount < adjustmentCountWhenTargetIsExceeded) {
+        if (updatedAccrualAdjustmentPeriodCount < adjustmentPeriodCountWhenTargetIsExceeded) {
             // No adjustment needed; target average age hasn't been exceeded yet
-            return (_storedAccrualParameter, updatedAccrualAdjustmentCount);
+            return (_storedAccrualParameter, updatedAccrualAdjustmentPeriodCount);
         }
 
-        uint256 numberOfAdjustments = updatedAccrualAdjustmentCount - Math.max(
+        uint256 numberOfAdjustments = updatedAccrualAdjustmentPeriodCount - Math.max(
             _storedAccrualAdjustmentCount,
-            adjustmentCountWhenTargetIsExceeded - 1
+            adjustmentPeriodCountWhenTargetIsExceeded - 1
         );
 
         updatedAccrualParameter = Math.max(
@@ -471,13 +471,13 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     function _updateAccrualParameter() internal returns (uint256) {
         uint256 storedAccrualParameter = accrualParameter;
-        uint256 storedAccrualAdjustmentCount = accrualAdjustmentCount;
+        uint256 storedAccrualAdjustmentPeriodCount = accrualAdjustmentPeriodCount;
 
-        (uint256 updatedAccrualParameter, uint256 updatedAccrualAdjustmentCount) =
-            _calcUpdatedAccrualParameter(storedAccrualParameter, storedAccrualAdjustmentCount);
+        (uint256 updatedAccrualParameter, uint256 updatedAccrualAdjustmentPeriodCount) =
+            _calcUpdatedAccrualParameter(storedAccrualParameter, storedAccrualAdjustmentPeriodCount);
 
-        if (updatedAccrualAdjustmentCount != storedAccrualAdjustmentCount) {
-            accrualAdjustmentCount = updatedAccrualAdjustmentCount;
+        if (updatedAccrualAdjustmentPeriodCount != storedAccrualAdjustmentPeriodCount) {
+            accrualAdjustmentPeriodCount = updatedAccrualAdjustmentPeriodCount;
 
             if (updatedAccrualParameter != storedAccrualParameter) {
                 accrualParameter = updatedAccrualParameter;
@@ -587,7 +587,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function calcAccruedSLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
         uint lusdInYearn = calcYearnLUSDVaultShareValue();
-        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentCount);
+        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
         return _calcAccruedSLUSD(bond, _calcSystemBackingRatio(lusdInYearn), updatedAccrualParameter);
     }
 
@@ -616,7 +616,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
     }
 
     function calcUpdatedAccrualParameter() external view returns (uint256) {
-        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentCount);
+        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
         return updatedAccrualParameter;
     }
 }
