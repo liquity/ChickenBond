@@ -39,6 +39,7 @@ jobs:
           forge test
           -vvv
           --match-contract ChickenBondManagerDevTest
+          --no-match-test '(Shift|RedeemDecreasesAcquiredLUSDInCurveByCorrectFraction)'
 
   mainnet-test:
     name: Mainnet tests
