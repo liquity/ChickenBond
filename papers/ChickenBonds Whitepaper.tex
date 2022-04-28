@@ -27,7 +27,7 @@
 
 \title{\textbf{ChickenBonds: Self-Bootstrapping Treasury}}
 \author{Liquity Team}
-\date{April 12, 2021}
+\date{April 28, 2021}
 
 \maketitle
 
@@ -40,7 +40,7 @@ The TKN acquired by the system backs the bTKN supply: while a portion of the TKN
 
 By retaining the revenue from the entire treasury including outstanding bonds, the system amplifies the redemption value of the bTKN, resulting in a rising price floor. This yield amplification makes it attractive to buy and hold bTKN in addition to obtaining it through bonding. 
 
-ChickenBonds are versatile and can be used by protocols to obtain DEX liquidity for their token at no cost or to pursue more sophisticated liquidity management strategies. An interesting use case involves bonding LP tokens.
+ChickenBonds are versatile and can be used by protocols to obtain DEX liquidity for their token at no cost or to pursue sophisticated liquidity management strategies including algorithmic market operators (AMOs). An interesting use case involves bonding LP tokens.
 
 \tableofcontents
 
@@ -525,13 +525,13 @@ t = \frac{\alpha p_r + \alpha \sqrt{(1-\tau)p_f p_r}}{(1-\tau)p_f-p_r}
 \]
 
 \begin{equation}
-  \label{eq:optimal_chicken_in_1}
+  \label{eq:optimal_chicken_in_1_tax}
 t = \alpha \frac{p_r + \sqrt{(1-\tau)p_f p_r}}{(1-\tau)p_f-p_r}
 \end{equation}
 
 In terms of the $\lambda$ defined in \ref{sec:economics}:
 \begin{equation}
-  \label{eq:optimal_chicken_in_2}
+  \label{eq:optimal_chicken_in_2_tax}
 t = \alpha \frac{1 + \sqrt{(1-\tau)\lambda}}{(1-\tau)\lambda - 1}
 \end{equation}
 
@@ -950,7 +950,7 @@ In particular this shows that the assumption that redemption price follows a pur
 TODO: update once we have a formula for the fair price
 
 \subsection{Self-reinforcing price impact}
-It follows from equations \ref{eq:opt-rebonding} that a higher premium $\lambda$ leads to a shorter rebonding period $t$ (the same is true for \ref{eq:optimal_chicken_in_2}, and for break even time in \ref{eq:break_even_2}). As a consequence, we can expect bonders to chicken in earlier, resulting in a higher fraction of the bond $b_p$ that transitions into the Permanent Bucket, which has a reinforcing effect on the premium and is favorable for the fair price of bTKN (see TODO).
+It follows from equations \ref{eq:opt-rebonding} that a higher premium $\lambda$ leads to a shorter rebonding period $t$ (the same is true for \ref{eq:optimal_chicken_in_2}, and for the break even time in \ref{eq:break_even_2}). As a consequence, we can expect bonders to chicken in earlier, resulting in a higher fraction of the bond $b_p$ that transitions into the Permanent Bucket, which makes the premium more sustainable and may be favorable for the fair price of bTKN (TODO: depends on the formula).
 
 Thus, if the market price of bTKN increases while everything else stays equal, the chances are higher that the price will continue to rise in the future thanks to earlier chicken ins. While this effect may be not always be immediate, a large bTKN price hike could effectively push bonders beyond their optimal rebonding times.
 Assuming perfectly rational behavior, this would result in immediate chicken ins (and rebonding).
@@ -983,11 +983,15 @@ A Permanent Bucket may not be suitable for all use cases and protocol tokens. Fo
 This makes bonding more sustainable in the long run even without a Permanent Bucket.
 
 
-\subsection{Auto-adjusting the steepness $\alpha$ of the accrual curve}
+\subsection{Automatically adjusting the steepness $\alpha$ of the accrual curve}
   \label{sec:adjustment}
-TODO
+The break even point (equation \ref{eq:break_even_2}) and the optimal rebonding time (equations \ref{eq:opt-rebonding}, \ref{eq:optimal_chicken_in_2} and \ref{eq:optimal_chicken_in_2_tax}) heavily depend on the premium $\lambda$ as well as on $\alpha$, i.e. the steepness of the bTKN accrual curve $s(t)$. 
 
-\subsection{Redemption fees}
+Simulations have shown that the premium $\lambda$ tends to decrease over time as the system matures. If  $\alpha$ was kept constant, this would mean that the break even and optimal rebonding times would increase throughout the lifetime of the system, making bonds less and less attractive due to a decreasing APR.
+
+To avoid this outcome, the system could automatically adjust $\alpha$ to keep the optimal bonding duration constant. To that end, a controller could track the average (size-weighted) outstanding bond age and decrease $\alpha$ by a certain factor whenever the average age exceeds a given target age.
+
+\subsection{Redemption fee}
   \label{sec:redemption-fee}
 To throttle the outflow of TKN from the Acquired Bucket, the system may charge a fee on redemptions, called the \textit{redemption fee}. The redeemer of $n$ bTKN would then get slightly less TKN than their pro rata share, i.e. $x < n \cdot p_r$. The difference $(n \cdot p_r - x)$ could be either kept in the Acquired Bucket or moved to the Permanent Bucket. 
 
