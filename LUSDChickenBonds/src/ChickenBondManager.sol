@@ -405,8 +405,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         yTokensPermanentCurveVault += permanentYTokensCurveIncrease;
 
         // Ensure the SP->Curve shift has decreased the Curve spot price to not less than 1.0
-        uint256 finalCurveSpotPrice;
-    
+        uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(finalCurveSpotPrice < initialCurveSpotPrice && finalCurveSpotPrice >=  1e18, "CBM: SP->Curve shift must decrease spot price to >= 1.0");
     }
 
