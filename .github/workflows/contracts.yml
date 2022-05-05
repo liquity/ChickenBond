@@ -39,6 +39,7 @@ jobs:
           forge test
           -vvv
           --match-contract ChickenBondManagerDevTest
+          --no-match-test '(Shift|RedeemDecreasesAcquiredLUSDInCurveByCorrectFraction)'
 
   mainnet-test:
     name: Mainnet tests
@@ -58,6 +59,8 @@ jobs:
 
       - name: Run mainnet tests
         working-directory: LUSDChickenBonds
+        env:
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
         run: >-
           forge test
           -vvv
