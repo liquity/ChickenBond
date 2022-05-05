@@ -2531,8 +2531,8 @@ contract ChickenBondManagerTest is BaseTest {
         // Average age is "sampled" by the controller at the exact timestamps given by the formula:
         // `deploymentTimestamp + n * adjustmentPeriod`, where `n` is integer >= 0.
         // We use `ceilDiv` to calculate the time delta of the first such timestamp where the
-        // controller sees an average age that's _strictly_ higher than the target.
-        return adjustmentPeriod * Math.ceilDiv(averageStartTimeDelta + target + 1, adjustmentPeriod);
+        // controller sees an average age that's >= the target.
+        return adjustmentPeriod * Math.ceilDiv(averageStartTimeDelta + target, adjustmentPeriod);
     }
 
     function testControllerDoesNotAdjustWhenAgeOfSingleBondIsBelowTarget(uint256 _interval) public {

@@ -448,8 +448,42 @@ contract ChickenBondManager is Ownable, ChickenMath {
         }
 
         uint256 averageStartTime = totalWeightedStartTimes / totalPendingLUSD;
+
+        // We want to calculate the period when the average age will have reached or exceeded the
+        // target average age, to be used later in a check against the actual current period.
+        //
+        // At any given timestamp `t`, the average age can be calculated as:
+        //   averageAge(t) = t - averageStartTime
+        //
+        // For any period `n`, the average age is evaluated at the following timestamp:
+        //   tSample(n) = deploymentTimestamp + n * accrualAdjustmentPeriodSeconds
+        //
+        // Hence we're looking for the smallest integer `n` such that:
+        //   averageAge(tSample(n)) >= targetAverageAgeSeconds
+        //
+        // If `n` is the smallest integer for which the above inequality stands, then:
+        //   averageAge(tSample(n - 1)) < targetAverageAgeSeconds
+        //
+        // Combining the two inequalities:
+        //   averageAge(tSample(n - 1)) < targetAverageAgeSeconds <= averageAge(tSample(n))
+        //
+        // Substituting and rearranging:
+        //   1.    deploymentTimestamp + (n - 1) * accrualAdjustmentPeriodSeconds - averageStartTime
+        //       < targetAverageAgeSeconds
+        //      <= deploymentTimestamp + n * accrualAdjustmentPeriodSeconds - averageStartTime
+        //
+        //   2.    (n - 1) * accrualAdjustmentPeriodSeconds
+        //       < averageStartTime + targetAverageAgeSeconds - deploymentTimestamp
+        //      <= n * accrualAdjustmentPeriodSeconds
+        //
+        //   3. n - 1 < (averageStartTime + targetAverageAgeSeconds - deploymentTimestamp) / accrualAdjustmentPeriodSeconds <= n
+        //
+        // Using equivalence `n = ceil(x) <=> n - 1 < x <= n` we arrive at:
+        //   n = ceil((averageStartTime + targetAverageAgeSeconds - deploymentTimestamp) / accrualAdjustmentPeriodSeconds)
+        //
+        // We can calculate `ceil(a / b)` using `Math.ceilDiv(a, b)`.
         uint256 adjustmentPeriodCountWhenTargetIsExceeded = Math.ceilDiv(
-            averageStartTime + targetAverageAgeSeconds + 1 - deploymentTimestamp,
+            averageStartTime + targetAverageAgeSeconds - deploymentTimestamp,
             accrualAdjustmentPeriodSeconds
         );
 
