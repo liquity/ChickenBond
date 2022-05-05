@@ -3111,7 +3111,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(lpTokensReceived, 0);
     }
 
-    function testCurveImmediateDepositAndWithdrawalLossIsBounded(uint256 _depositAmount) public {
+    function testCurveImmediateLUSDDepositAndWithdrawalLossIsBounded(uint256 _depositAmount) public {
         vm.assume(_depositAmount < 1e27 && _depositAmount > 1e18); // deposit in range [1, 1bil] LUSD
 
         // uint256 _depositAmount = 10e18;
@@ -3135,6 +3135,83 @@ contract ChickenBondManagerTest is BaseTest {
         // Check that simple Curve LUSD deposit->withdraw loses between [0.01%, 1%] of initial deposit.
         assertLt(curveRelativeDepositLoss, 1e16);
         assertGt(curveRelativeDepositLoss, 1e14);
+    }
+
+    function testCurveImmediate3CRVDepositAndWithdrawalLossIsBounded(uint256 _depositAmount) public {
+        vm.assume(_depositAmount < 1e27 && _depositAmount > 1e18); // deposit in range [1, 1bil] LUSD
+
+        // uint256 _depositAmount = 10e18;
+
+        // Tip CBM some 3CRV 
+        tip(address(_3crvToken), address(chickenBondManager), _depositAmount);
+
+        // Artificially deposit LUSD to Curve, as CBM
+        uint256 cbm3CRVBalBeforeDep = _3crvToken.balanceOf(address(chickenBondManager));
+        vm.startPrank(address(chickenBondManager));
+
+        _3crvToken.approve(address(curvePool), _depositAmount);
+        curvePool.add_liquidity([0, _depositAmount], 0); // 2nd array slot is 3CRV token amount
+        uint256 cbm3CRVBalBefore = _3crvToken.balanceOf(address(chickenBondManager));
+        assertEq(cbm3CRVBalBefore, 0);
+
+        // Artifiiually withdraw all the share value as CBM  
+        uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
+        curvePool.remove_liquidity_one_coin(cbmShares, 1, 0);
+
+        uint256 cbm3CRVBalAfter = _3crvToken.balanceOf(address(chickenBondManager));
+        uint256 curveRelativeDepositLoss = diffOrZero(_depositAmount, cbm3CRVBalAfter) * 1e18 / _depositAmount;
+        
+        // Check that simple Curve 3CRV deposit->withdraw loses between [0.01%, 1%] of initial deposit.
+        assertLt(curveRelativeDepositLoss, 1e16);
+        assertGt(curveRelativeDepositLoss, 1e14);
+    }
+
+    function testCurveImmediateProportionalDepositAndWithdrawalLossIsBounded(uint256 _depositMagnitude) public {
+        vm.assume(_depositMagnitude < 1e27 && _depositMagnitude >= 1e18); // deposit magnitude in range [1, 1bil]
+
+        uint256 curve3CRVSpot = curvePool.get_dy_underlying(1, 0, 1e18); 
+
+        // Choose deposit amounts in proportion to current spot price, in order to keep it constant
+        uint256 _depositMagnitude = 10e18;
+        // multiply by the lusd-per-3crv
+        uint256 _lusdDepositAmount =  curve3CRVSpot * _depositMagnitude / 1e18;
+        uint256 _3crvDepositAmount = _depositMagnitude;
+
+        uint256 total3CRVValueBefore = _depositMagnitude * 2;
+
+        // Tip CBM some LUSD and 3CRV
+        tip(address(lusdToken), address(chickenBondManager), _lusdDepositAmount);
+        tip(address(_3crvToken), address(chickenBondManager), _3crvDepositAmount);
+
+        // Artificially deposit LUSD to Curve, as CBM
+        vm.startPrank(address(chickenBondManager));
+
+        lusdToken.approve(address(curvePool), _lusdDepositAmount);
+        _3crvToken.approve(address(curvePool), _3crvDepositAmount);
+        curvePool.add_liquidity([_lusdDepositAmount, _3crvDepositAmount], 0); // deposit both tokens
+       
+        uint256 cbmLUSDBalBefore = lusdToken.balanceOf(address(chickenBondManager));
+        uint256 cbm3CRVBalBefore = _3crvToken.balanceOf(address(chickenBondManager));
+        assertEq(cbmLUSDBalBefore, 0);
+        assertEq(cbm3CRVBalBefore, 0);
+
+        // Artificially withdraw all the share value as CBM  
+        uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
+        curvePool.remove_liquidity(cbmShares, [uint256(0), uint256(0)]); // receive both LUSD and 3CRV, no minimums
+
+        uint256 cbmLUSDBalAfter = lusdToken.balanceOf(address(chickenBondManager));
+        uint256 cbm3CRVBalAfter = _3crvToken.balanceOf(address(chickenBondManager));
+
+        uint256 curve3CRVSpotAfter = curvePool.get_dy_underlying(1, 0, 1e18); 
+
+        // divide the LUSD by the LUSD-per-3CRV, to get the value of the LUSD in 3CRV
+        uint256 total3CRVValueAfter = cbm3CRVBalAfter + (cbmLUSDBalAfter * 1e18 /  curve3CRVSpotAfter);
+
+        uint256 total3CRVRelativeDepositLoss = diffOrZero(total3CRVValueBefore, total3CRVValueAfter) * 1e18 / total3CRVValueBefore;
+        
+        // Check that a proportional Curve 3CRV and LUSD deposit->withdraw loses between [0.01%, 1%] of initial deposit.
+        assertLt(total3CRVRelativeDepositLoss, 1e16);
+        assertGt(total3CRVRelativeDepositLoss, 1e14);
     }
 
     // --- Controller tests ---
