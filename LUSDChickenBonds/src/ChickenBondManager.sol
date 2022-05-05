@@ -35,6 +35,17 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     // --- Data structures ---
 
+    struct ExternalAdresses {
+        address bondNFTAddress;
+        address lusdTokenAddress;
+        address curvePoolAddress;
+        address yearnLUSDVaultAddress;
+        address yearnCurveVaultAddress;
+        address sLUSDTokenAddress;
+        address yearnRegistryAddress;
+        address sLUSDLPRewardsStakingAddress;
+    }
+
     struct BondData {
         uint256 lusdAmount;
         uint256 startTime;
@@ -99,29 +110,22 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     constructor
     (
-        address _bondNFTAddress,
-        address _lusdTokenAddress,
-        address _curvePoolAddress,
-        address _yearnLUSDVaultAddress,
-        address _yearnCurveVaultAddress,
-        address _sLUSDTokenAddress,
-        address _yearnRegistryAddress,
+        ExternalAdresses memory _externalContractAddresses, // to avoid stack too deep issues
         uint256 _targetAverageAgeSeconds,
         uint256 _initialAccrualParameter,
         uint256 _minimumAccrualParameter,
         uint256 _accrualAdjustmentRate,
         uint256 _accrualAdjustmentPeriodSeconds,
-        address _sLUSDLPRewardsStaking,
         uint256 _CHICKEN_IN_AMM_TAX
     )
     {
-        bondNFT = IBondNFT(_bondNFTAddress);
-        lusdToken = ILUSDToken(_lusdTokenAddress);
-        sLUSDToken = ISLUSDToken(_sLUSDTokenAddress);
-        curvePool = ICurvePool(_curvePoolAddress);
-        yearnLUSDVault = IYearnVault(_yearnLUSDVaultAddress);
-        yearnCurveVault = IYearnVault(_yearnCurveVaultAddress);
-        yearnRegistry = IYearnRegistry(_yearnRegistryAddress);
+        bondNFT = IBondNFT(_externalContractAddresses.bondNFTAddress);
+        lusdToken = ILUSDToken(_externalContractAddresses.lusdTokenAddress);
+        sLUSDToken = ISLUSDToken(_externalContractAddresses.sLUSDTokenAddress);
+        curvePool = ICurvePool(_externalContractAddresses.curvePoolAddress);
+        yearnLUSDVault = IYearnVault(_externalContractAddresses.yearnLUSDVaultAddress);
+        yearnCurveVault = IYearnVault(_externalContractAddresses.yearnCurveVaultAddress);
+        yearnRegistry = IYearnRegistry(_externalContractAddresses.yearnRegistryAddress);
 
         deploymentTimestamp = block.timestamp;
         targetAverageAgeSeconds = _targetAverageAgeSeconds;
@@ -130,7 +134,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         accrualAdjustmentMultiplier = 1e18 - _accrualAdjustmentRate;
         accrualAdjustmentPeriodSeconds = _accrualAdjustmentPeriodSeconds;
 
-        sLUSDLPRewardsStaking = IUnipool(_sLUSDLPRewardsStaking);
+        sLUSDLPRewardsStaking = IUnipool(_externalContractAddresses.sLUSDLPRewardsStakingAddress);
         CHICKEN_IN_AMM_TAX = _CHICKEN_IN_AMM_TAX;
 
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure

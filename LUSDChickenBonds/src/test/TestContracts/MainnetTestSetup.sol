@@ -67,20 +67,23 @@ contract MainnetTestSetup is BaseTest {
         address uniswapPairAddress = uniswapV2Factory.createPair(address(lusdToken), address(sLUSDToken));
         sLUSDLPRewardsStaking = new Unipool(address(lusdToken), uniswapPairAddress);
 
+        ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
+            bondNFTAddress: address(bondNFT),
+            lusdTokenAddress: address(lusdToken),
+            sLUSDTokenAddress: address(sLUSDToken),
+            curvePoolAddress: address(curvePool),
+            yearnLUSDVaultAddress: address(yearnLUSDVault),
+            yearnCurveVaultAddress: address(yearnCurveVault),
+            yearnRegistryAddress: address(yearnRegistry),
+            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking)
+        });
         chickenBondManager = new ChickenBondManagerWrap(
-            address(bondNFT),                  // _bondNFTAddress
-            address(lusdToken),                // _lusdTokenAddress
-            address(curvePool),                // _curvePoolAddress
-            address(yearnLUSDVault),           // _yearnLUSDVaultAddress
-            address(yearnCurveVault),          // _yearnCurveVaultAddress
-            address(sLUSDToken),               // _sLUSDTokenAddress
-            address(yearnRegistry),            // _yearnRegistryAddress
+            externalContractAddresses,
             TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds
             INITIAL_ACCRUAL_PARAMETER,         // _initialAccrualParameter
             MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
             ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
             ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
-            address(sLUSDLPRewardsStaking),    // _sLUSDLPRewardsStaking
             CHICKEN_IN_AMM_TAX                 // _CHICKEN_IN_AMM_TAX
         );
 
