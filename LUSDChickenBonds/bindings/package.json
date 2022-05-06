@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "deploy": "ts-node scripts/deploy.ts",
     "prepare": "ts-node scripts/generate-types.ts"
   }
 }
