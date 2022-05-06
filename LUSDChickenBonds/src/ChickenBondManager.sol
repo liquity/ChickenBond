@@ -405,12 +405,6 @@ contract ChickenBondManager is Ownable, ChickenMath {
         if (_bond.startTime == 0) {return 0;}
         uint256 bondSLUSDCap = _calcBondSLUSDCap(_bond.lusdAmount, _backingRatio);
 
-        /* Simple placeholder formula for the sLUSD accrual of the form: ct/(t+a), where "c" is the cap and  
-        * "a" is a constant parameter which determines the accrual rate. The current value of a = SECONDS_IN_ONE_MONTH
-        * results in an accrued sLUSD equal to 50% of the cap after one month.
-        *
-        * TODO: replace with final sLUSD accrual formula. */
-
         // Scale `bondDuration` up to an 18 digit fixed-point number.
         // This lets us add it to `accrualParameter`, which is also an 18-digit FP.
         uint256 bondDuration = 1e18 * (block.timestamp - _bond.startTime);
