@@ -10,6 +10,7 @@ import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
 import "./LUSDTokenTester.sol";
 
+
 contract DevTestSetup is BaseTest {
     function setUp() public {
         // Start tests at a non-zero timestamp
@@ -28,7 +29,7 @@ contract DevTestSetup is BaseTest {
         tip(address(lusdToken), A, 100e18);
         tip(address(lusdToken), B, 100e18);
         tip(address(lusdToken), C, 100e18);
-        
+
         // Check accounts are funded
         assertEq(lusdToken.balanceOf(A), 100e18);
         assertEq(lusdToken.balanceOf(B), 100e18);
@@ -58,22 +59,31 @@ contract DevTestSetup is BaseTest {
         // Deploy core ChickenBonds system
         sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
 
-        // TODO: choose conventional name and symbol for NFT contract 
+        // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
-        
+
+        // Deploy LUSD/sLUSD AMM LP Rewards staking contract
+        IERC20 uniToken = new ERC20("Uniswap LP Token", "UNI"); // mock Uniswap LP token
+        sLUSDLPRewardsStaking = new Unipool(address(lusdToken), address(uniToken));
+
+        ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
+            bondNFTAddress: address(bondNFT),
+            lusdTokenAddress: address(lusdToken),
+            sLUSDTokenAddress: address(sLUSDToken),
+            curvePoolAddress: address(curvePool),
+            yearnLUSDVaultAddress: address(yearnLUSDVault),
+            yearnCurveVaultAddress: address(yearnCurveVault),
+            yearnRegistryAddress: address(yearnRegistry),
+            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking)
+        });
         chickenBondManager = new ChickenBondManagerWrap(
-            address(bondNFT),                  // _bondNFTAddress
-            address(lusdToken),                // _lusdTokenAddress
-            address(curvePool),                // _curvePoolAddress
-            address(yearnLUSDVault),           // _yearnLUSDVaultAddress
-            address(yearnCurveVault),          // _yearnCurveVaultAddress
-            address(sLUSDToken),               // _sLUSDTokenAddress
-            address(yearnRegistry),            // _yearnRegistryAddress
+            externalContractAddresses,
             TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds
             INITIAL_ACCRUAL_PARAMETER,         // _initialAccrualParameter
             MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
             ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
-            ACCRUAL_ADJUSTMENT_PERIOD_SECONDS  // _accrualAdjustmentPeriodSeconds
+            ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
+            CHICKEN_IN_AMM_TAX                 // _CHICKEN_IN_AMM_TAX
         );
 
         bondNFT.setAddresses(address(chickenBondManager));
