@@ -36,12 +36,12 @@ contract ChickenBondManager is Ownable, ChickenMath {
     }
 
     uint256 public totalPendingLUSD;
+    uint256 public totalWeightedStartTimes; // Sum of `lusdAmount * startTime` for all outstanding bonds (used to tell weighted average bond age)
     uint256 public lastRedemptionTime; // The timestamp of the latest redemption
     uint256 public baseRedemptionRate; // The latest base redemption rate
     mapping (uint256 => BondData) public idToBondData;
 
     uint256 constant MAX_UINT256 = type(uint256).max;
-    uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
     int128 constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0; 
     int128 constant INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL = 1;
 
@@ -58,6 +58,32 @@ contract ChickenBondManager is Ownable, ChickenMath {
      */
     uint256 constant public MINUTE_DECAY_FACTOR = 999037758833783000;
 
+    // --- Accrual control variables ---
+
+    // `block.timestamp` of the block in which this contract was deployed.
+    uint256 public immutable deploymentTimestamp;
+
+    // Average outstanding bond age above which the controller will adjust `accrualParameter` in order to speed up accrual.
+    uint256 public immutable targetAverageAgeSeconds;
+
+    // Stop adjusting `accrualParameter` when this value is reached.
+    uint256 public immutable minimumAccrualParameter;
+
+    // Number between 0 and 1. `accrualParameter` is multiplied by this every time there's an adjustment.
+    uint256 public immutable accrualAdjustmentMultiplier;
+
+    // The duration of an adjustment period in seconds. The controller performs at most one adjustment per every period.
+    uint256 public immutable accrualAdjustmentPeriodSeconds;
+
+    // The number of seconds it takes to accrue 50% of the cap, represented as an 18 digit fixed-point number.
+    uint256 public accrualParameter;
+
+    // Counts the number of adjustment periods since deployment.
+    // Updated by operations that change the average outstanding bond age (createBond, chickenIn, chickenOut).
+    // Used by `_calcUpdatedAccrualParameter` to tell whether it's time to perform adjustments, and if so, how many times
+    // (in case the time elapsed since the last adjustment is more than one adjustment period).
+    uint256 public accrualAdjustmentPeriodCount;
+
     // --- events ---
 
     event BaseRedemptionRateUpdated(uint256 _baseRedemptionRate);
@@ -73,7 +99,12 @@ contract ChickenBondManager is Ownable, ChickenMath {
         address _yearnLUSDVaultAddress, 
         address _yearnCurveVaultAddress,
         address _sLUSDTokenAddress,
-        address _yearnRegistryAddress
+        address _yearnRegistryAddress,
+        uint256 _targetAverageAgeSeconds,
+        uint256 _initialAccrualParameter,
+        uint256 _minimumAccrualParameter,
+        uint256 _accrualAdjustmentRate,
+        uint256 _accrualAdjustmentPeriodSeconds
     )
     {
         bondNFT = IBondNFT(_bondNFTAddress);
@@ -83,6 +114,13 @@ contract ChickenBondManager is Ownable, ChickenMath {
         yearnLUSDVault = IYearnVault(_yearnLUSDVaultAddress);
         yearnCurveVault = IYearnVault(_yearnCurveVaultAddress);
         yearnRegistry = IYearnRegistry(_yearnRegistryAddress);
+
+        deploymentTimestamp = block.timestamp;
+        targetAverageAgeSeconds = _targetAverageAgeSeconds;
+        accrualParameter = _initialAccrualParameter;
+        minimumAccrualParameter = _minimumAccrualParameter;
+        accrualAdjustmentMultiplier = 1e18 - _accrualAdjustmentRate;
+        accrualAdjustmentPeriodSeconds = _accrualAdjustmentPeriodSeconds;
     
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure) 
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
@@ -103,6 +141,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function createBond(uint256 _lusdAmount) external {
         _requireNonZeroAmount(_lusdAmount);
         
+        _updateAccrualParameter();
+
         // Mint the bond NFT to the caller and get the bond ID
         uint256 bondID = bondNFT.mint(msg.sender);
 
@@ -113,6 +153,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         idToBondData[bondID] = bondData;
         
         totalPendingLUSD += _lusdAmount;
+        totalWeightedStartTimes += _lusdAmount * block.timestamp;
 
         lusdToken.transferFrom(msg.sender, address(this), _lusdAmount);
 
@@ -128,10 +169,13 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function chickenOut(uint256 _bondID) external {
         _requireCallerOwnsBond(_bondID);
 
-        uint256 bondedLUSD = idToBondData[_bondID].lusdAmount;
+        _updateAccrualParameter();
+
+        BondData memory bond = idToBondData[_bondID];
        
         delete idToBondData[_bondID];
-        totalPendingLUSD -= bondedLUSD;  
+        totalPendingLUSD -= bond.lusdAmount;
+        totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
         /* In practice, there could be edge cases where the totalPendingLUSD is not fully backed:
         * - Heavy liquidations, and before yield has been converted
@@ -145,7 +189,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         /* Occasionally (e.g. when the system contains only one bonder) the withdrawable LUSD in Yearn 
         * will be less than the bonded LUSD due to rounding error in the share calculation. Therefore,
         * withdraw the lesser of the two quantities. */
-        uint256 lusdToWithdraw = Math.min(bondedLUSD, lusdInYearn); 
+        uint256 lusdToWithdraw = Math.min(bond.lusdAmount, lusdInYearn);
 
         uint256 yTokensToSwapForLUSD = calcYTokensToBurn(yearnLUSDVault, lusdToWithdraw, lusdInYearn);
 
@@ -166,15 +210,18 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function chickenIn(uint256 _bondID) external {
         _requireCallerOwnsBond(_bondID);
 
+        uint256 updatedAccrualParameter = _updateAccrualParameter();
+
         BondData memory bond = idToBondData[_bondID];
         uint256 lusdInYearn = calcYearnLUSDVaultShareValue(); 
         uint256 backingRatio = _calcSystemBackingRatio(lusdInYearn);
-        uint256 accruedSLUSD = _calcAccruedSLUSD(bond, backingRatio);
+        uint256 accruedSLUSD = _calcAccruedSLUSD(bond, backingRatio, updatedAccrualParameter);
 
         delete idToBondData[_bondID];
 
         // Subtract the bonded amount from the total pending LUSD (and implicitly increase the total acquired LUSD)
         totalPendingLUSD -= bond.lusdAmount;
+        totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
         /* Get LUSD amounts to acquire and refund. Acquire LUSD in proportion to the system's current backing ratio, 
         * in order to maintain said ratio. */
@@ -353,7 +400,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
     }
 
     // Internal getter for calculating accrued LUSD based on BondData struct
-    function _calcAccruedSLUSD(BondData memory _bond, uint256 _backingRatio) internal view returns (uint256) {
+    function _calcAccruedSLUSD(BondData memory _bond, uint256 _backingRatio, uint256 _accrualParameter) internal view returns (uint256) {
         // All bonds have a non-zero creation timestamp, so return accrued sLQTY 0 if the startTime is 0
         if (_bond.startTime == 0) {return 0;}
         uint256 bondSLUSDCap = _calcBondSLUSDCap(_bond.lusdAmount, _backingRatio);
@@ -363,12 +410,115 @@ contract ChickenBondManager is Ownable, ChickenMath {
         * results in an accrued sLUSD equal to 50% of the cap after one month.
         *
         * TODO: replace with final sLUSD accrual formula. */
-        uint256 bondDuration = (block.timestamp - _bond.startTime);
 
-        uint256 accruedSLUSD = bondSLUSDCap * bondDuration / (bondDuration + SECONDS_IN_ONE_MONTH);
+        // Scale `bondDuration` up to an 18 digit fixed-point number.
+        // This lets us add it to `accrualParameter`, which is also an 18-digit FP.
+        uint256 bondDuration = 1e18 * (block.timestamp - _bond.startTime);
+
+        uint256 accruedSLUSD = bondSLUSDCap * bondDuration / (bondDuration + _accrualParameter);
         assert(accruedSLUSD < bondSLUSDCap);
 
         return accruedSLUSD;
+    }
+
+    // Gauge the average (size-weighted) outstanding bond age and adjust accrual parameter if it's higher than our target.
+    // If there's been more than one adjustment period since the last adjustment, perform multiple adjustments retroactively.
+    function _calcUpdatedAccrualParameter(
+        uint256 _storedAccrualParameter,
+        uint256 _storedAccrualAdjustmentCount
+    )
+        internal
+        view
+        returns (
+            uint256 updatedAccrualParameter,
+            uint256 updatedAccrualAdjustmentPeriodCount
+        )
+    {
+        updatedAccrualAdjustmentPeriodCount = (block.timestamp - deploymentTimestamp) / accrualAdjustmentPeriodSeconds;
+
+        if (
+            // There hasn't been enough time since the last update to warrant another update
+            updatedAccrualAdjustmentPeriodCount == _storedAccrualAdjustmentCount ||
+            // or `accrualParameter` is already bottomed-out
+            _storedAccrualParameter == minimumAccrualParameter ||
+            // or there are no outstanding bonds (avoid division by zero)
+            totalPendingLUSD == 0
+        ) {
+            return (_storedAccrualParameter, updatedAccrualAdjustmentPeriodCount);
+        }
+
+        uint256 averageStartTime = totalWeightedStartTimes / totalPendingLUSD;
+
+        // We want to calculate the period when the average age will have reached or exceeded the
+        // target average age, to be used later in a check against the actual current period.
+        //
+        // At any given timestamp `t`, the average age can be calculated as:
+        //   averageAge(t) = t - averageStartTime
+        //
+        // For any period `n`, the average age is evaluated at the following timestamp:
+        //   tSample(n) = deploymentTimestamp + n * accrualAdjustmentPeriodSeconds
+        //
+        // Hence we're looking for the smallest integer `n` such that:
+        //   averageAge(tSample(n)) >= targetAverageAgeSeconds
+        //
+        // If `n` is the smallest integer for which the above inequality stands, then:
+        //   averageAge(tSample(n - 1)) < targetAverageAgeSeconds
+        //
+        // Combining the two inequalities:
+        //   averageAge(tSample(n - 1)) < targetAverageAgeSeconds <= averageAge(tSample(n))
+        //
+        // Substituting and rearranging:
+        //   1.    deploymentTimestamp + (n - 1) * accrualAdjustmentPeriodSeconds - averageStartTime
+        //       < targetAverageAgeSeconds
+        //      <= deploymentTimestamp + n * accrualAdjustmentPeriodSeconds - averageStartTime
+        //
+        //   2.    (n - 1) * accrualAdjustmentPeriodSeconds
+        //       < averageStartTime + targetAverageAgeSeconds - deploymentTimestamp
+        //      <= n * accrualAdjustmentPeriodSeconds
+        //
+        //   3. n - 1 < (averageStartTime + targetAverageAgeSeconds - deploymentTimestamp) / accrualAdjustmentPeriodSeconds <= n
+        //
+        // Using equivalence `n = ceil(x) <=> n - 1 < x <= n` we arrive at:
+        //   n = ceil((averageStartTime + targetAverageAgeSeconds - deploymentTimestamp) / accrualAdjustmentPeriodSeconds)
+        //
+        // We can calculate `ceil(a / b)` using `Math.ceilDiv(a, b)`.
+        uint256 adjustmentPeriodCountWhenTargetIsExceeded = Math.ceilDiv(
+            averageStartTime + targetAverageAgeSeconds - deploymentTimestamp,
+            accrualAdjustmentPeriodSeconds
+        );
+
+        if (updatedAccrualAdjustmentPeriodCount < adjustmentPeriodCountWhenTargetIsExceeded) {
+            // No adjustment needed; target average age hasn't been exceeded yet
+            return (_storedAccrualParameter, updatedAccrualAdjustmentPeriodCount);
+        }
+
+        uint256 numberOfAdjustments = updatedAccrualAdjustmentPeriodCount - Math.max(
+            _storedAccrualAdjustmentCount,
+            adjustmentPeriodCountWhenTargetIsExceeded - 1
+        );
+
+        updatedAccrualParameter = Math.max(
+            _storedAccrualParameter * decPow(accrualAdjustmentMultiplier, numberOfAdjustments) / 1e18,
+            minimumAccrualParameter
+        );
+    }
+
+    function _updateAccrualParameter() internal returns (uint256) {
+        uint256 storedAccrualParameter = accrualParameter;
+        uint256 storedAccrualAdjustmentPeriodCount = accrualAdjustmentPeriodCount;
+
+        (uint256 updatedAccrualParameter, uint256 updatedAccrualAdjustmentPeriodCount) =
+            _calcUpdatedAccrualParameter(storedAccrualParameter, storedAccrualAdjustmentPeriodCount);
+
+        if (updatedAccrualAdjustmentPeriodCount != storedAccrualAdjustmentPeriodCount) {
+            accrualAdjustmentPeriodCount = updatedAccrualAdjustmentPeriodCount;
+
+            if (updatedAccrualParameter != storedAccrualParameter) {
+                accrualParameter = updatedAccrualParameter;
+            }
+        }
+
+        return updatedAccrualParameter;
     }
 
     function getBondData(uint256 _bondID) external view returns (uint256, uint256) {
@@ -471,7 +621,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function calcAccruedSLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
         uint lusdInYearn = calcYearnLUSDVaultShareValue();
-        return _calcAccruedSLUSD(bond, _calcSystemBackingRatio(lusdInYearn));
+        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
+        return _calcAccruedSLUSD(bond, _calcSystemBackingRatio(lusdInYearn), updatedAccrualParameter);
     }
 
     function calcBondSLUSDCap(uint256 _bondID) external view returns (uint256) {
@@ -496,5 +647,10 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function calcSystemBackingRatio() external view returns (uint256) {
         uint lusdInYearn = calcYearnLUSDVaultShareValue();
         return _calcSystemBackingRatio(lusdInYearn);
+    }
+
+    function calcUpdatedAccrualParameter() external view returns (uint256) {
+        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
+        return updatedAccrualParameter;
     }
 }

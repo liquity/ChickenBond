@@ -14,7 +14,12 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             address _yearnLUSDVaultAddress,
             address _yearnCurveVaultAddress,
             address _sLUSDTokenAddress,
-            address _yearnRegistryAddress
+            address _yearnRegistryAddress,
+            uint256 _targetAverageAgeSeconds,
+            uint256 _initialAccrualParameter,
+            uint256 _minimumAccrualParameter,
+            uint256 _accrualAdjustmentRate,
+            uint256 _accrualAdjustmentPeriodSeconds
         )
         ChickenBondManager(
             _bondNFTAddress,
@@ -23,7 +28,12 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             _yearnLUSDVaultAddress,
             _yearnCurveVaultAddress,
             _sLUSDTokenAddress,
-            _yearnRegistryAddress
+            _yearnRegistryAddress,
+            _targetAverageAgeSeconds,
+            _initialAccrualParameter,
+            _minimumAccrualParameter,
+            _accrualAdjustmentRate,
+            _accrualAdjustmentPeriodSeconds
         )
     {}
 
