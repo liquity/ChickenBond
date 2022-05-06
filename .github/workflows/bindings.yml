@@ -1,0 +1,63 @@
+name: Bindings
+
+env:
+  CI: true
+  FORCE_COLOR: true
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/bindings.yml"
+      - "LUSDChickenBonds/**"
+
+  pull_request:
+    paths:
+      - ".github/workflows/bindings.yml"
+      - "LUSDChickenBonds/**"
+
+jobs:
+  dev-test:
+    name: Code generation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          # TODO pin this down once Foundry starts versioning releases
+          version: nightly
+
+      - name: Compile contracts
+        working-directory: LUSDChickenBonds
+        run: forge build
+
+      - name: Setup Node.js & Yarn
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: yarn
+        env:
+          # Workaround for https://github.com/actions/setup-node/issues/317
+          FORCE_COLOR: 0
+
+      - name: Install dependencies & generate typings
+        working-directory: LUSDChickenBonds/bindings
+        run: yarn install --frozen-lockfile
+
+      - name: Compile with TypeScript
+        working-directory: LUSDChickenBonds/bindings
+        run: yarn build
+
+      - name: Start OpenEthereum dev-chain
+        working-directory: LUSDChickenBonds
+        run: ./scripts/start-dev-chain.sh
+
+      - name: Deploy LUSDChickenBond contracts
+        working-directory: LUSDChickenBonds/bindings
+        run: yarn deploy
