@@ -42,6 +42,9 @@ jobs:
         with:
           node-version: 16
           cache: yarn
+        env:
+          # Workaround for https://github.com/actions/setup-node/issues/317
+          FORCE_COLOR: 0
 
       - name: Install dependencies & generate typings
         working-directory: LUSDChickenBonds/bindings
