@@ -53,3 +53,11 @@ jobs:
       - name: Compile with TypeScript
         working-directory: LUSDChickenBonds/bindings
         run: yarn build
+
+      - name: Start OpenEthereum dev-chain
+        working-directory: LUSDChickenBonds
+        run: ./scripts/start-dev-chain.sh
+
+      - name: Deploy LUSDChickenBond contracts
+        working-directory: LUSDChickenBonds/bindings
+        run: yarn deploy
