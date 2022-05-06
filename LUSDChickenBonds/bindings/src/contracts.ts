@@ -4,20 +4,24 @@ import { Signer } from "@ethersproject/abstract-signer";
 
 import bondNFT from "../artifacts/BondNFT.json";
 import chickenBondManager from "../artifacts/ChickenBondManager.json";
+import erc20 from "../artifacts/ERC20.json";
 import lusdTokenTester from "../artifacts/LUSDTokenTester.json";
 import mockCurvePool from "../artifacts/MockCurvePool.json";
 import mockYearnRegistry from "../artifacts/MockYearnRegistry.json";
 import mockYearnVault from "../artifacts/MockYearnVault.json";
 import sLUSDToken from "../artifacts/SLUSDToken.json";
+import unipool from "../artifacts/Unipool.json";
 
 import {
   BondNFTFactory,
   ChickenBondManagerFactory,
+  ERC20Factory,
   LUSDTokenTesterFactory,
   MockCurvePoolFactory,
   MockYearnRegistryFactory,
   MockYearnVaultFactory,
-  SLUSDTokenFactory
+  SLUSDTokenFactory,
+  UnipoolFactory
 } from "./generated/types";
 
 import {
@@ -48,9 +52,19 @@ export interface LUSDChickenBondContractFactories {
     factory: LUSDTokenTesterFactory;
   };
 
+  sLUSDLPRewardsStaking: {
+    contractName: "Unipool";
+    factory: UnipoolFactory;
+  };
+
   sLUSDToken: {
     contractName: "SLUSDToken";
     factory: SLUSDTokenFactory;
+  };
+
+  uniToken: {
+    contractName: "ERC20";
+    factory: ERC20Factory;
   };
 
   yearnRegistry: {
@@ -114,7 +128,9 @@ const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   chickenBondManager: checkArtifact("ChickenBondManager", chickenBondManager),
   curvePool: checkArtifact("MockCurvePool", mockCurvePool),
   lusdToken: checkArtifact("LUSDTokenTester", lusdTokenTester),
+  sLUSDLPRewardsStaking: checkArtifact("Unipool", unipool),
   sLUSDToken: checkArtifact("SLUSDToken", sLUSDToken),
+  uniToken: checkArtifact("ERC20", erc20),
   yearnCurveVault: checkArtifact("MockYearnVault", mockYearnVault),
   yearnLUSDVault: checkArtifact("MockYearnVault", mockYearnVault),
   yearnRegistry: checkArtifact("MockYearnRegistry", mockYearnRegistry)

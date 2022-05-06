@@ -3,13 +3,15 @@ import path from "path";
 
 import { Interface, ParamType } from "@ethersproject/abi";
 
-import LUSDTokenTester from "../../out/LUSDTokenTester.sol/LUSDTokenTester.json";
-import MockCurvePool from "../../out/MockCurvePool.sol/MockCurvePool.json";
-import MockYearnVault from "../../out/MockYearnVault.sol/MockYearnVault.json";
-import MockYearnRegistry from "../../out/MockYearnRegistry.sol/MockYearnRegistry.json";
-import SLUSDToken from "../../out/SLUSDToken.sol/SLUSDToken.json";
 import BondNFT from "../../out/BondNFT.sol/BondNFT.json";
 import ChickenBondManager from "../../out/ChickenBondManager.sol/ChickenBondManager.json";
+import ERC20 from "../../out/ERC20.sol/ERC20.json";
+import LUSDTokenTester from "../../out/LUSDTokenTester.sol/LUSDTokenTester.json";
+import MockCurvePool from "../../out/MockCurvePool.sol/MockCurvePool.json";
+import MockYearnRegistry from "../../out/MockYearnRegistry.sol/MockYearnRegistry.json";
+import MockYearnVault from "../../out/MockYearnVault.sol/MockYearnVault.json";
+import SLUSDToken from "../../out/SLUSDToken.sol/SLUSDToken.json";
+import Unipool from "../../out/Unipool.sol/Unipool.json";
 
 const getTupleType = (components: ParamType[], flexible: boolean) => {
   if (components.every(component => component.name)) {
@@ -137,13 +139,15 @@ const declareInterface = ({
 };
 
 const contractArtifacts = Object.entries({
+  BondNFT,
+  ChickenBondManager,
+  ERC20,
   LUSDTokenTester,
   MockCurvePool,
-  MockYearnVault,
   MockYearnRegistry,
+  MockYearnVault,
   SLUSDToken,
-  BondNFT,
-  ChickenBondManager
+  Unipool
 });
 
 const contracts = contractArtifacts.map(([contractName, { abi }]) => ({

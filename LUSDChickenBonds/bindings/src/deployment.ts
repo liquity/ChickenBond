@@ -119,23 +119,34 @@ const deployContracts = async (
   );
 
   const sLUSDToken = await deployContract(factories.sLUSDToken, "sLUSDToken", "SLUSD", overrides);
-
   const bondNFT = await deployContract(factories.bondNFT, "LUSDBondNFT", "LUSDBOND", overrides);
+  const uniToken = await deployContract(factories.uniToken, "Uniswap LP Token", "UNI", overrides);
+
+  const sLUSDLPRewardsStaking = await deployContract(
+    factories.sLUSDLPRewardsStaking,
+    lusdToken.contract.address,
+    uniToken.contract.address,
+    overrides
+  );
 
   const chickenBondManager = await deployContract(
     factories.chickenBondManager,
-    bondNFT.contract.address,
-    lusdToken.contract.address,
-    curvePool.contract.address,
-    yearnLUSDVault.contract.address,
-    yearnCurveVault.contract.address,
-    sLUSDToken.contract.address,
-    yearnRegistry.contract.address,
+    {
+      bondNFTAddress: bondNFT.contract.address,
+      curvePoolAddress: curvePool.contract.address,
+      lusdTokenAddress: lusdToken.contract.address,
+      sLUSDLPRewardsStakingAddress: sLUSDLPRewardsStaking.contract.address,
+      sLUSDTokenAddress: sLUSDToken.contract.address,
+      yearnCurveVaultAddress: yearnCurveVault.contract.address,
+      yearnLUSDVaultAddress: yearnLUSDVault.contract.address,
+      yearnRegistryAddress: yearnRegistry.contract.address
+    },
     config.targetAverageAgeSeconds,
     config.initialAccrualParameter,
     config.minimumAccrualParameter,
     config.accrualAdjustmentRate,
     config.accrualAdjustmentPeriodSeconds,
+    config.chickenInAMMTax,
     overrides
   );
 
@@ -144,7 +155,9 @@ const deployContracts = async (
     chickenBondManager,
     curvePool,
     lusdToken,
+    sLUSDLPRewardsStaking,
     sLUSDToken,
+    uniToken,
     yearnCurveVault,
     yearnLUSDVault,
     yearnRegistry
