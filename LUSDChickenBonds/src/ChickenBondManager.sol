@@ -13,22 +13,38 @@ import "./Interfaces/ISLUSDToken.sol";
 import "./Interfaces/IYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
 import "./Interfaces/IYearnRegistry.sol";
+import "./LPRewards/Interfaces/IUnipool.sol";
+
 
 contract ChickenBondManager is Ownable, ChickenMath {
 
     // ChickenBonds contracts
-    IBondNFT public bondNFT;
+    IBondNFT immutable public bondNFT;
 
-    ISLUSDToken public sLUSDToken;
-    ILUSDToken public lusdToken;
+    ISLUSDToken immutable public sLUSDToken;
+    ILUSDToken immutable public lusdToken;
 
     // External contracts
-    ICurvePool curvePool;
-    IYearnVault yearnLUSDVault;
-    IYearnVault yearnCurveVault;
-    IYearnRegistry yearnRegistry;
+    ICurvePool immutable public curvePool;
+    IYearnVault immutable public yearnLUSDVault;
+    IYearnVault immutable public yearnCurveVault;
+    IYearnRegistry immutable public yearnRegistry;
+    IUnipool immutable public sLUSDLPRewardsStaking;
+
+    uint256 immutable public CHICKEN_IN_AMM_TAX;
 
     // --- Data structures ---
+
+    struct ExternalAdresses {
+        address bondNFTAddress;
+        address lusdTokenAddress;
+        address curvePoolAddress;
+        address yearnLUSDVaultAddress;
+        address yearnCurveVaultAddress;
+        address sLUSDTokenAddress;
+        address yearnRegistryAddress;
+        address sLUSDLPRewardsStakingAddress;
+    }
 
     struct BondData {
         uint256 lusdAmount;
@@ -41,8 +57,9 @@ contract ChickenBondManager is Ownable, ChickenMath {
     uint256 public baseRedemptionRate; // The latest base redemption rate
     mapping (uint256 => BondData) public idToBondData;
 
+    // constants
     uint256 constant MAX_UINT256 = type(uint256).max;
-    int128 constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0; 
+    int128 constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0;
     int128 constant INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL = 1;
 
     uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
@@ -93,27 +110,22 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     constructor
     (
-        address _bondNFTAddress, 
-        address _lusdTokenAddress, 
-        address _curvePoolAddress,
-        address _yearnLUSDVaultAddress, 
-        address _yearnCurveVaultAddress,
-        address _sLUSDTokenAddress,
-        address _yearnRegistryAddress,
+        ExternalAdresses memory _externalContractAddresses, // to avoid stack too deep issues
         uint256 _targetAverageAgeSeconds,
         uint256 _initialAccrualParameter,
         uint256 _minimumAccrualParameter,
         uint256 _accrualAdjustmentRate,
-        uint256 _accrualAdjustmentPeriodSeconds
+        uint256 _accrualAdjustmentPeriodSeconds,
+        uint256 _CHICKEN_IN_AMM_TAX
     )
     {
-        bondNFT = IBondNFT(_bondNFTAddress);
-        lusdToken = ILUSDToken(_lusdTokenAddress);
-        sLUSDToken = ISLUSDToken(_sLUSDTokenAddress);
-        curvePool = ICurvePool(_curvePoolAddress);
-        yearnLUSDVault = IYearnVault(_yearnLUSDVaultAddress);
-        yearnCurveVault = IYearnVault(_yearnCurveVaultAddress);
-        yearnRegistry = IYearnRegistry(_yearnRegistryAddress);
+        bondNFT = IBondNFT(_externalContractAddresses.bondNFTAddress);
+        lusdToken = ILUSDToken(_externalContractAddresses.lusdTokenAddress);
+        sLUSDToken = ISLUSDToken(_externalContractAddresses.sLUSDTokenAddress);
+        curvePool = ICurvePool(_externalContractAddresses.curvePoolAddress);
+        yearnLUSDVault = IYearnVault(_externalContractAddresses.yearnLUSDVaultAddress);
+        yearnCurveVault = IYearnVault(_externalContractAddresses.yearnCurveVaultAddress);
+        yearnRegistry = IYearnRegistry(_externalContractAddresses.yearnRegistryAddress);
 
         deploymentTimestamp = block.timestamp;
         targetAverageAgeSeconds = _targetAverageAgeSeconds;
@@ -121,12 +133,16 @@ contract ChickenBondManager is Ownable, ChickenMath {
         minimumAccrualParameter = _minimumAccrualParameter;
         accrualAdjustmentMultiplier = 1e18 - _accrualAdjustmentRate;
         accrualAdjustmentPeriodSeconds = _accrualAdjustmentPeriodSeconds;
-    
-        // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure) 
+
+        sLUSDLPRewardsStaking = IUnipool(_externalContractAddresses.sLUSDLPRewardsStakingAddress);
+        CHICKEN_IN_AMM_TAX = _CHICKEN_IN_AMM_TAX;
+
+        // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
         lusdToken.approve(address(yearnLUSDVault), MAX_UINT256);
         lusdToken.approve(address(curvePool), MAX_UINT256);
         curvePool.approve(address(yearnCurveVault), MAX_UINT256);
+        lusdToken.approve(address(sLUSDLPRewardsStaking), MAX_UINT256);
 
         // Check that the system is hooked up to the correct latest Yearn vaults
         assert(address(yearnLUSDVault) == yearnRegistry.latestVault(address(lusdToken)));
@@ -140,7 +156,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     function createBond(uint256 _lusdAmount) external {
         _requireNonZeroAmount(_lusdAmount);
-        
+
         _updateAccrualParameter();
 
         // Mint the bond NFT to the caller and get the bond ID
@@ -151,7 +167,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         bondData.lusdAmount = _lusdAmount;
         bondData.startTime = block.timestamp;
         idToBondData[bondID] = bondData;
-        
+
         totalPendingLUSD += _lusdAmount;
         totalWeightedStartTimes += _lusdAmount * block.timestamp;
 
@@ -159,7 +175,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         // Deposit the LUSD to the Yearn LUSD vault
         yearnLUSDVault.deposit(_lusdAmount);
-    } 
+    }
 
     /* NOTE: chickenOut and chickenIn require the caller to pass their correct _bondID. This can be gleaned from their past
     * emitted createBond event.
@@ -172,7 +188,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         _updateAccrualParameter();
 
         BondData memory bond = idToBondData[_bondID];
-       
+
         delete idToBondData[_bondID];
         totalPendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
@@ -182,11 +198,11 @@ contract ChickenBondManager is Ownable, ChickenMath {
         * - Heavy loss-making liquidations, i.e. at <100% CR
         * - SP or Yearn vault hack that drains LUSD
         *
-        * TODO: decide how to handle chickenOuts if/when the recorded totalPendingLUSD is not fully backed by actual 
+        * TODO: decide how to handle chickenOuts if/when the recorded totalPendingLUSD is not fully backed by actual
         * LUSD in Yearn / the SP. */
 
         uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
-        /* Occasionally (e.g. when the system contains only one bonder) the withdrawable LUSD in Yearn 
+        /* Occasionally (e.g. when the system contains only one bonder) the withdrawable LUSD in Yearn
         * will be less than the bonded LUSD due to rounding error in the share calculation. Therefore,
         * withdraw the lesser of the two quantities. */
         uint256 lusdToWithdraw = Math.min(bond.lusdAmount, lusdInYearn);
@@ -199,8 +215,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         uint256 lusdBalanceDelta = lusdBalanceAfter - lusdBalanceBefore;
 
-        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal bondedLUSD. 
-        * Reasoning: the LUSD balance delta can be slightly lower than the bondedLUSD due to floor division in the 
+        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal bondedLUSD.
+        * Reasoning: the LUSD balance delta can be slightly lower than the bondedLUSD due to floor division in the
         * yToken calculation prior to withdrawal. */
         lusdToken.transfer(msg.sender, lusdBalanceDelta);
 
@@ -213,9 +229,11 @@ contract ChickenBondManager is Ownable, ChickenMath {
         uint256 updatedAccrualParameter = _updateAccrualParameter();
 
         BondData memory bond = idToBondData[_bondID];
-        uint256 lusdInYearn = calcYearnLUSDVaultShareValue(); 
+        (uint256 taxAmount, uint256 taxedBondAmount) = _getTaxedBond(bond.lusdAmount);
+
+        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
         uint256 backingRatio = _calcSystemBackingRatio(lusdInYearn);
-        uint256 accruedSLUSD = _calcAccruedSLUSD(bond, backingRatio, updatedAccrualParameter);
+        uint256 accruedSLUSD = _calcAccruedSLUSD(bond.startTime, taxedBondAmount, backingRatio, updatedAccrualParameter);
 
         delete idToBondData[_bondID];
 
@@ -223,34 +241,49 @@ contract ChickenBondManager is Ownable, ChickenMath {
         totalPendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
-        /* Get LUSD amounts to acquire and refund. Acquire LUSD in proportion to the system's current backing ratio, 
+        /* Get LUSD amounts to acquire and refund. Acquire LUSD in proportion to the system's current backing ratio,
         * in order to maintain said ratio. */
         uint256 lusdToAcquire = accruedSLUSD * backingRatio / 1e18;
-        uint256 lusdToRefund = bond.lusdAmount - lusdToAcquire;
+        uint256 lusdToRefund = taxedBondAmount - lusdToAcquire;
 
-        assert ((lusdToAcquire + lusdToRefund) <= bond.lusdAmount);
+        assert ((lusdToAcquire + lusdToRefund) <= taxedBondAmount);
 
-        uint256 yTokensToSwapForLUSD = calcYTokensToBurn(yearnLUSDVault, lusdToRefund, lusdInYearn);
+        uint256 yTokensToSwapForRefundLUSD = calcYTokensToBurn(yearnLUSDVault, lusdToRefund, lusdInYearn);
+        uint256 yTokensToSwapForTaxLUSD = calcYTokensToBurn(yearnLUSDVault, taxAmount, lusdInYearn);
 
          // Pull the refund from Yearn LUSD vault
-        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));  
-        yearnLUSDVault.withdraw(yTokensToSwapForLUSD);
-        uint256 lusdBalanceAfter = lusdToken.balanceOf(address(this));
+        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        yearnLUSDVault.withdraw(yTokensToSwapForRefundLUSD);
 
-        uint256 lusdBalanceDelta = lusdBalanceAfter - lusdBalanceBefore; 
+        uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
 
-        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal lusdToRefund. 
-        * Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to floor division in the 
+        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal lusdToRefund.
+        * Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to floor division in the
         * yToken calculation prior to withdrawal. */
         lusdToken.transfer(msg.sender, lusdBalanceDelta);
 
         sLUSDToken.mint(msg.sender, accruedSLUSD);
         bondNFT.burn(_bondID);
+
+        // transfer the chicken in tax to the LUSD/sLUSD AMM LP Rewards staking contract
+
+        // Pull the tax amount from Yearn LUSD vault
+        lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        yearnLUSDVault.withdraw(yTokensToSwapForTaxLUSD);
+
+        lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+
+        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal lusdToRefund.
+         * Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to floor division in the
+         * yToken calculation prior to withdrawal. */
+        lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        sLUSDLPRewardsStaking.pullRewardAmount(lusdBalanceDelta);
+        assert(lusdBalanceBefore - lusdToken.balanceOf(address(this)) == lusdBalanceDelta);
     }
 
     function redeem(uint256 _sLUSDToRedeem) external {
         _requireNonZeroAmount(_sLUSDToRedeem);
-        
+
         /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
         Current approach leaves redemption fees in the acquired bucket. */
         uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
@@ -262,25 +295,25 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
         // Get the LUSD to withdraw from Yearn, and the corresponding yTokens
         uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
-      
+
         uint256 lusdToWithdrawFromYearn = _getAcquiredLUSDInYearn(lusdInYearn) * fractionOfAcquiredLUSDToWithdraw / 1e18;
         uint256 yTokensToWithdrawFromLUSDVault = calcYTokensToBurn(yearnLUSDVault, lusdToWithdrawFromYearn, lusdInYearn);
-        
+
         // Since 100% of the Curve liquidity is "acquired", just get the yTokens directly
         uint256 yTokensToWithdrawFromCurveVault = yearnCurveVault.balanceOf(address(this)) * fractionOfAcquiredLUSDToWithdraw / 1e18;
 
         // The LUSD and LUSD3CRV deltas from SP/Curve withdrawals are the amounts to send to the redeemer
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
         uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
-     
+
         if (yTokensToWithdrawFromLUSDVault > 0) {yearnLUSDVault.withdraw(yTokensToWithdrawFromLUSDVault);} // obtain LUSD from Yearn
         if (yTokensToWithdrawFromCurveVault > 0) {yearnCurveVault.withdraw(yTokensToWithdrawFromCurveVault);} // obtain LUSD3CRV from Yearn
-     
+
         uint256 LUSD3CRVDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
         if (LUSD3CRVDelta > 0) {curvePool.remove_liquidity_one_coin(LUSD3CRVDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);} // obtain LUSD from Curve
-    
+
         uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-    
+
         _requireNonZeroAmount(lusdBalanceDelta);
 
         // Burn the redeemed sLUSD
@@ -303,7 +336,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
         yearnLUSDVault.withdraw(yTokensToBurn);
         uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-    
+
         // Assertion should hold in principle. In practice, there is usually minor rounding error
         // assert(lusdBalanceDelta == lusdToShift);
 
@@ -321,7 +354,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(finalCurveSpotPrice < initialCurveSpotPrice && finalCurveSpotPrice >=  1e18, "CBM: SP->Curve shift must decrease spot price to >= 1.0");
     }
-   
+
    function shiftLUSDFromCurveToSP(uint256 _lusdToShift) external {
         _requireNonZeroAmount(_lusdToShift);
 
@@ -331,7 +364,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
         uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([_lusdToShift, 0], false);
 
-        //Calculate yTokens to swap for LUSD3CRV-f 
+        //Calculate yTokens to swap for LUSD3CRV-f
         uint256 LUSD3CRVfInYearn = calcYearnCurveVaultShareValue();
         uint256 yTokensToBurn = calcYTokensToBurn(yearnCurveVault, LUSD3CRVfToBurn, LUSD3CRVfInYearn);
 
@@ -360,13 +393,13 @@ contract ChickenBondManager is Ownable, ChickenMath {
         // Ensure the Curve->SP shift has increased the Curve spot price to not more than 1.0
         uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(finalCurveSpotPrice > initialCurveSpotPrice && finalCurveSpotPrice <=  1e18, "CBM: Curve->SP shift must increase spot price to <= 1.0");
-    
+
     }
 
     // --- Helper functions ---
 
-    function _getCurveLUSDSpotPrice() public returns (uint256) {
-        // Get the Curve spot price of LUSD: the amount of 3CRV that would be received by swapping 1 LUSD 
+    function _getCurveLUSDSpotPrice() public view returns (uint256) {
+        // Get the Curve spot price of LUSD: the amount of 3CRV that would be received by swapping 1 LUSD
         return curvePool.get_dy_underlying(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
     }
 
@@ -399,21 +432,26 @@ contract ChickenBondManager is Ownable, ChickenMath {
         return (block.timestamp - lastRedemptionTime) / SECONDS_IN_ONE_MINUTE;
     }
 
-    // Internal getter for calculating accrued LUSD based on BondData struct
-    function _calcAccruedSLUSD(BondData memory _bond, uint256 _backingRatio, uint256 _accrualParameter) internal view returns (uint256) {
-        // All bonds have a non-zero creation timestamp, so return accrued sLQTY 0 if the startTime is 0
-        if (_bond.startTime == 0) {return 0;}
-        uint256 bondSLUSDCap = _calcBondSLUSDCap(_bond.lusdAmount, _backingRatio);
+    function _getTaxedBond(uint256 _bondLUSDAmount) internal view returns (uint256, uint256) {
+        uint256 taxAmount = _bondLUSDAmount * CHICKEN_IN_AMM_TAX / 1e18;
+        uint256 taxedBondAmount = _bondLUSDAmount - taxAmount;
+        return (taxAmount, taxedBondAmount);
+    }
 
-        /* Simple placeholder formula for the sLUSD accrual of the form: ct/(t+a), where "c" is the cap and  
-        * "a" is a constant parameter which determines the accrual rate. The current value of a = SECONDS_IN_ONE_MONTH
-        * results in an accrued sLUSD equal to 50% of the cap after one month.
-        *
-        * TODO: replace with final sLUSD accrual formula. */
+    function _getTaxedBondAmount(uint256 _bondLUSDAmount) internal view returns (uint256) {
+        (, uint256 taxedBondAmount) = _getTaxedBond(_bondLUSDAmount);
+        return taxedBondAmount;
+    }
+
+    // Internal getter for calculating accrued LUSD based on BondData struct
+    function _calcAccruedSLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio, uint256 _accrualParameter) internal view returns (uint256) {
+        // All bonds have a non-zero creation timestamp, so return accrued sLQTY 0 if the startTime is 0
+        if (_startTime == 0) {return 0;}
+        uint256 bondSLUSDCap = _calcBondSLUSDCap(_lusdAmount, _backingRatio);
 
         // Scale `bondDuration` up to an 18 digit fixed-point number.
         // This lets us add it to `accrualParameter`, which is also an 18-digit FP.
-        uint256 bondDuration = 1e18 * (block.timestamp - _bond.startTime);
+        uint256 bondDuration = 1e18 * (block.timestamp - _startTime);
 
         uint256 accruedSLUSD = bondSLUSDCap * bondDuration / (bondDuration + _accrualParameter);
         assert(accruedSLUSD < bondSLUSDCap);
@@ -448,8 +486,42 @@ contract ChickenBondManager is Ownable, ChickenMath {
         }
 
         uint256 averageStartTime = totalWeightedStartTimes / totalPendingLUSD;
+
+        // We want to calculate the period when the average age will have reached or exceeded the
+        // target average age, to be used later in a check against the actual current period.
+        //
+        // At any given timestamp `t`, the average age can be calculated as:
+        //   averageAge(t) = t - averageStartTime
+        //
+        // For any period `n`, the average age is evaluated at the following timestamp:
+        //   tSample(n) = deploymentTimestamp + n * accrualAdjustmentPeriodSeconds
+        //
+        // Hence we're looking for the smallest integer `n` such that:
+        //   averageAge(tSample(n)) >= targetAverageAgeSeconds
+        //
+        // If `n` is the smallest integer for which the above inequality stands, then:
+        //   averageAge(tSample(n - 1)) < targetAverageAgeSeconds
+        //
+        // Combining the two inequalities:
+        //   averageAge(tSample(n - 1)) < targetAverageAgeSeconds <= averageAge(tSample(n))
+        //
+        // Substituting and rearranging:
+        //   1.    deploymentTimestamp + (n - 1) * accrualAdjustmentPeriodSeconds - averageStartTime
+        //       < targetAverageAgeSeconds
+        //      <= deploymentTimestamp + n * accrualAdjustmentPeriodSeconds - averageStartTime
+        //
+        //   2.    (n - 1) * accrualAdjustmentPeriodSeconds
+        //       < averageStartTime + targetAverageAgeSeconds - deploymentTimestamp
+        //      <= n * accrualAdjustmentPeriodSeconds
+        //
+        //   3. n - 1 < (averageStartTime + targetAverageAgeSeconds - deploymentTimestamp) / accrualAdjustmentPeriodSeconds <= n
+        //
+        // Using equivalence `n = ceil(x) <=> n - 1 < x <= n` we arrive at:
+        //   n = ceil((averageStartTime + targetAverageAgeSeconds - deploymentTimestamp) / accrualAdjustmentPeriodSeconds)
+        //
+        // We can calculate `ceil(a / b)` using `Math.ceilDiv(a, b)`.
         uint256 adjustmentPeriodCountWhenTargetIsExceeded = Math.ceilDiv(
-            averageStartTime + targetAverageAgeSeconds + 1 - deploymentTimestamp,
+            averageStartTime + targetAverageAgeSeconds - deploymentTimestamp,
             accrualAdjustmentPeriodSeconds
         );
 
@@ -497,10 +569,10 @@ contract ChickenBondManager is Ownable, ChickenMath {
     * plus
     * the LUSD cash-in value of the Curve LP shares in the Yearn Curve vault
     * minus
-    * the total pending LUSD.  
+    * the total pending LUSD.
     *
     *
-    * In practice, the total acquired LUSD calculation will depend on the specifics of how Yearn vaults calculate 
+    * In practice, the total acquired LUSD calculation will depend on the specifics of how Yearn vaults calculate
     their balances and incorporate the yield, and whether we implement a toll on chicken-ins (and therefore divert some permanent DEX liquidity) */
     function _getTotalAcquiredLUSD(uint256 _lusdInYearn) public view returns (uint256) {
         return  _getAcquiredLUSDInYearn(_lusdInYearn) + getAcquiredLUSDInCurve();
@@ -513,7 +585,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         * When sLUSD supply == 0 (i.e. before the "first" chicken-in), this delta should be 0. However in practice, due to rounding
         * error in Yearn's share calculation the delta can be negative. We assume that a negative delta always corresponds to 0 acquired LUSD.
         *
-        * TODO: Determine if this is the only situation whereby the delta can be negative. Potentially enforce some minimum 
+        * TODO: Determine if this is the only situation whereby the delta can be negative. Potentially enforce some minimum
         * chicken-in value so that acquired LUSD always more than covers any rounding error in the share value.
         */
         uint256 acquiredLUSDInYearn = _lusdInYearn > totalPendingLUSDCached ? _lusdInYearn - totalPendingLUSDCached : 0;
@@ -526,7 +598,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         uint256 lusd3CRVInYearn = calcYearnCurveVaultShareValue();
         uint256 lusdInCurve;
 
-        // Get the LUSD value of the LUSD-3CRV tokens 
+        // Get the LUSD value of the LUSD-3CRV tokens
         if (lusd3CRVInYearn > 0) {
             lusdInCurve = curvePool.calc_withdraw_one_coin(lusd3CRVInYearn, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL);
         }
@@ -555,7 +627,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function _calcSystemBackingRatio(uint256 _lusdInYearn) public view returns (uint256) {
         uint256 totalSLUSDSupply = sLUSDToken.totalSupply();
         uint256 totalAcquiredLUSD = _getTotalAcquiredLUSD(_lusdInYearn);
-    
+
         /* TODO: Determine how to define the backing ratio when there is 0 sLUSD and 0 totalAcquiredLUSD,
         * i.e. before the first chickenIn. For now, return a backing ratio of 1. Note: Both quantities would be 0
         * also when the sLUSD supply is fully redeemed.
@@ -586,18 +658,16 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     function calcAccruedSLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
-        uint lusdInYearn = calcYearnLUSDVaultShareValue();
         (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
-        return _calcAccruedSLUSD(bond, _calcSystemBackingRatio(lusdInYearn), updatedAccrualParameter);
+        return _calcAccruedSLUSD(bond.startTime, _getTaxedBondAmount(bond.lusdAmount), calcSystemBackingRatio(), updatedAccrualParameter);
     }
 
     function calcBondSLUSDCap(uint256 _bondID) external view returns (uint256) {
-        uint lusdInYearn = calcYearnLUSDVaultShareValue();
-        uint256 backingRatio = _calcSystemBackingRatio(lusdInYearn);
-       
+        uint256 backingRatio = calcSystemBackingRatio();
+
         BondData memory bond = idToBondData[_bondID];
 
-        return _calcBondSLUSDCap(bond.lusdAmount, backingRatio);
+        return _calcBondSLUSDCap(_getTaxedBondAmount(bond.lusdAmount), backingRatio);
     }
 
     function getTotalAcquiredLUSD() external view returns (uint256) {
@@ -610,8 +680,8 @@ contract ChickenBondManager is Ownable, ChickenMath {
         return _getAcquiredLUSDInYearn(lusdInYearn);
     }
 
-    function calcSystemBackingRatio() external view returns (uint256) {
-        uint lusdInYearn = calcYearnLUSDVaultShareValue();
+    function calcSystemBackingRatio() public view returns (uint256) {
+        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
         return _calcSystemBackingRatio(lusdInYearn);
     }
 

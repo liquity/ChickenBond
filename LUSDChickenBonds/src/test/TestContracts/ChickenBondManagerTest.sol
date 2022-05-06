@@ -5,6 +5,7 @@ import "./BaseTest.sol";
 import "./QuickSort.sol";
 
 contract ChickenBondManagerTest is BaseTest {
+    uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
 
     // --- Helpers ---
 
@@ -15,6 +16,7 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.createBond(_bondAmount);
         vm.stopPrank();
 
+        // bond ID
         return bondNFT.totalMinted();
     }
 
@@ -25,12 +27,29 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
-        tip(address(lusdToken), _user, _lusdDeposit); 
+        tip(address(lusdToken), _user, _lusdDeposit);
         assertGe(lusdToken.balanceOf(_user), _lusdDeposit);
         vm.startPrank(_user);
         lusdToken.approve(address(curvePool), _lusdDeposit);
         curvePool.add_liquidity([_lusdDeposit, 0], 0);
         vm.stopPrank();
+    }
+
+    function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
+    }
+
+    function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
+    }
+
+    function _calcAccruedSLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio) internal view returns (uint256) {
+        uint256 bondSLUSDCap = _lusdAmount * 1e18 / _backingRatio;
+
+        uint256 bondDuration = (block.timestamp - _startTime);
+
+        // TODO: replace with final sLUSD accrual formula. */
+        return bondSLUSDCap * bondDuration / (bondDuration + SECONDS_IN_ONE_MONTH);
     }
 
     // --- Tests ---
@@ -74,7 +93,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Get initial backing ratio
         uint256 backingRatio_1 = chickenBondManager.calcSystemBackingRatio();
-        
+
         // B approves the system for LUSD transfer and creates the bond
         createBondForUser(B,  25e18);
 
@@ -88,13 +107,13 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(A);
         chickenBondManager.chickenIn(bondID_A);
         vm.stopPrank();
-    
+
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertGt(totalAcquiredLUSD, 0);
 
         // Get backing ratio 3
         uint256 backingRatio_3 = chickenBondManager.calcSystemBackingRatio();
-    
+
         // C creates bond
        createBondForUser(C,  25e18);
 
@@ -124,7 +143,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // C creates bond
         createBondForUser(C,  25e18);
-        
+
         uint256 bondID_C = bondNFT.totalMinted();
         (, uint256 bondStartTime_C) = chickenBondManager.getBondData(bondID_C);
 
@@ -163,7 +182,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testFirstCreateBondIncreasesTotalPendingLUSD(uint) public {
         // Get initial pending LUSD
         uint256 totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
-        
+
         // Confirm initial total pending LUSD is 0
         assertTrue(totalPendingLUSDBefore == 0);
 
@@ -178,12 +197,12 @@ contract ChickenBondManagerTest is BaseTest {
     function testCreateBondIncreasesTotalPendingLUSD() public {
         // First, A creates an initial bond
         createBondForUser(A, 25e18);
-  
+
         // B creates the bond
         createBondForUser(B, 10e18);
 
         vm.stopPrank();
-        
+
         // Check totalPendingLUSD has increased by the correct amount
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
         assertTrue(totalPendingLUSDAfter == 35e18);
@@ -248,7 +267,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testCreateBondIncreasesTheBondNFTSupplyByOne() public {
         // A creates bond
         createBondForUser(A, 10e18);
-        
+
         // Get NFT token supply before
         uint256 tokenSupplyBefore = bondNFT.tokenSupply();
 
@@ -263,7 +282,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testCreateBondIncreasesTheBondNFTTotalMintedByOne() public {
         // A creates bond
         createBondForUser(A, 10e18);
-        
+
         // Get NFT total minted before
         uint256 totalMintedBefore = bondNFT.totalMinted();
 
@@ -282,7 +301,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // A creates bond
         createBondForUser(A, 10e18);
-        
+
         // Check A now has one NFT
         uint256 A_NFTBalanceAfter = bondNFT.balanceOf(A);
         assertEq(A_NFTBalanceAfter, 1);
@@ -300,7 +319,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bondNFT.totalMinted(),  1);
         address ownerOfID1 = bondNFT.ownerOf(1);
         assertEq(ownerOfID1, A);
-        
+
         // B creates bond
         createBondForUser(B, 10e18);
 
@@ -354,7 +373,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
         assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore - bondAmount);
     }
-    
+
     function testChickenOutDeletesBondData() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -583,7 +602,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Time interval passes
         vm.warp(block.timestamp + _interval);
-        
+
         // Check accrued sLUSD < sLUSD Cap
         assertTrue(chickenBondManager.calcAccruedSLUSD(B_bondID) < chickenBondManager.calcBondSLUSDCap(B_bondID));
     }
@@ -621,7 +640,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Time passes
         vm.warp(block.timestamp + _interval);
-        
+
         // Check accrued sLUSD < sLUSD Cap
         assertTrue(chickenBondManager.calcAccruedSLUSD(B_bondID) < chickenBondManager.calcBondSLUSDCap(B_bondID));
     }
@@ -641,7 +660,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + _interval);
         uint256 newAccruedSLUSD_A = chickenBondManager.calcAccruedSLUSD(bondID_A);
         assertTrue(newAccruedSLUSD_A > accruedSLUSD_A);
-        
+
         // time passes
         vm.warp(block.timestamp + 30 days);
 
@@ -688,7 +707,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A, B create bonds
         createBondForUser(A, bondAmount);
         A_bondID = bondNFT.totalMinted();
-        
+
         createBondForUser(B, bondAmount);
         uint256 B_bondID = bondNFT.totalMinted();
 
@@ -715,7 +734,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 unusedBondID = bondNFT.totalMinted() + 1;
 
-        // 10 minutes passes 
+        // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
         // Check accrued sLUSD for a nonexistent bond is 0
@@ -730,10 +749,10 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(backingRatio_1, 1e18);
 
         uint256 bondAmount = 10e18;
-    
+
         // A creates bond
         createBondForUser(A, bondAmount);
-        
+
         uint256 backingRatio_2 = chickenBondManager.calcSystemBackingRatio();
         assertEq(backingRatio_2, 1e18);
 
@@ -743,7 +762,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 backingRatio_3 = chickenBondManager.calcSystemBackingRatio();
         assertEq(backingRatio_3, 1e18);
     }
-   
+
     // --- chickenIn tests ---
 
     function testChickenInSucceedsAfterShortBondingInterval(uint256 _interval) public {
@@ -755,7 +774,7 @@ contract ChickenBondManagerTest is BaseTest {
        createBondForUser(A, bondAmount);
 
         vm.warp(block.timestamp + _interval);
-      
+
         uint256 A_bondID = bondNFT.totalMinted();
 
         // A chickens in
@@ -783,7 +802,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_bondedLUSD, bondAmount);
         assertEq(B_bondStartTime, currentTime);
 
-        // 10 minutes passes 
+        // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
         // B chickens in
@@ -805,7 +824,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B creates bond
        createBondForUser(B, bondAmount);
-       
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // Get B sLUSD balance before
@@ -813,10 +832,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Get B's accrued sLUSD and confirm it is non-zero
         uint256 B_accruedSLUSD = chickenBondManager.calcAccruedSLUSD(B_bondID);
-        
+
         // B chickens in
         vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
@@ -834,7 +853,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B creates bond
        createBondForUser(B, bondAmount);
-       
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
@@ -842,7 +861,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Get B LUSD balance before
         uint256 B_LUSDBalanceBefore = lusdToken.balanceOf(B);
-    
+
         // B chickens in
         vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
@@ -851,8 +870,8 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 B_LUSDBalanceAfter = lusdToken.balanceOf(B);
         assertGt(B_LUSDBalanceAfter, B_LUSDBalanceBefore);
     }
-    
-    
+
+
     function testChickenInDecreasesTotalPendingLUSDByBondAmount() public {
          // A creates bond
         uint256 bondAmount = 10e18;
@@ -861,12 +880,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B creates bond
        createBondForUser(B, bondAmount);
-       
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Get total pending LUSD before
         uint256 totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
 
@@ -887,12 +906,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B creates bond
        createBondForUser(B, bondAmount);
-       
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Get total pending LUSD before
         uint256 totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
 
@@ -913,12 +932,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B creates bond
        createBondForUser(B, bondAmount);
-       
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         uint256 nftTokenSupplyBefore = bondNFT.tokenSupply();
 
         // B chickens in
@@ -937,12 +956,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B creates bond
        createBondForUser(B, bondAmount);
-       
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         uint256 nftTotalMintedBefore = bondNFT.totalMinted();
 
         // B chickens in
@@ -958,10 +977,10 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
 
         createBondForUser(A, bondAmount);
-        
+
         // B creates bond
        createBondForUser(B, bondAmount);
-        
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
@@ -969,11 +988,11 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Get B's NFT balance before
         uint256 B_bondNFTBalanceBefore = bondNFT.balanceOf(B);
- 
+
         // B chickens in
         vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
-        
+
         // Check B's NFT balance decreases by 1
         uint256 B_bondNFTBalanceAfter = bondNFT.balanceOf(B);
         assertEq(B_bondNFTBalanceAfter, B_bondNFTBalanceBefore - 1);
@@ -987,12 +1006,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B creates bond
         createBondForUser(B, bondAmount);
-       
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Confirm bond owner is B
         address bondOwnerBefore = bondNFT.ownerOf(B_bondID);
         assertEq(bondOwnerBefore, B);
@@ -1004,6 +1023,49 @@ contract ChickenBondManagerTest is BaseTest {
         // Expert revert when we check for the owner of a non-existent token
         vm.expectRevert("ERC721: owner query for nonexistent token");
         bondNFT.ownerOf(B_bondID);
+    }
+
+    function testChickenInChargesTax() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_startTime = block.timestamp;
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // B creates bond
+        uint256 B_startTime = block.timestamp;
+        uint256 B_bondID = createBondForUser(B, bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // B chickens in
+        vm.startPrank(B);
+        uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
+        chickenBondManager.chickenIn(B_bondID);
+        vm.stopPrank();
+
+        // check rewards contract has received rewards
+        assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), _getTaxForAmount(bondAmount), 1, "Wrong tax diverted to rewards contract");
+        // check accrued amount is reduced by tax
+        assertApproximatelyEqual(sLUSDToken.balanceOf(B), _getTaxedAmount(_calcAccruedSLUSD(B_startTime, bondAmount, backingRatio)), 1000, "Wrong tax applied to B");
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // A chickens in
+        vm.startPrank(A);
+        backingRatio = chickenBondManager.calcSystemBackingRatio();
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // check rewards contract has received rewards
+        assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), 2 * _getTaxForAmount(bondAmount), 2, "Wrong tax diverted to rewards contract");
+        // check accrued amount is reduced by tax
+        assertApproximatelyEqual(sLUSDToken.balanceOf(A), _getTaxedAmount(_calcAccruedSLUSD(A_startTime, bondAmount, backingRatio)), 1000, "Wrong tax applied to A");
     }
 
     function testChickenInRevertsWhenCallerIsNotABonder() public {
@@ -1020,7 +1082,7 @@ contract ChickenBondManagerTest is BaseTest {
         // Confirm B has no bonds
         uint256 B_bondCount = bondNFT.balanceOf(B);
         assertEq(B_bondCount, 0);
-        
+
         // B tries to chicken out A's bond
         vm.startPrank(B);
         vm.expectRevert("CBM: Caller must own the bond");
@@ -1028,10 +1090,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B tries to chicken out a non-existent bond
         vm.expectRevert("ERC721: owner query for nonexistent token");
-        chickenBondManager.chickenIn(37);   
+        chickenBondManager.chickenIn(37);
     }
 
-    function testChickenInRevertsWhenBonderChickensInBondTheyDontOwn() public { 
+    function testChickenInRevertsWhenBonderChickensInBondTheyDontOwn() public {
          // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1039,12 +1101,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B creates bond
        createBondForUser(B, bondAmount);
-       
+
         uint256 B_bondID = bondNFT.totalMinted();
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Confirm bond owner is B
         address bondOwnerBefore = bondNFT.ownerOf(B_bondID);
         assertEq(bondOwnerBefore, B);
@@ -1065,7 +1127,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Confirm A's sLUSD balance is zero
         uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertTrue(A_sLUSDBalance == 0);
@@ -1104,7 +1166,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Confirm A's sLUSD balance is zero
         uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertTrue(A_sLUSDBalance == 0);
@@ -1143,10 +1205,10 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 10e18;
 
        createBondForUser(A, bondAmount);
-    
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Confirm A's sLUSD balance is zero
         uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertTrue(A_sLUSDBalance == 0);
@@ -1188,7 +1250,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Confirm A's sLUSD balance is zero
         uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertTrue(A_sLUSDBalance == 0);
@@ -1230,12 +1292,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // A creates bond
         uint256 bondAmount = 10e18;
-       
+
        createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Confirm A's sLUSD balance is zero
         uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertEq(A_sLUSDBalance, 0);
@@ -1259,15 +1321,15 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Get acquired LUSD in Yearn before
         uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
-        
+
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
-        
+
         assertGt(sLUSDToRedeem, 0);
 
         assertTrue(sLUSDToRedeem != 0);
         vm.startPrank(B);
-       
+
         assertEq(sLUSDToRedeem, sLUSDToken.totalSupply() * redemptionFraction / 1e18);
         chickenBondManager.redeem(sLUSDToRedeem);
 
@@ -1285,12 +1347,12 @@ contract ChickenBondManagerTest is BaseTest {
 
         // A creates bond
         uint256 bondAmount = 10e18;
-       
+
        createBondForUser(A, bondAmount);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-    
+
         // Confirm A's sLUSD balance is zero
         uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertTrue(A_sLUSDBalance == 0);
@@ -1299,7 +1361,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
-      
+
         // Check A's sLUSD balance is non-zero
         A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertTrue(A_sLUSDBalance > 0);
@@ -1315,11 +1377,11 @@ contract ChickenBondManagerTest is BaseTest {
         // A shifts some LUSD from SP to Curve
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
-       
+
         // Get acquired LUSD in Curve before
         uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
         assertGt(acquiredLUSDInCurveBefore, 0);
-       
+
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
         vm.startPrank(B);
@@ -1337,7 +1399,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testRedeemChargesRedemptionFee() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 ROUNDING_ERROR = 1000;
+        uint256 ROUNDING_ERROR = 2000;
 
        createBondForUser(A, bondAmount);
 
@@ -1421,8 +1483,8 @@ contract ChickenBondManagerTest is BaseTest {
         vm.expectRevert("ERC20: burn amount exceeds balance");
         chickenBondManager.redeem(B_sLUSDBalance + 1);
 
-        /* Reverts on transfer rather than burn, since it tries to redeem more than the total SLUSD supply, and therefore tries 
-        * to withdraw more LUSD than is held by the system */
+        // Reverts on transfer rather than burn, since it tries to redeem more than the total SLUSD supply, and therefore tries
+        // to withdraw more LUSD than is held by the system
         // TODO: Fix. Seems to revert with no reason string (or not catch it)?
         // vm.expectRevert("ERC20: transfer amount exceeds balance");
         // chickenBondManager.redeem(B_sLUSDBalance + sLUSDToken.totalSupply());
@@ -1484,10 +1546,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1507,10 +1569,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1524,7 +1586,7 @@ contract ChickenBondManagerTest is BaseTest {
         // Attempt to shift 10% of acquired LUSD in Yearn
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn()  / 10;
         assertGt(lusdToShift, 0);
-        
+
         // Try to shift the LUSD
         vm.expectRevert("CBM: Curve spot must be > 1.0 before SP->Curve shift");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -1535,17 +1597,17 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(yearnGovernanceAddress);
         yearnLUSDVault.setDepositLimit(1e27);
         vm.stopPrank();
-        
+
         // A creates bond
-        uint256 bondAmount = 500_000_000e18; // 500m 
+        uint256 bondAmount = 500_000_000e18; // 500m
 
         tip(address(lusdToken), A, bondAmount);
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 1 year passes
         vm.warp(block.timestamp + 365 days);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1557,7 +1619,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // --- First check that the amount to shift *would* drop the curve price below 1.0, by having a whale
         // deposit it, checking Curve price, then withdrawing it again --- ///
-       
+
         uint256 lusdAmount = 200_000_000e18;
 
         // Whale deposits to Curve pool and LUSD spot price drops < 1.0
@@ -1573,7 +1635,7 @@ contract ChickenBondManagerTest is BaseTest {
         curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertGt(curveSpotPrice, 1e18);
 
-        // --- Now, attempt the shift that would drop the price below 1.0 --- 
+        // --- Now, attempt the shift that would drop the price below 1.0 ---
         vm.expectRevert("CBM: SP->Curve shift must decrease spot price to >= 1.0");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdAmount);
     }
@@ -1585,10 +1647,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1600,26 +1662,26 @@ contract ChickenBondManagerTest is BaseTest {
         // Get total LUSD in CBM before
         uint256 CBM_lusdBalanceBefore = lusdToken.balanceOf(address(chickenBondManager));
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
-        
+
         // Check total LUSD in CBM has not changed
         uint256 CBM_lusdBalanceAfter = lusdToken.balanceOf(address(chickenBondManager));
 
         assertEq(CBM_lusdBalanceAfter, CBM_lusdBalanceBefore);
     }
-    
+
     function testShiftLUSDFromSPToCurveDoesntChangeCBMTotalAcquiredLUSDTracker() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1628,7 +1690,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
         assertGt(totalAcquiredLUSDBefore, 0);
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -1638,7 +1700,7 @@ contract ChickenBondManagerTest is BaseTest {
         // TODO: Why does the error margin need to be so large here when shifting from SP -> Curve?
         // It's bigger than a rounding error.
         // NOTE: Relative error seems fairly constant as bond size varies (~5th digit)
-        // However, relative error increases/decreases as amount shifted increases/decreases 
+        // However, relative error increases/decreases as amount shifted increases/decreases
         // (4th digit when shifting all SP LUSD, 7th digit when shifting only 1% SP LUSD)
         assertApproximatelyEqual(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore, 1e15);
     }
@@ -1651,10 +1713,10 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1663,26 +1725,26 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalPendingLUSDBefore = chickenBondManager.totalPendingLUSD();
         assertTrue(totalPendingLUSDBefore > 0);
 
-       // Shift 10% of LUSD in SP 
+       // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
-        // Check pending LUSD After has not changed 
+        // Check pending LUSD After has not changed
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
         assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
     }
 
-    // CBM Yearn and Curve trackers 
+    // CBM Yearn and Curve trackers
     function testShiftLUSDFromSPToCurveDecreasesCBMAcquiredLUSDInYearnTracker() public {
         // A creates bond
         uint256 bondAmount = 25e18;
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1690,33 +1752,33 @@ contract ChickenBondManagerTest is BaseTest {
         // Get acquired LUSD in Yearn before
         uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check acquired LUSD in Yearn has decreased
         uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
         assertTrue(acquiredLUSDInYearnAfter < acquiredLUSDInYearnBefore);
-    } 
-    
+    }
+
     function testShiftLUSDFromSPToCurveDecreasesCBMLUSDInYearnTracker() public {
         // A creates bond
         uint256 bondAmount = 25e18;
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
-        // Get CBM's view of LUSD in Yearn  
+        // Get CBM's view of LUSD in Yearn
         uint256 lusdInYearnBefore = chickenBondManager.calcYearnLUSDVaultShareValue();
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -1731,10 +1793,10 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1742,7 +1804,7 @@ contract ChickenBondManagerTest is BaseTest {
         // Get CBM's view of LUSD in Curve before
         uint256 lusdInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -1762,7 +1824,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     // function testFailShiftLUSDFromSPToCurveWhen0LUSDInYearn() public {}
     // function testShiftLUSDFromSPToCurveRevertsWithZeroLUSDinSP() public {}
-   
+
 
     // --- shiftLUSDFromCurveToSP tests ---
 
@@ -1772,10 +1834,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1786,7 +1848,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
-    
+
         uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertGt(curveSpotPrice, 1e18);
         // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
@@ -1805,10 +1867,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1819,7 +1881,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
-    
+
         // Check spot price is > 1.0
         uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertGt(curveSpotPrice, 1e18);
@@ -1827,7 +1889,7 @@ contract ChickenBondManagerTest is BaseTest {
         // Attempt to shift 10% of acquired LUSD in Yearn
         lusdToShift = chickenBondManager.getAcquiredLUSDInYearn()  / 10;
         assertGt(lusdToShift, 0);
-        
+
         // Try to shift the LUSD
         vm.expectRevert("CBM: Curve spot must be < 1.0 before Curve->SP shift");
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
@@ -1838,24 +1900,24 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(yearnGovernanceAddress);
         yearnLUSDVault.setDepositLimit(1e27);
         vm.stopPrank();
-       
+
         // A creates bond
-        uint256 bondAmount = 500_000_000e18; // 500m 
+        uint256 bondAmount = 500_000_000e18; // 500m
 
         tip(address(lusdToken), A, bondAmount);
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 1 year passes
         vm.warp(block.timestamp + 365 days);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        /* Put some 3CRV in Curve, so that the subsequent SP->Curve shift can move enough LUSD to Curve without crossing 
-        the 1.0 price boundary */
+        // Put some 3CRV in Curve, so that the subsequent SP->Curve shift can move enough LUSD to Curve without crossing
+        // the 1.0 price boundary
         uint256 _3crvDeposit = 300_000_000e18;
         tip(address(_3crvToken), D, _3crvDeposit);
         assertGe(_3crvToken.balanceOf(D), _3crvDeposit);
@@ -1879,10 +1941,6 @@ contract ChickenBondManagerTest is BaseTest {
         depositLUSDToCurveForUser(C, lusdAmount); // deposit 200m LUSD
         curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertLt(curveSpotPrice, 1e18);
-    
-
-        uint256 lusdInYearn = chickenBondManager.getAcquiredLUSDInYearn();
-        uint256 lusdInCurve = chickenBondManager.getAcquiredLUSDInCurve();
 
         // Now, attempt to shift the same amount, which would raise the price back above 1.0, and expect it to fail
         vm.expectRevert("CBM: Curve->SP shift must increase spot price to <= 1.0");
@@ -1895,10 +1953,10 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1913,7 +1971,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
         assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
-    
+
         uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertGt(curveSpotPrice, 1e18);
         // Some user makes large LUSD deposit to Curve, moving Curve spot price below 1.0
@@ -1927,7 +1985,7 @@ contract ChickenBondManagerTest is BaseTest {
         // Shift LUSD from Curve to SP
         lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10; // shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
-        
+
         // Check total LUSD in CBM has not changed
         uint256 CBM_lusdBalanceAfter = lusdToken.balanceOf(address(chickenBondManager));
 
@@ -1940,10 +1998,10 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1953,7 +2011,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
 
-        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -1987,10 +2045,10 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -2000,7 +2058,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
 
-        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -2021,7 +2079,7 @@ contract ChickenBondManagerTest is BaseTest {
         lusdToShift = chickenBondManager.getAcquiredLUSDInCurve() / 10; // shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
-        // Check pending LUSD After has not changed 
+        // Check pending LUSD After has not changed
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
         assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
     }
@@ -2035,10 +2093,10 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -2048,7 +2106,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
 
-        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -2082,10 +2140,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -2095,7 +2153,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
 
-        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -2119,8 +2177,8 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 lusdInYearnAfter = chickenBondManager.calcYearnLUSDVaultShareValue();
         assertTrue(lusdInYearnAfter > lusdInYearnBefore);
     }
-    
-    
+
+
     function testShiftLUSDFromCurveToSPDecreasesCBMLUSDInCurveTracker() public {
         uint256 bondAmount = 10e18;
 
@@ -2129,10 +2187,10 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
-       
+
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -2142,7 +2200,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
 
-        // Put some initial LUSD in Curve: shift LUSD from SP to Curve 
+        // Put some initial LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
         uint256 lusdToShift = chickenBondManager.getAcquiredLUSDInYearn() / 10; // shift 10% of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -2191,7 +2249,7 @@ contract ChickenBondManagerTest is BaseTest {
     // Test whether the CBM share value calculator correctly calculates what actually will be withdrawn from Yearn.
     // function testCalcYearnLUSDShareValueGivesCorrectAmountAtFirstDepositPartialWithdrawal() public {
     //     uint256 depositAmount = 10e18;
-    //     // Tip CBM some LUSD 
+    //     // Tip CBM some LUSD
     //     tip(address(lusdToken), address(chickenBondManager), depositAmount);
 
     //     // Artificially deposit LUSD to Yearn, as CBM
@@ -2217,7 +2275,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.assume(_denominator > 0 && _denominator < 1e9);
 
         uint256 depositAmount = 10e18;
-        // Tip CBM some LUSD 
+        // Tip CBM some LUSD
         tip(address(lusdToken), address(chickenBondManager), depositAmount);
 
         // Artificially deposit LUSD to Yearn, as CBM
@@ -2247,7 +2305,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint _depositAmount = 6013798781155418312;
 
-        // Tip CBM some LUSD 
+        // Tip CBM some LUSD
         tip(address(lusdToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to Yearn, as CBM
@@ -2259,7 +2317,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 CBMShareLUSDValue = chickenBondManager.calcYearnLUSDVaultShareValue();
         assertGt(CBMShareLUSDValue, 0);
 
-        // Artifiiually withdraw all the share value as CBM  
+        // Artifiiually withdraw all the share value as CBM
         uint256 shares = yearnLUSDVault.balanceOf(address(chickenBondManager));
         yearnLUSDVault.withdraw(shares);
 
@@ -2272,7 +2330,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 availableDepositLimit = yearnLUSDVault.availableDepositLimit();
         vm.assume(_depositAmount < availableDepositLimit && _depositAmount > 10);
 
-        // Tip CBM some LUSD 
+        // Tip CBM some LUSD
         tip(address(lusdToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to Yearn, as CBM
@@ -2284,18 +2342,18 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 CBMShareLUSDValue = chickenBondManager.calcYearnLUSDVaultShareValue();
         assertGt(CBMShareLUSDValue, 0);
 
-        // Artificually withdraw all the share value as CBM  
+        // Artificually withdraw all the share value as CBM
         uint256 shares = yearnLUSDVault.balanceOf(address(chickenBondManager));
         yearnLUSDVault.withdraw(shares);
 
         // Check that the CBM received at least all of it's share value
         assertGeAndWithinRange(lusdToken.balanceOf(address(chickenBondManager)), CBMShareLUSDValue, 1e9);
     }
-    
+
     // Test calculated share value does not change over time, ceteris paribus
-    function testCalcYearnLUSDShareValueDoesNotChangeOverTimeAllElseEqual() public { 
+    function testCalcYearnLUSDShareValueDoesNotChangeOverTimeAllElseEqual() public {
         uint256 bondAmount = 10e18;
-        
+
         // A creates bond
         createBondForUser(A, bondAmount);
 
@@ -2329,7 +2387,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(bondID_A);
-        
+
         // Get share value 5
         uint256 lusdVaultshareValue_5 = chickenBondManager.calcYearnLUSDVaultShareValue();
         assertGt(lusdVaultshareValue_5, 0);
@@ -2341,11 +2399,11 @@ contract ChickenBondManagerTest is BaseTest {
          uint256 lusdVaultshareValue_6 = chickenBondManager.calcYearnLUSDVaultShareValue();
         assertEq(lusdVaultshareValue_6, lusdVaultshareValue_5);
     }
-    
+
     // Test totalShares does not change over time ceteris paribus
-    function testYearnTotalLUSDYTokensDoesNotChangeOverTimeAllElseEqual() public { 
+    function testYearnTotalLUSDYTokensDoesNotChangeOverTimeAllElseEqual() public {
         uint256 bondAmount = 10e18;
-        
+
         // A creates bond
         createBondForUser(A, bondAmount);
 
@@ -2375,11 +2433,11 @@ contract ChickenBondManagerTest is BaseTest {
         // Check total yTokens 4 == total yTokens 3
         uint256 yTokensYearnLUSD_4 = chickenBondManager.calcYearnLUSDVaultShareValue();
         assertEq(yTokensYearnLUSD_4, yTokensYearnLUSD_3);
-    
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(bondID_A);
-      
+
         // Get total yTokens 5
         uint256 yTokensYearnLUSD_5 = chickenBondManager.calcYearnLUSDVaultShareValue();
         assertGt(yTokensYearnLUSD_5, 0);
@@ -2393,9 +2451,9 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     // Test CBM shares does not change over time ceteris paribus
-    function testCBMYearnLUSDYTokensDoesNotChangeOverTimeAllElseEqual() public { 
+    function testCBMYearnLUSDYTokensDoesNotChangeOverTimeAllElseEqual() public {
         uint256 bondAmount = 10e18;
-        
+
         // A creates bond
         createBondForUser(A, bondAmount);
 
@@ -2429,7 +2487,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(bondID_A);
-        
+
         // Get CBM yTokens 5
         uint256 CBMyTokensYearnLUSD_5 = yearnLUSDVault.balanceOf(address(chickenBondManager));
         assertGt(CBMyTokensYearnLUSD_5, 0);
@@ -2438,7 +2496,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 1e6);
 
         // Check CBM yTokens 5 == CBM yTokens 6
-         uint256 CBMyTokensYearnLUSD_6 = yearnLUSDVault.balanceOf(address(chickenBondManager));
+        uint256 CBMyTokensYearnLUSD_6 = yearnLUSDVault.balanceOf(address(chickenBondManager));
         assertEq(CBMyTokensYearnLUSD_6, CBMyTokensYearnLUSD_5);
     }
 
@@ -2447,15 +2505,15 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 availableDepositLimit = yearnLUSDVault.availableDepositLimit();
         vm.assume(_depositAmount < availableDepositLimit && _depositAmount > 10);
 
-        // Tip CBM some LUSD 
+        // Tip CBM some LUSD
         tip(address(lusdToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to Yearn, as CBM
         vm.startPrank(address(chickenBondManager));
-        yearnLUSDVault.deposit(_depositAmount); 
+        yearnLUSDVault.deposit(_depositAmount);
         assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0);
 
-        // Artifiiually withdraw all the share value as CBM  
+        // Artifiiually withdraw all the share value as CBM
         uint256 shares = yearnLUSDVault.balanceOf(address(chickenBondManager));
         yearnLUSDVault.withdraw(shares);
 
@@ -2531,8 +2589,8 @@ contract ChickenBondManagerTest is BaseTest {
         // Average age is "sampled" by the controller at the exact timestamps given by the formula:
         // `deploymentTimestamp + n * adjustmentPeriod`, where `n` is integer >= 0.
         // We use `ceilDiv` to calculate the time delta of the first such timestamp where the
-        // controller sees an average age that's _strictly_ higher than the target.
-        return adjustmentPeriod * Math.ceilDiv(averageStartTimeDelta + target + 1, adjustmentPeriod);
+        // controller sees an average age that's >= the target.
+        return adjustmentPeriod * Math.ceilDiv(averageStartTimeDelta + target, adjustmentPeriod);
     }
 
     function testControllerDoesNotAdjustWhenAgeOfSingleBondIsBelowTarget(uint256 _interval) public {
@@ -2545,7 +2603,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondID = createBondForUser(A, 100e18);
         vm.warp(block.timestamp + interval);
         chickenInForUser(A, bondID);
-    
+
         uint256 accrualParameter = chickenBondManager.accrualParameter();
         assertEqDecimal(accrualParameter, INITIAL_ACCRUAL_PARAMETER, 18);
     }
@@ -2560,7 +2618,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondID = createBondForUser(A, 100e18);
         vm.warp(block.timestamp + interval);
         chickenInForUser(A, bondID);
-    
+
         uint256 accrualParameter = chickenBondManager.accrualParameter();
         assertLtDecimal(accrualParameter, INITIAL_ACCRUAL_PARAMETER, 18);
     }
@@ -2589,7 +2647,7 @@ contract ChickenBondManagerTest is BaseTest {
         for (uint8 i = 0; i < _periods; ++i) {
             expectedAdjustment = (expectedAdjustment * (1e18 - ACCRUAL_ADJUSTMENT_RATE) + 0.5e18) / 1e18;
         }
-    
+
         assertApproximatelyEqual(accrualParameterAfter, accrualParameterBefore * expectedAdjustment / 1e18, 1e9);
     }
 

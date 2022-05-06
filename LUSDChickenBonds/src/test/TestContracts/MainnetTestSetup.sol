@@ -5,6 +5,8 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
+import "uniswapV2/interfaces/IUniswapV2Factory.sol";
+
 
 contract MainnetTestSetup is BaseTest {
     // Mainnet addresses
@@ -15,8 +17,9 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
+    address constant MAINNET_UNISWAP_V2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
-    uint256 constant MAINNET_PINNED_BLOCK =  1648476300; 
+    uint256 constant MAINNET_PINNED_BLOCK =  1648476300;
 
     function setUp() public {
         // pinBlock(MAINNET_PINNED_BLOCK);
@@ -31,12 +34,12 @@ contract MainnetTestSetup is BaseTest {
         _3crvToken = IERC20(MAINNET_3CRV_TOKEN_ADDRESS);
 
         (A, B, C, D) = (accountsList[0], accountsList[1], accountsList[2], accountsList[3]);
-       
+
         // Give some LUSD to test accounts
         tip(address(lusdToken), A, 100e18);
         tip(address(lusdToken), B, 100e18);
         tip(address(lusdToken), C, 100e18);
-    
+
         // Check accounts are funded
         assertTrue(lusdToken.balanceOf(A) == 100e18);
         assertTrue(lusdToken.balanceOf(B) == 100e18);
@@ -56,22 +59,32 @@ contract MainnetTestSetup is BaseTest {
         // Deploy core ChickenBonds system
         sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
 
-        // TODO: choose conventional name and symbol for NFT contract 
+        // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
-       
+
+        // Deploy LUSD/sLUSD AMM LP Rewards staking contract
+        IUniswapV2Factory uniswapV2Factory = IUniswapV2Factory(MAINNET_UNISWAP_V2_FACTORY_ADDRESS);
+        address uniswapPairAddress = uniswapV2Factory.createPair(address(lusdToken), address(sLUSDToken));
+        sLUSDLPRewardsStaking = new Unipool(address(lusdToken), uniswapPairAddress);
+
+        ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
+            bondNFTAddress: address(bondNFT),
+            lusdTokenAddress: address(lusdToken),
+            sLUSDTokenAddress: address(sLUSDToken),
+            curvePoolAddress: address(curvePool),
+            yearnLUSDVaultAddress: address(yearnLUSDVault),
+            yearnCurveVaultAddress: address(yearnCurveVault),
+            yearnRegistryAddress: address(yearnRegistry),
+            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking)
+        });
         chickenBondManager = new ChickenBondManagerWrap(
-            address(bondNFT),                  // _bondNFTAddress
-            address(lusdToken),                // _lusdTokenAddress
-            address(curvePool),                // _curvePoolAddress
-            address(yearnLUSDVault),           // _yearnLUSDVaultAddress
-            address(yearnCurveVault),          // _yearnCurveVaultAddress
-            address(sLUSDToken),               // _sLUSDTokenAddress
-            address(yearnRegistry),            // _yearnRegistryAddress
+            externalContractAddresses,
             TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds
             INITIAL_ACCRUAL_PARAMETER,         // _initialAccrualParameter
             MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
             ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
-            ACCRUAL_ADJUSTMENT_PERIOD_SECONDS  // _accrualAdjustmentPeriodSeconds
+            ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
+            CHICKEN_IN_AMM_TAX                 // _CHICKEN_IN_AMM_TAX
         );
 
         bondNFT.setAddresses(address(chickenBondManager));
@@ -84,9 +97,9 @@ contract MainnetTestSetup is BaseTest {
         console.log(address(lusdToken), "LUSDToken address");
         console.log(address(yearnLUSDVault), "Yearn LUSD vault address");
         console.log(address(yearnCurveVault), "Yearn Curve vault address");
-        console.log(address(curvePool), "Curve pool address");  
-        console.log(address(chickenBondManager), "ChickenBondManager address");  
-        console.log(address(sLUSDToken), "sLUSDToken address"); 
+        console.log(address(curvePool), "Curve pool address");
+        console.log(address(chickenBondManager), "ChickenBondManager address");
+        console.log(address(sLUSDToken), "sLUSDToken address");
         console.log(address(bondNFT), "BondNFT address");
     }
 
