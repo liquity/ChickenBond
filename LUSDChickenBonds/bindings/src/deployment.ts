@@ -13,9 +13,14 @@ import {
   mapContracts
 } from "./contracts";
 
+export interface LogFunction {
+  (...args: unknown[]): void;
+}
+
 export interface LUSDChickenBondDeploymentParams {
   config: LUSDChickenBondConfig;
   overrides: Overrides;
+  log: boolean | LogFunction;
 }
 
 export interface LUSDChickenBondDeploymentManifest {
@@ -40,191 +45,212 @@ export interface LUSDChickenBondDeploymentResult {
   manifest: LUSDChickenBondDeploymentManifest;
 }
 
-let silent = true;
-
-export const log = (...args: unknown[]): void => {
-  if (!silent) {
-    console.log(...args);
-  }
-};
-
-export const setSilent = (s: boolean): void => {
-  silent = s;
-};
-
 interface NamedFactory<T extends TypedContract, A extends unknown[]> {
   contractName: string;
   factory: TypedContractFactory<T, A>;
 }
 
-const deployContract = async <T extends TypedContract, A extends unknown[]>(
-  { contractName, factory }: NamedFactory<T, A>,
-  ...args: A
-): Promise<DeployedContract<T>> => {
-  log(`Deploying ${contractName} ...`);
-  const contract = await factory.deploy(...args);
+const getLogFunction = (x: boolean | LogFunction | undefined): LogFunction =>
+  typeof x === "function" ? x : x ? console.log : () => {};
 
-  log(`Waiting for transaction ${contract.deployTransaction.hash} ...`);
-  const receipt = await contract.deployTransaction.wait();
+class LUSDChickenBondDeployment {
+  private readonly deployer;
+  private readonly factories;
+  private readonly overrides;
+  private readonly config;
+  private readonly log;
 
-  log({
-    contractAddress: contract.address,
-    blockNumber: receipt.blockNumber,
-    gasUsed: receipt.gasUsed.toNumber()
-  });
+  constructor(deployer: Signer, params?: Readonly<Partial<LUSDChickenBondDeploymentParams>>) {
+    this.deployer = deployer;
+    this.factories = getContractFactories(deployer);
+    this.overrides = { ...params?.overrides };
+    this.config = fillConfig(params?.config);
+    this.log = getLogFunction(params?.log);
+  }
 
-  log();
+  private async deployContract<T extends TypedContract, A extends unknown[]>(
+    { contractName, factory }: NamedFactory<T, A>,
+    ...args: A
+  ): Promise<DeployedContract<T>> {
+    const { log } = this;
 
-  return { contract, receipt };
-};
+    log(`Deploying ${contractName} ...`);
+    const contract = await factory.deploy(...args);
 
-const deployContracts = async (
-  deployer: Signer,
-  params?: LUSDChickenBondDeploymentParams
-): Promise<LUSDChickenBondDeployedContracts> => {
-  const overrides = { ...params?.overrides };
-  const config = fillConfig(params?.config);
-  const factories = getContractFactories(deployer);
+    log(`Waiting for transaction ${contract.deployTransaction.hash} ...`);
+    const receipt = await contract.deployTransaction.wait();
 
-  const lusdToken = await deployContract(
-    factories.lusdToken,
-    AddressZero,
-    AddressZero,
-    AddressZero,
-    overrides
-  );
+    log({
+      contractAddress: contract.address,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toNumber()
+    });
 
-  const curvePool = await deployContract(
-    factories.curvePool,
-    "LUSD-3CRV Pool",
-    "LUSD3CRV-f",
-    overrides
-  );
+    log();
 
-  const yearnLUSDVault = await deployContract(
-    factories.yearnLUSDVault,
-    "LUSD yVault",
-    "yvLUSD",
-    overrides
-  );
+    return { contract, receipt };
+  }
 
-  const yearnCurveVault = await deployContract(
-    factories.yearnCurveVault,
-    "Curve LUSD Pool yVault",
-    "yvCurve-LUSD",
-    overrides
-  );
+  private async deployContracts(): Promise<LUSDChickenBondDeployedContracts> {
+    const { factories, overrides, config } = this;
 
-  const yearnRegistry = await deployContract(
-    factories.yearnRegistry,
-    yearnLUSDVault.contract.address,
-    yearnCurveVault.contract.address,
-    lusdToken.contract.address,
-    curvePool.contract.address,
-    overrides
-  );
+    const lusdToken = await this.deployContract(
+      factories.lusdToken,
+      AddressZero,
+      AddressZero,
+      AddressZero,
+      overrides
+    );
 
-  const sLUSDToken = await deployContract(factories.sLUSDToken, "sLUSDToken", "SLUSD", overrides);
-  const bondNFT = await deployContract(factories.bondNFT, "LUSDBondNFT", "LUSDBOND", overrides);
-  const uniToken = await deployContract(factories.uniToken, "Uniswap LP Token", "UNI", overrides);
+    const curvePool = await this.deployContract(
+      factories.curvePool,
+      "LUSD-3CRV Pool",
+      "LUSD3CRV-f",
+      overrides
+    );
 
-  const sLUSDLPRewardsStaking = await deployContract(
-    factories.sLUSDLPRewardsStaking,
-    lusdToken.contract.address,
-    uniToken.contract.address,
-    overrides
-  );
+    const yearnLUSDVault = await this.deployContract(
+      factories.yearnLUSDVault,
+      "LUSD yVault",
+      "yvLUSD",
+      overrides
+    );
 
-  const chickenBondManager = await deployContract(
-    factories.chickenBondManager,
-    {
-      bondNFTAddress: bondNFT.contract.address,
-      curvePoolAddress: curvePool.contract.address,
-      lusdTokenAddress: lusdToken.contract.address,
-      sLUSDLPRewardsStakingAddress: sLUSDLPRewardsStaking.contract.address,
-      sLUSDTokenAddress: sLUSDToken.contract.address,
-      yearnCurveVaultAddress: yearnCurveVault.contract.address,
-      yearnLUSDVaultAddress: yearnLUSDVault.contract.address,
-      yearnRegistryAddress: yearnRegistry.contract.address
-    },
-    config.targetAverageAgeSeconds,
-    config.initialAccrualParameter,
-    config.minimumAccrualParameter,
-    config.accrualAdjustmentRate,
-    config.accrualAdjustmentPeriodSeconds,
-    config.chickenInAMMTax,
-    overrides
-  );
+    const yearnCurveVault = await this.deployContract(
+      factories.yearnCurveVault,
+      "Curve LUSD Pool yVault",
+      "yvCurve-LUSD",
+      overrides
+    );
 
-  return {
-    bondNFT,
-    chickenBondManager,
-    curvePool,
-    lusdToken,
-    sLUSDLPRewardsStaking,
-    sLUSDToken,
-    uniToken,
-    yearnCurveVault,
-    yearnLUSDVault,
-    yearnRegistry
-  };
-};
+    const yearnRegistry = await this.deployContract(
+      factories.yearnRegistry,
+      yearnLUSDVault.contract.address,
+      yearnCurveVault.contract.address,
+      lusdToken.contract.address,
+      curvePool.contract.address,
+      overrides
+    );
 
-const connectContracts = async (
-  deployed: LUSDChickenBondDeployedContracts,
-  overrides?: Overrides
-) => {
-  const signer = deployed.chickenBondManager.contract.signer;
-  const txCount = await signer.getTransactionCount();
+    const sLUSDToken = await this.deployContract(
+      factories.sLUSDToken,
+      "sLUSDToken",
+      "SLUSD",
+      overrides
+    );
 
-  const connections: ((nonce: number) => Promise<ContractTransaction>)[] = [
-    nonce =>
-      deployed.bondNFT.contract.setAddresses(deployed.chickenBondManager.contract.address, {
-        ...overrides,
-        nonce
-      }),
+    const bondNFT = await this.deployContract(
+      factories.bondNFT,
+      "LUSDBondNFT",
+      "LUSDBOND",
+      overrides
+    );
 
-    nonce =>
-      deployed.sLUSDToken.contract.setAddresses(deployed.chickenBondManager.contract.address, {
-        ...overrides,
-        nonce
-      })
-  ];
+    const uniToken = await this.deployContract(
+      factories.uniToken,
+      "Uniswap LP Token",
+      "UNI",
+      overrides
+    );
 
-  const txs = await Promise.all(connections.map((connect, i) => connect(txCount + i)));
+    const sLUSDLPRewardsStaking = await this.deployContract(
+      factories.sLUSDLPRewardsStaking,
+      lusdToken.contract.address,
+      uniToken.contract.address,
+      overrides
+    );
 
-  let i = 0;
-  await Promise.all(txs.map(tx => tx.wait().then(() => log(`Connected ${++i}`))));
-};
+    const chickenBondManager = await this.deployContract(
+      factories.chickenBondManager,
+      {
+        bondNFTAddress: bondNFT.contract.address,
+        curvePoolAddress: curvePool.contract.address,
+        lusdTokenAddress: lusdToken.contract.address,
+        sLUSDLPRewardsStakingAddress: sLUSDLPRewardsStaking.contract.address,
+        sLUSDTokenAddress: sLUSDToken.contract.address,
+        yearnCurveVaultAddress: yearnCurveVault.contract.address,
+        yearnLUSDVaultAddress: yearnLUSDVault.contract.address,
+        yearnRegistryAddress: yearnRegistry.contract.address
+      },
+      config.targetAverageAgeSeconds,
+      config.initialAccrualParameter,
+      config.minimumAccrualParameter,
+      config.accrualAdjustmentRate,
+      config.accrualAdjustmentPeriodSeconds,
+      config.chickenInAMMTax,
+      overrides
+    );
+
+    return {
+      bondNFT,
+      chickenBondManager,
+      curvePool,
+      lusdToken,
+      sLUSDLPRewardsStaking,
+      sLUSDToken,
+      uniToken,
+      yearnCurveVault,
+      yearnLUSDVault,
+      yearnRegistry
+    };
+  }
+
+  private async connectDeployedContracts(deployed: LUSDChickenBondDeployedContracts) {
+    const { overrides, log } = this;
+
+    const connections: (() => Promise<ContractTransaction>)[] = [
+      () =>
+        deployed.bondNFT.contract.setAddresses(
+          deployed.chickenBondManager.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.sLUSDToken.contract.setAddresses(
+          deployed.chickenBondManager.contract.address,
+          overrides
+        )
+    ];
+
+    for (const [i, connect] of connections.entries()) {
+      const tx = await connect();
+      await tx.wait();
+      log(`Connected ${i + 1}`);
+    }
+  }
+
+  async deployAndSetupContracts(): Promise<LUSDChickenBondDeploymentResult> {
+    const { deployer, log } = this;
+
+    if (!deployer.provider) {
+      throw new Error("deployer must have provider");
+    }
+
+    const deployed = await this.deployContracts();
+
+    log("Connecting contracts...");
+    await this.connectDeployedContracts(deployed);
+
+    const { receipt: firstReceipt } = Object.values(deployed).reduce((a, b) =>
+      a.receipt.blockNumber < b.receipt.blockNumber ? a : b
+    );
+
+    const firstDeploymentBlock = await deployer.provider.getBlock(firstReceipt.blockNumber);
+
+    return {
+      deployed,
+      manifest: {
+        addresses: mapContracts<DeployedContract, string>(deployed, x => x.contract.address),
+        chainId: await deployer.getChainId(),
+        deploymentTimestamp: firstDeploymentBlock.timestamp,
+        startBlock: firstReceipt.blockNumber
+      }
+    };
+  }
+}
 
 export const deployAndSetupContracts = async (
   deployer: Signer,
-  params?: LUSDChickenBondDeploymentParams
-): Promise<LUSDChickenBondDeploymentResult> => {
-  if (!deployer.provider) {
-    throw new Error("deployer must have provider");
-  }
-
-  log("Deploying contracts...");
-  log();
-  const deployed = await deployContracts(deployer, params);
-
-  log("Connecting contracts...");
-  await connectContracts(deployed, params?.overrides);
-
-  const { receipt: firstReceipt } = Object.values(deployed).reduce((a, b) =>
-    a.receipt.blockNumber < b.receipt.blockNumber ? a : b
-  );
-
-  const firstDeploymentBlock = await deployer.provider.getBlock(firstReceipt.blockNumber);
-
-  return {
-    deployed,
-    manifest: {
-      addresses: mapContracts<DeployedContract, string>(deployed, x => x.contract.address),
-      chainId: await deployer.getChainId(),
-      deploymentTimestamp: firstDeploymentBlock.timestamp,
-      startBlock: firstReceipt.blockNumber
-    }
-  };
-};
+  params?: Readonly<Partial<LUSDChickenBondDeploymentParams>>
+): Promise<LUSDChickenBondDeploymentResult> =>
+  new LUSDChickenBondDeployment(deployer, params).deployAndSetupContracts();
