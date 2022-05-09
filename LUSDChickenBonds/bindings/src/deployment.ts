@@ -4,6 +4,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { ContractTransaction, Overrides } from "@ethersproject/contracts";
 
 import { TypedContract, TypedContractFactory } from "./typing";
+import { fillConfig, LUSDChickenBondConfig } from "./config";
 
 import {
   getContractFactories,
@@ -12,14 +13,17 @@ import {
   mapContracts
 } from "./contracts";
 
-import * as config from "./config";
+export interface LUSDChickenBondDeploymentParams {
+  config: LUSDChickenBondConfig;
+  overrides: Overrides;
+}
 
 export interface LUSDChickenBondDeploymentManifest {
-  readonly chainId: number;
-  readonly addresses: LUSDChickenBondContractAddresses;
-  // readonly version: string; // TODO
-  readonly deploymentTimestamp: number;
-  readonly startBlock: number;
+  chainId: number;
+  addresses: LUSDChickenBondContractAddresses;
+  // version: string; // TODO
+  deploymentTimestamp: number;
+  startBlock: number;
 }
 
 export interface DeployedContract<T extends TypedContract = TypedContract> {
@@ -76,8 +80,10 @@ const deployContract = async <T extends TypedContract, A extends unknown[]>(
 
 const deployContracts = async (
   deployer: Signer,
-  overrides?: Overrides
+  params?: LUSDChickenBondDeploymentParams
 ): Promise<LUSDChickenBondDeployedContracts> => {
+  const overrides = { ...params?.overrides };
+  const config = fillConfig(params?.config);
   const factories = getContractFactories(deployer);
 
   const lusdToken = await deployContract(
@@ -193,20 +199,18 @@ const connectContracts = async (
 
 export const deployAndSetupContracts = async (
   deployer: Signer,
-  overrides?: Overrides
+  params?: LUSDChickenBondDeploymentParams
 ): Promise<LUSDChickenBondDeploymentResult> => {
-  overrides = { ...overrides };
-
   if (!deployer.provider) {
     throw new Error("deployer must have provider");
   }
 
   log("Deploying contracts...");
   log();
-  const deployed = await deployContracts(deployer, overrides);
+  const deployed = await deployContracts(deployer, params);
 
   log("Connecting contracts...");
-  await connectContracts(deployed, overrides);
+  await connectContracts(deployed, params?.overrides);
 
   const { receipt: firstReceipt } = Object.values(deployed).reduce((a, b) =>
     a.receipt.blockNumber < b.receipt.blockNumber ? a : b
