@@ -458,10 +458,6 @@ contract ChickenBondManager is Ownable, ChickenMath {
         // Ensure the Curve->SP shift has increased the Curve spot price to not more than 1.0
         uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(finalCurveSpotPrice > initialCurveSpotPrice && finalCurveSpotPrice <=  1e18, "CBM: Curve->SP shift must increase spot price to <= 1.0");
-<<<<<<< HEAD
-
-=======
->>>>>>> 2d28b28 (Add permament bucket to Curve->SP shifter)
     }
 
     // --- Helper functions ---
