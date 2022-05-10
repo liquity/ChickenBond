@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "./BaseTest.sol";
-import "./QuickSort.sol";
+import "./QuickSort.sol" as QuickSort;
 
 contract ChickenBondManagerTest is BaseTest {
     uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
@@ -2723,7 +2723,7 @@ contract ChickenBondManagerTest is BaseTest {
             startTimeDeltas[i] = _params[i].startTimeDelta;
         }
 
-        startTimeDeltas = QuickSort.sort(startTimeDeltas);
+        QuickSort.sort(startTimeDeltas);
 
         for (uint256 i = 0; i < _params.length; ++i) {
             _params[i].startTimeDelta = startTimeDeltas[i];
