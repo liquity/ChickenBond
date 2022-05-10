@@ -17,18 +17,22 @@ contract MockYearnVault is ERC20, Ownable {
         token = LUSDTokenTester(_tokenAddress);
     }
 
-    function deposit(uint256 _tokenAmount) external {
+    function deposit(uint256 _tokenAmount) external returns (uint256) {
         token.transferFrom(msg.sender, address(this), _tokenAmount);
-
         uint lpShares = calcTokenToYToken(_tokenAmount);
+        
         _mint(msg.sender, lpShares);
+       
+        return lpShares;
     }
 
-    function withdraw (uint256 _lpShares) external {
-        uint tokenAmount = calcYTokenToToken(_lpShares);
+    function withdraw (uint256 _lpShares) external returns (uint256) {
+        uint tokenAmount = _lpShares;
         token.transfer(msg.sender, tokenAmount);
 
         _burn(msg.sender, _lpShares);
+
+        return tokenAmount;
     }
 
     // Mimic yield harvest - this actually belongs to Strategy contract
