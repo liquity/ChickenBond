@@ -9,3 +9,6 @@
 *.log
 *.out
 *.toc
+
+# Python virtual environments
+.venv
