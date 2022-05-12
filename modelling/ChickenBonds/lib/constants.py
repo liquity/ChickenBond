@@ -51,7 +51,7 @@ CHICKEN_IN_AMM_TAX = 1/100              # Tax to be used for sTOKEN AMM rewards
 # Initial price of sLQTY quoted in LQTY, to make sure bootstrap is profitable
 INITIAL_PRICE = 1.2 * (BOOTSTRAP_ITERATION + INITIAL_ACCRUAL_PARAM) / BOOTSTRAP_ITERATION
 
-PRICE_PREMIUM = "full_balance"            # The estimator of the price premium ("normal_dist","perpetuity","coop_balance","full_balance")
+PRICE_PREMIUM = "yield_comparison"      # The estimator of the price premium ("normal_dist","perpetuity","coop_balance","full_balance", "yield_comparison")
 PREMIUM_MU = 0.1                        # Expected value of the normal distribution as a fraction of POL token balance
 PREMIUM_SIGMA = 0.1                     # Deviation of the normal distribution as a fraction of the POL token balance
 

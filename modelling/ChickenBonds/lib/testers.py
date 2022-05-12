@@ -159,6 +159,24 @@ class TesterSimpleToll(TesterInterface):
 
         return new_natural_rate
 
+    def get_premium_by_yield_comparison(self, chicken):
+        expected_bonding_time = 2 * TARGET_AVERAGE_AGE
+        acquired_bucket = chicken.pol_token_balance()
+        pending_bucket = chicken.coop_token_balance()
+        permanent_bucket = chicken.amm.get_value_in_token_A()
+
+        acquired_yield = self.get_yield_amount(acquired_bucket, self.external_yield, expected_bonding_time)
+        pending_yield = self.get_yield_amount(pending_bucket, self.external_yield, expected_bonding_time)
+        amm_yield = self.get_yield_amount(permanent_bucket, self.amm_yield, expected_bonding_time)
+
+        holding_roi = (acquired_yield + pending_yield + amm_yield) / acquired_bucket
+
+        redemption_price = self.get_pol_ratio(chicken)
+        fair_price = redemption_price * ((1 + holding_roi) ** 2)
+        premium = fair_price - redemption_price
+
+        return premium
+
     def get_premium(self, chicken):
         stoken_supply = chicken.stoken.total_supply
         if stoken_supply == 0:
@@ -174,6 +192,7 @@ class TesterSimpleToll(TesterInterface):
                           "perpetuity": (chicken.coop_token_balance() * EXTERNAL_YIELD) ** (1 / TIME_UNITS_PER_YEAR),
                           "coop_balance": chicken.coop_token_balance() / stoken_supply,
                           "full_balance": (chicken.coop_token_balance() + (self.amm_yield/self.external_yield) * chicken.amm.get_value_in_token_A()) / stoken_supply,
+                          "yield_comparison": self.get_premium_by_yield_comparison(chicken),
                           }
 
         return premium_mapper.get(self.price_premium, 0)
@@ -190,14 +209,15 @@ class TesterSimpleToll(TesterInterface):
             return self.initial_price
 
         base_amount = chicken.pol_token_balance()
+        price_floor = base_amount / stoken_supply
 
         # Different methods to include volatility in the price.
         volatility_mapper = {"None": 0,
-                             "bounded": min(np.random.normal(VOLA_MU, VOLA_SIGMA, 1), base_amount / stoken_supply),
+                             "bounded": min(np.random.normal(VOLA_MU, VOLA_SIGMA, 1), price_floor),
                              "unbounded": np.random.normal(VOLA_MU, VOLA_SIGMA, 1),
                              }
 
-        total_price = base_amount / stoken_supply \
+        total_price = price_floor \
                       + self.get_premium(chicken) \
                       + volatility_mapper.get(self.price_volatility, 0)
 
@@ -301,8 +321,8 @@ class TesterSimpleToll(TesterInterface):
     def get_chicken_in_profit_percentage(self):
         return np.random.gamma(self.chicken_in_gamma_shape, self.chicken_in_gamma_scale, 1)[0]
 
-    def get_yield_amount(self, base_amount, yield_percentage):
-        return base_amount * ((1 + yield_percentage) ** (1 / TIME_UNITS_PER_YEAR) - 1)
+    def get_yield_amount(self, base_amount, yield_percentage, time_units=1):
+        return base_amount * ((1 + yield_percentage) ** (time_units / TIME_UNITS_PER_YEAR) - 1)
 
     # Special case before the first chicken in (actually, when sTOKEN supply is zero)
     # to avoid giving advantage to the first one
