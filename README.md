@@ -37,14 +37,14 @@ Core contracts are found in `src`.
 - [x] refund functionality inside chickenIn
 - [x] Shifting functions
 - [ ] **Replace refund functionality with permanent bucket**
-- [ ] **Liquity-like redemption fee**
+- [x] **Liquity-like redemption fee**
 - [x] Extract common functionality in core contracts 
 - [x] Extract common setup functionality in unit tests
 - [ ] Basic math function for converting to/from 18 digit fractions
 - [ ] Implement main events
 - [ ] Settle on best Solidity version to use (OZ contracts are v8+, and Slither detects v8+)
 - [ ] Add return values to all state-changing functions for integrations
-- [ ] Tax on chicken in + incentive for bTKN/TKN pool
+- [x] Tax on chicken in + incentive for bTKN/TKN pool
 - [x] Adapt shifting function: revert when Curve price crosses boundary 
 
 ### External contracts integrations 
