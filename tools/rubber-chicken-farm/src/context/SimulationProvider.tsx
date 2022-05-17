@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { ChickenFarm, ChickenFarmDatum, ChickenFarmSteerParams } from "../model/ChickenFarm";
 import { parseSimulationKnobs, SimulationKnobs } from "../knobs";
 import { useKnobs } from "./KnobsProvider";
-import { collectSamples, PID } from "../utils";
+import { collectSamples, percent, PID, round } from "../utils";
 
 export interface SimulationContextType {
   period: number;
@@ -104,11 +104,17 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
               } else {
                 const endTime = new Date();
                 const durationMs = endTime.getTime() - startTime.getTime();
+                const lastDatum = collectedData[collectedData.length - 1];
+
                 console.log(`Simulation took ${durationMs / 1000} seconds.`);
                 console.log("Data:");
                 console.log(collectedData);
                 console.log("Population:");
                 console.log(farm.population);
+                console.log("Finals:");
+                console.log(`  POL ratio: ${round(lastDatum.polRatio)}`);
+                console.log(`  Premium:   ${percent(lastDatum.premium)}`);
+                console.log(`  Toll:      ${percent(lastDatum.tollTOKEN / lastDatum.in.TOKEN)}`);
                 console.log("---------------------------------------------------------------------");
               }
             } catch (error) {

@@ -92,3 +92,6 @@ export const randomBinomial = (n: number, p: number) => {
     ++x;
   }
 };
+
+export const round = (n: number, digits = 2) => `${Math.round(n * 10 ** digits) / 10 ** digits}`;
+export const percent = (n: number, digits = 2) => `${round(n * 100, digits)}%`;

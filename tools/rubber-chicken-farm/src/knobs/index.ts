@@ -29,26 +29,36 @@ export type SimulationKnobs = { [P in keyof ParsedSimulationKnobs]: string };
 
 export const simulationDefaults: SimulationKnobs = {
   periods: "4",
-  u0: "30",
+  u0: "8",
   in0: "[1, 1]",
   curve: "(dk, u) => dk / (dk + u)",
 
   grow: "() => 0.05",
 
-  spot: `
-({ stats: s }) => (
-  s.coop.TOKEN +
-  s.in.TOKEN +
-  s.tollTOKEN * 0.5
-) / s.in.sTOKEN`.trim(),
+  //   spot: `
+  // ({ stats: s }) => (
+  //   s.coop.TOKEN +
+  //   s.in.TOKEN +
+  //   s.tollTOKEN * 0.5
+  // ) / s.in.sTOKEN`.trim(),
 
-  point: "() => 30",
+  spot: `
+({ stats: s }) =>
+  s.in.TOKEN / s.in.sTOKEN * (1 + (
+    s.coop.TOKEN * (1.05 ** (120/365) - 1) +
+    s.in.TOKEN   * (1.05 ** (120/365) - 1) +
+    s.tollTOKEN  * (1.02 ** (120/365) - 1)
+  ) / s.in.TOKEN) ** 2`.trim(),
+
+  point: "() => 60",
 
   gauge: `
 ({ k, coop }) => coop
-  .map(({ bond: { k0 } }) => k - k0)
-  .reduce((a, b) => a + b, 0)
-  / (coop.length || 1)`.trim(),
+  .reduce(([num, den], { bond }) => [
+    num + bond.TOKEN * (k - bond.k0),
+    den + bond.TOKEN
+  ], [0, 0])
+  .reduce((num, den) => num / (den || 1))`.trim(),
 
   hatch: `
 ({ k }) => new Array(

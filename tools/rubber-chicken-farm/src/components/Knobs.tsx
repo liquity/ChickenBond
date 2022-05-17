@@ -54,7 +54,7 @@ export const Knobs: React.FC = () => {
           <Textarea rows={1} value={state.grow} onChange={e => set("grow", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>sTOKEN Market Price [TOKEN]</Label>
-          <Textarea rows={5} value={state.spot} onChange={e => set("spot", e.target.value)} />
+          <Textarea rows={6} value={state.spot} onChange={e => set("spot", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Bonding Inflow [TOKEN]</Label>
           <Textarea rows={3} value={state.hatch} onChange={e => set("hatch", e.target.value)} />
@@ -79,7 +79,7 @@ export const Knobs: React.FC = () => {
           <Textarea rows={1} value={state.point} onChange={e => set("point", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Process Variable (y)</Label>
-          <Textarea rows={4} value={state.gauge} onChange={e => set("gauge", e.target.value)} />
+          <Textarea rows={6} value={state.gauge} onChange={e => set("gauge", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Controller</Label>
           <Select
