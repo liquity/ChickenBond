@@ -400,11 +400,15 @@ class TesterSimpleToll(TesterInterface):
 
     def get_avg_outstanding_bond_age(self, chicks, iteration):
         bonded_chicks = self.get_bonded_chicks(chicks)
-        # bonded_chicks = list(filter(lambda chick: not chick.rebonder and not chick.lp, bonded_chicks))
+
         if not bonded_chicks:
             return 0
-        total = sum(map(lambda chick: iteration - chick.bond_time, bonded_chicks))
-        return total / len(bonded_chicks)
+
+        # size-weighted average
+        numerator = sum(map(lambda chick: chick.bond_amount * (iteration - chick.bond_time), bonded_chicks))
+        denominator = sum(map(lambda chick: chick.bond_amount, bonded_chicks))
+
+        return numerator / denominator
 
     def update_chicken(self, chicken, chicks, data, iteration):
         """ Update the state of each user. Users may:
