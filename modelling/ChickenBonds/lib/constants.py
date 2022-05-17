@@ -28,9 +28,9 @@ EXTERNAL_YIELD = 0.05 # 5%              # Yield received from staking the total 
 BOND_AMOUNT = (100, 1000)               # Random number between 100 and 1,000.
 
 # -------------- Controller Parameters -------------
-INITIAL_ACCRUAL_PARAM = 30              # "u" in the accrual curve "t / (t + u)". The higher the value, the slower the accrual.
+INITIAL_ACCRUAL_PARAM = 8               # "u" in the accrual curve "t / (t + u)". The higher the value, the slower the accrual.
 ACCRUAL_ADJUSTMENT_RATE = 0.01          # Set to non-zero to enable control
-TARGET_AVERAGE_AGE = 30
+TARGET_AVERAGE_AGE = 60
 
 # number of iterations to take the average APR of the AMM
 AMM_APR_PERIOD = 10
@@ -45,13 +45,14 @@ SD_NATURAL_RATE = 0.002                 # ToDo
 # -------------- Chicken Parameters ----------------
 CHICKEN_IN_GAMMA = (1.5, 0.1)           # Parameters of gamma distribution for random target return (Mean: 1.5 * 0.1)
 CHICKEN_OUT_PROBABILITY = 0.01          # Probability of a user randomly chicken out
-CHICKEN_IN_AMM_TAX = 1/100              # Tax to be used for sTOKEN AMM rewards
+# TODO: fix 'yield_comparison' to take into account the tax
+CHICKEN_IN_AMM_TAX = 0/100              # Tax to be used for sTOKEN AMM rewards
 
 # -------------- Price Parameters ----------------
 # Initial price of sLQTY quoted in LQTY, to make sure bootstrap is profitable
 INITIAL_PRICE = 1.2 * (BOOTSTRAP_ITERATION + INITIAL_ACCRUAL_PARAM) / BOOTSTRAP_ITERATION
 
-PRICE_PREMIUM = "full_balance"            # The estimator of the price premium ("normal_dist","perpetuity","coop_balance","full_balance")
+PRICE_PREMIUM = "yield_comparison"      # The estimator of the price premium ("normal_dist","perpetuity","coop_balance","full_balance", "yield_comparison")
 PREMIUM_MU = 0.1                        # Expected value of the normal distribution as a fraction of POL token balance
 PREMIUM_SIGMA = 0.1                     # Deviation of the normal distribution as a fraction of the POL token balance
 
