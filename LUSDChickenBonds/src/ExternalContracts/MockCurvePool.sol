@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "../console.sol";
+import "../utils/console.sol";
 import "../Interfaces/ILUSDToken.sol";
 import "../Interfaces/ICurvePool.sol";
 import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";

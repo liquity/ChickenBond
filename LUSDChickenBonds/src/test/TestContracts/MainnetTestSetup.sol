@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-// import "../../console.sol";
+import "uniswapV2/interfaces/IUniswapV2Factory.sol";
+// import "../../utils/console.sol";
 import "./BaseTest.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
-import "uniswapV2/interfaces/IUniswapV2Factory.sol";
 
 
 contract MainnetTestSetup is BaseTest {
@@ -101,6 +101,7 @@ contract MainnetTestSetup is BaseTest {
         console.log(address(chickenBondManager), "ChickenBondManager address");
         console.log(address(sLUSDToken), "sLUSDToken address");
         console.log(address(bondNFT), "BondNFT address");
+        console.log(address(sLUSDLPRewardsStaking), "Rewards staking address");
     }
 
     function pinBlock(uint256 _blockTimestamp) public {

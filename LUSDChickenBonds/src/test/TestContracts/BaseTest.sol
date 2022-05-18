@@ -7,7 +7,7 @@ import "../../../lib/forge-std/src/Vm.sol";
 import "../../../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
 import "../../SLUSDToken.sol";
-import "../../BondNFT.sol"; 
+import "../../BondNFT.sol";
 import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/ICurvePool.sol";
@@ -23,8 +23,8 @@ contract BaseTest is DSTest, stdCheats {
     ChickenBondManagerWrap chickenBondManager;
     BondNFT bondNFT;
     SLUSDToken sLUSDToken;
-    
-    // Integrations 
+
+    // Integrations
     IERC20 lusdToken;
     IERC20 _3crvToken;
     ICurvePool curvePool;
@@ -50,6 +50,7 @@ contract BaseTest is DSTest, stdCheats {
     Vm vm = Vm(CHEATCODE_ADDRESS);
 
     uint256 MAX_UINT256 = type(uint256).max;
+    uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
 
     address[] accountsList;
     address public A;
@@ -108,5 +109,41 @@ contract BaseTest is DSTest, stdCheats {
             // x < min, therefore x < max, also
             return max - (max - x) % modulus;
         }
+    }
+
+    // --- Helpers ---
+
+    // Create a bond for `_user` using `_bondAmount` amount of LUSD, then return the bond's ID.
+    function createBondForUser(address _user, uint256 _bondAmount) public returns (uint256) {
+        vm.startPrank(_user);
+        lusdToken.approve(address(chickenBondManager), _bondAmount);
+        chickenBondManager.createBond(_bondAmount);
+        vm.stopPrank();
+
+        // bond ID
+        return bondNFT.totalMinted();
+    }
+
+    function chickenInForUser(address _user, uint256 _bondID) public {
+        vm.startPrank(_user);
+        chickenBondManager.chickenIn(_bondID);
+        vm.stopPrank();
+    }
+
+    function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
+        tip(address(lusdToken), _user, _lusdDeposit);
+        assertGe(lusdToken.balanceOf(_user), _lusdDeposit);
+        vm.startPrank(_user);
+        lusdToken.approve(address(curvePool), _lusdDeposit);
+        curvePool.add_liquidity([_lusdDeposit, 0], 0);
+        vm.stopPrank();
+    }
+
+    function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
+    }
+
+    function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
     }
 }
