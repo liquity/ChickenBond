@@ -264,11 +264,11 @@ contract ChickenBondManager is Ownable, ChickenMath {
     // Divert acquired yield to LUSD/sLUSD AMM LP rewards staking contract
     // It happens on the very first chicken in event of the system, or any time that redemptions deplete sLUSD total supply to zero
     function _firstChickenIn() internal {
-        uint256 lusdInYearn = calcYearnLUSDVaultShareValue();
+        uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
         uint256 lusdFromInitialYield = _getTotalAcquiredLUSD(lusdInYearn);
         if (lusdFromInitialYield == 0) { return; }
 
-        uint256 yTokensToSwapForYieldLUSD = calcYTokensToBurn(yearnLUSDVault, lusdFromInitialYield, lusdInYearn);
+        uint256 yTokensToSwapForYieldLUSD = calcCorrespondingYTokens(yearnLUSDVault, lusdFromInitialYield, lusdInYearn);
         if (yTokensToSwapForYieldLUSD == 0) { return; }
         _transferToRewardsStakingContract(yTokensToSwapForYieldLUSD);
     }

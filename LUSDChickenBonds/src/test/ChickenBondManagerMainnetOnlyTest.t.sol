@@ -13,14 +13,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         address keeper = StrategyAPI(strategy).keeper();
 
         // harvest
-        uint256 prevValue = chickenBondManager.calcYearnLUSDVaultShareValue();
+        uint256 prevValue = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
         vm.startPrank(keeper);
         StrategyAPI(strategy).harvest();
 
         // some time passes to unlock profits
         vm.warp(block.timestamp + 600);
         vm.stopPrank();
-        uint256 valueIncrease = chickenBondManager.calcYearnLUSDVaultShareValue() - prevValue;
+        uint256 valueIncrease = chickenBondManager.calcTotalYearnLUSDVaultShareValue() - prevValue;
 
         return valueIncrease;
     }
