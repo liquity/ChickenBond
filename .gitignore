@@ -12,3 +12,6 @@
 
 # Python virtual environments
 .venv
+
+# Node.JS dependencies
+node_modules
