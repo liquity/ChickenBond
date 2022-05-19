@@ -6,5 +6,3 @@ import "./TestContracts/MainnetTestSetup.sol";
 import "./TestContracts/ChickenBondManagerTest.sol"; 
 
 contract ChickenBondManagerMainnetTest is BaseTest, MainnetTestSetup, ChickenBondManagerTest { }
-
-

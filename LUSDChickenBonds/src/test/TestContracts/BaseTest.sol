@@ -34,6 +34,7 @@ contract BaseTest is DSTest, stdCheats {
     IUnipool sLUSDLPRewardsStaking;
 
     address yearnGovernanceAddress;
+    address liquitySPAddress;
 
     uint256 CHICKEN_IN_AMM_TAX = 1e16; // 1%
 
@@ -139,11 +140,67 @@ contract BaseTest is DSTest, stdCheats {
         vm.stopPrank();
     }
 
+    function makeCurveSpotPriceBelow1(uint256 _lusdDeposit) public {
+        uint256 curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        if (curveLUSDSpotPrice < 1e18) {return;}
+
+        // C makes large LUSD deposit to Curve, moving Curve spot price below 1.0
+        depositLUSDToCurveForUser(C, _lusdDeposit); // C deposits 200m LUSD
+        curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+         require(curveLUSDSpotPrice < 1e18, "test helper: deposit insufficient to makeCurveSpotPriceBelow1");
+    }
+
+    function makeCurveSpotPriceAbove1(uint256 _3crvDeposit) public {
+        uint256 curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        console.log(curveLUSDSpotPrice, "curveLUSDSpotPrice test helper before");
+        if (curveLUSDSpotPrice > 1e18) {return;}
+
+        // C makes large 3CRV deposit to Curve, moving Curve spot price above 1.0
+        tip(address(_3crvToken), C, _3crvDeposit);
+        assertGe(_3crvToken.balanceOf(C), _3crvDeposit);
+        vm.startPrank(C);
+        _3crvToken.approve(address(curvePool), _3crvDeposit);
+        curvePool.add_liquidity([0, _3crvDeposit], 0);
+        vm.stopPrank();
+       
+        curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        console.log(curveLUSDSpotPrice, "curveLUSDSpotPrice test helper after");
+
+        require(curveLUSDSpotPrice > 1e18, "test helper: deposit insufficient to makeCurveSpotPriceAbove1");
+    }
+
+    function shiftFractionFromSPToCurve(uint256 _divisor) public returns (uint256) {
+        // Put some  LUSD in Curve: shift LUSD from SP to Curve 
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / _divisor; // shift fraction of LUSD in SP
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+
+        uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        assertGt(curveSpotPrice, 1e18);
+        return lusdToShift;
+    }
+
     function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
         return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
     }
 
     function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
         return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
+    }
+    
+    function diffOrZero(uint256 x, uint256 y) public pure returns (uint256) {
+        return x > y ? x - y : 0;
+    }
+
+    function logCBMBuckets(string memory _logHeadingText) public {
+        console.log(_logHeadingText);
+        console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
+        console.log(chickenBondManager.getAcquiredLUSDInYearn(), "Acquired LUSD in Yearn");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
+        console.log(chickenBondManager.getPermanentLUSDInYearn(), "Permanent LUSD in Yearn");
+        console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
+        console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
+        console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");
     }
 }
