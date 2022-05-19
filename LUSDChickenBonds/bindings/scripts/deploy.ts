@@ -1,7 +1,10 @@
+import { ContractTransaction } from "@ethersproject/contracts";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Wallet } from "@ethersproject/wallet";
+import { Decimal } from "@liquity/lib-base";
 
 import { deployAndSetupContracts } from "../src/deployment";
+import { connectToContracts, LUSDChickenBondContractAddresses } from "../src/contracts";
 
 const jsonRpcUrl = "http://127.0.0.1:8545";
 
@@ -11,6 +14,17 @@ const deployerPrivateKeyChain = [
   // Account #1 on Hardhat/Anvil
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 ];
+
+const txWait = (tx: ContractTransaction) => tx.wait();
+
+const runSmokeTest = async (wallet: Wallet, addresses: LUSDChickenBondContractAddresses) => {
+  const { lusdToken, chickenBondManager } = connectToContracts(wallet, addresses);
+  const bondLUSDAmount = Decimal.from(100).hex;
+
+  await lusdToken.unprotectedMint(wallet.address, bondLUSDAmount).then(txWait);
+  await lusdToken.approve(chickenBondManager.address, bondLUSDAmount).then(txWait);
+  await chickenBondManager.createBond(bondLUSDAmount).then(txWait);
+};
 
 const main = async () => {
   const provider = new JsonRpcProvider(jsonRpcUrl);
@@ -33,6 +47,13 @@ const main = async () => {
   console.log();
   console.log("Deployment succeeded! Manifest:");
   console.log(deployment.manifest);
+
+  if (process.argv.includes("--smoke-test")) {
+    console.log();
+    console.log("Running smoke test ...");
+    await runSmokeTest(deployer.wallet, deployment.manifest.addresses);
+    console.log("Smoke test succeeded!");
+  }
 };
 
 main().catch(err => {
