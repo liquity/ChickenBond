@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "uniswapV2/interfaces/IUniswapV2Factory.sol";
 // import "../../utils/console.sol";
 import "./BaseTest.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
-import  "../../ExternalContracts/MockCurvePool.sol";
+import "../../ExternalContracts/MockCurvePool.sol";
+import "./Interfaces/ICurveFactory.sol";
+import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
 
 
 contract MainnetTestSetup is BaseTest {
@@ -18,7 +19,7 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
-    address constant MAINNET_UNISWAP_V2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
     uint256 constant MAINNET_PINNED_BLOCK =  1648476300;
 
@@ -40,7 +41,7 @@ contract MainnetTestSetup is BaseTest {
         tip(address(lusdToken), A, 1e24);
         tip(address(lusdToken), B, 1e24);
         tip(address(lusdToken), C, 1e24);
-    
+
         // Check accounts are funded
         assertTrue(lusdToken.balanceOf(A) == 1e24);
         assertTrue(lusdToken.balanceOf(B) == 1e24);
@@ -66,10 +67,20 @@ contract MainnetTestSetup is BaseTest {
 
         lusdSilo = new LUSDSilo();
 
-        // Deploy LUSD/sLUSD AMM LP Rewards staking contract
-        IUniswapV2Factory uniswapV2Factory = IUniswapV2Factory(MAINNET_UNISWAP_V2_FACTORY_ADDRESS);
-        address uniswapPairAddress = uniswapV2Factory.createPair(address(lusdToken), address(sLUSDToken));
-        sLUSDLPRewardsStaking = new Unipool(address(lusdToken), uniswapPairAddress);
+        // Deploy LUSD/sLUSD AMM Curve V2 pool and LiquidityGauge V4
+        ICurveFactory curveFactory = ICurveFactory(MAINNET_CURVE_V2_FACTORY_ADDRESS);
+        address[4] memory sLUSDCurvePoolCoins = [address(sLUSDToken), address(lusdToken), address(0), address(0)];
+        address sLUSDCurvePoolAddress = curveFactory.deploy_plain_pool(
+            "sLUSD_LUSD",               // name
+            "sLUSDLUSDC",              // symbol
+            sLUSDCurvePoolCoins,        // coins
+            1000,                       // A
+            4000000,                    // fee
+            1,                          // asset type
+            1                           // implementation idx
+        );
+        address curveLiquidityGaugeAddress = curveFactory.deploy_gauge(sLUSDCurvePoolAddress);
+        curveLiquidityGauge = ICurveLiquidityGaugeV4(curveLiquidityGaugeAddress);
 
         ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
             bondNFTAddress: address(bondNFT),
@@ -79,11 +90,11 @@ contract MainnetTestSetup is BaseTest {
             yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
-            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
+            curveLiquidityGaugeAddress: curveLiquidityGaugeAddress,
             yearnGovernanceAddress: yearnGovernanceAddress,
             lusdSiloAddress: address(lusdSilo)
         });
-        
+
         chickenBondManager = new ChickenBondManagerWrap(
             externalContractAddresses,
             TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds
@@ -93,6 +104,11 @@ contract MainnetTestSetup is BaseTest {
             ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
             CHICKEN_IN_AMM_TAX                 // _CHICKEN_IN_AMM_TAX
         );
+
+        // Add LUSD as reward token for Curve Liquidity Gauge, and set ChickenBondManager as distributor
+        vm.startPrank(curveFactory.admin());
+        curveLiquidityGauge.add_reward(address(lusdToken), address(chickenBondManager));
+        vm.stopPrank();
 
         bondNFT.setAddresses(address(chickenBondManager));
         sLUSDToken.setAddresses(address(chickenBondManager));
@@ -109,7 +125,8 @@ contract MainnetTestSetup is BaseTest {
         console.log(address(chickenBondManager), "ChickenBondManager address");
         console.log(address(sLUSDToken), "sLUSDToken address");
         console.log(address(bondNFT), "BondNFT address");
-        console.log(address(sLUSDLPRewardsStaking), "Rewards staking address");
+        console.log(sLUSDCurvePoolAddress, "Curve sLUSD/LUSD pool address");
+        console.log(curveLiquidityGaugeAddress, "Curve Liquidity Gauge address");
     }
 
     function pinBlock(uint256 _blockTimestamp) public {

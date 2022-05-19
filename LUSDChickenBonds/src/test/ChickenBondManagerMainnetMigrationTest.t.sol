@@ -630,7 +630,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Get rewards staking contract LUSD balance before
-        uint256 lusdBalanceStakingBeforeCI = lusdToken.balanceOf(address(sLUSDLPRewardsStaking));
+        uint256 lusdBalanceStakingBeforeCI = lusdToken.balanceOf(address(curveLiquidityGauge));
         assertGt(lusdBalanceStakingBeforeCI, 0); // should be > 0 from previous CIs in normal mode
 
         vm.warp(block.timestamp + 10 days);
@@ -638,7 +638,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenInForUser(C, C_bondID); 
 
         // Check rewards staking contract lusd balance is the same
-        uint256 lusdBalanceStakingAfterCI = lusdToken.balanceOf(address(sLUSDLPRewardsStaking));
+        uint256 lusdBalanceStakingAfterCI = lusdToken.balanceOf(address(curveLiquidityGauge));
         assertEq(lusdBalanceStakingAfterCI,lusdBalanceStakingBeforeCI);  
     }
 
