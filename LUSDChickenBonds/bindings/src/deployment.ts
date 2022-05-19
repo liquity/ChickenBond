@@ -199,6 +199,20 @@ class LUSDChickenBondDeployment {
     const { overrides, log } = this;
 
     const connections: (() => Promise<ContractTransaction>)[] = [
+      () => deployed.curvePool.contract.setAddresses(deployed.lusdToken.contract.address, overrides),
+
+      () =>
+        deployed.yearnLUSDVault.contract.setAddresses(
+          deployed.lusdToken.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.yearnCurveVault.contract.setAddresses(
+          deployed.curvePool.contract.address,
+          overrides
+        ),
+
       () =>
         deployed.bondNFT.contract.setAddresses(
           deployed.chickenBondManager.contract.address,
