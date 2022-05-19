@@ -58,6 +58,6 @@ jobs:
         working-directory: LUSDChickenBonds
         run: ./scripts/start-dev-chain.sh
 
-      - name: Deploy LUSDChickenBond contracts
+      - name: Deploy LUSDChickenBond contracts and run smoke test
         working-directory: LUSDChickenBonds/bindings
-        run: yarn deploy
+        run: yarn deploy --smoke-test
