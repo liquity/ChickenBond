@@ -25,6 +25,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         return valueIncrease;
     }
 
+    // --- chickening in when sTOKEN supply is zero ---
+
     function testFirstChickenInTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -117,6 +119,75 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         );
         // check sLUSD B balance
         assertEq(sLUSDToken.balanceOf(B), accruedSLUSD_B, "sLUSD balance of B doesn't match");
+    }
+
+    // --- redemption tests ---
+
+    function testRedeemDecreasesAcquiredLUSDInCurveByCorrectFraction(uint256 redemptionFraction) public {
+        // Fraction between 1 billion'th, and 100%.  If amount is too tiny, redemption can revert due to attempts to
+        // withdraw 0 LUSDfrom Yearn (due to rounding in share calc).
+        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9); 
+
+        // uint256 redemptionFraction = 1e9; // 50%
+        uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage();
+        // 1-r(1-f).  Fee is left inside system
+        uint256 expectedFractionRemainingAfterRedemption = 1e18 - (redemptionFraction * (1e18 - percentageFee)) / 1e18;
+
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+       createBondForUser(A, bondAmount);
+
+        // time passes
+        vm.warp(block.timestamp + 365 days);
+    
+        // Confirm A's sLUSD balance is zero
+        uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance == 0);
+
+        uint256 A_bondID = bondNFT.totalMinted();
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's sLUSD balance is non-zero
+        A_sLUSDBalance = sLUSDToken.balanceOf(A);
+        assertTrue(A_sLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
+        sLUSDToken.transfer(B, sLUSDBalance);
+        vm.stopPrank();
+
+        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        assertEq(sLUSDToken.totalSupply(), sLUSDToken.balanceOf(B));
+
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
+        shiftFractionFromSPToCurve(10);
+        makeCurveSpotPriceBelow1(200_000_000e18);
+
+        // Get acquired LUSD in Curve before
+        uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 permanentLUSDInCurveBefore = chickenBondManager.getPermanentLUSDInCurve();
+        assertGt(acquiredLUSDInCurveBefore, 0);
+        assertGt(permanentLUSDInCurveBefore, 0);
+       
+        // B redeems some sLUSD
+        uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
+        vm.startPrank(B);
+        assertEq(sLUSDToRedeem, sLUSDToken.totalSupply() * redemptionFraction / 1e18);
+        chickenBondManager.redeem(sLUSDToRedeem);
+        vm.stopPrank();
+
+        // Check acquired LUSD in curve after has reduced by correct fraction
+        uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 expectedAcquiredLUSDInCurveAfter = acquiredLUSDInCurveBefore * expectedFractionRemainingAfterRedemption / 1e18;
+
+        console.log(acquiredLUSDInCurveBefore, "acquiredLUSDInCurveBefore");
+        console.log(acquiredLUSDInCurveAfter, "acquiredLUSDInCurveAfter");
+        console.log(expectedAcquiredLUSDInCurveAfter, "expectedAcquiredLUSDInCurveAfter");
+        assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1e9);
     }
 
     // --- shiftLUSDFromSPToCurve tests ---
