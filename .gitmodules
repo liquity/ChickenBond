@@ -10,3 +10,6 @@
 [submodule "LUSDChickenBonds/lib/uniswapV2"]
 	path = LUSDChickenBonds/lib/uniswapV2
 	url = https://github.com/Uniswap/v2-core
+[submodule "LUSDChickenBonds/lib/ds-proxy"]
+	path = LUSDChickenBonds/lib/ds-proxy
+	url = https://github.com/dapphub/ds-proxy
