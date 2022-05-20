@@ -77,8 +77,10 @@ contract MainnetTestSetup is BaseTest {
             yearnLUSDVaultAddress: address(yearnLUSDVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
-            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking)
+            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
+            yearnGovernanceAddress: yearnGovernanceAddress
         });
+        
         chickenBondManager = new ChickenBondManagerWrap(
             externalContractAddresses,
             TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds

@@ -25,12 +25,14 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     ISLUSDToken immutable public sLUSDToken;
     ILUSDToken immutable public lusdToken;
 
-    // External contracts
+    // External contracts and addresses
     ICurvePool immutable public curvePool;
     IYearnVault immutable public yearnLUSDVault;
     IYearnVault immutable public yearnCurveVault;
     IYearnRegistry immutable public yearnRegistry;
     IUnipool immutable public sLUSDLPRewardsStaking;
+    
+    address immutable public yearnGovernanceAddress;
 
     uint256 immutable public CHICKEN_IN_AMM_TAX;
 
@@ -45,8 +47,9 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         address curvePoolAddress;
         address yearnLUSDVaultAddress;
         address yearnCurveVaultAddress;
-        address sLUSDTokenAddress;
         address yearnRegistryAddress;
+        address yearnGovernanceAddress;
+        address sLUSDTokenAddress;
         address sLUSDLPRewardsStakingAddress;
     }
 
@@ -61,7 +64,21 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     uint256 public baseRedemptionRate; // The latest base redemption rate
     mapping (uint256 => BondData) public idToBondData;
 
-    // constants
+    /* migration: flag which determines whether the system is in migration mode. 
+    
+    When migration mode has been triggered:
+
+    - No tokens are held in the Yearn LUSD vault; all liquidity is in Curve
+    - No token are held in the permanent bucket. Liquidity is either pending, or acquired
+    - Bond creation and public shifter functions are disabled
+    - Users with an existing bond may still chicken in or out
+    - sLUSD holders may still redeem.
+    */
+
+    bool migration; 
+
+    // --- Constants ---
+
     uint256 constant MAX_UINT256 = type(uint256).max;
     int128 public constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0;
     int128 constant INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL = 1;
@@ -105,12 +122,12 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     // (in case the time elapsed since the last adjustment is more than one adjustment period).
     uint256 public accrualAdjustmentPeriodCount;
 
-    // --- events ---
+    // --- Events ---
 
     event BaseRedemptionRateUpdated(uint256 _baseRedemptionRate);
     event LastRedemptionTimeUpdated(uint256 _lastRedemptionFeeOpTime);
 
-    // --- constructor ---
+    // --- Constructor ---
 
     constructor
     (
@@ -130,6 +147,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         yearnLUSDVault = IYearnVault(_externalContractAddresses.yearnLUSDVaultAddress);
         yearnCurveVault = IYearnVault(_externalContractAddresses.yearnCurveVaultAddress);
         yearnRegistry = IYearnRegistry(_externalContractAddresses.yearnRegistryAddress);
+        yearnGovernanceAddress = _externalContractAddresses.yearnGovernanceAddress;
 
         deploymentTimestamp = block.timestamp;
         targetAverageAgeSeconds = _targetAverageAgeSeconds;
@@ -160,6 +178,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     function createBond(uint256 _lusdAmount) external {
         _requireNonZeroAmount(_lusdAmount);
+        _requireMigrationNotActive();
 
         _updateAccrualParameter();
 
@@ -335,6 +354,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     function shiftLUSDFromSPToCurve(uint256 _lusdToShift) external {
         _requireNonZeroAmount(_lusdToShift);
+        _requireMigrationNotActive();
 
         uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(initialCurveSpotPrice > 1e18, "CBM: Curve spot must be > 1.0 before SP->Curve shift");
@@ -374,13 +394,14 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         uint256 permanentYTokensCurveIncrease = yTokensCurveVaultIncrease * ratioPermanentToOwned / 1e18;
         yTokensPermanentCurveVault += permanentYTokensCurveIncrease;
 
-        // Ensure the SP->Curve shift has decreased the Curve spot price to not less than 1.0
+        // Do price check: ensure the SP->Curve shift has decreased the Curve spot price to not less than 1.0
         uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(finalCurveSpotPrice < initialCurveSpotPrice && finalCurveSpotPrice >=  1e18, "CBM: SP->Curve shift must decrease spot price to >= 1.0");
     }
 
    function shiftLUSDFromCurveToSP(uint256 _lusdToShift) external {
         _requireNonZeroAmount(_lusdToShift);
+        _requireMigrationNotActive();
 
         uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(initialCurveSpotPrice < 1e18, "CBM: Curve spot must be < 1.0 before Curve->SP shift");
@@ -428,6 +449,39 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         // Ensure the Curve->SP shift has increased the Curve spot price to not more than 1.0
         uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(finalCurveSpotPrice > initialCurveSpotPrice && finalCurveSpotPrice <=  1e18, "CBM: Curve->SP shift must increase spot price to <= 1.0");
+    }
+
+    // --- Migration functionality ---
+    
+    function activateMigration() external {
+        require(msg.sender == yearnGovernanceAddress, "CBM: Only Yearn Governance can activate migration");
+        _requireMigrationNotActive();
+
+        migration = true;
+
+        // Zero the permament yTokens trackers.  This implicitly makes all permament liquidity acquired.
+        yTokensPermanentLUSDVault = 0;
+        yTokensPermanentCurveVault = 0;
+
+        _shiftAllLUSDFromSPToCurve();
+    }
+
+    function _shiftAllLUSDFromSPToCurve() internal returns (uint256 initialCurveSpotPrice) {
+        uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
+        uint256 yTokensToBurnFromLUSDVault = yearnLUSDVault.balanceOf(address(this));
+
+        // Convert all SP yTokens to LUSD
+        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        yearnLUSDVault.withdraw(yTokensToBurnFromLUSDVault);
+        uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+
+        // Deposit the received LUSD to Curve in return for LUSD3CRV-f tokens
+        uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
+        curvePool.add_liquidity([lusdBalanceDelta, 0], 0);
+        uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
+
+        // Deposit the received LUSD3CRV-f to Yearn Curve vault
+        uint256 yTokensCurveVaultIncrease = yearnCurveVault.deposit(LUSD3CRVBalanceDelta);
     }
 
     // --- Helper functions ---
@@ -710,6 +764,10 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     function _requireNonZeroAmount(uint256 _amount) internal pure {
         require(_amount > 0, "CBM: Amount must be > 0");
+    }
+
+    function _requireMigrationNotActive() internal view {
+        require(!migration, "CBM: Migration must be not be active");
     }
 
     // --- External getter convenience functions ---
