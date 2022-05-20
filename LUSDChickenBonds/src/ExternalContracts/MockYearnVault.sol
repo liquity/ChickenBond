@@ -18,16 +18,16 @@ contract MockYearnVault is ERC20, Ownable {
     }
 
     function deposit(uint256 _tokenAmount) external returns (uint256) {
-        token.transferFrom(msg.sender, address(this), _tokenAmount);
         uint lpShares = calcTokenToYToken(_tokenAmount);
-        
+        token.transferFrom(msg.sender, address(this), _tokenAmount);
+
         _mint(msg.sender, lpShares);
        
         return lpShares;
     }
 
     function withdraw (uint256 _lpShares) external returns (uint256) {
-        uint tokenAmount = _lpShares;
+        uint tokenAmount = calcYTokenToToken(_lpShares);
         token.transfer(msg.sender, tokenAmount);
 
         _burn(msg.sender, _lpShares);

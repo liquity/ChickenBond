@@ -39,7 +39,6 @@ jobs:
           forge test
           -vvv
           --match-contract ChickenBondManagerDev
-          --no-match-test '(Shift|RedeemDecreasesAcquiredLUSDInCurveByCorrectFraction)'
 
   mainnet-test:
     name: Mainnet tests
@@ -64,6 +63,5 @@ jobs:
         run: >-
           forge test
           -vvv
-          --match-contract ChickenBondManagerMainnetTest
+          --match-contract ChickenBondManagerMainnet
           --fork-url ${{ secrets.ETH_RPC_URL }}
-          --fork-block-number 14582611

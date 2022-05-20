@@ -25,7 +25,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
 
         // Checks
-        assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), initialYield + taxAmount, 1, "Balance of rewards contract doesn't match");
+        assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), initialYield + taxAmount, 2, "Balance of rewards contract doesn't match");
 
         // check sLUSD A balance
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
