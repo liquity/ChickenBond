@@ -14,9 +14,10 @@ import "./Interfaces/IYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
 import "./Interfaces/IYearnRegistry.sol";
 import "./LPRewards/Interfaces/IUnipool.sol";
+import "./Interfaces/IChickenBondManager.sol";
 
 
-contract ChickenBondManager is Ownable, ChickenMath {
+contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     // ChickenBonds contracts
     IBondNFT immutable public bondNFT;
@@ -62,9 +63,9 @@ contract ChickenBondManager is Ownable, ChickenMath {
         uint256 yTokensAcquiredCurveVault;
         uint256 yTokensToWithdrawFromCurveVault;
         uint256 lusdBalanceBefore;
-        uint256 LUSD3CRVBalanceBefore;
-        uint256 LUSD3CRVDelta;
         uint256 lusdBalanceDelta;
+        uint256 LUSD3CRVBalanceBefore;
+        uint256 LUSD3CRVBalanceDelta;
     }
 
     struct BondData {
@@ -316,7 +317,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
         _transferToRewardsStakingContract(yTokensToSwapForTaxLUSD);
     }
 
-    function redeem(uint256 _sLUSDToRedeem) external {
+    function redeem(uint256 _sLUSDToRedeem) external returns (uint256, uint256) {
         _requireNonZeroAmount(_sLUSDToRedeem);
 
         LocalVarsRedemption memory vars; 
@@ -349,18 +350,20 @@ contract ChickenBondManager is Ownable, ChickenMath {
         if (vars.yTokensToWithdrawFromLUSDVault > 0) {yearnLUSDVault.withdraw(vars.yTokensToWithdrawFromLUSDVault);} // obtain LUSD from Yearn
         if (vars.yTokensToWithdrawFromCurveVault > 0) {yearnCurveVault.withdraw(vars.yTokensToWithdrawFromCurveVault);} // obtain LUSD3CRV from Yearn
      
-        vars.LUSD3CRVDelta = curvePool.balanceOf(address(this)) - vars.LUSD3CRVBalanceBefore;
-        if (vars.LUSD3CRVDelta > 0) {curvePool.remove_liquidity_one_coin(vars.LUSD3CRVDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);} // obtain LUSD from Curve
-    
         vars.lusdBalanceDelta = lusdToken.balanceOf(address(this)) - vars.lusdBalanceBefore;
-    
-        _requireNonZeroAmount(vars.lusdBalanceDelta);
+        vars.LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - vars.LUSD3CRVBalanceBefore;
+
+        _requireNonZeroAmount(vars.lusdBalanceDelta + vars.LUSD3CRVBalanceDelta);
 
         // Burn the redeemed sLUSD
         sLUSDToken.burn(msg.sender, _sLUSDToRedeem);
 
         // Send the LUSD to the redeemer
         lusdToken.transfer(msg.sender, vars.lusdBalanceDelta);
+        // Send the LUSD3CRV LP tokens to the redeemer
+        curvePool.transfer(msg.sender, vars.LUSD3CRVBalanceDelta);
+
+        return (vars.lusdBalanceDelta, vars.LUSD3CRVBalanceDelta);
     }
 
     function shiftLUSDFromSPToCurve(uint256 _lusdToShift) external {
@@ -784,5 +787,14 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function calcUpdatedAccrualParameter() external view returns (uint256) {
         (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
         return updatedAccrualParameter;
+    }
+
+    function getIndexOfLusdTokenInCurvePool() external pure returns (int128) {
+        return INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL;
+    }
+
+    function getIdToBondData(uint256 _bondID) external view returns (uint256, uint256) {
+        BondData memory bond = idToBondData[_bondID];
+        return (bond.lusdAmount, bond.startTime);
     }
 }
