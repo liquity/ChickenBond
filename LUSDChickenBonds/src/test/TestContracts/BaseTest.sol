@@ -193,7 +193,7 @@ contract BaseTest is DSTest, stdCheats {
         return x > y ? x - y : 0;
     }
 
-    function logCBMBuckets(string memory _logHeadingText) public {
+    function logCBMBuckets(string memory _logHeadingText) public view {
         console.log(_logHeadingText);
         console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
         console.log(chickenBondManager.getAcquiredLUSDInYearn(), "Acquired LUSD in Yearn");
