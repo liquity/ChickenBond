@@ -114,7 +114,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
             initialYield + secondYield + 2 * taxAmount,
-            11,
+            12,
             "Balance of rewards contract doesn't match"
         );
         // check sLUSD B balance
@@ -170,8 +170,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Get acquired LUSD in Curve before
         uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
         uint256 permanentLUSDInCurveBefore = chickenBondManager.getPermanentLUSDInCurve();
-        assertGt(acquiredLUSDInCurveBefore, 0);
-        assertGt(permanentLUSDInCurveBefore, 0);
+        assertGt(acquiredLUSDInCurveBefore, 0, "Acquired in Curve should be greater than zero");
+        assertGt(permanentLUSDInCurveBefore, 0, "Permanent in Curve should be greater than zero");
        
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
@@ -187,7 +187,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         console.log(acquiredLUSDInCurveBefore, "acquiredLUSDInCurveBefore");
         console.log(acquiredLUSDInCurveAfter, "acquiredLUSDInCurveAfter");
         console.log(expectedAcquiredLUSDInCurveAfter, "expectedAcquiredLUSDInCurveAfter");
-        assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1e9);
+        assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1e9, "Final acquired LUSD in Curve mismatch");
     }
 
     // --- shiftLUSDFromSPToCurve tests ---
@@ -798,7 +798,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // check CBM's recorded total acquire LUSD hasn't changed
         uint256 totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
-        assertApproximatelyEqual(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore, 1e3);
+        assertApproximatelyEqual(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore, 2e4);
     }
 
     function testShiftLUSDFromCurveToSPDoesntChangeCBMPendingLUSDTracker() public {// A creates bond

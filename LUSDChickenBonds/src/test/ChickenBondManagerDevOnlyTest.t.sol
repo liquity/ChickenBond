@@ -98,7 +98,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
             initialYield + secondYield + 2 * taxAmount,
-            2,
+            5,
             "Balance of rewards contract doesn't match"
         );
         // check sLUSD B balance
