@@ -74,7 +74,6 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     - Users with an existing bond may still chicken in or out
     - sLUSD holders may still redeem.
     */
-
     bool migration; 
 
     // --- Constants ---
@@ -230,15 +229,19 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         * withdraw the lesser of the two quantities. */
         uint256 lusdToWithdraw = Math.min(bond.lusdAmount, lusdInYearn);
 
-        uint256 yTokensToSwapForLUSD = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdraw, lusdInYearn);
-
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        yearnLUSDVault.withdraw(yTokensToSwapForLUSD);
-        uint256 lusdBalanceAfter = lusdToken.balanceOf(address(this));
 
+        if (!migration) { // In normal mode, withdraw from Yearn LUSD vault
+            uint256 yTokensToSwapForLUSD = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdraw, lusdInYearn);
+            yearnLUSDVault.withdraw(yTokensToSwapForLUSD);
+        } else { // In migration mode, withdraw from Yearn Curve vault
+            _withdrawLUSDFromCurve(lusdToWithdraw);
+        }
+    
+        uint256 lusdBalanceAfter = lusdToken.balanceOf(address(this));
         uint256 lusdBalanceDelta = lusdBalanceAfter - lusdBalanceBefore;
 
-        /* Transfer the LUSD balance delta resulting from the Yearn withdrawal, rather than the ideal bondedLUSD.
+        /* Transfer the LUSD balance delta resulting from the withdrawal, rather than the ideal bondedLUSD.
         * Reasoning: the LUSD balance delta can be slightly lower than the bondedLUSD due to floor division in the
         * yToken calculation prior to withdrawal. */
         lusdToken.transfer(msg.sender, lusdBalanceDelta);
@@ -298,18 +301,27 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         totalPendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
-        /* Get LUSD amounts to acquire and make permanent. Acquire LUSD in proportion to the system's current backing ratio,
-        * in order to maintain said ratio. */
+        /* Get the LUSD amount to acquire from the bond, and the remaining surplus. Acquire LUSD in proportion to the system's 
+        current backing ratio,* in order to maintain said ratio. */
         uint256 lusdToAcquire = accruedSLUSD * backingRatio / 1e18;
-        uint256 lusdToPermanent = taxedBondAmount - lusdToAcquire;
+        uint256 lusdSurplus = taxedBondAmount - lusdToAcquire;
 
-        assert ((lusdToAcquire + lusdToPermanent) <= taxedBondAmount);
+        assert ((lusdToAcquire + lusdSurplus) <= taxedBondAmount);
 
         uint256 yTokensToSwapForTaxLUSD = calcCorrespondingYTokens(yearnLUSDVaultCached, taxAmount, lusdInYearn);
 
-        // Record the yTokens that correspond to the permanent portion from this chicken-in. This implicitly decreases the acquired LUSD.
-        uint256 yTokensToPutInPermanent = calcCorrespondingYTokens(yearnLUSDVaultCached, lusdToPermanent, lusdInYearn);
-        yTokensPermanentLUSDVault += yTokensToPutInPermanent;
+        // Handle the surplus LUSD from the chicken-in:
+        if (!migration) { // In normal mode, add the surplus to the permanent bucket by increasing the permament yToken tracker. This implicitly decreases the acquired LUSD.
+            uint256 yTokensToPutInPermanent = calcCorrespondingYTokens(yearnLUSDVaultCached, lusdSurplus, lusdInYearn);
+            yTokensPermanentLUSDVault += yTokensToPutInPermanent;
+        } else { // In migration mode, withdraw surplus from Curve and refund to bonder
+            uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+            _withdrawLUSDFromCurve(lusdSurplus);
+            uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+
+            // Refund surplus LUSD to bonder
+            lusdToken.transfer(msg.sender, lusdBalanceDelta);
+        }
     
         sLUSDToken.mint(msg.sender, accruedSLUSD);
         bondNFT.burn(_bondID);
@@ -318,28 +330,45 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         _transferToRewardsStakingContract(yTokensToSwapForTaxLUSD);
     }
 
+    function _withdrawLUSDFromCurve(uint256 _lusdAmount) internal {
+        // Calculate the LUSD3CRV needed to obtain the LUSD 
+        uint256 LUSC3CRVInYearnCurveVault = calcTotalYearnCurveVaultShareValue();
+        uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([_lusdAmount, 0], false);
+        uint256 yTokensToWithdrawFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, LUSC3CRVInYearnCurveVault);
+        
+        // withdraw LUSD3CRV from Yearn Curve vault
+        uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
+        yearnCurveVault.withdraw(yTokensToWithdrawFromCurveVault); // obtain LUSD3CRV from Yearn
+        uint256 LUSD3CRVDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
+        
+        // Withdraw LUSD from Curve
+        curvePool.remove_liquidity_one_coin(LUSD3CRVDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);
+    }
+
     function redeem(uint256 _sLUSDToRedeem) external returns (uint256, uint256) {
         _requireNonZeroAmount(_sLUSDToRedeem);
 
         /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
         Current approach leaves redemption fees in the acquired bucket. */
         uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
-        // Calculate redemption fraction to withdraw, given that we leave the fee inside the system
+        // Calculate redemption fraction to withdraw, given that we leave the fee inside the acquired bucket
         uint256 redemptionFeePercentage = calcRedemptionFeePercentage();
         uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
         // Increase redemption base rate with the new redeemed amount
         _updateRedemptionRateAndTime(redemptionFeePercentage, fractionOfSLUSDToRedeem);
 
-        // Get the LUSD to withdraw from Yearn LUSD Vault, and the corresponding yTokens
-        uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdInSPVault = calcTotalYearnLUSDVaultShareValue();
+        uint256 lusd3CRVInCurveVault = calcTotalYearnCurveVaultShareValue();
 
-        uint256 lusdToWithdrawFromYearn = _getAcquiredLUSDInYearn(lusdInYearn) * fractionOfAcquiredLUSDToWithdraw / 1e18;
-        uint256 yTokensFromLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdrawFromYearn, lusdInYearn);
+        // Calculate the LUSD to withdraw from SP, and corresponding yTokens
+        uint256 lusdToWithdrawFromSP = _getAcquiredLUSDInYearn(lusdInSPVault) * fractionOfAcquiredLUSDToWithdraw / 1e18;
+        uint256 yTokensToWithdrawFromSPVault = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdrawFromSP, lusdInSPVault);
         
-        //  Since 100% of the Curve vault liquidity is "acquired + permanent", just get the acquired yTokens by subtracting permanent 
-        uint256 yTokensAcquiredCurveVault = yearnCurveVault.balanceOf(address(this)) - yTokensPermanentCurveVault;
-        uint256 yTokensFromCurveVault = yTokensAcquiredCurveVault * fractionOfAcquiredLUSDToWithdraw / 1e18;
-
+        // Calculate the LUSD to withdraw from Curve, and corresponding yTokens
+        uint256 lusdToWithdrawFromCurve = getAcquiredLUSDInCurve() * fractionOfAcquiredLUSDToWithdraw / 1e18;
+        uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([lusdToWithdrawFromCurve, 0], false);
+        uint256 yTokensToWithdrawFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, lusd3CRVInCurveVault);
+           
         _requireNonZeroAmount(yTokensFromLUSDVault + yTokensFromCurveVault);
 
         // Burn the redeemed sLUSD
@@ -667,7 +696,9 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     }
 
     function _getAcquiredLUSDInYearn(uint256 _lusdInYearn) public view returns (uint256) {
-        uint256 totalPendingLUSDCached = totalPendingLUSD;
+        // In normal mode, all pending LUSD is in Yearn SP vault. In migration mode, none is.
+        uint256 totalPendingLUSDInYearn = migration ? 0 : totalPendingLUSD;
+
         uint256 permanentLUSDInYearn = getPermanentLUSDInYearn();
 
         /* In principle, the acquired LUSD is always the delta between the LUSD deposited to Yearn and the total pending LUSD.
@@ -679,22 +710,27 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         */
         uint256 acquiredLUSDInYearn;
 
-        if (_lusdInYearn > totalPendingLUSDCached + permanentLUSDInYearn) {
-            acquiredLUSDInYearn = _lusdInYearn - totalPendingLUSDCached - permanentLUSDInYearn;
+        if (_lusdInYearn > totalPendingLUSDInYearn + permanentLUSDInYearn) {
+            acquiredLUSDInYearn = _lusdInYearn - totalPendingLUSDInYearn - permanentLUSDInYearn;
         }
         
         return acquiredLUSDInYearn;
     }
 
     function getAcquiredLUSDInCurve() public view returns (uint256) {
-        uint256 permanentLUSD3CRVInYearn = yTokensPermanentCurveVault * yearnCurveVault.pricePerShare() / 1e18;
+        // In normal mode, no pending LUSD is in Curve Vault. In migration mode, all of it is.
+        uint256 totalPendingLUSDInCurve = migration ? totalPendingLUSD : 0;
+
+        uint256 permanentLUSD3CRVInCurveVault = getPermanentLUSDInCurve();
         uint256 lusd3CRVInYearn = calcTotalYearnCurveVaultShareValue();
        
         uint256 acquiredLUSDInCurve;
 
         // Get the LUSD value of the LUSD-3CRV tokens 
-        if (lusd3CRVInYearn > permanentLUSD3CRVInYearn) {
-            acquiredLUSDInCurve = curvePool.calc_withdraw_one_coin((lusd3CRVInYearn - permanentLUSD3CRVInYearn), INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL);
+        if (lusd3CRVInYearn > permanentLUSD3CRVInCurveVault + totalPendingLUSDInCurve) {
+            acquiredLUSDInCurve = 
+                curvePool.calc_withdraw_one_coin((lusd3CRVInYearn - permanentLUSD3CRVInCurveVault), INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL) 
+                - totalPendingLUSDInCurve;
         }
 
         return acquiredLUSDInCurve;
