@@ -14,9 +14,10 @@ import "./Interfaces/IYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
 import "./Interfaces/IYearnRegistry.sol";
 import "./LPRewards/Interfaces/IUnipool.sol";
+import "./Interfaces/IChickenBondManager.sol";
 
 
-contract ChickenBondManager is Ownable, ChickenMath {
+contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     // ChickenBonds contracts
     IBondNFT immutable public bondNFT;
@@ -48,24 +49,6 @@ contract ChickenBondManager is Ownable, ChickenMath {
         address yearnRegistryAddress;
         address sLUSDLPRewardsStakingAddress;
     }
-    
-    /* Used to hold, return and assign variables inside the redeem() function, in order to avoid the error:
-    "CompilerError: Stack too deep". */
-    struct LocalVarsRedemption {
-        uint256 fractionOfSLUSDToRedeem;
-        uint256 redemptionFeePercentage;
-        uint256 fractionOfAcquiredLUSDToWithdraw;
-        uint256 lusdInYearn;
-        uint256 lusd3CRVInCurve;
-        uint256 lusdToWithdrawFromYearn;
-        uint256 yTokensToWithdrawFromLUSDVault;
-        uint256 yTokensAcquiredCurveVault;
-        uint256 yTokensToWithdrawFromCurveVault;
-        uint256 lusdBalanceBefore;
-        uint256 LUSD3CRVBalanceBefore;
-        uint256 LUSD3CRVDelta;
-        uint256 lusdBalanceDelta;
-    }
 
     struct BondData {
         uint256 lusdAmount;
@@ -80,7 +63,7 @@ contract ChickenBondManager is Ownable, ChickenMath {
 
     // constants
     uint256 constant MAX_UINT256 = type(uint256).max;
-    int128 constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0;
+    int128 public constant INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = 0;
     int128 constant INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL = 1;
 
     uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
@@ -316,51 +299,38 @@ contract ChickenBondManager is Ownable, ChickenMath {
         _transferToRewardsStakingContract(yTokensToSwapForTaxLUSD);
     }
 
-    function redeem(uint256 _sLUSDToRedeem) external {
+    function redeem(uint256 _sLUSDToRedeem) external returns (uint256, uint256) {
         _requireNonZeroAmount(_sLUSDToRedeem);
 
-        LocalVarsRedemption memory vars; 
-        
         /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
         Current approach leaves redemption fees in the acquired bucket. */
-        vars.fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
+        uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
         // Calculate redemption fraction to withdraw, given that we leave the fee inside the system
-        vars.redemptionFeePercentage = calcRedemptionFeePercentage();
-        vars.fractionOfAcquiredLUSDToWithdraw = vars.fractionOfSLUSDToRedeem * (1e18 - vars.redemptionFeePercentage) / 1e18;
+        uint256 redemptionFeePercentage = calcRedemptionFeePercentage();
+        uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
         // Increase redemption base rate with the new redeemed amount
-        _updateRedemptionRateAndTime(vars.redemptionFeePercentage, vars.fractionOfSLUSDToRedeem);
+        _updateRedemptionRateAndTime(redemptionFeePercentage, fractionOfSLUSDToRedeem);
 
         // Get the LUSD to withdraw from Yearn LUSD Vault, and the corresponding yTokens
-        vars.lusdInYearn = calcTotalYearnLUSDVaultShareValue();
-        vars.lusd3CRVInCurve = calcTotalYearnCurveVaultShareValue();
+        uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
 
-        vars.lusdToWithdrawFromYearn = _getAcquiredLUSDInYearn(vars.lusdInYearn) * vars.fractionOfAcquiredLUSDToWithdraw / 1e18;
-        vars.yTokensToWithdrawFromLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, vars.lusdToWithdrawFromYearn, vars.lusdInYearn);
+        uint256 lusdToWithdrawFromYearn = _getAcquiredLUSDInYearn(lusdInYearn) * fractionOfAcquiredLUSDToWithdraw / 1e18;
+        uint256 yTokensFromLUSDVault = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdrawFromYearn, lusdInYearn);
         
         //  Since 100% of the Curve vault liquidity is "acquired + permanent", just get the acquired yTokens by subtracting permanent 
-        vars.yTokensAcquiredCurveVault = yearnCurveVault.balanceOf(address(this)) - yTokensPermanentCurveVault;
-        vars.yTokensToWithdrawFromCurveVault = vars.yTokensAcquiredCurveVault * vars.fractionOfAcquiredLUSDToWithdraw / 1e18;
+        uint256 yTokensAcquiredCurveVault = yearnCurveVault.balanceOf(address(this)) - yTokensPermanentCurveVault;
+        uint256 yTokensFromCurveVault = yTokensAcquiredCurveVault * fractionOfAcquiredLUSDToWithdraw / 1e18;
 
-        // The LUSD deltas from SP/Curve withdrawals are the amounts to send to the redeemer
-        vars.lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        vars.LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
-     
-        // Redemptions draw LUSD purely from the acquired bucket
-        if (vars.yTokensToWithdrawFromLUSDVault > 0) {yearnLUSDVault.withdraw(vars.yTokensToWithdrawFromLUSDVault);} // obtain LUSD from Yearn
-        if (vars.yTokensToWithdrawFromCurveVault > 0) {yearnCurveVault.withdraw(vars.yTokensToWithdrawFromCurveVault);} // obtain LUSD3CRV from Yearn
-     
-        vars.LUSD3CRVDelta = curvePool.balanceOf(address(this)) - vars.LUSD3CRVBalanceBefore;
-        if (vars.LUSD3CRVDelta > 0) {curvePool.remove_liquidity_one_coin(vars.LUSD3CRVDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);} // obtain LUSD from Curve
-    
-        vars.lusdBalanceDelta = lusdToken.balanceOf(address(this)) - vars.lusdBalanceBefore;
-    
-        _requireNonZeroAmount(vars.lusdBalanceDelta);
+        _requireNonZeroAmount(yTokensFromLUSDVault + yTokensFromCurveVault);
 
         // Burn the redeemed sLUSD
         sLUSDToken.burn(msg.sender, _sLUSDToRedeem);
 
-        // Send the LUSD to the redeemer
-        lusdToken.transfer(msg.sender, vars.lusdBalanceDelta);
+        // Transfer yTokens to user
+        yearnLUSDVault.transfer(msg.sender, yTokensFromLUSDVault);
+        yearnCurveVault.transfer(msg.sender, yTokensFromCurveVault);
+
+        return (yTokensFromLUSDVault, yTokensFromCurveVault);
     }
 
     function shiftLUSDFromSPToCurve(uint256 _lusdToShift) external {
@@ -784,5 +754,10 @@ contract ChickenBondManager is Ownable, ChickenMath {
     function calcUpdatedAccrualParameter() external view returns (uint256) {
         (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
         return updatedAccrualParameter;
+    }
+
+    function getIdToBondData(uint256 _bondID) external view returns (uint256, uint256) {
+        BondData memory bond = idToBondData[_bondID];
+        return (bond.lusdAmount, bond.startTime);
     }
 }

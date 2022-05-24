@@ -12,7 +12,7 @@ import "./LUSDTokenTester.sol";
 
 
 contract DevTestSetup is BaseTest {
-    function setUp() public {
+    function setUp() public virtual {
         // Start tests at a non-zero timestamp
         vm.warp(block.timestamp + 600);
 

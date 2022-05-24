@@ -472,8 +472,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
         createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-       
+
         // time passes
         vm.warp(block.timestamp + 30 days);
       
@@ -545,8 +544,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
         createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-       
+
         // time passes
         vm.warp(block.timestamp + 30 days);
       
@@ -586,8 +584,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
         createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-       
+
         // time passes
         vm.warp(block.timestamp + 30 days);
       
@@ -854,17 +851,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
-    
-        // check total acquired LUSD > 0
-        uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
         shiftFractionFromSPToCurve(10);
         makeCurveSpotPriceBelow1(200_000_000e18);
       
-        uint256 permanentYearnAfterShift = chickenBondManager.getPermanentLUSDInYearn();
-        uint256 permanentCurveAfterShift = chickenBondManager.getPermanentLUSDInCurve();
+        //uint256 permanentYearnAfterShift = chickenBondManager.getPermanentLUSDInYearn();
+        //uint256 permanentCurveAfterShift = chickenBondManager.getPermanentLUSDInCurve();
         assertGt(chickenBondManager.getAcquiredLUSDInCurve(), 0);
         assertGt(chickenBondManager.getAcquiredLUSDInYearn(), 0);
 
@@ -969,8 +963,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
         createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-       
+
         // time passes
         vm.warp(block.timestamp + 30 days);
       
@@ -1041,8 +1034,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
         createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-       
+
         // time passes
         vm.warp(block.timestamp + 30 days);
       
@@ -1094,8 +1086,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
         createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-       
+
         // time passes
         vm.warp(block.timestamp + 30 days);
       
@@ -1180,7 +1171,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         tip(address(_3crvToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to Curve, as CBM
-        uint256 cbm3CRVBalBeforeDep = _3crvToken.balanceOf(address(chickenBondManager));
+        //uint256 cbm3CRVBalBeforeDep = _3crvToken.balanceOf(address(chickenBondManager));
         vm.startPrank(address(chickenBondManager));
 
         _3crvToken.approve(address(curvePool), _depositAmount);
@@ -1208,7 +1199,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 curve3CRVSpot = curvePool.get_dy_underlying(1, 0, 1e18); 
 
         // Choose deposit amounts in proportion to current spot price, in order to keep it constant
-        uint256 _depositMagnitude = 10e18;
+        //uint256 _depositMagnitude = 10e18;
         // multiply by the lusd-per-3crv
         uint256 _lusdDepositAmount =  curve3CRVSpot * _depositMagnitude / 1e18;
         uint256 _3crvDepositAmount = _depositMagnitude;
