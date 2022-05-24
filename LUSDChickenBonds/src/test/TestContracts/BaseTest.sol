@@ -78,8 +78,12 @@ contract BaseTest is DSTest, stdCheats {
     }
 
     function assertNotApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin) public {
+        assertNotApproximatelyEqual(_x, _y, _margin, "");
+    }
+
+    function assertNotApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin, string memory _reason) public {
         uint256 diff = abs(_x, _y);
-        assertGt(diff, _margin);
+        assertGt(diff, _margin, _reason);
     }
 
     function assertGeAndWithinRange(uint256 _x, uint256 _y, uint _margin) public {

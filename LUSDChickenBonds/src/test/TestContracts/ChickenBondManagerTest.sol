@@ -1420,7 +1420,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(totalSLUSDAfter > 0);
     }
 
-    function testRedeemIncreasesCallersLUSDBalance() public {
+    function testRedeemIncreasesCallersYTokenBalance() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1448,17 +1448,17 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
         vm.stopPrank();
 
-        uint256 B_LUSDBalanceBefore = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceBefore = yearnLUSDVault.balanceOf(B);
 
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance / 2;
         vm.startPrank(B);
         chickenBondManager.redeem(sLUSDToRedeem);
 
-        uint256 B_LUSDBalanceAfter = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceAfter = yearnLUSDVault.balanceOf(B);
 
         // Check B's LUSD Balance has increased
-        assertTrue(B_LUSDBalanceAfter > B_LUSDBalanceBefore);
+        assertTrue(B_yTokensBalanceAfter > B_yTokensBalanceBefore);
     }
 
     function testRedeemDecreasesAcquiredLUSDInYearnByCorrectFraction(uint256 redemptionFraction) public {
@@ -1554,7 +1554,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
         vm.stopPrank();
 
-        uint256 B_LUSDBalanceBefore = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceBefore = yearnLUSDVault.balanceOf(B);
         uint256 backingRatio0 = chickenBondManager.calcSystemBackingRatio();
 
         //assertEq(chickenBondManager.getTotalAcquiredLUSD(), sLUSDToken.totalSupply());
@@ -1564,23 +1564,33 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(B);
         chickenBondManager.redeem(sLUSDToRedeem);
 
-        uint256 B_LUSDBalanceAfter1 = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceAfter1 = yearnLUSDVault.balanceOf(B);
         uint256 backingRatio1 = chickenBondManager.calcSystemBackingRatio();
 
-        // Check B's LUSD Balance has increased by exactly redemption amount:
+        // Check B's Y tokens Balance converted to LUSD has increased by exactly redemption amount:
         // backing ratio was 1, and redemption fee was still zero
-        assertApproximatelyEqual(B_LUSDBalanceAfter1 - B_LUSDBalanceBefore, sLUSDToRedeem, ROUNDING_ERROR);
-        assertApproximatelyEqual(backingRatio0, backingRatio1, ROUNDING_ERROR);
+        assertApproximatelyEqual(
+            (B_yTokensBalanceAfter1 - B_yTokensBalanceBefore) * yearnLUSDVault.pricePerShare() / 1e18,
+            sLUSDToRedeem,
+            ROUNDING_ERROR,
+            "Wrong B Y tokens balance increase after 1st redemption"
+        );
+        assertApproximatelyEqual(backingRatio0, backingRatio1, ROUNDING_ERROR, "Wrong backing ratio after 1st redemption");
 
         // B redeems again
         chickenBondManager.redeem(sLUSDToRedeem);
-        uint256 B_LUSDBalanceAfter2 = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceAfter2 = yearnLUSDVault.balanceOf(B);
         uint256 backingRatio2 = chickenBondManager.calcSystemBackingRatio();
-        // Check B's LUSD Balance has increased by less than redemption amount
+        // Check B's Y tokens Balance converted to LUSD has increased by less than redemption amount
         // backing ratio was 1, but redemption fee was non zero
-        assertNotApproximatelyEqual(B_LUSDBalanceAfter2 - B_LUSDBalanceAfter2, sLUSDToRedeem, ROUNDING_ERROR);
-        // Now backing ratio should have increased
-        assertNotApproximatelyEqual(backingRatio1, backingRatio2, ROUNDING_ERROR);
+        assertNotApproximatelyEqual(
+            (B_yTokensBalanceAfter2 - B_yTokensBalanceAfter1) * yearnLUSDVault.pricePerShare() / 1e18,
+            sLUSDToRedeem,
+            ROUNDING_ERROR,
+            "Wrong B Y tokens balance increase after 2nd redemption"
+        );
+        // Backing ratio should stay the same
+        assertNotApproximatelyEqual(backingRatio1, backingRatio2, ROUNDING_ERROR, "Wrong backing ratio after 2nd redemption");
     }
 
     function testRedeemRevertsWhenCallerHasInsufficientSLUSD() public {
