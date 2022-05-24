@@ -84,6 +84,11 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         vm.warp(block.timestamp + 600);
 
+        // make sure A withdraws Y tokens, otherwise would get part of the new harvest!
+        vm.startPrank(A);
+        yearnLUSDVault.withdraw(yearnLUSDVault.balanceOf(A));
+        vm.stopPrank();
+
         // Yearn LUSD Vault gets some yield
         uint256 secondYield = 4e18;
         MockYearnVault(address(yearnLUSDVault)).harvest(secondYield);
