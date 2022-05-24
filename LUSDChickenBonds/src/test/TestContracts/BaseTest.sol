@@ -175,10 +175,10 @@ contract BaseTest is DSTest, stdCheats {
 
     function shiftFractionFromSPToCurve(uint256 _divisor) public returns (uint256) {
         // Put some  LUSD in Curve: shift LUSD from SP to Curve 
-        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / _divisor; // shift fraction of LUSD in SP
+        assertEq(chickenBondManager.getAcquiredLUSDInCurveVault(), 0);
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / _divisor; // shift fraction of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
-        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurveVault() > 0);
 
         uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertGt(curveSpotPrice, 1e18);
@@ -200,11 +200,11 @@ contract BaseTest is DSTest, stdCheats {
     function logCBMBuckets(string memory _logHeadingText) public view {
         console.log(_logHeadingText);
         console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
-        console.log(chickenBondManager.getAcquiredLUSDInYearn(), "Acquired LUSD in Yearn");
-        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
-        console.log(chickenBondManager.getPermanentLUSDInYearn(), "Permanent LUSD in Yearn");
-        console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
-        console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
-        console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");
+        console.log(chickenBondManager.getAcquiredLUSDInLUSDVault(), "Acquired LUSD in Yearn");
+        console.log(chickenBondManager.getAcquiredLUSDInCurveVault(), "Acquired LUSD in Curve");
+        console.log(chickenBondManager.getPermanentLUSDInLUSDVault(), "Permanent LUSD in Yearn");
+        console.log(chickenBondManager.getPermanentLUSDInCurveVault(), "Permanent LUSD in Curve");
+        console.log(chickenBondManager.getOwnedLUSDInLUSDVault(), "Owned LUSD in SP (Ac. + Perm.)");
+        console.log(chickenBondManager.getOwnedLUSDInCurveVault(), "Owned LUSD in Curve (Ac. + Perm.)");
     }
 }
