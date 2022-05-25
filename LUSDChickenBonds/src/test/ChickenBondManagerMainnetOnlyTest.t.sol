@@ -338,7 +338,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -350,7 +350,68 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // NOTE: Relative error seems fairly constant as bond size varies (~5th digit)
         // However, relative error increases/decreases as amount shifted increases/decreases
         // (4th digit when shifting all SP LUSD, 7th digit when shifting only 1% SP LUSD)
-        assertApproximatelyEqual(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore, 1e15);
+        assertRelativeError(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore, 1e14, "Acquired LUSD deviated too much after 1st shift");
+
+        // Shift 10% of LUSD in SP (again, as this time Curve vault was not empty before, so it’s a better check for proportions)
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+
+        // check CBM's recorded total acquire LUSD hasn't changed
+        uint256 totalAcquiredLUSDAfter2 = chickenBondManager.getTotalAcquiredLUSD();
+
+        // TODO: Why does the error margin need to be so large here when shifting from SP -> Curve?
+        // It's bigger than a rounding error.
+        // NOTE: Relative error seems fairly constant as bond size varies (~5th digit)
+        // However, relative error increases/decreases as amount shifted increases/decreases
+        // (4th digit when shifting all SP LUSD, 7th digit when shifting only 1% SP LUSD)
+        assertRelativeError(totalAcquiredLUSDAfter2, totalAcquiredLUSDAfter, 1e14, "Acquired LUSD deviated too much after 2nd shift");
+    }
+
+    function testShiftLUSDFromSPToCurveDoesntChangeCBMTotalPermanentLUSDTracker() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+       createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // A chickens in
+        chickenInForUser(A, A_bondID);
+
+        // get CBM's recorded total permanent LUSD before
+        uint256 totalPermanentLUSDBefore = chickenBondManager.getPermanentLUSDInLUSDVault() + chickenBondManager.getPermanentLUSDInCurveVault();
+        assertGt(totalPermanentLUSDBefore, 0);
+
+        makeCurveSpotPriceAbove1(200_000_000e18);
+
+        // Shift 10% of LUSD in SP
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+
+        // check CBM's recorded total permanent LUSD hasn't changed
+        uint256 totalPermanentLUSDAfter = chickenBondManager.getPermanentLUSDInLUSDVault() + chickenBondManager.getPermanentLUSDInCurveVault();
+
+        // TODO: Why does the error margin need to be so large here when shifting from SP -> Curve?
+        // It's bigger than a rounding error.
+        // NOTE: Relative error seems fairly constant as bond size varies (~5th digit)
+        // However, relative error increases/decreases as amount shifted increases/decreases
+        // (4th digit when shifting all SP LUSD, 7th digit when shifting only 1% SP LUSD)
+        assertRelativeError(totalPermanentLUSDAfter, totalPermanentLUSDBefore, 1e14, "Permanent LUSD deviated too much after 1st shift");
+
+
+        // Shift 10% of LUSD in SP (again, as this time Curve vault was not empty before, so it’s a better check for proportions)
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+
+        // check CBM's recorded total permanent LUSD hasn't changed
+        uint256 totalPermanentLUSDAfter2 = chickenBondManager.getPermanentLUSDInLUSDVault() + chickenBondManager.getPermanentLUSDInCurveVault();
+
+        // TODO: Why does the error margin need to be so large here when shifting from SP -> Curve?
+        // It's bigger than a rounding error.
+        // NOTE: Relative error seems fairly constant as bond size varies (~5th digit)
+        // However, relative error increases/decreases as amount shifted increases/decreases
+        // (4th digit when shifting all SP LUSD, 7th digit when shifting only 1% SP LUSD)
+        assertRelativeError(totalPermanentLUSDAfter2, totalPermanentLUSDAfter, 1e14, "Permanent LUSD deviated too much after 2nd shift");
     }
 
     function testShiftLUSDFromSPToCurveDoesntChangeCBMPendingLUSDTracker() public {
@@ -796,6 +857,43 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check CBM's recorded total acquire LUSD hasn't changed
         uint256 totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
         assertApproximatelyEqual(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore, 2e4);
+    }
+
+    function testShiftLUSDFromCurveToSPDoesntChangeCBMTotalPermanentLUSDTracker() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+       createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // check total permanent LUSD > 0
+        uint256 totalPermanentLUSD = chickenBondManager.getPermanentLUSDInLUSDVault() + chickenBondManager.getPermanentLUSDInCurveVault();
+        assertTrue(totalPermanentLUSD > 0);
+
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
+        shiftFractionFromSPToCurve(10);
+        makeCurveSpotPriceBelow1(200_000_000e18);
+
+        // get CBM's recorded total permanent LUSD before
+        uint256 totalPermanentLUSDBefore = chickenBondManager.getPermanentLUSDInLUSDVault() + chickenBondManager.getPermanentLUSDInCurveVault();
+        assertTrue(totalPermanentLUSDBefore > 0);
+
+        // Shift LUSD from Curve to SP
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10; // shift 10% of LUSD in Curve
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
+
+        // check CBM's recorded total acquire LUSD hasn't changed
+        uint256 totalPermanentLUSDAfter = chickenBondManager.getPermanentLUSDInLUSDVault() + chickenBondManager.getPermanentLUSDInCurveVault();
+        assertApproximatelyEqual(totalPermanentLUSDAfter, totalPermanentLUSDBefore, 2e4);
     }
 
     function testShiftLUSDFromCurveToSPDoesntChangeCBMPendingLUSDTracker() public {// A creates bond
