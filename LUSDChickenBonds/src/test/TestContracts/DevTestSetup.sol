@@ -23,7 +23,7 @@ contract DevTestSetup is BaseTest {
         LUSDTokenTester mockLUSDToken = new LUSDTokenTester(ZERO_ADDRESS,ZERO_ADDRESS, ZERO_ADDRESS);
         lusdToken = IERC20(address(mockLUSDToken));
 
-        (A, B, C, yearnGovernanceAddress) = (accountsList[0], accountsList[1], accountsList[2], accountsList[10]);
+        (A, B, C, yearnGovernanceAddress) = (accountsList[0], accountsList[1], accountsList[2], accountsList[9]);
 
         // Give some LUSD to test accounts
         tip(address(lusdToken), A, 100e18);

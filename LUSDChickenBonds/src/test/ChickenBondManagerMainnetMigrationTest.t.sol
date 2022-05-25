@@ -402,12 +402,12 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
         assertEq(sLUSDToken.balanceOf(B), 0);
 
-
         uint256 curveAcquiredLUSDBeforeLastRedeem = chickenBondManager.getAcquiredLUSDInCurve();
         assertGt(curveAcquiredLUSDBeforeLastRedeem, 0);
         uint256 C_expectedRedemptionFee = curveAcquiredLUSDBeforeLastRedeem * chickenBondManager.calcRedemptionFeePercentage() / 1e18;
         assertGt(C_expectedRedemptionFee, 0);
 
+        // Final sLUSD holder C redeems
         vm.startPrank(C);
         chickenBondManager.redeem(sLUSDToken.balanceOf(C));
         vm.stopPrank();

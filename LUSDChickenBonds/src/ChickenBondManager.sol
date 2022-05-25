@@ -377,26 +377,32 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
         uint256 lusdInSPVault = calcTotalYearnLUSDVaultShareValue();
         uint256 lusd3CRVInCurveVault = calcTotalYearnCurveVaultShareValue();
-
+      
+        uint256 yTokensFromSPVault;
         // Calculate the LUSD to withdraw from SP, and corresponding yTokens
-        uint256 lusdToWithdrawFromSP = _getAcquiredLUSDInYearn(lusdInSPVault) * fractionOfAcquiredLUSDToWithdraw / 1e18;
-        uint256 yTokensToWithdrawFromSPVault = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdrawFromSP, lusdInSPVault);
+        if (lusdInSPVault > 0) {
+            uint256 lusdToWithdrawFromSP = _getAcquiredLUSDInYearn(lusdInSPVault) * fractionOfAcquiredLUSDToWithdraw / 1e18;
+            yTokensFromSPVault = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdrawFromSP, lusdInSPVault);
+        }
         
+        uint256 yTokensFromCurveVault;
         // Calculate the LUSD to withdraw from Curve, and corresponding yTokens
-        uint256 lusdToWithdrawFromCurve = getAcquiredLUSDInCurve() * fractionOfAcquiredLUSDToWithdraw / 1e18;
-        uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([lusdToWithdrawFromCurve, 0], false);
-        uint256 yTokensToWithdrawFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, lusd3CRVInCurveVault);
-           
-        _requireNonZeroAmount(yTokensFromLUSDVault + yTokensFromCurveVault);
+        if (lusd3CRVInCurveVault > 0) {
+            uint256 lusdToWithdrawFromCurve = getAcquiredLUSDInCurve() * fractionOfAcquiredLUSDToWithdraw / 1e18;
+            uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([lusdToWithdrawFromCurve, 0], false);
+            yTokensFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, lusd3CRVInCurveVault);
+        }
+        
+        _requireNonZeroAmount(yTokensFromSPVault + yTokensFromCurveVault);
 
         // Burn the redeemed sLUSD
         sLUSDToken.burn(msg.sender, _sLUSDToRedeem);
 
         // Transfer yTokens to user
-        yearnLUSDVault.transfer(msg.sender, yTokensFromLUSDVault);
+        yearnLUSDVault.transfer(msg.sender, yTokensFromSPVault);
         yearnCurveVault.transfer(msg.sender, yTokensFromCurveVault);
 
-        return (yTokensFromLUSDVault, yTokensFromCurveVault);
+        return (yTokensFromSPVault, yTokensFromCurveVault);
     }
 
     function shiftLUSDFromSPToCurve(uint256 _lusdToShift) external {
@@ -793,7 +799,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     }
 
     // Returns the yTokens needed to make a partial withdrawal of the CBM's total vault deposit
-    function calcCorrespondingYTokens(IYearnVault _yearnVault, uint256 _wantedTokenAmount, uint256 _CBMTotalVaultDeposit) internal view returns (uint256) {
+    function calcCorrespondingYTokens(IYearnVault _yearnVault, uint256 _wantedTokenAmount, uint256 _CBMTotalVaultDeposit) public view returns (uint256) {
         uint256 yTokensHeldByCBM = _yearnVault.balanceOf(address(this));
         uint256 yTokensToBurn = yTokensHeldByCBM * _wantedTokenAmount / _CBMTotalVaultDeposit;
         return yTokensToBurn;
