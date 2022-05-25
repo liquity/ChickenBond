@@ -370,13 +370,15 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         curvePool.add_liquidity([lusdBalanceDelta, 0], 0);
         uint256 lusd3CRVBalanceDelta = curvePool.balanceOf(address(this)) - lusd3CRVBalanceBefore;
 
+        (, uint256 lusdInCurveVaultBefore) = getTotalLPAndLUSDInCurveVault();
         // Deposit the received LUSD3CRV-f to Yearn Curve vault
         yearnCurveVault.deposit(lusd3CRVBalanceDelta);
 
         /* Record the portion of LUSD added to the the permanent Yearn Curve bucket,
         assuming that receipt of yTokens increases both the permanent and acquired Yearn Curve buckets by the same factor. */
         (, uint256 lusdInCurveVault) = getTotalLPAndLUSDInCurveVault();
-        uint256 permanentLUSDCurveIncrease = lusdInCurveVault * ratioPermanentToOwned / 1e18;
+        uint256 permanentLUSDCurveIncrease = (lusdInCurveVault - lusdInCurveVaultBefore) * ratioPermanentToOwned / 1e18;
+
         permanentLUSDInCurveVault += permanentLUSDCurveIncrease;
 
         // Ensure the SP->Curve shift has decreased the Curve spot price to not less than 1.0
