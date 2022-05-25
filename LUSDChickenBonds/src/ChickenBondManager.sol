@@ -506,8 +506,8 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     // --- Migration functionality ---
     
     function activateMigration() external {
-        require(msg.sender == yearnGovernanceAddress, "CBM: Only Yearn Governance can activate migration");
-        _requireMigrationNotActive();
+        _requireCallerIsYearnGovernance();
+         _requireMigrationNotActive();
 
         migration = true;
 
@@ -534,6 +534,17 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
         // Deposit the received LUSD3CRV-f to Yearn Curve vault
         uint256 yTokensCurveVaultIncrease = yearnCurveVault.deposit(LUSD3CRVBalanceDelta);
+    }
+
+    // --- Fee share ---
+
+    function sendFeeShare(uint256 _lusdAmount) external {
+        _requireCallerIsYearnGovernance();
+        require(!migration, "CBM: Receive fee share only in normal mode");
+
+        // Move LUSD from caller to CBM and deposit to 
+        lusdToken.transferFrom(yearnGovernanceAddress, address(this), _lusdAmount);
+        yearnLUSDVault.deposit(_lusdAmount);
     }
 
     // --- Helper functions ---
@@ -837,6 +848,10 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     function _requireMigrationNotActive() internal view {
         require(!migration, "CBM: Migration must be not be active");
+    }
+
+    function _requireCallerIsYearnGovernance() internal view {
+        require(msg.sender == yearnGovernanceAddress, "CBM: Only Yearn Governance can call");
     }
 
     // --- External getter convenience functions ---

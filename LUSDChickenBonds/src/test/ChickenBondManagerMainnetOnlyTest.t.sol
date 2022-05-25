@@ -1447,5 +1447,134 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");  
         loopOverProportionalDepositSizes(10);
     }
+
+    // --- Fee share test ---
+
+    function testSendFeeShareCallableOnlyByYearnGov() public {
+        // Create some bonds
+        uint256 bondAmount = 10e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        uint C_bondID = createBondForUser(C, bondAmount);
+    
+        vm.warp(block.timestamp + 30 days);
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID); 
+
+        tip(address(lusdToken), yearnGovernanceAddress, 37e18);
+        vm.startPrank(yearnGovernanceAddress);
+        lusdToken.approve(address(chickenBondManager), 37e18);
+        vm.stopPrank();
+
+        // Reverts for sLUSD holder
+        vm.startPrank(A); 
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        // Reverts for current bonder
+        vm.startPrank(C);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+         chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        // Reverts for random address
+        vm.startPrank(D);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        // reverts for yearn non-gov addresses
+        address YEARN_STRATEGIST = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
+        address YEARN_GUARDIAN = 0x846e211e8ba920B353FB717631C015cf04061Cc9;
+        address YEARN_KEEPER = 0xaaa8334B378A8B6D8D37cFfEF6A755394B4C89DF;
+
+        vm.startPrank(YEARN_STRATEGIST);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        vm.startPrank(YEARN_GUARDIAN);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        vm.startPrank(YEARN_KEEPER);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        // Succeeds for Yearn governance
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.sendFeeShare(37e18);
+    }
+
+    function testSendFeeShareInMigrationModeReverts() public {
+        // Create some bonds
+        uint256 bondAmount = 10e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        uint C_bondID = createBondForUser(C, bondAmount);
+    
+        vm.warp(block.timestamp + 30 days);
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID); 
+
+        uint256 feeShare = 37e18;
+
+        tip(address(lusdToken), yearnGovernanceAddress, feeShare);
+
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.activateMigration();
+        lusdToken.approve(address(chickenBondManager), feeShare);
+    
+        vm.expectRevert("CBM: Receive fee share only in normal mode");
+        chickenBondManager.sendFeeShare(feeShare);
+    }
+
+    function testSendFeeShareInNormalModeIncreasesAcquiredLUSDInSP() public {
+        // Create some bonds
+        uint256 bondAmount = 10e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        uint C_bondID = createBondForUser(C, bondAmount);
+    
+        vm.warp(block.timestamp + 30 days);
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID); 
+
+        uint256 feeShare = 37e18;
+
+        tip(address(lusdToken), yearnGovernanceAddress, feeShare);
+        vm.startPrank(yearnGovernanceAddress);
+        lusdToken.approve(address(chickenBondManager), feeShare);
+        vm.stopPrank();
+
+        uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 permanentLUSDInSPBefore = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 pendingLUSDInSPBefore = chickenBondManager.totalPendingLUSD();
+        uint256 ownedLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurve();
+        
+        // Succeeds for Yearn governance
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.sendFeeShare(feeShare);
+
+        uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 permanentLUSDInSPAfter = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 pendingLUSDInSPAfter = chickenBondManager.totalPendingLUSD();
+        uint256 ownedLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurve();
+
+        //Check acquired LUSD In SP increased by correct amount
+        uint256 tolerance = feeShare / 1e9;  // relative error tolerance of 1e-9
+        assertApproximatelyEqual(acquiredLUSDInSPAfter - acquiredLUSDInSPBefore, feeShare, tolerance);
+
+        // Other buckets don't change
+        assertEq(permanentLUSDInSPAfter, permanentLUSDInSPBefore);
+        assertEq(pendingLUSDInSPAfter, pendingLUSDInSPBefore);
+        assertEq(ownedLUSDInCurveAfter, ownedLUSDInCurveBefore);
+    }
 }
 

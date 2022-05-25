@@ -21,19 +21,19 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
         // Reverts for sLUSD holder
         vm.startPrank(A); 
-        vm.expectRevert("CBM: Only Yearn Governance can activate migration");
+        vm.expectRevert("CBM: Only Yearn Governance can call");
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
         // Reverts for current bonder
         vm.startPrank(C);
-        vm.expectRevert("CBM: Only Yearn Governance can activate migration");
+        vm.expectRevert("CBM: Only Yearn Governance can call");
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
         // Reverts for random address
         vm.startPrank(D);
-        vm.expectRevert("CBM: Only Yearn Governance can activate migration");
+        vm.expectRevert("CBM: Only Yearn Governance can call");
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
@@ -44,17 +44,17 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         address YEARN_KEEPER = 0xaaa8334B378A8B6D8D37cFfEF6A755394B4C89DF;
 
         vm.startPrank(YEARN_STRATEGIST);
-        vm.expectRevert("CBM: Only Yearn Governance can activate migration");
+        vm.expectRevert("CBM: Only Yearn Governance can call");
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
         vm.startPrank(YEARN_GUARDIAN);
-        vm.expectRevert("CBM: Only Yearn Governance can activate migration");
+        vm.expectRevert("CBM: Only Yearn Governance can call");
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
         vm.startPrank(YEARN_KEEPER);
-        vm.expectRevert("CBM: Only Yearn Governance can activate migration");
+        vm.expectRevert("CBM: Only Yearn Governance can call");
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
