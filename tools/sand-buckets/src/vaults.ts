@@ -76,14 +76,11 @@ export class ChickenBondsVaultBasedImplementation implements ChickenBondsImpleme
     const underlyingDelta = this._vaultA.withdraw(derivative);
     this._yA -= derivative;
 
+    const totalBBefore = this._yB * this._vaultB.price;
     this._yB += this._vaultB.deposit(underlyingDelta);
+    const totalB = this._yB * this._vaultB.price;
 
-    // Original buggy version ;-)
-    // https://github.com/liquity/ChickenBond/pull/57/files#r881280625
-    // const totalB = this._yB * this._vaultB.price;
-    // this._permanentB += totalB * permanentPerOwnedA;
-
-    this._permanentB += underlyingDelta * permanentPerOwnedA;
+    this._permanentB += (totalB - totalBBefore) * permanentPerOwnedA;
   }
 
   shiftB2A(underlying: number) {
