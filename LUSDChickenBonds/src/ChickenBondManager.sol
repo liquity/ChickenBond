@@ -223,19 +223,19 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         * TODO: decide how to handle chickenOuts if/when the recorded totalPendingLUSD is not fully backed by actual
         * LUSD in Yearn / the SP. */
 
-        uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
-        /* Occasionally (e.g. when the system contains only one bonder) the withdrawable LUSD in Yearn 
-        * will be less than the bonded LUSD due to rounding error in the share calculation. Therefore,
-        * withdraw the lesser of the two quantities. */
-        uint256 lusdToWithdraw = Math.min(bond.lusdAmount, lusdInYearn);
-
+        uint256 lusdToWithdraw;
+    
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
 
         if (!migration) { // In normal mode, withdraw from Yearn LUSD vault
+            uint256 lusdInYearn = calcTotalYearnLUSDVaultShareValue();
+            lusdToWithdraw = Math.min(bond.lusdAmount, lusdInYearn);  // avoids revert due to rounding error if system contains only 1 bonder
             uint256 yTokensToSwapForLUSD = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdraw, lusdInYearn);
             yearnLUSDVault.withdraw(yTokensToSwapForLUSD);
         } else { // In migration mode, withdraw from Yearn Curve vault
-            _withdrawLUSDFromCurve(lusdToWithdraw);
+            uint256 lusd3CRVInCurve = calcTotalYearnCurveVaultShareValue();
+            lusdToWithdraw = Math.min(bond.lusdAmount, curvePool.calc_withdraw_one_coin(lusd3CRVInCurve, 0)); // avoids revert due to rounding error if system contains only 1 bonder
+            _withdrawLUSDFromCurve(lusdToWithdraw, lusd3CRVInCurve);
         }
     
         uint256 lusdBalanceAfter = lusdToken.balanceOf(address(this));
@@ -326,7 +326,8 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
             yTokensPermanentLUSDVault += yTokensToPutInPermanent;
         } else { // In migration mode, withdraw surplus from Curve and refund to bonder
             uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-            _withdrawLUSDFromCurve(lusdSurplus);
+            uint256 lusd3CRVInCurve = calcTotalYearnCurveVaultShareValue();
+            _withdrawLUSDFromCurve(lusdSurplus, lusd3CRVInCurve);
             uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
 
             // Refund surplus LUSD to bonder
@@ -343,14 +344,12 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         }
     }
 
-    function _withdrawLUSDFromCurve(uint256 _lusdAmount) internal {
-        // Calculate the LUSD3CRV needed to obtain the LUSD 
-        uint256 LUSC3CRVInYearnCurveVault = calcTotalYearnCurveVaultShareValue();
-        if (LUSC3CRVInYearnCurveVault == 0) {return;}
+    function _withdrawLUSDFromCurve(uint256 _lusdAmount, uint256 _LUSC3CRVInYearnCurveVault) internal {
+        if (_LUSC3CRVInYearnCurveVault == 0) {return;}
 
         uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([_lusdAmount, 0], false);
        
-        uint256 yTokensToWithdrawFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, LUSC3CRVInYearnCurveVault);
+        uint256 yTokensToWithdrawFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, _LUSC3CRVInYearnCurveVault);
         if (yTokensToWithdrawFromCurveVault == 0) {return;}
 
         // Withdraw LUSD3CRV from Yearn Curve vault

@@ -590,9 +590,164 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         assertEq(chickenBondManager.getOwnedLUSDInSP(), 0);
     }
 
-    // Tests TODO:
-    // - post-migration CI increases Curve acquired
-    // - post-migration CI refunds surplus
-    // - post-migration CI doesn't charge a tax
-    // - post-migration CO pulls funds from Curve acquired
+    function testPostMigrationCIIncreasesAcquiredLUSDInCurve() public {
+        // Create some bonds
+        uint256 bondAmount = 100e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        uint C_bondID = createBondForUser(C, bondAmount);
+    
+        vm.warp(block.timestamp + 30 days);
+
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID); 
+     
+        // shift some LUSD from SP->Curve
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        shiftFractionFromSPToCurve(10);
+
+        // Check yearn SP vault is > 0
+        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+
+        // Yearn activates migration
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.activateMigration();
+        vm.stopPrank();
+
+        // Get Curve acquired
+        uint256 acquiredLUSDInCurveBeforeCI = chickenBondManager.getAcquiredLUSDInCurve();
+        assertGt(acquiredLUSDInCurveBeforeCI, 0);
+
+        vm.warp(block.timestamp + 10 days);
+        // C chickens in
+        chickenInForUser(C, C_bondID); 
+
+       // Check Curve acquired LUSD increases after CI
+        uint256 acquiredLUSDInCurveAfterCI = chickenBondManager.getAcquiredLUSDInCurve();
+        assertGt(acquiredLUSDInCurveAfterCI, acquiredLUSDInCurveBeforeCI);
+    }
+
+    function testPostMigrationCISendsRefundToBonder() public {
+        // Create some bonds
+        uint256 bondAmount = 100e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        uint C_bondID = createBondForUser(C, bondAmount);
+    
+        vm.warp(block.timestamp + 30 days);
+
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID); 
+     
+        // shift some LUSD from SP->Curve
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        shiftFractionFromSPToCurve(10);
+
+        // Check yearn SP vault is > 0
+        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+
+        // Yearn activates migration
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.activateMigration();
+        vm.stopPrank();
+
+        // Get C LUSD balance 
+        uint256 C_lusdBalBeforeCI = lusdToken.balanceOf(C);
+        
+        vm.warp(block.timestamp + 10 days);
+        // C chickens in
+        chickenInForUser(C, C_bondID); 
+
+        // Check C LUSD balance increases
+        uint256 C_lusdBalAfterCI = lusdToken.balanceOf(C);
+        assertGt(C_lusdBalAfterCI, C_lusdBalBeforeCI);
+    }
+
+    function testPostMigrationCIDoesntSendTaxToStakingRewards() public {
+        // Create some bonds
+        uint256 bondAmount = 100e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        uint C_bondID = createBondForUser(C, bondAmount);
+    
+        vm.warp(block.timestamp + 30 days);
+
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID); 
+     
+        // shift some LUSD from SP->Curve
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        shiftFractionFromSPToCurve(10);
+
+        // Check yearn SP vault is > 0
+        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+
+        // Yearn activates migration
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.activateMigration();
+        vm.stopPrank();
+
+        // Get rewards staking contract LUSD balance before
+        uint256 lusdBalanceStakingBeforeCI = lusdToken.balanceOf(address(sLUSDLPRewardsStaking));
+        assertGt(lusdBalanceStakingBeforeCI, 0); // should be > 0 from previous CIs in normal mode
+
+        vm.warp(block.timestamp + 10 days);
+        // C chickens in
+        chickenInForUser(C, C_bondID); 
+
+        // Check rewards staking contract lusd balance is the same
+        uint256 lusdBalanceStakingAfterCI = lusdToken.balanceOf(address(sLUSDLPRewardsStaking));
+        assertEq(lusdBalanceStakingAfterCI,lusdBalanceStakingBeforeCI);  
+    }
+
+    function testPostMigrationCOPullsPendingLUSDFromCurve() public {
+        // Create some bonds
+        uint256 bondAmount = 100e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        uint C_bondID = createBondForUser(C, bondAmount);
+    
+        vm.warp(block.timestamp + 30 days);
+
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID); 
+     
+        // shift some LUSD from SP->Curve
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        shiftFractionFromSPToCurve(10);
+
+        // Check yearn SP vault is > 0
+        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+
+        // Yearn activates migration
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.activateMigration();
+        vm.stopPrank();
+
+        // Get acquired LUSD in Curve before
+        uint256 LUSDInCurveBeforeCO = chickenBondManager.calcTotalYearnCurveVaultShareValue();
+        uint256 pendingLUSDBeforeCO = chickenBondManager.totalPendingLUSD();   
+        assertGt(LUSDInCurveBeforeCO, 0);
+        assertGt(pendingLUSDBeforeCO, 0);
+
+        vm.warp(block.timestamp + 10 days);
+
+        // C chickens in
+        vm.startPrank(C);
+        chickenBondManager.chickenOut(C_bondID); 
+        vm.stopPrank();
+
+        uint256 LUSDInCurveAfterCO = chickenBondManager.calcTotalYearnCurveVaultShareValue();
+        uint256 pendingLUSDAfterCO = chickenBondManager.totalPendingLUSD();  
+       
+        // Check total LUSD in Curve decreased
+        assertLt(LUSDInCurveAfterCO, LUSDInCurveBeforeCO, "total LUSD in curve didn't decrease");
+
+        // Check pending LUSD deceased
+        assertEq(pendingLUSDAfterCO, 0, "pending didn't decrease"); 
+    }
 }
