@@ -96,7 +96,7 @@ contract BaseTest is DSTest, stdCheats {
     }
 
     function assertRelativeError(uint256 _x, uint256 _y, uint _margin, string memory _reason) public {
-        assertLt(abs(_x, _y) * 1e18 / _y, _margin);
+        assertLt(abs(_x, _y) * 1e18 / _y, _margin, _reason);
     }
 
     function abs(uint256 x, uint256 y) public pure returns (uint256) {
