@@ -156,8 +156,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check permament buckets are > 0
-        assertGt(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertGt(chickenBondManager.getPermanentLUSDInYearn(), 0);
+        assertGt(chickenBondManager.getPermanentLUSDInCurveVault(), 0);
+        assertGt(chickenBondManager.getPermanentLUSDInLUSDVault(), 0);
         assertGt(chickenBondManager.yTokensPermanentCurveVault(), 0);
         assertGt(chickenBondManager.yTokensPermanentLUSDVault(), 0);
 
@@ -167,8 +167,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Check permament buckets are 0
-        assertEq(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertEq(chickenBondManager.getPermanentLUSDInYearn(), 0);
+        assertEq(chickenBondManager.getPermanentLUSDInCurveVault(), 0);
+        assertEq(chickenBondManager.getPermanentLUSDInLUSDVault(), 0);
         assertEq(chickenBondManager.yTokensPermanentCurveVault(), 0);
         assertEq(chickenBondManager.yTokensPermanentLUSDVault(), 0);
     }
@@ -375,9 +375,9 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Check POL is only in Curve Vault
-        uint256 polCurve = chickenBondManager.getOwnedLUSDInCurve();
-        uint256 acquiredCurve = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 polSP = chickenBondManager.getOwnedLUSDInSP();
+        uint256 polCurve = chickenBondManager.getOwnedLUSDInCurveVault();
+        uint256 acquiredCurve = chickenBondManager.getAcquiredLUSDInCurveVault();
+        uint256 polSP = chickenBondManager.getOwnedLUSDInLUSDVault();
         assertGt(acquiredCurve, 0);
         assertEq(polCurve, acquiredCurve);
         assertEq(polSP, 0);
@@ -402,7 +402,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
         assertEq(sLUSDToken.balanceOf(B), 0);
 
-        uint256 curveAcquiredLUSDBeforeLastRedeem = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 curveAcquiredLUSDBeforeLastRedeem = chickenBondManager.getAcquiredLUSDInCurveVault();
         assertGt(curveAcquiredLUSDBeforeLastRedeem, 0);
         uint256 C_expectedRedemptionFee = curveAcquiredLUSDBeforeLastRedeem * chickenBondManager.calcRedemptionFeePercentage() / 1e18;
         assertGt(C_expectedRedemptionFee, 0);
@@ -417,14 +417,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         assertEq(sLUSDToken.totalSupply(), 0, "slUSD supply != 0");
 
         // Check only remaining LUSD in acquired bucket is the fee left over from the final redemption
-        uint256 acquiredLUSDInCurve = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInCurve = chickenBondManager.getAcquiredLUSDInCurveVault();
         console.log(acquiredLUSDInCurve, "acquiredLUSDInCurve");
         console.log(C_expectedRedemptionFee, "C_expectedRedemptionFee");
 
         uint tolerance = C_expectedRedemptionFee / 1000; // 0.1% relative error tolerance
         assertApproximatelyEqual(acquiredLUSDInCurve, C_expectedRedemptionFee, tolerance);
 
-        polSP = chickenBondManager.getOwnedLUSDInSP();
+        polSP = chickenBondManager.getOwnedLUSDInLUSDVault();
         assertEq(polSP, 0);
     }
 
@@ -501,7 +501,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.expectRevert("CBM: Migration must be not be active");
         chickenBondManager.shiftLUSDFromCurveToSP(1); 
 
-        uint polCurve = chickenBondManager.getOwnedLUSDInCurve();
+        uint polCurve = chickenBondManager.getOwnedLUSDInCurveVault();
 
         vm.expectRevert("CBM: Migration must be not be active");
         chickenBondManager.shiftLUSDFromCurveToSP(polCurve);
@@ -525,8 +525,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check permanent buckets are  > 0 before migration
-        assertGt(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertGt(chickenBondManager.getPermanentLUSDInYearn(), 0);
+        assertGt(chickenBondManager.getPermanentLUSDInCurveVault(), 0);
+        assertGt(chickenBondManager.getPermanentLUSDInLUSDVault(), 0);
         assertGt(chickenBondManager.yTokensPermanentCurveVault(), 0);
         assertGt(chickenBondManager.yTokensPermanentLUSDVault(), 0);
 
@@ -536,8 +536,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Check permanent buckets are now 0
-        assertEq(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertEq(chickenBondManager.getPermanentLUSDInYearn(), 0);
+        assertEq(chickenBondManager.getPermanentLUSDInCurveVault(), 0);
+        assertEq(chickenBondManager.getPermanentLUSDInLUSDVault(), 0);
         assertEq(chickenBondManager.yTokensPermanentCurveVault(), 0);
         assertEq(chickenBondManager.yTokensPermanentLUSDVault(), 0);
 
@@ -546,8 +546,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenInForUser(C, C_bondID); 
 
         // Check permanent buckets are still 0
-        assertEq(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertEq(chickenBondManager.getPermanentLUSDInYearn(), 0);
+        assertEq(chickenBondManager.getPermanentLUSDInCurveVault(), 0);
+        assertEq(chickenBondManager.getPermanentLUSDInLUSDVault(), 0);
         assertEq(chickenBondManager.yTokensPermanentCurveVault(), 0);
         assertEq(chickenBondManager.yTokensPermanentLUSDVault(), 0);  
     }
@@ -572,7 +572,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check yearn SP vault is > 0
-        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+        assertGt(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
 
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
@@ -580,14 +580,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Check yearn SP vault now has 0 protocol-owned LUSD
-        assertEq(chickenBondManager.getOwnedLUSDInSP(), 0);
+        assertEq(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
 
         vm.warp(block.timestamp + 10 days);
         // C chickens in
         chickenInForUser(C, C_bondID); 
 
        // Check yearn SP vault still has 0 protocol-owned LUSD
-        assertEq(chickenBondManager.getOwnedLUSDInSP(), 0);
+        assertEq(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
     }
 
     function testPostMigrationCIIncreasesAcquiredLUSDInCurve() public {
@@ -608,7 +608,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check yearn SP vault is > 0
-        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+        assertGt(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
 
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
@@ -616,7 +616,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Get Curve acquired
-        uint256 acquiredLUSDInCurveBeforeCI = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInCurveBeforeCI = chickenBondManager.getAcquiredLUSDInCurveVault();
         assertGt(acquiredLUSDInCurveBeforeCI, 0);
 
         vm.warp(block.timestamp + 10 days);
@@ -624,7 +624,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenInForUser(C, C_bondID); 
 
        // Check Curve acquired LUSD increases after CI
-        uint256 acquiredLUSDInCurveAfterCI = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInCurveAfterCI = chickenBondManager.getAcquiredLUSDInCurveVault();
         assertGt(acquiredLUSDInCurveAfterCI, acquiredLUSDInCurveBeforeCI);
     }
 
@@ -646,7 +646,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check yearn SP vault is > 0
-        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+        assertGt(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
 
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
@@ -683,7 +683,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check yearn SP vault is > 0
-        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+        assertGt(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
 
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
@@ -721,7 +721,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check yearn SP vault is > 0
-        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+        assertGt(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
 
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);

@@ -205,7 +205,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceBelow1(200_000_000e18);
 
         // Get Curve acquired yTokens before
-        uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurveVault();
         uint256 totalLUSDInCurveBefore = chickenBondManager.calcTotalYearnCurveVaultShareValue();
         uint256 curveAcquiredYTokensBefore = chickenBondManager.calcCorrespondingYTokens(yearnCurveVault, acquiredLUSDInCurveBefore, totalLUSDInCurveBefore);
         assertGt(curveAcquiredYTokensBefore, 0);
@@ -218,7 +218,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Get Curve acquired yTokens after
-        uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurveVault();
         uint256 totalLUSDInCurveAfter = chickenBondManager.calcTotalYearnCurveVaultShareValue();
         uint256 curveAcquiredYTokensAfter = chickenBondManager.calcCorrespondingYTokens(yearnCurveVault, acquiredLUSDInCurveAfter, totalLUSDInCurveAfter);
         assertGt(curveAcquiredYTokensAfter, 0);
@@ -272,7 +272,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceBelow1(200_000_000e18);
 
         // Attempt to shift 10% of acquired LUSD in Yearn
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         assertGt(lusdToShift, 0);
 
         // Try to shift the LUSD
@@ -350,7 +350,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check total LUSD in CBM has not changed
@@ -379,7 +379,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // check CBM's recorded total acquire LUSD hasn't changed
@@ -415,7 +415,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
 
        // Shift 10% of LUSD in SP 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check pending LUSD After has not changed
@@ -438,16 +438,16 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
 
         // Get acquired LUSD in Yearn before
-        uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInLUSDVault();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check acquired LUSD in Yearn has decreased
-        uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInLUSDVault();
         assertTrue(acquiredLUSDInYearnAfter < acquiredLUSDInYearnBefore);
     }
 
@@ -470,7 +470,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check CBM's view of LUSD in Yearn has decreased
@@ -492,16 +492,16 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
 
         // Get CBM's view of LUSD in Curve before
-        uint256 lusdInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 lusdInCurveBefore = chickenBondManager.getAcquiredLUSDInCurveVault();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check CBM's view of LUSD in Curve has inccreased
-        uint256 lusdInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 lusdInCurveAfter = chickenBondManager.getAcquiredLUSDInCurveVault();
         assertTrue(lusdInCurveAfter > lusdInCurveBefore);
     }
 
@@ -520,8 +520,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
 
         // Get the total LUSD in Yearn and Curve before
-        uint256 cbmLUSDInYearnBefore = chickenBondManager.getOwnedLUSDInSP();
-        uint256 cbmLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurve();
+        uint256 cbmLUSDInYearnBefore = chickenBondManager.getOwnedLUSDInLUSDVault();
+        uint256 cbmLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurveVault();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
@@ -530,12 +530,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 CurveBalanceBefore = lusdToken.balanceOf(address(curvePool));
 
         // Shift to Curve
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10; // Shift 10% of total owned LUSD
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10; // Shift 10% of total owned LUSD
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Get the total LUSD in Yearn and Curve after
-        uint256 cbmLUSDInYearnAfter = chickenBondManager.getOwnedLUSDInSP();
-        uint256 cbmLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurve();
+        uint256 cbmLUSDInYearnAfter = chickenBondManager.getOwnedLUSDInLUSDVault();
+        uint256 cbmLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurveVault();
 
         // Get actual SP and Curve pool LUSD Balances after
         uint256 yearnLUSDVaultBalanceAfter = lusdToken.balanceOf(address(yearnLUSDVault));
@@ -592,19 +592,19 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
 
         // Get permanent LUSD in both pools before
-        uint256 permanentLUSDInCurve_1 = chickenBondManager.getPermanentLUSDInCurve();
-        uint256 permanentLUSDInYearn_1 = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 permanentLUSDInCurve_1 = chickenBondManager.getPermanentLUSDInCurveVault();
+        uint256 permanentLUSDInYearn_1 = chickenBondManager.getPermanentLUSDInLUSDVault();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
 
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Get permanent LUSD in both pools after
-        uint256 permanentLUSDInCurve_2 = chickenBondManager.getPermanentLUSDInCurve();
-        uint256 permanentLUSDInYearn_2 = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 permanentLUSDInCurve_2 = chickenBondManager.getPermanentLUSDInCurveVault();
+        uint256 permanentLUSDInYearn_2 = chickenBondManager.getPermanentLUSDInLUSDVault();
         
         // check SP permanent decrease approx == Curve permanent increase
         uint256 permanentLUSDYearnDecrease_1 = permanentLUSDInYearn_1 - permanentLUSDInYearn_2;
@@ -632,19 +632,19 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
 
         // Get permanent LUSD in both pools before
-        uint256 acquiredLUSDInCurve_1 = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 acquiredLUSDInYearn_1 = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInCurve_1 = chickenBondManager.getAcquiredLUSDInCurveVault();
+        uint256 acquiredLUSDInYearn_1 = chickenBondManager.getAcquiredLUSDInLUSDVault();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
        
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Get permanent LUSD in both pools after
-        uint256 acquiredLUSDInCurve_2 = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 acquiredLUSDInYearn_2 = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInCurve_2 = chickenBondManager.getAcquiredLUSDInCurveVault();
+        uint256 acquiredLUSDInYearn_2 = chickenBondManager.getAcquiredLUSDInLUSDVault();
 
         // check SP permanent decrease approx == Curve permanent increase
         uint256 acquiredLUSDYearnDecrease_1 = acquiredLUSDInYearn_1 - acquiredLUSDInYearn_2;
@@ -719,7 +719,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(curveSpotPrice, 1e18);
 
         // Attempt to shift 10% of owned LUSD
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / 10;
         assertGt(lusdToShift, 0);
 
         // Try to shift the LUSD
@@ -792,7 +792,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 CBM_lusdBalanceBefore = lusdToken.balanceOf(address(chickenBondManager));
 
         // Shift LUSD from Curve to SP
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10; // shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check total LUSD in CBM has not changed
@@ -830,7 +830,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertTrue(totalAcquiredLUSDBefore > 0);
 
         // Shift LUSD from Curve to SP
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10; // shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // check CBM's recorded total acquire LUSD hasn't changed
@@ -865,7 +865,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertTrue(totalPendingLUSDBefore > 0);
 
         // Shift LUSD from Curve to SP
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10; // shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check pending LUSD After has not changed
@@ -902,22 +902,22 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
         makeCurveSpotPriceBelow1(200_000_000e18);
       
-        //uint256 permanentYearnAfterShift = chickenBondManager.getPermanentLUSDInYearn();
-        //uint256 permanentCurveAfterShift = chickenBondManager.getPermanentLUSDInCurve();
-        assertGt(chickenBondManager.getAcquiredLUSDInCurve(), 0);
-        assertGt(chickenBondManager.getAcquiredLUSDInYearn(), 0);
+        //uint256 permanentYearnAfterShift = chickenBondManager.getPermanentLUSDInLUSDVault();
+        //uint256 permanentCurveAfterShift = chickenBondManager.getPermanentLUSDInCurveVault();
+        assertGt(chickenBondManager.getAcquiredLUSDInCurveVault(), 0);
+        assertGt(chickenBondManager.getAcquiredLUSDInLUSDVault(), 0);
 
         // Get acquired LUSD in Yearn Before
-        uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInLUSDVault();
         assertGt(acquiredLUSDInYearnBefore, 0);
 
         // Shift LUSD from Curve to SP
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10; // shift 10% of LUSD in Curve
       
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
        
         // Check acquired LUSD in Yearn Increases
-        uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInLUSDVault();
        
         assertGt(acquiredLUSDInYearnAfter, acquiredLUSDInYearnBefore,  "ac. LUSD before and after shift doesn't change");
     }
@@ -952,7 +952,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 lusdInYearnBefore = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
 
         // Shift LUSD from Curve to SP
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10; // shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check LUSD in Yearn Increases
@@ -988,14 +988,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceBelow1(200_000_000e18);
 
         // Get acquired LUSD in Curve Before
-        uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurveVault();
 
         // Shift LUSD from Curve to SP
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10; // shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check LUSD in Curve Decreases
-        uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurveVault();
         assertTrue(acquiredLUSDInCurveAfter < acquiredLUSDInCurveBefore);
     }
 
@@ -1026,20 +1026,20 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceBelow1(200_000_000e18);
 
         // Get the total LUSD in Yearn and Curve before
-        uint256 cbmLUSDInYearnBefore = chickenBondManager.getOwnedLUSDInSP();
-        uint256 cbmLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurve();
+        uint256 cbmLUSDInYearnBefore = chickenBondManager.getOwnedLUSDInLUSDVault();
+        uint256 cbmLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurveVault();
 
         // Get actual SP and Curve pool LUSD Balances before
         uint256 yearnLUSDVaultBalanceBefore =  lusdToken.balanceOf(address(yearnLUSDVault));
         uint256 CurveBalanceBefore = lusdToken.balanceOf(address(curvePool));
 
         // Shift Curve->SP
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // Shift 10% of LUSD in Curve
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10; // Shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
        
         // Get the total LUSD in Yearn and Curve after
-        uint256 cbmLUSDInYearnAfter = chickenBondManager.getOwnedLUSDInSP();
-        uint256 cbmLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurve();
+        uint256 cbmLUSDInYearnAfter = chickenBondManager.getOwnedLUSDInLUSDVault();
+        uint256 cbmLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurveVault();
        
         // Get actual SP and Curve pool LUSD Balances after
         uint256 yearnLUSDVaultBalanceAfter = lusdToken.balanceOf(address(yearnLUSDVault));
@@ -1101,18 +1101,18 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceBelow1(200_000_000e18);
 
         // Get permanent LUSD in both pools before
-        uint256 permanentLUSDInCurve_1 = chickenBondManager.getPermanentLUSDInCurve();
-        uint256 permanentLUSDInYearn_1 = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 permanentLUSDInCurve_1 = chickenBondManager.getPermanentLUSDInCurveVault();
+        uint256 permanentLUSDInYearn_1 = chickenBondManager.getPermanentLUSDInLUSDVault();
         assertGt(permanentLUSDInCurve_1, 0);
         assertGt(permanentLUSDInYearn_1, 0);
 
         // Shift 10% of owned LUSD in Curve;
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10;
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Get permanent LUSD in both pools after
-        uint256 permanentLUSDInCurve_2 = chickenBondManager.getPermanentLUSDInCurve();
-        uint256 permanentLUSDInYearn_2 = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 permanentLUSDInCurve_2 = chickenBondManager.getPermanentLUSDInCurveVault();
+        uint256 permanentLUSDInYearn_2 = chickenBondManager.getPermanentLUSDInLUSDVault();
 
         // check SP permanent decrease approx == Curve permanent increase
         uint256 permanentLUSDYearnIncrease_1 = permanentLUSDInYearn_2 - permanentLUSDInYearn_1;
@@ -1150,18 +1150,18 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceBelow1(200_000_000e18);
 
         // Get acquired LUSD in both pools before
-        uint256 acquiredLUSDInCurve_1 = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 acquiredLUSDInYearn_1 = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInCurve_1 = chickenBondManager.getAcquiredLUSDInCurveVault();
+        uint256 acquiredLUSDInYearn_1 = chickenBondManager.getAcquiredLUSDInLUSDVault();
         assertGt(acquiredLUSDInCurve_1, 0);
         assertGt(acquiredLUSDInYearn_1, 0);
         
         // Shift 10% of owned LUSD in Curve 
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10;
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurveVault() / 10;
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Get permanent LUSD in both pools after
-        uint256 acquiredLUSDInCurve_2 = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 acquiredLUSDInYearn_2 = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInCurve_2 = chickenBondManager.getAcquiredLUSDInCurveVault();
+        uint256 acquiredLUSDInYearn_2 = chickenBondManager.getAcquiredLUSDInLUSDVault();
 
         // check SP permanent decrease approx == Curve permanent increase
         uint256 acquiredLUSDYearnIncrease_1 = acquiredLUSDInYearn_2 - acquiredLUSDInYearn_1;
@@ -1553,19 +1553,19 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         lusdToken.approve(address(chickenBondManager), feeShare);
         vm.stopPrank();
 
-        uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInYearn();
-        uint256 permanentLUSDInSPBefore = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInLUSDVault();
+        uint256 permanentLUSDInSPBefore = chickenBondManager.getPermanentLUSDInLUSDVault();
         uint256 pendingLUSDInSPBefore = chickenBondManager.totalPendingLUSD();
-        uint256 ownedLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurve();
+        uint256 ownedLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurveVault();
         
         // Succeeds for Yearn governance
         vm.startPrank(yearnGovernanceAddress);
         chickenBondManager.sendFeeShare(feeShare);
 
-        uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInYearn();
-        uint256 permanentLUSDInSPAfter = chickenBondManager.getPermanentLUSDInYearn();
+        uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInLUSDVault();
+        uint256 permanentLUSDInSPAfter = chickenBondManager.getPermanentLUSDInLUSDVault();
         uint256 pendingLUSDInSPAfter = chickenBondManager.totalPendingLUSD();
-        uint256 ownedLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurve();
+        uint256 ownedLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurveVault();
 
         //Check acquired LUSD In SP increased by correct amount
         uint256 tolerance = feeShare / 1e9;  // relative error tolerance of 1e-9

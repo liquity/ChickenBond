@@ -1500,7 +1500,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Get acquired LUSD in Yearn before
-        uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInLUSDVault();
 
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
@@ -1514,7 +1514,7 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.redeem(sLUSDToRedeem);
 
         // Check acquired LUSD in Yearn has decreased by correct fraction
-        uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInYearn();
+        uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInLUSDVault();
         uint256 expectedAcquiredLUSDInYearnAfter = acquiredLUSDInYearnBefore * expectedFractionRemainingAfterRedemption / 1e18;
 
         assertApproximatelyEqual(acquiredLUSDInYearnAfter, expectedAcquiredLUSDInYearnAfter, 1e9);
