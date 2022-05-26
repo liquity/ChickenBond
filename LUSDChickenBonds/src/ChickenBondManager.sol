@@ -305,10 +305,8 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         Current approach leaves redemption fees in the acquired bucket. */
         uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
         // Calculate redemption fraction to withdraw, given that we leave the fee inside the system
-        uint256 redemptionFeePercentage = calcRedemptionFeePercentage();
+        uint256 redemptionFeePercentage = _updateRedemptionFeePercentage(fractionOfSLUSDToRedeem);
         uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
-        // Increase redemption base rate with the new redeemed amount
-        _updateRedemptionRateAndTime(redemptionFeePercentage, fractionOfSLUSDToRedeem);
 
         // Get the LUSD to withdraw from Yearn LUSD Vault, and the corresponding yTokens
         uint256 lusdInSP = calcTotalYearnLUSDVaultShareValue();
@@ -444,12 +442,24 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         return curvePool.get_dy_underlying(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
     }
 
-    // Update the base redemption rate and the last redemption time (only if time passed >= decay interval. This prevents base rate griefing)
-    function _updateRedemptionRateAndTime(uint256 _decayedBaseRedemptionRate, uint256 _fractionOfSLUSDToRedeem) internal {
-        // Update the baseRate state variable
-        uint256 newBaseRedemptionRate = _decayedBaseRedemptionRate + _fractionOfSLUSDToRedeem / BETA;
+    // Calc decayed redemption rate
+    function calcRedemptionFeePercentage(uint256 _fractionOfSLUSDToRedeem) public view returns (uint256) {
+        uint256 minutesPassed = _minutesPassedSinceLastRedemption();
+        uint256 decayFactor = decPow(MINUTE_DECAY_FACTOR, minutesPassed);
+
+        uint256 decayedBaseRedemptionRate = baseRedemptionRate * decayFactor / DECIMAL_PRECISION;
+
+        // Increase redemption base rate with the new redeemed amount
+        uint256 newBaseRedemptionRate = decayedBaseRedemptionRate + _fractionOfSLUSDToRedeem / BETA;
         newBaseRedemptionRate = Math.min(newBaseRedemptionRate, DECIMAL_PRECISION); // cap baseRate at a maximum of 100%
         //assert(newBaseRedemptionRate <= DECIMAL_PRECISION); // This is already enforced in the line above
+
+        return newBaseRedemptionRate;
+    }
+
+    // Update the base redemption rate and the last redemption time (only if time passed >= decay interval. This prevents base rate griefing)
+    function _updateRedemptionFeePercentage(uint256 _fractionOfSLUSDToRedeem) internal returns (uint256) {
+        uint256 newBaseRedemptionRate = calcRedemptionFeePercentage(_fractionOfSLUSDToRedeem);
         baseRedemptionRate = newBaseRedemptionRate;
         emit BaseRedemptionRateUpdated(newBaseRedemptionRate);
 
@@ -459,14 +469,8 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
             lastRedemptionTime = block.timestamp;
             emit LastRedemptionTimeUpdated(block.timestamp);
         }
-    }
 
-    // Calc decayed redemption rate
-    function calcRedemptionFeePercentage() public view returns (uint256) {
-        uint256 minutesPassed = _minutesPassedSinceLastRedemption();
-        uint256 decayFactor = decPow(MINUTE_DECAY_FACTOR, minutesPassed);
-
-        return baseRedemptionRate * decayFactor / DECIMAL_PRECISION;
+        return newBaseRedemptionRate;
     }
 
     function _minutesPassedSinceLastRedemption() internal view returns (uint256) {

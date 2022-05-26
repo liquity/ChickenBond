@@ -78,6 +78,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.warp(block.timestamp + 600);
 
         // A redeems full
+        uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
+        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
+        uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
         chickenBondManager.redeem(sLUSDToken.balanceOf(A));
         vm.stopPrank();
@@ -100,9 +103,10 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.stopPrank();
 
         // Checks
+        uint256 yieldFromFirstChickenInRedemptionFee = sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
-            initialYield + secondYield + 2 * taxAmount,
+            initialYield + secondYield + 2 * taxAmount + yieldFromFirstChickenInRedemptionFee,
             5,
             "Balance of rewards contract doesn't match"
         );

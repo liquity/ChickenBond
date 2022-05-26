@@ -97,6 +97,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + 600);
 
         // A redeems full
+        uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
+        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
+        uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
         chickenBondManager.redeem(sLUSDToken.balanceOf(A));
         vm.stopPrank();
@@ -111,9 +114,10 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Checks
+        uint256 yieldFromFirstChickenInRedemptionFee = sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
-            initialYield + secondYield + 2 * taxAmount,
+            initialYield + secondYield + 2 * taxAmount + yieldFromFirstChickenInRedemptionFee,
             20,
             "Balance of rewards contract doesn't match"
         );
@@ -129,7 +133,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9); 
 
         // uint256 redemptionFraction = 1e9; // 50%
-        uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage();
+        uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage(redemptionFraction);
         // 1-r(1-f).  Fee is left inside system
         uint256 expectedFractionRemainingAfterRedemption = 1e18 - (redemptionFraction * (1e18 - percentageFee)) / 1e18;
 

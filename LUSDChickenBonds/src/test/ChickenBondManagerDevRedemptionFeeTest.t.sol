@@ -7,13 +7,18 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
 
     // _updateRedemptionRateAndTime
     function _checkUpdateRedemptionRate(uint256 _decayedBaseRedemptionRate, uint256 _fractionOfSLUSDToRedeem, uint256 _expectedRate) internal {
-        chickenBondManager.updateRedemptionRateAndTime(_decayedBaseRedemptionRate, _fractionOfSLUSDToRedeem);
-        //console.log("r:", chickenBondManager.baseRedemptionRate());
+        chickenBondManager.setBaseRedemptionRate(_decayedBaseRedemptionRate);
+        uint256 newBaseRedemptionRate = chickenBondManager.calcRedemptionFeePercentage(_fractionOfSLUSDToRedeem);
+        //console.log("r:", newBaseRedemptionRate);
         //console.log("e:", _expectedRate);
-        assert(chickenBondManager.baseRedemptionRate() == _expectedRate);
+        assertEq(newBaseRedemptionRate, _expectedRate, "Redemption rate mismatch");
     }
 
     function testUpdateRedemptionRate() public {
+        uint256 currentTime = 1649755222;
+        vm.warp(currentTime);
+        chickenBondManager.setLastRedemptionTime(currentTime);
+
         uint256 decayedBaseRedemptionRate = 0;
         uint256 fractionOfSLUSDToRedeem = 0;
         uint256 expectedRate = 0;
@@ -30,7 +35,7 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
         _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfSLUSDToRedeem, expectedRate);
 
         decayedBaseRedemptionRate = 1e16;
-        fractionOfSLUSDToRedeem = 2e16;
+        fractionOfSLUSDToRedeem = 2e16; // 2%
         expectedRate = 2e16;
         _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfSLUSDToRedeem, expectedRate);
 
@@ -49,8 +54,8 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
         vm.warp(_currentTime);
         chickenBondManager.setLastRedemptionTime(_lastRedemptionTime);
 
-        chickenBondManager.updateRedemptionRateAndTime(0, 0);
-        assert(chickenBondManager.lastRedemptionTime() == _expectedTime);
+        chickenBondManager.updateRedemptionFeePercentage(0);
+        assertEq(chickenBondManager.lastRedemptionTime(), _expectedTime, "Last redemption time mismatch");
     }
 
     function testUpdateRedemptionTime() public {
@@ -80,7 +85,7 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
         chickenBondManager.setLastRedemptionTime(currentTime + 1);
         // Expect revert due to underflow
         //vm.expectRevert("Reason: Arithmetic over/underflow");
-        //chickenBondManager.updateRedemptionRateAndTime(0, 0);
+        //chickenBondManager.calcRedemptionFeePercentage(0);
     }
 
     // calcRedemptionFeePercentage
@@ -89,7 +94,7 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
         chickenBondManager.setBaseRedemptionRate(_baseRedemptionRate);
         //console.log("r:", chickenBondManager.calcRedemptionFeePercentage());
         //console.log("e:", _expectedRate);
-        assert(chickenBondManager.calcRedemptionFeePercentage() == _expectedRate);
+        assert(chickenBondManager.calcRedemptionFeePercentage(0) == _expectedRate);
     }
 
     function testCalcRedemptionFeePercentage() public {
