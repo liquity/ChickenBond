@@ -1,4 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 
 export interface LUSDChickenBondConfig {
   targetAverageAgeSeconds: BigNumber;
@@ -7,6 +8,7 @@ export interface LUSDChickenBondConfig {
   accrualAdjustmentRate: BigNumber;
   accrualAdjustmentPeriodSeconds: BigNumber;
   chickenInAMMTax: BigNumber;
+  yearnGovernanceAddress: string;
 }
 
 export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
@@ -15,16 +17,23 @@ export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   minimumAccrualParameter: BigNumber.from("2592000000000000000000"),
   accrualAdjustmentRate: BigNumber.from("10000000000000000"),
   accrualAdjustmentPeriodSeconds: BigNumber.from("86400"),
-  chickenInAMMTax: BigNumber.from("10000000000000000")
+  chickenInAMMTax: BigNumber.from("10000000000000000"),
+  yearnGovernanceAddress: AddressZero
 };
 
-const mapRecordValues = <K extends string, V, W>(r: Record<K, V>, f: (k: K, v: V) => W) =>
-  Object.fromEntries(Object.entries(r).map(([k, v]) => [k, f(k as K, v as V)])) as Record<K, W>;
+const mapConfig = (
+  r: Readonly<LUSDChickenBondConfig>,
+  f: <K extends keyof LUSDChickenBondConfig>(
+    k: K,
+    v: LUSDChickenBondConfig[K]
+  ) => LUSDChickenBondConfig[K]
+) =>
+  Object.fromEntries(
+    Object.entries(r).map(([k, v]) => [k, f(k as keyof LUSDChickenBondConfig, v)])
+  ) as unknown as LUSDChickenBondConfig;
 
-export const fillConfig = (
-  config?: Readonly<Partial<LUSDChickenBondConfig>>
-): LUSDChickenBondConfig =>
-  mapRecordValues(
+export const fillConfig = (config?: Readonly<Partial<LUSDChickenBondConfig>>) =>
+  mapConfig(
     defaultConfig,
     (paramName, defaultValue) => (config && config[paramName]) ?? defaultValue
   );
