@@ -1,0 +1,10 @@
+{
+  "name": "@liquity/chicken-bonds",
+  "version": "0.0.1",
+  "devDependencies": {
+    "hardhat": "^2.9.3"
+  },
+  "scripts": {
+    "deploy-fork": "./scripts/deploy.sh"
+  }
+}

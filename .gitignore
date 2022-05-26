@@ -15,3 +15,7 @@
 
 # Node.JS dependencies
 node_modules
+
+# Deployment artifacts
+out
+cache
