@@ -13,15 +13,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         address keeper = StrategyAPI(strategy).keeper();
 
         // harvest
-        uint256 prevValue = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 prevValue = chickenBondManager.calcTotalYearnSPVaultShareValue();
         vm.startPrank(keeper);
         StrategyAPI(strategy).harvest();
 
         // some time passes to unlock profits
         vm.warp(block.timestamp + 600);
         vm.stopPrank();
-        uint256 valueIncrease = chickenBondManager.calcTotalYearnLUSDVaultShareValue() - prevValue;
-        console.log(valueIncrease, "harvest increase");
+        uint256 valueIncrease = chickenBondManager.calcTotalYearnSPVaultShareValue() - prevValue;
         return valueIncrease;
     }
 
@@ -33,17 +32,13 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // harvest
         uint256 prevValue = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        console.log(prevValue, "prevValue");
         vm.startPrank(keeper);
         StrategyAPI(strategy).harvest();
 
-        console.log(chickenBondManager.calcTotalYearnCurveVaultShareValue(), "intValue");
         // some time passes to unlock profits
         vm.warp(block.timestamp + 600);
         vm.stopPrank();
-        console.log(chickenBondManager.calcTotalYearnCurveVaultShareValue(), "newValue");
         uint256 valueIncrease = chickenBondManager.calcTotalYearnCurveVaultShareValue() - prevValue;
-        console.log(valueIncrease, "harvest increase");
         return valueIncrease;
     }
 
@@ -119,7 +114,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
             initialYield + taxAmount,
-            11,
+            12,
             "Balance of rewards contract after A's chicken-in doesn't match"
         );
 
@@ -638,7 +633,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
 
         // Get CBM's view of LUSD in Yearn
-        uint256 lusdInSPBefore = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdInSPBefore = chickenBondManager.calcTotalYearnSPVaultShareValue();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
@@ -647,7 +642,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Check CBM's view of LUSD in Yearn has decreased
-        uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertTrue(lusdInSPAfter < lusdInSPBefore);
     }
 
@@ -1158,14 +1153,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceBelow1(200_000_000e18);
 
         // Get LUSD in Yearn Before
-        uint256 lusdInSPBefore = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdInSPBefore = chickenBondManager.calcTotalYearnSPVaultShareValue();
 
         // Shift LUSD from Curve to SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
         // Check LUSD in Yearn Increases
-        uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertTrue(lusdInSPAfter > lusdInSPBefore);
     }
 

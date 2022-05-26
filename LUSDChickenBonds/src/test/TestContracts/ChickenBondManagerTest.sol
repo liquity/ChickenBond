@@ -1725,7 +1725,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(yearnRegistry.latestVault(address(curvePool)), address(yearnCurveVault));
     }
 
-    // --- calcTotalYearnLUSDVaultShareValue tests ---
+    // --- calcTotalYearnSPVaultShareValue tests ---
 
     // Test whether the CBM share value calculator correctly calculates what actually will be withdrawn from Yearn.
     // function testCalcYearnLUSDShareValueGivesCorrectAmountAtFirstDepositPartialWithdrawal() public {
@@ -1739,7 +1739,7 @@ contract ChickenBondManagerTest is BaseTest {
     //     assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0);
 
     //     // Calc share value
-    //     uint256 CBMShareLUSDValue = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+    //     uint256 CBMShareLUSDValue = chickenBondManager.calcTotalYearnSPVaultShareValue();
     //     assertGt(CBMShareLUSDValue, 0);
 
     //     // Artificually withdraw half the shares
@@ -1765,7 +1765,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0);
 
         // Calc share value
-        uint256 CBMShareLUSDValue = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 CBMShareLUSDValue = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(CBMShareLUSDValue, 0);
 
         // Artificially withdraw fraction of the shares
@@ -1795,7 +1795,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0);
 
         // Calc share value
-        uint256 CBMShareLUSDValue = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 CBMShareLUSDValue = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(CBMShareLUSDValue, 0);
 
         // Artifiiually withdraw all the share value as CBM
@@ -1820,7 +1820,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0);
 
         // Calc share value
-        uint256 CBMShareLUSDValue = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 CBMShareLUSDValue = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(CBMShareLUSDValue, 0);
 
         // Artificually withdraw all the share value as CBM
@@ -1841,28 +1841,28 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondID_A = bondNFT.totalMinted();
 
         // Get share value 1
-        uint256 lusdVaultshareValue_1 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdVaultshareValue_1 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(lusdVaultshareValue_1, 0);
 
         // Fast forward time
         vm.warp(block.timestamp + 1e6);
 
         // Check share value 2 == share value 1
-        uint256 lusdVaultshareValue_2 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdVaultshareValue_2 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertEq(lusdVaultshareValue_2, lusdVaultshareValue_1);
 
         // B creates bond
         createBondForUser(B, bondAmount);
 
         // Get share value 3
-        uint256 lusdVaultshareValue_3 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdVaultshareValue_3 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(lusdVaultshareValue_3, 0);
 
         // Fast forward time
         vm.warp(block.timestamp + 1e6);
 
         // Check share value 4 == share value 3
-        uint256 lusdVaultshareValue_4 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdVaultshareValue_4 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertEq(lusdVaultshareValue_4, lusdVaultshareValue_3);
 
         // A chickens in
@@ -1870,14 +1870,14 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(bondID_A);
 
         // Get share value 5
-        uint256 lusdVaultshareValue_5 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdVaultshareValue_5 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(lusdVaultshareValue_5, 0);
 
         // Fast forward time
         vm.warp(block.timestamp + 1e6);
 
         // Check share value 5 == share value 6
-         uint256 lusdVaultshareValue_6 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+         uint256 lusdVaultshareValue_6 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertEq(lusdVaultshareValue_6, lusdVaultshareValue_5);
     }
 
@@ -1905,14 +1905,14 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(B, bondAmount);
 
         // Get total yTokens  3
-        uint256 yTokensYearnLUSD_3 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 yTokensYearnLUSD_3 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(yTokensYearnLUSD_3, 0);
 
         // Fast forward time
         vm.warp(block.timestamp + 1e6);
 
         // Check total yTokens 4 == total yTokens 3
-        uint256 yTokensYearnLUSD_4 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 yTokensYearnLUSD_4 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertEq(yTokensYearnLUSD_4, yTokensYearnLUSD_3);
 
         // A chickens in
@@ -1920,14 +1920,14 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(bondID_A);
 
         // Get total yTokens 5
-        uint256 yTokensYearnLUSD_5 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 yTokensYearnLUSD_5 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(yTokensYearnLUSD_5, 0);
 
         // Fast forward time
         vm.warp(block.timestamp + 1e6);
 
         // Check total yTokens 5 == total yTokens 6
-         uint256 yTokensYearnLUSD_6 = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+         uint256 yTokensYearnLUSD_6 = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertEq(yTokensYearnLUSD_6, yTokensYearnLUSD_5);
     }
 
