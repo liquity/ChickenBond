@@ -369,7 +369,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         // Otherwise in migration mode, send LUSD from the Silo to the redeemer
         uint256 lusdFromSilo;
         if (migration) {
-            uint256 lusdFromSilo = getAcquiredLUSDInSilo() * fractionOfAcquiredLUSDToWithdraw / 1e18;
+            lusdFromSilo = getAcquiredLUSDInSilo() * fractionOfAcquiredLUSDToWithdraw / 1e18;
 
             lusdToken.transferFrom(lusdSiloAddress, msg.sender, lusdFromSilo);
         }

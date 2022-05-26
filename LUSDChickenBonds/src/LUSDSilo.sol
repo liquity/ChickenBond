@@ -1,3 +1,4 @@
+pragma solidity ^0.8.10;
 
 import "./Interfaces/ILUSDToken.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";

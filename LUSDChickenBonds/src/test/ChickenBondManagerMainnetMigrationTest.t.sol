@@ -12,7 +12,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 10e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
         // Chicken some bonds in
@@ -68,7 +68,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 10e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -143,7 +143,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 10e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -179,7 +179,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 10e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -208,7 +208,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 10e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -261,7 +261,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         tip(address(lusdToken), C, 100e24);
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -310,7 +310,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -361,7 +361,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -433,7 +433,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -460,7 +460,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
@@ -485,7 +485,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
-        uint C_bondID = createBondForUser(C, bondAmount);
+        createBondForUser(C, bondAmount);
     
         vm.warp(block.timestamp + 30 days);
 
