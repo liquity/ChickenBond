@@ -75,7 +75,7 @@ contract ChickenBondOperationsScript {
             sLUSDToken.transferFrom(msg.sender, address(this), _sLUSDToRedeem - proxyBalance);
         }
 
-        (uint256 yTokensFromLUSDVault, uint256 yTokensFromCurveVault) = chickenBondManager.redeem(_sLUSDToRedeem);
+        (uint256 yTokensFromLUSDVault, uint256 yTokensFromCurveVault, ) = chickenBondManager.redeem(_sLUSDToRedeem);
 
         // The LUSD deltas from SP/Curve withdrawals are the amounts to send to the redeemer
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
