@@ -506,7 +506,6 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     }
 
     function _shiftAllLUSDToSilo() internal {
-        uint256 lusdInLUSDVault = calcTotalYearnLUSDVaultShareValue();
         uint256 yTokensToBurnFromLUSDVault = yearnLUSDVault.balanceOf(address(this));
 
         // Convert all Yearn LUSD vault yTokens to LUSD
