@@ -64,6 +64,8 @@ contract MainnetTestSetup is BaseTest {
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
 
+        lusdSilo = new LUSDSilo();
+
         // Deploy LUSD/sLUSD AMM LP Rewards staking contract
         IUniswapV2Factory uniswapV2Factory = IUniswapV2Factory(MAINNET_UNISWAP_V2_FACTORY_ADDRESS);
         address uniswapPairAddress = uniswapV2Factory.createPair(address(lusdToken), address(sLUSDToken));
@@ -78,7 +80,8 @@ contract MainnetTestSetup is BaseTest {
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
             sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
-            yearnGovernanceAddress: yearnGovernanceAddress
+            yearnGovernanceAddress: yearnGovernanceAddress,
+            lusdSiloAddress: address(lusdSilo)
         });
         
         chickenBondManager = new ChickenBondManagerWrap(
@@ -93,6 +96,7 @@ contract MainnetTestSetup is BaseTest {
 
         bondNFT.setAddresses(address(chickenBondManager));
         sLUSDToken.setAddresses(address(chickenBondManager));
+        lusdSilo.initialize(address(chickenBondManager), address(lusdToken));
 
         // Log some current blockchain state
         console.log(block.timestamp, "block.timestamp");

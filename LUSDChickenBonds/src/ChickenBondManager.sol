@@ -19,11 +19,13 @@ import "./Interfaces/IChickenBondManager.sol";
 
 contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
-    // ChickenBonds contracts
+    // ChickenBonds contracts and addresses
     IBondNFT immutable public bondNFT;
 
     ISLUSDToken immutable public sLUSDToken;
     ILUSDToken immutable public lusdToken;
+
+    address immutable public lusdSiloAddress;
 
     // External contracts and addresses
     ICurvePool immutable public curvePool;
@@ -51,6 +53,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         address yearnGovernanceAddress;
         address sLUSDTokenAddress;
         address sLUSDLPRewardsStakingAddress;
+        address lusdSiloAddress;
     }
 
     struct BondData {
@@ -147,6 +150,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         yearnCurveVault = IYearnVault(_externalContractAddresses.yearnCurveVaultAddress);
         yearnRegistry = IYearnRegistry(_externalContractAddresses.yearnRegistryAddress);
         yearnGovernanceAddress = _externalContractAddresses.yearnGovernanceAddress;
+        lusdSiloAddress = _externalContractAddresses.lusdSiloAddress;
 
         deploymentTimestamp = block.timestamp;
         targetAverageAgeSeconds = _targetAverageAgeSeconds;
@@ -225,27 +229,27 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
         uint256 lusdToWithdraw;
     
-        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-
         if (!migration) { // In normal mode, withdraw from Yearn LUSD vault
+            uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+
             uint256 lusdInLUSDVault = calcTotalYearnLUSDVaultShareValue();
             lusdToWithdraw = Math.min(bond.lusdAmount, lusdInLUSDVault);  // avoids revert due to rounding error if system contains only 1 bonder
             uint256 yTokensToSwapForLUSD = calcCorrespondingYTokens(yearnLUSDVault, lusdToWithdraw, lusdInLUSDVault);
             yearnLUSDVault.withdraw(yTokensToSwapForLUSD);
-        } else { // In migration mode, withdraw from Yearn Curve vault
-            uint256 lusd3CRVInCurveVault = calcTotalYearnCurveVaultShareValue();
-            lusdToWithdraw = Math.min(bond.lusdAmount, curvePool.calc_withdraw_one_coin(lusd3CRVInCurveVault, 0)); // avoids revert due to rounding error if system contains only 1 bonder
-            _withdrawLUSDFromCurve(lusdToWithdraw, lusd3CRVInCurveVault);
+
+            uint256 lusdBalanceAfter = lusdToken.balanceOf(address(this));
+            uint256 lusdBalanceDelta = lusdBalanceAfter - lusdBalanceBefore;
+
+            /* Transfer the LUSD balance delta resulting from the withdrawal, rather than the ideal bondedLUSD.
+            * Reasoning: the LUSD balance delta can be slightly lower than the bondedLUSD due to floor division in the
+            * yToken calculation prior to withdrawal. */
+            lusdToken.transfer(msg.sender, lusdBalanceDelta);
+        
+        } else { // In migration mode, withdraw from the Silo
+            lusdToWithdraw = Math.min(bond.lusdAmount, lusdToken.balanceOf(lusdSiloAddress));
+            lusdToken.transferFrom(lusdSiloAddress, msg.sender, lusdToWithdraw);
         }
     
-        uint256 lusdBalanceAfter = lusdToken.balanceOf(address(this));
-        uint256 lusdBalanceDelta = lusdBalanceAfter - lusdBalanceBefore;
-
-        /* Transfer the LUSD balance delta resulting from the withdrawal, rather than the ideal bondedLUSD.
-        * Reasoning: the LUSD balance delta can be slightly lower than the bondedLUSD due to floor division in the
-        * yToken calculation prior to withdrawal. */
-        lusdToken.transfer(msg.sender, lusdBalanceDelta);
-
         bondNFT.burn(_bondID);
     }
 
@@ -515,10 +519,10 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         yTokensPermanentLUSDVault = 0;
         yTokensPermanentCurveVault = 0;
 
-        _shiftAllLUSDFromSPToCurve();
+        _shiftAllLUSDToSilo();
     }
 
-    function _shiftAllLUSDFromSPToCurve() internal {
+    function _shiftAllLUSDToSilo() internal {
         uint256 lusdInLUSDVault = calcTotalYearnLUSDVaultShareValue();
         uint256 yTokensToBurnFromLUSDVault = yearnLUSDVault.balanceOf(address(this));
 
@@ -527,13 +531,8 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         yearnLUSDVault.withdraw(yTokensToBurnFromLUSDVault);
         uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
 
-        // Deposit the received LUSD to Curve in return for LUSD3CRV-f tokens
-        uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
-        curvePool.add_liquidity([lusdBalanceDelta, 0], 0);
-        uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
-
-        // Deposit the received LUSD3CRV-f to Yearn Curve vault
-        uint256 yTokensCurveVaultIncrease = yearnCurveVault.deposit(LUSD3CRVBalanceDelta);
+        // Transfer the received LUSD to the silo
+        lusdToken.transfer(lusdSiloAddress, lusdBalanceDelta);
     }
 
     // --- Fee share ---

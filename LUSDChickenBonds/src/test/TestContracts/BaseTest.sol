@@ -8,6 +8,7 @@ import "../../../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
 import "../../SLUSDToken.sol";
 import "../../BondNFT.sol";
+import "../../LUSDSilo.sol";
 import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/ICurvePool.sol";
@@ -23,6 +24,7 @@ contract BaseTest is DSTest, stdCheats {
     ChickenBondManagerWrap chickenBondManager;
     BondNFT bondNFT;
     SLUSDToken sLUSDToken;
+    LUSDSilo lusdSilo;
 
     // Integrations
     IERC20 lusdToken;

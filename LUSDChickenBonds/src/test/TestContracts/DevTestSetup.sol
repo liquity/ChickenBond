@@ -62,6 +62,8 @@ contract DevTestSetup is BaseTest {
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
 
+        lusdSilo = new LUSDSilo();
+
         // Deploy LUSD/sLUSD AMM LP Rewards staking contract
         IERC20 uniToken = new ERC20("Uniswap LP Token", "UNI"); // mock Uniswap LP token
         sLUSDLPRewardsStaking = new Unipool(address(lusdToken), address(uniToken));
@@ -75,7 +77,8 @@ contract DevTestSetup is BaseTest {
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
             sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
-            yearnGovernanceAddress: yearnGovernanceAddress
+            yearnGovernanceAddress: yearnGovernanceAddress,
+            lusdSiloAddress: address(lusdSilo)
         });
 
         chickenBondManager = new ChickenBondManagerWrap(
