@@ -367,8 +367,9 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         /* TODO: determine whether we should simply leave the fee in the acquired bucket, or add it to a permanent bucket.
         Current approach leaves redemption fees in the acquired bucket. */
         uint256 fractionOfSLUSDToRedeem = _sLUSDToRedeem * 1e18 / sLUSDToken.totalSupply();
-        // Calculate redemption fraction to withdraw, given that we leave the fee inside the acquired bucket
-        uint256 redemptionFeePercentage = calcRedemptionFeePercentage();
+        /* Calculate redemption fraction to withdraw, given that we leave the fee inside the acquired bucket.
+        * No fee in migration mode. */
+        uint256 redemptionFeePercentage = migration ? 0: calcRedemptionFeePercentage();
         uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
         // Increase redemption base rate with the new redeemed amount
         _updateRedemptionRateAndTime(redemptionFeePercentage, fractionOfSLUSDToRedeem);
