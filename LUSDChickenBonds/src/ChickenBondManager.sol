@@ -530,7 +530,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         _requireCallerIsYearnGovernance();
         require(!migration, "CBM: Receive fee share only in normal mode");
 
-        // Move LUSD from caller to CBM and deposit to 
+        // Move LUSD from caller to CBM and deposit to Yearn LUSD Vault
         lusdToken.transferFrom(yearnGovernanceAddress, address(this), _lusdAmount);
         yearnLUSDVault.deposit(_lusdAmount);
     }
