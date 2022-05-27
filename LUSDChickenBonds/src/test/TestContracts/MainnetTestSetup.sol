@@ -47,7 +47,7 @@ contract MainnetTestSetup is BaseTest {
         assertTrue(lusdToken.balanceOf(C) == 1e24);
 
         // Connect to deployed Yearn LUSD Vault
-        yearnLUSDVault = IYearnVault(MAINNET_YEARN_LUSD_VAULT_ADDRESS);
+        yearnSPVault = IYearnVault(MAINNET_YEARN_LUSD_VAULT_ADDRESS);
 
         // Connect to deployed LUSD-3CRV Curve pool, and Yearn LUSD-3CRV vault
         curvePool = ICurvePool(MAINNET_CURVE_POOL_ADDRESS);
@@ -76,7 +76,7 @@ contract MainnetTestSetup is BaseTest {
             lusdTokenAddress: address(lusdToken),
             sLUSDTokenAddress: address(sLUSDToken),
             curvePoolAddress: address(curvePool),
-            yearnLUSDVaultAddress: address(yearnLUSDVault),
+            yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
             sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
@@ -103,7 +103,7 @@ contract MainnetTestSetup is BaseTest {
         console.log(block.number, "block.number");
         console.log(lusdToken.totalSupply(), "Total LUSD supply");
         console.log(address(lusdToken), "LUSDToken address");
-        console.log(address(yearnLUSDVault), "Yearn LUSD vault address");
+        console.log(address(yearnSPVault), "Yearn LUSD vault address");
         console.log(address(yearnCurveVault), "Yearn Curve vault address");
         console.log(address(curvePool), "Curve pool address");
         console.log(address(chickenBondManager), "ChickenBondManager address");

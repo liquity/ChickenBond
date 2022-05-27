@@ -10,7 +10,7 @@ interface IChickenBondManager {
     function lusdToken() external view returns (ILUSDToken);
     function sLUSDToken() external view returns (ISLUSDToken);
     function curvePool() external view returns (ICurvePool);
-    function yearnLUSDVault() external view returns (IYearnVault);
+    function yearnSPVault() external view returns (IYearnVault);
     function yearnCurveVault() external view returns (IYearnVault);
     // constants
     function INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL() external pure returns (int128);

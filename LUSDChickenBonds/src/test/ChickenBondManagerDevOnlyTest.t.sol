@@ -17,7 +17,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = 1e18;
-        MockYearnVault(address(yearnLUSDVault)).harvest(initialYield);
+        MockYearnVault(address(yearnSPVault)).harvest(initialYield);
 
         // A chickens in
         vm.startPrank(A);
@@ -68,7 +68,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = 1e18;
-        MockYearnVault(address(yearnLUSDVault)).harvest(initialYield);
+        MockYearnVault(address(yearnSPVault)).harvest(initialYield);
 
         // A chickens in
         vm.startPrank(A);
@@ -89,12 +89,12 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         // make sure A withdraws Y tokens, otherwise would get part of the new harvest!
         vm.startPrank(A);
-        yearnLUSDVault.withdraw(yearnLUSDVault.balanceOf(A));
+        yearnSPVault.withdraw(yearnSPVault.balanceOf(A));
         vm.stopPrank();
 
         // Yearn LUSD Vault gets some yield
         uint256 secondYield = 4e18;
-        MockYearnVault(address(yearnLUSDVault)).harvest(secondYield);
+        MockYearnVault(address(yearnSPVault)).harvest(secondYield);
 
         // B chickens in
         vm.startPrank(B);

@@ -30,7 +30,7 @@ contract BaseTest is DSTest, stdCheats {
     IERC20 lusdToken;
     IERC20 _3crvToken;
     ICurvePool curvePool;
-    IYearnVault yearnLUSDVault;
+    IYearnVault yearnSPVault;
     IYearnVault yearnCurveVault;
     IYearnRegistry yearnRegistry;
     IUnipool sLUSDLPRewardsStaking;
@@ -185,10 +185,10 @@ contract BaseTest is DSTest, stdCheats {
 
     function shiftFractionFromSPToCurve(uint256 _divisor) public returns (uint256) {
         // Put some  LUSD in Curve: shift LUSD from SP to Curve
-        assertEq(chickenBondManager.getAcquiredLUSDInCurveVault(), 0);
-        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / _divisor; // shift fraction of LUSD in SP
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / _divisor; // shift fraction of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
-        assertTrue(chickenBondManager.getAcquiredLUSDInCurveVault() > 0);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
 
         uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertGt(curveSpotPrice, 1e18);

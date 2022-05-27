@@ -42,14 +42,14 @@ contract DevTestSetup is BaseTest {
 
         MockYearnVault mockYearnLUSDVault = new MockYearnVault("LUSD yVault", "yvLUSD");
         mockYearnLUSDVault.setAddresses(address(lusdToken));
-        yearnLUSDVault = IYearnVault(address(mockYearnLUSDVault));
+        yearnSPVault = IYearnVault(address(mockYearnLUSDVault));
 
         MockYearnVault mockYearnCurveVault = new MockYearnVault("Curve LUSD Pool yVault", "yvCurve-LUSD");
         mockYearnCurveVault.setAddresses(address(curvePool));
         yearnCurveVault = IYearnVault(address(mockYearnCurveVault));
 
         MockYearnRegistry mockYearnRegistry = new MockYearnRegistry(
-            address(yearnLUSDVault),
+            address(yearnSPVault),
             address(yearnCurveVault),
             address(lusdToken),
             address(curvePool)
@@ -73,7 +73,7 @@ contract DevTestSetup is BaseTest {
             lusdTokenAddress: address(lusdToken),
             sLUSDTokenAddress: address(sLUSDToken),
             curvePoolAddress: address(curvePool),
-            yearnLUSDVaultAddress: address(yearnLUSDVault),
+            yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
             sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
