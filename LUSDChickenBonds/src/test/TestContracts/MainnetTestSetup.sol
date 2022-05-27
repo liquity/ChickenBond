@@ -47,7 +47,7 @@ contract MainnetTestSetup is BaseTest {
         assertTrue(lusdToken.balanceOf(C) == 1e24);
 
         // Connect to deployed Yearn LUSD Vault
-        yearnLUSDVault = IYearnVault(MAINNET_YEARN_LUSD_VAULT_ADDRESS);
+        yearnSPVault = IYearnVault(MAINNET_YEARN_LUSD_VAULT_ADDRESS);
 
         // Connect to deployed LUSD-3CRV Curve pool, and Yearn LUSD-3CRV vault
         curvePool = ICurvePool(MAINNET_CURVE_POOL_ADDRESS);
@@ -64,6 +64,8 @@ contract MainnetTestSetup is BaseTest {
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
 
+        lusdSilo = new LUSDSilo();
+
         // Deploy LUSD/sLUSD AMM LP Rewards staking contract
         IUniswapV2Factory uniswapV2Factory = IUniswapV2Factory(MAINNET_UNISWAP_V2_FACTORY_ADDRESS);
         address uniswapPairAddress = uniswapV2Factory.createPair(address(lusdToken), address(sLUSDToken));
@@ -74,11 +76,14 @@ contract MainnetTestSetup is BaseTest {
             lusdTokenAddress: address(lusdToken),
             sLUSDTokenAddress: address(sLUSDToken),
             curvePoolAddress: address(curvePool),
-            yearnLUSDVaultAddress: address(yearnLUSDVault),
+            yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
-            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking)
+            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
+            yearnGovernanceAddress: yearnGovernanceAddress,
+            lusdSiloAddress: address(lusdSilo)
         });
+        
         chickenBondManager = new ChickenBondManagerWrap(
             externalContractAddresses,
             TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds
@@ -91,13 +96,14 @@ contract MainnetTestSetup is BaseTest {
 
         bondNFT.setAddresses(address(chickenBondManager));
         sLUSDToken.setAddresses(address(chickenBondManager));
+        lusdSilo.initialize(address(chickenBondManager));
 
         // Log some current blockchain state
         console.log(block.timestamp, "block.timestamp");
         console.log(block.number, "block.number");
         console.log(lusdToken.totalSupply(), "Total LUSD supply");
         console.log(address(lusdToken), "LUSDToken address");
-        console.log(address(yearnLUSDVault), "Yearn LUSD vault address");
+        console.log(address(yearnSPVault), "Yearn LUSD vault address");
         console.log(address(yearnCurveVault), "Yearn Curve vault address");
         console.log(address(curvePool), "Curve pool address");
         console.log(address(chickenBondManager), "ChickenBondManager address");

@@ -18,7 +18,7 @@ export interface LogFunction {
 }
 
 export interface LUSDChickenBondDeploymentParams {
-  config: LUSDChickenBondConfig;
+  config: Partial<LUSDChickenBondConfig>;
   overrides: Overrides;
   log: boolean | LogFunction;
 }
@@ -169,6 +169,7 @@ class LUSDChickenBondDeployment {
         sLUSDLPRewardsStakingAddress: sLUSDLPRewardsStaking.contract.address,
         sLUSDTokenAddress: sLUSDToken.contract.address,
         yearnCurveVaultAddress: yearnCurveVault.contract.address,
+        yearnGovernanceAddress: config.yearnGovernanceAddress,
         yearnLUSDVaultAddress: yearnLUSDVault.contract.address,
         yearnRegistryAddress: yearnRegistry.contract.address
       },

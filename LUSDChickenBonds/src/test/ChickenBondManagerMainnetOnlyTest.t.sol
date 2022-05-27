@@ -8,7 +8,7 @@ import "../Interfaces/StrategyAPI.sol";
 contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function _harvest() internal returns (uint256) {
         // get strategy
-        address strategy = yearnLUSDVault.withdrawalQueue(0);
+        address strategy = yearnSPVault.withdrawalQueue(0);
         // get keeper
         address keeper = StrategyAPI(strategy).keeper();
 
@@ -21,7 +21,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + 600);
         vm.stopPrank();
         uint256 valueIncrease = chickenBondManager.calcTotalYearnLUSDVaultShareValue() - prevValue;
-
+        console.log(valueIncrease, "harvest increase");
         return valueIncrease;
     }
 
@@ -94,6 +94,13 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
+        assertApproximatelyEqual(
+            lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
+            initialYield + taxAmount,
+            11,
+            "Balance of rewards contract after A's chicken-in doesn't match"
+        );
+
         vm.warp(block.timestamp + 600);
 
         // A redeems full
@@ -103,6 +110,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.startPrank(A);
         chickenBondManager.redeem(sLUSDToken.balanceOf(A));
         vm.stopPrank();
+
+        // Confirm total sLUSD supply is 0
+        assertEq(sLUSDToken.totalSupply(), 0, "sLUSD supply not 0 after full redemption");
 
         // Yearn LUSD Vault gets some yield
         uint256 secondYield = _harvest();
@@ -119,8 +129,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
             initialYield + secondYield + 2 * taxAmount + yieldFromFirstChickenInRedemptionFee,
             20,
-            "Balance of rewards contract doesn't match"
+            "Balance of rewards contract after B's chicken-in doesn't match"
         );
+
+        // check CBM holds no LUSD
+        assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0, "cbm holds non-zero lusd");
+
         // check sLUSD B balance
         assertEq(sLUSDToken.balanceOf(B), accruedSLUSD_B, "sLUSD balance of B doesn't match");
     }
@@ -130,7 +144,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testRedeemDecreasesAcquiredLUSDInCurveByCorrectFraction(uint256 redemptionFraction) public {
         // Fraction between 1 billion'th, and 100%.  If amount is too tiny, redemption can revert due to attempts to
         // withdraw 0 LUSDfrom Yearn (due to rounding in share calc).
-        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9); 
+        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9);
 
         // uint256 redemptionFraction = 1e9; // 50%
         uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage(redemptionFraction);
@@ -144,7 +158,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // time passes
         vm.warp(block.timestamp + 365 days);
-    
+
         // Confirm A's sLUSD balance is zero
         uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
         assertTrue(A_sLUSDBalance == 0);
@@ -176,7 +190,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 permanentLUSDInCurveBefore = chickenBondManager.getPermanentLUSDInCurve();
         assertGt(acquiredLUSDInCurveBefore, 0, "Acquired in Curve should be greater than zero");
         assertGt(permanentLUSDInCurveBefore, 0, "Permanent in Curve should be greater than zero");
-       
+
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
         vm.startPrank(B);
@@ -188,10 +202,11 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 acquiredLUSDInCurveAfter = chickenBondManager.getAcquiredLUSDInCurve();
         uint256 expectedAcquiredLUSDInCurveAfter = acquiredLUSDInCurveBefore * expectedFractionRemainingAfterRedemption / 1e18;
 
-        console.log(acquiredLUSDInCurveBefore, "acquiredLUSDInCurveBefore");
-        console.log(acquiredLUSDInCurveAfter, "acquiredLUSDInCurveAfter");
-        console.log(expectedAcquiredLUSDInCurveAfter, "expectedAcquiredLUSDInCurveAfter");
-        assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, 1e9, "Final acquired LUSD in Curve mismatch");
+        //console.log(acquiredLUSDInCurveBefore, "acquiredLUSDInCurveBefore");
+        //console.log(acquiredLUSDInCurveAfter, "acquiredLUSDInCurveAfter");
+        //console.log(expectedAcquiredLUSDInCurveAfter, "expectedAcquiredLUSDInCurveAfter");
+        uint256 tolerance = acquiredLUSDInCurveBefore / 1000; // Assume 0.1% relative error tolerance
+        assertApproximatelyEqual(acquiredLUSDInCurveAfter, expectedAcquiredLUSDInCurveAfter, tolerance, "Final acquired LUSD in Curve mismatch");
     }
 
     // --- shiftLUSDFromSPToCurve tests ---
@@ -210,7 +225,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
 
         makeCurveSpotPriceAbove1(200_000_000e18);
-        
+
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
@@ -245,9 +260,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromSPToCurveRevertsWhenShiftWouldDropCurvePriceBelow1() public {
-        // TODO: Artificially raise Yearn LUSD vault deposit limit to accommodate sufficient LUSD for the test
+        // Artificially raise Yearn LUSD vault deposit limit to accommodate sufficient LUSD for the test
         vm.startPrank(yearnGovernanceAddress);
-        yearnLUSDVault.setDepositLimit(1e27);
+        yearnSPVault.setDepositLimit(1e27);
         vm.stopPrank();
 
         // A creates bond
@@ -266,7 +281,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
-    
+
         // --- First check that the amount to shift *would* drop the curve price below 1.0, by having a whale
         // deposit it, checking Curve price, then withdrawing it again --- ///
 
@@ -313,7 +328,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -439,7 +454,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
-       // Shift 10% of LUSD in SP 
+       // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -467,7 +482,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -489,12 +504,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // A chickens in
         chickenInForUser(A, A_bondID);
 
-        // Get CBM's view of LUSD in Yearn  
+        // Get CBM's view of LUSD in Yearn
         uint256 lusdInSPBefore = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -521,7 +536,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
@@ -540,7 +555,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // time passes
         vm.warp(block.timestamp + 30 days);
-      
+
         // A chickens in
         chickenInForUser(A, A_bondID);
 
@@ -551,7 +566,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Get actual SP and Curve pool LUSD Balances before
-        uint256 yearnLUSDVaultBalanceBefore =  lusdToken.balanceOf(address(yearnLUSDVault));
+        uint256 yearnSPVaultBalanceBefore =  lusdToken.balanceOf(address(yearnSPVault));
         uint256 CurveBalanceBefore = lusdToken.balanceOf(address(curvePool));
 
         // Shift to Curve
@@ -563,20 +578,20 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 cbmLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurve();
 
         // Get actual SP and Curve pool LUSD Balances after
-        uint256 yearnLUSDVaultBalanceAfter = lusdToken.balanceOf(address(yearnLUSDVault));
+        uint256 yearnSPVaultBalanceAfter = lusdToken.balanceOf(address(yearnSPVault));
         uint256 CurveBalanceAfter = lusdToken.balanceOf(address(curvePool));
 
         // Check Yearn LUSD vault decreases
         assertLt(cbmLUSDInSPAfter, cbmLUSDInSPBefore);
-        assertLt(yearnLUSDVaultBalanceAfter, yearnLUSDVaultBalanceBefore);
+        assertLt(yearnSPVaultBalanceAfter, yearnSPVaultBalanceBefore);
         // Check Curve pool increases
         assertGt(cbmLUSDInCurveAfter, cbmLUSDInCurveBefore);
         assertGt(CurveBalanceAfter, CurveBalanceBefore);
 
-        uint256 cbmyearnLUSDVaultDecrease = cbmLUSDInSPBefore - cbmLUSDInSPAfter; // Yearn LUSD vault decreases
+        uint256 cbmyearnSPVaultDecrease = cbmLUSDInSPBefore - cbmLUSDInSPAfter; // Yearn LUSD vault decreases
         uint256 cbmCurveIncrease = cbmLUSDInCurveAfter - cbmLUSDInCurveBefore; // Curve increases
-    
-        uint256 yearnLUSDVaultBalanceDecrease = yearnLUSDVaultBalanceBefore - yearnLUSDVaultBalanceAfter;
+
+        uint256 yearnSPVaultBalanceDecrease = yearnSPVaultBalanceBefore - yearnSPVaultBalanceAfter;
         uint256 CurveBalanceIncrease = CurveBalanceAfter - CurveBalanceBefore;
 
         // Check that amount we can actually withdraw from Curve is very close to the amount we actually withdraw (by artificially
@@ -588,16 +603,16 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 cbmLUSDBalAfterCurveWithdraw = lusdToken.balanceOf(address(chickenBondManager));
         uint256 lusdWithdrawalFromCurve = cbmLUSDBalAfterCurveWithdraw - cbmLUSDBalBeforeCurveWithdraw;
         uint256 relativeCurveWithdrawalDelta = abs(lusdWithdrawalFromCurve, cbmCurveIncrease) * 1e18 / cbmCurveIncrease;
-        
+
         // Confirm that a forced Curve withdrawal results in a LUSD withdrawal that is within 0.01%
         //  of the calculated withdrawal amount
         assertLt(relativeCurveWithdrawalDelta, 1e14);
 
         uint256 lossRelativeToCurvePool = diffOrZero(CurveBalanceIncrease, cbmCurveIncrease) * 1e18 / CurveBalanceIncrease;
-        uint256 lossRelativeToYearnVault = diffOrZero(cbmyearnLUSDVaultDecrease, yearnLUSDVaultBalanceDecrease) * 1e18 / yearnLUSDVaultBalanceDecrease;
-       
+        uint256 lossRelativeToYearnVault = diffOrZero(cbmyearnSPVaultDecrease, yearnSPVaultBalanceDecrease) * 1e18 / yearnSPVaultBalanceDecrease;
+
         // Curve shifting loss can be up to ~1% of the shifted amount, due to Curve pool share calculation
-        assertLt(lossRelativeToCurvePool, 1e16); 
+        assertLt(lossRelativeToCurvePool, 1e16);
         // Yearn LUSD vault shifting loss is much lower
         assertLt(lossRelativeToYearnVault, 1e3);
     }
@@ -612,7 +627,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // time passes
         vm.warp(block.timestamp + 30 days);
-      
+
         // A chickens in
         chickenInForUser(A, A_bondID);
 
@@ -622,7 +637,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
 
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -630,13 +645,13 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Get permanent LUSD in both pools after
         uint256 permanentLUSDInCurve_2 = chickenBondManager.getPermanentLUSDInCurve();
         uint256 permanentLUSDInSP_2 = chickenBondManager.getPermanentLUSDInSP();
-        
+
         // check SP permanent decrease approx == Curve permanent increase
         uint256 permanentLUSDYearnDecrease_1 = permanentLUSDInSP_1 - permanentLUSDInSP_2;
         uint256 permanentLUSDCurveIncrease_1 = permanentLUSDInCurve_2 - permanentLUSDInCurve_1;
-      
+
         uint256 relativePermanentLoss = diffOrZero(permanentLUSDYearnDecrease_1, permanentLUSDCurveIncrease_1) * 1e18 / (permanentLUSDInSP_1 + permanentLUSDInCurve_1);
-        // Check that any discrepancy between the permanent SP decrease and the permanent Curve increase from shifting is <1% of 
+        // Check that any discrepancy between the permanent SP decrease and the permanent Curve increase from shifting is <1% of
         // the initial permanent LUSD in the SP
         // Appears to be high due the loss upon Curve deposit.
         assertLt(relativePermanentLoss, 1e16);
@@ -652,7 +667,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // time passes
         vm.warp(block.timestamp + 30 days);
-      
+
         // A chickens in
         chickenInForUser(A, A_bondID);
 
@@ -662,9 +677,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
-        // Shift 10% of LUSD in SP 
+        // Shift 10% of LUSD in SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
-       
+
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
 
         // Get permanent LUSD in both pools after
@@ -674,10 +689,10 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check SP permanent decrease approx == Curve permanent increase
         uint256 acquiredLUSDYearnDecrease_1 = acquiredLUSDInSP_1 - acquiredLUSDInSP_2;
         uint256 acquiredLUSDCurveIncrease_1 = acquiredLUSDInCurve_2 - acquiredLUSDInCurve_1;
-      
+
         uint256 relativeAcquiredLoss = diffOrZero(acquiredLUSDYearnDecrease_1, acquiredLUSDCurveIncrease_1) * 1e18 / acquiredLUSDInSP_1 + acquiredLUSDInCurve_1;
 
-        // Check that any discrepancy between the acquired SP decrease and the acquired Curve increase from shifting is <0.01% of 
+        // Check that any discrepancy between the acquired SP decrease and the acquired Curve increase from shifting is <0.01% of
         // the initial acquired LUSD in the SP
         assertLt(relativeAcquiredLoss, 1e14);
     }
@@ -738,7 +753,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
         shiftFractionFromSPToCurve(10);
-       
+
         // Check spot price is > 1.0
         uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         assertGt(curveSpotPrice, 1e18);
@@ -755,7 +770,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     // TODO: refactor this test to be more robust to specific Curve mainnet state. Currently sometimes fails.
     // function testShiftLUSDFromCurveToSPRevertsWhenShiftWouldRaiseCurvePriceAbove1() public {
     //     vm.startPrank(yearnGovernanceAddress);
-    //     yearnLUSDVault.setDepositLimit(1e27);
+    //     yearnSPVault.setDepositLimit(1e27);
     //     vm.stopPrank();
 
     //     // A creates bond
@@ -778,7 +793,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     //     console.log("A");
     //     console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price A");
     //     shiftFractionFromSPToCurve(30);
-      
+
     //     console.log("B");
     //     makeCurveSpotPriceBelow1(50_000_000e18);
     //     console.log("C");
@@ -934,7 +949,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 totalPendingLUSDAfter = chickenBondManager.totalPendingLUSD();
         assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
     }
- 
+
     // CBM Yearn and Curve trackers
 
     function testShiftLUSDFromCurveToSPIncreasesCBMAcquiredLUSDInSPTracker() public {
@@ -954,11 +969,15 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
+        // check total acquired LUSD > 0
+        uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertGt(totalAcquiredLUSD, 0, "total ac. lusd not < 0 after chicken in");
+
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
         shiftFractionFromSPToCurve(10);
         makeCurveSpotPriceBelow1(200_000_000e18);
-      
+
         //uint256 permanentYearnAfterShift = chickenBondManager.getPermanentLUSDInSP();
         //uint256 permanentCurveAfterShift = chickenBondManager.getPermanentLUSDInCurve();
         assertGt(chickenBondManager.getAcquiredLUSDInCurve(), 0);
@@ -970,13 +989,13 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // Shift LUSD from Curve to SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // shift 10% of LUSD in Curve
-      
+
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
-       
+
         // Check acquired LUSD in Yearn Increases
         uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInSP();
-       
-        assertGt(acquiredLUSDInSPAfter, acquiredLUSDInSPBefore);
+
+        assertGt(acquiredLUSDInSPAfter, acquiredLUSDInSPBefore, "ac. LUSD before and after shift doesn't change");
     }
 
     function testShiftLUSDFromCurveToSPIncreasesCBMLUSDInSPTracker() public {
@@ -1068,7 +1087,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // time passes
         vm.warp(block.timestamp + 30 days);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1087,48 +1106,48 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 cbmLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurve();
 
         // Get actual SP and Curve pool LUSD Balances before
-        uint256 yearnLUSDVaultBalanceBefore =  lusdToken.balanceOf(address(yearnLUSDVault));
+        uint256 yearnSPVaultBalanceBefore =  lusdToken.balanceOf(address(yearnSPVault));
         uint256 CurveBalanceBefore = lusdToken.balanceOf(address(curvePool));
 
         // Shift Curve->SP
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10; // Shift 10% of LUSD in Curve
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
-       
+
         // Get the total LUSD in Yearn and Curve after
         uint256 cbmLUSDInSPAfter = chickenBondManager.getOwnedLUSDInSP();
         uint256 cbmLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurve();
-       
+
         // Get actual SP and Curve pool LUSD Balances after
-        uint256 yearnLUSDVaultBalanceAfter = lusdToken.balanceOf(address(yearnLUSDVault));
+        uint256 yearnSPVaultBalanceAfter = lusdToken.balanceOf(address(yearnSPVault));
         uint256 CurveBalanceAfter = lusdToken.balanceOf(address(curvePool));
 
         // Check Yearn LUSD vault increases
         assertGt(cbmLUSDInSPAfter, cbmLUSDInSPBefore);
-        assertGt(yearnLUSDVaultBalanceAfter, yearnLUSDVaultBalanceBefore);
+        assertGt(yearnSPVaultBalanceAfter, yearnSPVaultBalanceBefore);
         // Check Curve pool decreases
         assertLt(cbmLUSDInCurveAfter, cbmLUSDInCurveBefore);
         assertLt(CurveBalanceAfter, CurveBalanceBefore);
-        
-        uint256 cbmyearnLUSDVaultIncrease = cbmLUSDInSPAfter - cbmLUSDInSPBefore; // Yearn LUSD vault increases
+
+        uint256 cbmyearnSPVaultIncrease = cbmLUSDInSPAfter - cbmLUSDInSPBefore; // Yearn LUSD vault increases
         uint256 cbmCurveDecrease = cbmLUSDInCurveBefore - cbmLUSDInCurveAfter; // Curve decreases
-    
-        uint256 yearnLUSDVaultBalanceIncrease = yearnLUSDVaultBalanceAfter - yearnLUSDVaultBalanceBefore;
+
+        uint256 yearnSPVaultBalanceIncrease = yearnSPVaultBalanceAfter - yearnSPVaultBalanceBefore;
         uint256 CurveBalanceDecrease = CurveBalanceBefore - CurveBalanceAfter;
 
         /*Calculate the relative losses, if there are any.
         * Our relative Curve loss is positive if CBM has lost more than Curve has lost.
         * Our relative Yearn LUSD loss is positive if Yearn LUSD vault has gained more than CBM has gained.
         */
-        uint256 lossRelativeToCurvePool = diffOrZero(cbmCurveDecrease, CurveBalanceDecrease) * 1e18 / CurveBalanceDecrease;    
-        uint256 lossRelativeToYearnLUSDVault = diffOrZero(yearnLUSDVaultBalanceIncrease, cbmyearnLUSDVaultIncrease) * 1e18 / yearnLUSDVaultBalanceIncrease;
-       
+        uint256 lossRelativeToCurvePool = diffOrZero(cbmCurveDecrease, CurveBalanceDecrease) * 1e18 / CurveBalanceDecrease;
+        uint256 lossRelativeToYearnLUSDVault = diffOrZero(yearnSPVaultBalanceIncrease, cbmyearnSPVaultIncrease) * 1e18 / yearnSPVaultBalanceIncrease;
+
         // Check that both deltas are < 1 million'th tiny when shifting Curve->SP
-        assertLt(lossRelativeToCurvePool, 1e12); 
+        assertLt(lossRelativeToCurvePool, 1e12);
         assertLt(lossRelativeToYearnLUSDVault, 1e12);
     }
 
     function testShiftLUSDFromCurveToSPChangesPermanentBucketsBySimilarAmount(uint256 bondAmount) public {
-        vm.assume(bondAmount < 1e24 && bondAmount > 1e18);   
+        vm.assume(bondAmount < 1e24 && bondAmount > 1e18);
 
         // uint256 bondAmount = 10e18;
 
@@ -1139,7 +1158,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // time passes
         vm.warp(block.timestamp + 30 days);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1174,9 +1193,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check SP permanent decrease approx == Curve permanent increase
         uint256 permanentLUSDYearnIncrease_1 = permanentLUSDInSP_2 - permanentLUSDInSP_1;
         uint256 permanentLUSDCurveDecrease_1 = permanentLUSDInCurve_1 - permanentLUSDInCurve_2;
-      
+
         uint256 relativePermanentLoss = diffOrZero(permanentLUSDCurveDecrease_1, permanentLUSDYearnIncrease_1) * 1e18 / (permanentLUSDInCurve_1 + permanentLUSDInSP_1);
-       
+
        // Check that any relative loss in the permanent bucket from shifting Curve->SP is less than 1 million'th of total permanent LUSD
         assertLt(relativePermanentLoss, 1e12);
     }
@@ -1191,7 +1210,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // time passes
         vm.warp(block.timestamp + 30 days);
-      
+
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -1211,8 +1230,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 acquiredLUSDInSP_1 = chickenBondManager.getAcquiredLUSDInSP();
         assertGt(acquiredLUSDInCurve_1, 0);
         assertGt(acquiredLUSDInSP_1, 0);
-        
-        // Shift 10% of owned LUSD in Curve 
+
+        // Shift 10% of owned LUSD in Curve
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() / 10;
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
 
@@ -1223,10 +1242,10 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check SP permanent decrease approx == Curve permanent increase
         uint256 acquiredLUSDYearnIncrease_1 = acquiredLUSDInSP_2 - acquiredLUSDInSP_1;
         uint256 acquiredLUSDCurveDecrease_1 = acquiredLUSDInCurve_1 - acquiredLUSDInCurve_2;
-      
+
        uint256 relativeAcquiredLoss = diffOrZero(acquiredLUSDCurveDecrease_1, acquiredLUSDYearnIncrease_1) * 1e18 / (acquiredLUSDInSP_1 + acquiredLUSDInCurve_1);
 
-        // Check that any relative loss in the acquired bucket from shifting Curve->SP is less than 1 billion'th of total acquired LUSD 
+        // Check that any relative loss in the acquired bucket from shifting Curve->SP is less than 1 billion'th of total acquired LUSD
         assertLt(relativeAcquiredLoss, 1e12);
     }
 
@@ -1235,12 +1254,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testCurveImmediateLUSDDepositAndWithdrawalLossIsBounded(uint256 _depositAmount) public {
         // // Set Curve spot price to >1.0
         makeCurveSpotPriceAbove1(75_000_000e18);
-        
+
         vm.assume(_depositAmount < 1e27 && _depositAmount > 1e18); // deposit in range [1, 1bil] LUSD
 
         // uint256 _depositAmount = 10e18;
 
-        // Tip CBM some LUSD 
+        // Tip CBM some LUSD
         tip(address(lusdToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to Curve, as CBM
@@ -1248,14 +1267,13 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         curvePool.add_liquidity([_depositAmount, 0], 0);
         assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0);
 
-        // Artifiiually withdraw all the share value as CBM  
+        // Artifiiually withdraw all the share value as CBM
         uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
         curvePool.remove_liquidity_one_coin(cbmShares, 0, 0);
 
         uint256 cbmLUSDBalAfter = lusdToken.balanceOf(address(chickenBondManager));
         uint256 curveRelativeDepositLoss = diffOrZero(_depositAmount, cbmLUSDBalAfter) * 1e18 / _depositAmount;
-        
-        console.log(curveRelativeDepositLoss, "curveRelativeDepositLoss");
+
         // Check that simple Curve LUSD deposit->withdraw loses between [0.01%, 1%] of initial deposit.
         assertLt(curveRelativeDepositLoss, 1e15);
         assertGt(curveRelativeDepositLoss, 1e14);
@@ -1269,7 +1287,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // uint256 _depositAmount = 10e18;
 
-        // Tip CBM some 3CRV 
+        // Tip CBM some 3CRV
         tip(address(_3crvToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to Curve, as CBM
@@ -1281,13 +1299,13 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 cbm3CRVBalBefore = _3crvToken.balanceOf(address(chickenBondManager));
         assertEq(cbm3CRVBalBefore, 0);
 
-        // Artifiiually withdraw all the share value as CBM  
+        // Artifiiually withdraw all the share value as CBM
         uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
         curvePool.remove_liquidity_one_coin(cbmShares, 1, 0);
 
         uint256 cbm3CRVBalAfter = _3crvToken.balanceOf(address(chickenBondManager));
         uint256 curveRelativeDepositLoss = diffOrZero(_depositAmount, cbm3CRVBalAfter) * 1e18 / _depositAmount;
-        
+
         // Check that simple Curve 3CRV deposit->withdraw loses  <0.1% of initial deposit.
         assertLt(curveRelativeDepositLoss, 1e15);
     }
@@ -1298,7 +1316,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         vm.assume(_depositMagnitude < 1e27 && _depositMagnitude >= 1e18); // deposit magnitude in range [1, 1bil]
 
-        uint256 curve3CRVSpot = curvePool.get_dy_underlying(1, 0, 1e18); 
+        uint256 curve3CRVSpot = curvePool.get_dy_underlying(1, 0, 1e18);
 
         // Choose deposit amounts in proportion to current spot price, in order to keep it constant
         //uint256 _depositMagnitude = 10e18;
@@ -1318,26 +1336,26 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         lusdToken.approve(address(curvePool), _lusdDepositAmount);
         _3crvToken.approve(address(curvePool), _3crvDepositAmount);
         curvePool.add_liquidity([_lusdDepositAmount, _3crvDepositAmount], 0); // deposit both tokens
-       
+
         uint256 cbmLUSDBalBefore = lusdToken.balanceOf(address(chickenBondManager));
         uint256 cbm3CRVBalBefore = _3crvToken.balanceOf(address(chickenBondManager));
         assertEq(cbmLUSDBalBefore, 0);
         assertEq(cbm3CRVBalBefore, 0);
 
-        // Artificially withdraw all the share value as CBM  
+        // Artificially withdraw all the share value as CBM
         uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
         curvePool.remove_liquidity(cbmShares, [uint256(0), uint256(0)]); // receive both LUSD and 3CRV, no minimums
 
         uint256 cbmLUSDBalAfter = lusdToken.balanceOf(address(chickenBondManager));
         uint256 cbm3CRVBalAfter = _3crvToken.balanceOf(address(chickenBondManager));
 
-        uint256 curve3CRVSpotAfter = curvePool.get_dy_underlying(1, 0, 1e18); 
+        uint256 curve3CRVSpotAfter = curvePool.get_dy_underlying(1, 0, 1e18);
 
         // divide the LUSD by the LUSD-per-3CRV, to get the value of the LUSD in 3CRV
         uint256 total3CRVValueAfter = cbm3CRVBalAfter + (cbmLUSDBalAfter * 1e18 /  curve3CRVSpotAfter);
 
         uint256 total3CRVRelativeDepositLoss = diffOrZero(total3CRVValueBefore, total3CRVValueAfter) * 1e18 / total3CRVValueBefore;
-        
+
         // Check that a proportional Curve 3CRV and LUSD deposit->withdraw loses between [0.01%, 1%] of initial deposit.
         assertLt(total3CRVRelativeDepositLoss, 1e16);
         assertGt(total3CRVRelativeDepositLoss, 1e14);
@@ -1346,30 +1364,30 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function loopOverCurveLUSDDepositSizes(int steps) public {
         uint256 depositAmount = 1e18;
         uint256 stepMultiplier = 10;
-    
+
         // Loop over deposit sizes
         int step;
         while (step < steps) {
-            // Tip CBM some LUSD 
+            // Tip CBM some LUSD
             tip(address(lusdToken), address(chickenBondManager), depositAmount);
 
             // Artificially deposit LUSD to Curve, as CBM
             vm.startPrank(address(chickenBondManager));
             curvePool.add_liquidity([depositAmount, 0], 0);
-            
+
             assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0);
 
-            // Artificially withdraw all the share value as CBM  
+            // Artificially withdraw all the share value as CBM
             uint256 cbmSharesBefore = curvePool.balanceOf(address(chickenBondManager));
             curvePool.remove_liquidity_one_coin(cbmSharesBefore, 0, 0);
             uint256 cbmSharesAfter = curvePool.balanceOf(address(chickenBondManager));
             assertEq(cbmSharesAfter, 0);
-            
+
             vm.stopPrank();
 
             uint256 cbmLUSDBalAfter = lusdToken.balanceOf(address(chickenBondManager));
             uint256 curveRelativeDepositLoss = diffOrZero(depositAmount, cbmLUSDBalAfter) * 1e18 / depositAmount;
-            
+
             console.log(depositAmount / 1e18);
             console.log(curveRelativeDepositLoss);
 
@@ -1379,19 +1397,19 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     // LUSD deposit, initial curve price above 1
-    function testCurveImmediateLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne1() public {  
+    function testCurveImmediateLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne1() public {
         makeCurveSpotPriceAbove1(200_000_000e18);
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
         loopOverCurveLUSDDepositSizes(10);
     }
 
-    function testCurveImmediateLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne2() public {  
+    function testCurveImmediateLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne2() public {
         makeCurveSpotPriceAbove1(500_000_000e18);
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
         loopOverCurveLUSDDepositSizes(10);
     }
 
-    function testCurveImmediateLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne3() public {  
+    function testCurveImmediateLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne3() public {
         makeCurveSpotPriceAbove1(1000_000_000e18);
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
         loopOverCurveLUSDDepositSizes(10);
@@ -1425,7 +1443,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             uint256 LUSDto3CRVDepositRatioBefore;
             uint256 LUSDto3CRVBalRatioAfter;
         }
-    
+
     function loopOverProportionalDepositSizes(int steps) public {
         Vars memory vars;
         vars._depositMagnitude = 1e18;
@@ -1433,12 +1451,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vars.steps = 10;
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
 
-        uint256 curve3CRVSpot = curvePool.get_dy_underlying(1, 0, 1e18); 
+        uint256 curve3CRVSpot = curvePool.get_dy_underlying(1, 0, 1e18);
 
         vm.startPrank(address(chickenBondManager));
 
         for (int i = 1; i <= steps; i++) {
-        
+
             // multiply by the lusd-per-3crv
             vars._lusdDepositAmount =  curve3CRVSpot * vars._depositMagnitude / 1e18;
             vars._3crvDepositAmount = vars._depositMagnitude;
@@ -1454,13 +1472,13 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             lusdToken.approve(address(curvePool), vars._lusdDepositAmount);
             _3crvToken.approve(address(curvePool), vars._3crvDepositAmount);
             curvePool.add_liquidity([vars._lusdDepositAmount, vars._3crvDepositAmount], 0); // deposit both tokens
-        
+
             uint256 cbmLUSDBalBefore = lusdToken.balanceOf(address(chickenBondManager));
             uint256 cbm3CRVBalBefore = _3crvToken.balanceOf(address(chickenBondManager));
             assertEq(cbmLUSDBalBefore, 0);
             assertEq(cbm3CRVBalBefore, 0);
 
-            // Artificially withdraw all the share value as CBM  
+            // Artificially withdraw all the share value as CBM
             uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
             curvePool.remove_liquidity(cbmShares, [uint256(0), uint256(0)]); // receive both LUSD and 3CRV, no minimums
 
@@ -1468,7 +1486,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             uint256 cbm3CRVBalAfter = _3crvToken.balanceOf(address(chickenBondManager));
             vars.LUSDto3CRVBalRatioAfter = cbmLUSDBalAfter * 1e18 / cbm3CRVBalAfter;
             console.log(vars.LUSDto3CRVBalRatioAfter, "lUSD to 3crv balance ratio");
-            uint256 curve3CRVSpotAfter = curvePool.get_dy_underlying(1, 0, 1e18); 
+            uint256 curve3CRVSpotAfter = curvePool.get_dy_underlying(1, 0, 1e18);
 
             // divide the LUSD by the LUSD-per-3CRV, to get the value of the LUSD in 3CRV
             uint256 total3CRVValueAfter = cbm3CRVBalAfter + (cbmLUSDBalAfter * 1e18 /  curve3CRVSpotAfter);
@@ -1477,32 +1495,161 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
             console.log(vars._depositMagnitude / 1e18);
             console.log(total3CRVRelativeDepositLoss);
-            
+
             vars._depositMagnitude *= vars.stepMultiplier;
         }
     }
 
     function testCurveImmediateProportionalLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne1() public {
-        makeCurveSpotPriceAbove1(50_000_000e18); 
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");  
+        makeCurveSpotPriceAbove1(50_000_000e18);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
         loopOverProportionalDepositSizes(10);
     }
 
      function testCurveImmediateProportionalLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne2() public {
-        makeCurveSpotPriceAbove1(1000_000_000e18); 
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");  
+        makeCurveSpotPriceAbove1(1000_000_000e18);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
         loopOverProportionalDepositSizes(10);
     }
 
     function testCurveImmediateProportionalLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceBelowOne1() public {
-        makeCurveSpotPriceBelow1(50_000_000e18); 
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");  
+        makeCurveSpotPriceBelow1(50_000_000e18);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
         loopOverProportionalDepositSizes(10);
     }
 
      function testCurveImmediateProportionalLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceBelowOne2() public {
-        makeCurveSpotPriceAbove1(1000_000_000e18); 
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");  
+        makeCurveSpotPriceAbove1(1000_000_000e18);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
         loopOverProportionalDepositSizes(10);
+    }
+
+    // --- Fee share test ---
+
+    function testSendFeeShareCallableOnlyByYearnGov() public {
+        // Create some bonds
+        uint256 bondAmount = 10e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        createBondForUser(C, bondAmount);
+
+        vm.warp(block.timestamp + 30 days);
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID);
+
+        tip(address(lusdToken), yearnGovernanceAddress, 37e18);
+        vm.startPrank(yearnGovernanceAddress);
+        lusdToken.approve(address(chickenBondManager), 37e18);
+        vm.stopPrank();
+
+        // Reverts for sLUSD holder
+        vm.startPrank(A);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        // Reverts for current bonder
+        vm.startPrank(C);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+         chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        // Reverts for random address
+        vm.startPrank(D);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        // reverts for yearn non-gov addresses
+        address YEARN_STRATEGIST = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
+        address YEARN_GUARDIAN = 0x846e211e8ba920B353FB717631C015cf04061Cc9;
+        address YEARN_KEEPER = 0xaaa8334B378A8B6D8D37cFfEF6A755394B4C89DF;
+
+        vm.startPrank(YEARN_STRATEGIST);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        vm.startPrank(YEARN_GUARDIAN);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        vm.startPrank(YEARN_KEEPER);
+        vm.expectRevert("CBM: Only Yearn Governance can call");
+        chickenBondManager.sendFeeShare(37e18);
+        vm.stopPrank();
+
+        // Succeeds for Yearn governance
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.sendFeeShare(37e18);
+    }
+
+    function testSendFeeShareInMigrationModeReverts() public {
+        // Create some bonds
+        uint256 bondAmount = 10e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        createBondForUser(C, bondAmount);
+
+        vm.warp(block.timestamp + 30 days);
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID);
+
+        uint256 feeShare = 37e18;
+
+        tip(address(lusdToken), yearnGovernanceAddress, feeShare);
+
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.activateMigration();
+        lusdToken.approve(address(chickenBondManager), feeShare);
+
+        vm.expectRevert("CBM: Receive fee share only in normal mode");
+        chickenBondManager.sendFeeShare(feeShare);
+    }
+
+    function testSendFeeShareInNormalModeIncreasesAcquiredLUSDInSP() public {
+        // Create some bonds
+        uint256 bondAmount = 10e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        createBondForUser(C, bondAmount);
+
+        vm.warp(block.timestamp + 30 days);
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID);
+
+        uint256 feeShare = 37e18;
+
+        tip(address(lusdToken), yearnGovernanceAddress, feeShare);
+        vm.startPrank(yearnGovernanceAddress);
+        lusdToken.approve(address(chickenBondManager), feeShare);
+        vm.stopPrank();
+
+        uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInSP();
+        uint256 permanentLUSDInSPBefore = chickenBondManager.getPermanentLUSDInSP();
+        uint256 pendingLUSDInSPBefore = chickenBondManager.totalPendingLUSD();
+        uint256 ownedLUSDInCurveBefore = chickenBondManager.getOwnedLUSDInCurve();
+
+        // Succeeds for Yearn governance
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.sendFeeShare(feeShare);
+
+        uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInSP();
+        uint256 permanentLUSDInSPAfter = chickenBondManager.getPermanentLUSDInSP();
+        uint256 pendingLUSDInSPAfter = chickenBondManager.totalPendingLUSD();
+        uint256 ownedLUSDInCurveAfter = chickenBondManager.getOwnedLUSDInCurve();
+
+        //Check acquired LUSD In SP increased by correct amount
+        uint256 tolerance = feeShare / 1e9;  // relative error tolerance of 1e-9
+        assertApproximatelyEqual(acquiredLUSDInSPAfter - acquiredLUSDInSPBefore, feeShare, tolerance);
+
+        // Other buckets don't change
+        assertEq(permanentLUSDInSPAfter, permanentLUSDInSPBefore);
+        assertEq(pendingLUSDInSPAfter, pendingLUSDInSPBefore);
+        assertEq(ownedLUSDInCurveAfter, ownedLUSDInCurveBefore);
     }
 }

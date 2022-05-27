@@ -8,6 +8,7 @@ import "../../../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
 import "../../SLUSDToken.sol";
 import "../../BondNFT.sol";
+import "../../LUSDSilo.sol";
 import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/ICurvePool.sol";
@@ -23,12 +24,13 @@ contract BaseTest is DSTest, stdCheats {
     ChickenBondManagerWrap chickenBondManager;
     BondNFT bondNFT;
     SLUSDToken sLUSDToken;
+    LUSDSilo lusdSilo;
 
     // Integrations
     IERC20 lusdToken;
     IERC20 _3crvToken;
     ICurvePool curvePool;
-    IYearnVault yearnLUSDVault;
+    IYearnVault yearnSPVault;
     IYearnVault yearnCurveVault;
     IYearnRegistry yearnRegistry;
     IUnipool sLUSDLPRewardsStaking;
@@ -174,7 +176,7 @@ contract BaseTest is DSTest, stdCheats {
         _3crvToken.approve(address(curvePool), _3crvDeposit);
         curvePool.add_liquidity([0, _3crvDeposit], 0);
         vm.stopPrank();
-       
+
         curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         console.log(curveLUSDSpotPrice, "curveLUSDSpotPrice test helper after");
 
@@ -182,7 +184,7 @@ contract BaseTest is DSTest, stdCheats {
     }
 
     function shiftFractionFromSPToCurve(uint256 _divisor) public returns (uint256) {
-        // Put some  LUSD in Curve: shift LUSD from SP to Curve 
+        // Put some  LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / _divisor; // shift fraction of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -200,7 +202,7 @@ contract BaseTest is DSTest, stdCheats {
     function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
         return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
     }
-    
+
     function diffOrZero(uint256 x, uint256 y) public pure returns (uint256) {
         return x > y ? x - y : 0;
     }

@@ -13,7 +13,7 @@ contract ChickenBondOperationsScript {
     IERC20 immutable lusdToken;
     IERC20 immutable sLUSDToken;
     ICurvePool immutable curvePool;
-    IYearnVault immutable public yearnLUSDVault;
+    IYearnVault immutable public yearnSPVault;
     IYearnVault immutable public yearnCurveVault;
 
     int128 immutable INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL;// = 0;
@@ -25,7 +25,7 @@ contract ChickenBondOperationsScript {
         lusdToken = _chickenBondManager.lusdToken();
         sLUSDToken = _chickenBondManager.sLUSDToken();
         curvePool = _chickenBondManager.curvePool();
-        yearnLUSDVault = _chickenBondManager.yearnLUSDVault();
+        yearnSPVault = _chickenBondManager.yearnSPVault();
         yearnCurveVault = _chickenBondManager.yearnCurveVault();
 
         INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL = _chickenBondManager.INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL();
@@ -75,14 +75,14 @@ contract ChickenBondOperationsScript {
             sLUSDToken.transferFrom(msg.sender, address(this), _sLUSDToRedeem - proxyBalance);
         }
 
-        (uint256 yTokensFromLUSDVault, uint256 yTokensFromCurveVault) = chickenBondManager.redeem(_sLUSDToRedeem);
+        (uint256 yTokensFromSPVault, uint256 yTokensFromCurveVault, ) = chickenBondManager.redeem(_sLUSDToRedeem);
 
         // The LUSD deltas from SP/Curve withdrawals are the amounts to send to the redeemer
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
         uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
 
         // Withdraw obtained yTokens from both vaults
-        if (yTokensFromLUSDVault > 0) {yearnLUSDVault.withdraw(yTokensFromLUSDVault);} // obtain LUSD from Yearn
+        if (yTokensFromSPVault > 0) {yearnSPVault.withdraw(yTokensFromSPVault);} // obtain LUSD from Yearn
         if (yTokensFromCurveVault > 0) {yearnCurveVault.withdraw(yTokensFromCurveVault);} // obtain LUSD3CRV from Yearn
 
         uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;

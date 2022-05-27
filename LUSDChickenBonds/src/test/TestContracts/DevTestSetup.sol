@@ -23,7 +23,7 @@ contract DevTestSetup is BaseTest {
         LUSDTokenTester mockLUSDToken = new LUSDTokenTester(ZERO_ADDRESS,ZERO_ADDRESS, ZERO_ADDRESS);
         lusdToken = IERC20(address(mockLUSDToken));
 
-        (A, B, C) = (accountsList[0], accountsList[1], accountsList[2]);
+        (A, B, C, yearnGovernanceAddress) = (accountsList[0], accountsList[1], accountsList[2], accountsList[9]);
 
         // Give some LUSD to test accounts
         tip(address(lusdToken), A, 100e18);
@@ -42,14 +42,14 @@ contract DevTestSetup is BaseTest {
 
         MockYearnVault mockYearnLUSDVault = new MockYearnVault("LUSD yVault", "yvLUSD");
         mockYearnLUSDVault.setAddresses(address(lusdToken));
-        yearnLUSDVault = IYearnVault(address(mockYearnLUSDVault));
+        yearnSPVault = IYearnVault(address(mockYearnLUSDVault));
 
         MockYearnVault mockYearnCurveVault = new MockYearnVault("Curve LUSD Pool yVault", "yvCurve-LUSD");
         mockYearnCurveVault.setAddresses(address(curvePool));
         yearnCurveVault = IYearnVault(address(mockYearnCurveVault));
 
         MockYearnRegistry mockYearnRegistry = new MockYearnRegistry(
-            address(yearnLUSDVault),
+            address(yearnSPVault),
             address(yearnCurveVault),
             address(lusdToken),
             address(curvePool)
@@ -62,6 +62,8 @@ contract DevTestSetup is BaseTest {
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
 
+        lusdSilo = new LUSDSilo();
+
         // Deploy LUSD/sLUSD AMM LP Rewards staking contract
         IERC20 uniToken = new ERC20("Uniswap LP Token", "UNI"); // mock Uniswap LP token
         sLUSDLPRewardsStaking = new Unipool(address(lusdToken), address(uniToken));
@@ -71,11 +73,14 @@ contract DevTestSetup is BaseTest {
             lusdTokenAddress: address(lusdToken),
             sLUSDTokenAddress: address(sLUSDToken),
             curvePoolAddress: address(curvePool),
-            yearnLUSDVaultAddress: address(yearnLUSDVault),
+            yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
-            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking)
+            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
+            yearnGovernanceAddress: yearnGovernanceAddress,
+            lusdSiloAddress: address(lusdSilo)
         });
+
         chickenBondManager = new ChickenBondManagerWrap(
             externalContractAddresses,
             TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds

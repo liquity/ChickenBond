@@ -127,7 +127,6 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
         checkCalcRedemptionFeePercentage(lastRedemptionTime, baseRedemptionRate, expectedRate);
     }
 
-
     // _minutesPassedSinceLastFeeOp
     function testMinutesPassedSinceLastRedemption() public {
         uint256 currentTime = 1649755222;
