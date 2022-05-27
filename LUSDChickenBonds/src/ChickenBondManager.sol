@@ -354,10 +354,8 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         uint256 redemptionFeePercentage = migration ? 0 : _updateRedemptionFeePercentage(fractionOfSLUSDToRedeem);
         uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfSLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
 
-        uint256 lusdInSP = calcTotalYearnLUSDVaultShareValue();
-        (, uint256 lusdInCurve) = getTotalLPAndLUSDInCurve();
-
         // In normal mode, calculate the LUSD to withdraw from LUSD vault, and send the corresponding yTokens to redeemer
+        uint256 lusdInSP = calcTotalYearnSPVaultShareValue();
         uint256 yTokensFromSPVault;
         if (!migration && lusdInSP > 0) {
             uint256 lusdToWithdrawFromSP = _getAcquiredLUSDInSP(lusdInSP) * fractionOfAcquiredLUSDToWithdraw / 1e18;
@@ -373,21 +371,14 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
             lusdToken.transferFrom(lusdSiloAddress, msg.sender, lusdFromSilo);
         }
         // In either mode, calculate the LUSD to withdraw from Curve, and send the corresponding yTokens to redeemer
-        uint256 lusd3CRVInCurveVault = calcTotalYearnCurveVaultShareValue(); // TODO
+        uint256 LUSD3CRVInCurve = calcTotalYearnCurveVaultShareValue();
         uint256 yTokensFromCurveVault;
-        if (lusd3CRVInCurveVault > 0) {
+        if (LUSD3CRVInCurve > 0) {
             uint256 lusdToWithdrawFromCurve = getAcquiredLUSDInCurve() * fractionOfAcquiredLUSDToWithdraw / 1e18;
             uint256 LUSD3CRVfToBurn = curvePool.calc_token_amount([lusdToWithdrawFromCurve, 0], false);
-            yTokensFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, lusd3CRVInCurveVault);
+            yTokensFromCurveVault = calcCorrespondingYTokens(yearnCurveVault, LUSD3CRVfToBurn, LUSD3CRVInCurve);
 
             yearnCurveVault.transfer(msg.sender, yTokensFromCurveVault);
-        }
-        // TODO
-        if (lusdInCurve > 0) {
-            uint256 yearnCurveVaultBalance = yearnCurveVault.balanceOf(address(this));
-            uint256 yTokensPermanentCurveVault = permanentLUSDInCurve * yearnCurveVaultBalance / lusdInCurve;
-            uint256 yTokensAcquiredCurveVault = yearnCurveVaultBalance - yTokensPermanentCurveVault;
-            yTokensFromCurveVault = yTokensAcquiredCurveVault * fractionOfAcquiredLUSDToWithdraw / 1e18;
         }
 
         _requireNonZeroAmount(yTokensFromSPVault + yTokensFromCurveVault + lusdFromSilo);
@@ -884,7 +875,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     }
 
     function getAcquiredLUSDInSP() public view returns (uint256) {
-        uint256 lusdInSP = calcTotalYearnLUSDVaultShareValue();
+        uint256 lusdInSP = calcTotalYearnSPVaultShareValue();
         return _getAcquiredLUSDInSP(lusdInSP);
     }
 
