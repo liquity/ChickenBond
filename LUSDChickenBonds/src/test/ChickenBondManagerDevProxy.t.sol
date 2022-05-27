@@ -90,11 +90,12 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         vm.startPrank(A);
         uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
         sLUSDToken.approve(address(chickenBondOperationsScript), sLUSDBalance);
-        chickenBondOperationsScript.redeemAndWithdraw(sLUSDBalance);
+        chickenBondOperationsScript.redeemAndWithdraw(sLUSDBalance / 2);
         vm.stopPrank();
 
         // checks
-        uint256 expectedLUSDBalance = accruedSLUSD * backingRatio / 1e18;
+        // fraction redeeemed: 1/2; redemption fee: 1/4; 1/2*(1 - 4) = 3/8
+        uint256 expectedLUSDBalance = accruedSLUSD * backingRatio / 1e18 * 3/8;
         assertEq(lusdToken.balanceOf(A) - previousBalance, expectedLUSDBalance, "LUSD balance doesn't match");
     }
 }

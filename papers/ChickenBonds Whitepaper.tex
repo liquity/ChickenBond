@@ -27,7 +27,11 @@
 
 \title{\textbf{ChickenBonds: Self-Bootstrapping Treasury}}
 \author{Liquity Team}
+<<<<<<< HEAD
+\date{May 25, 2021}
+=======
 \date{May 24, 2021}
+>>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
 
 \maketitle
 
@@ -783,6 +787,15 @@ and get:
   p_f = p_r\left(1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}\right) \frac{T_{opt}+\alpha}{T_{opt}}
 \end{equation}
 
+<<<<<<< HEAD
+The following chart plots $p_f$ on the y-axis in function of the Pending Bucket $q_p$ (x-axis) for $\alpha$=(50, 100, 150, 200), with $q_a=1$, $q_d=2$, $S=$1 and $r_a=r_p=r_d=0.1$. As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_comparison_price.png}
+
+Note that the curves are getting for higher $\alpha$ and that all the equations have lower branches, only one of which is shown on the chart (in blue for $\alpha$=50). 
+
+=======
+>>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
 \subparagraph{With $\alpha$ being adjusted by the controller}
 By assuming that the controller will keep the actual rebonding time constant (section \ref{sec:adjustment}), we can solve the approximation formula for $T_{opt}$ (equation \ref{eq:optimal_chicken_in_2}) for $\alpha$, obtaining
 
@@ -812,7 +825,16 @@ Using the new definitions of $H_{ROI}$ and $B_{ROI}$, we can solve equation \ref
   p_f = p_r\left(1 + \frac{T_t}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}\right)^2 
 \end{equation}
 
+<<<<<<< HEAD
+The following chart depicts the fair price (y-axis) according to equation \ref{eq:ROI-bonding-holding-controller} in function of the Pending Bucket $q_p$ (x-axis) for $T_t=(60, 120, 240, 480, 960)$, with $q_a=1$, $q_d=2$, $S=$1 and $r_a=r_p=r_d=0.1$.
+As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_controller_price.png}
+
+Note that the impact $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_a$, which influence $p_f$ in the same fashion.
+=======
+
+>>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
 
 \paragraph{Equating ROI of staking TKN and holding bTKN}
 Assuming rational markets and no additional risks for holding bTKN compared to holding (and staking) TKN, we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start. (Or is economically possible under perfectly rational conditions that a portfolio A has a higher yield than a portfolio B with the same risk profile?)

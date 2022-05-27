@@ -80,13 +80,25 @@ contract BaseTest is DSTest, stdCheats {
     }
 
     function assertNotApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin) public {
+        assertNotApproximatelyEqual(_x, _y, _margin, "");
+    }
+
+    function assertNotApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin, string memory _reason) public {
         uint256 diff = abs(_x, _y);
-        assertGt(diff, _margin);
+        assertGt(diff, _margin, _reason);
     }
 
     function assertGeAndWithinRange(uint256 _x, uint256 _y, uint _margin) public {
         assertGe(_x, _y);
         assertLe(_x - _y, _margin);
+    }
+
+    function assertRelativeError(uint256 _x, uint256 _y, uint _margin) public {
+        assertRelativeError(_x, _y, _margin, "");
+    }
+
+    function assertRelativeError(uint256 _x, uint256 _y, uint _margin, string memory _reason) public {
+        assertLt(abs(_x, _y) * 1e18 / _y, _margin, _reason);
     }
 
     function abs(uint256 x, uint256 y) public pure returns (uint256) {
@@ -164,7 +176,7 @@ contract BaseTest is DSTest, stdCheats {
         _3crvToken.approve(address(curvePool), _3crvDeposit);
         curvePool.add_liquidity([0, _3crvDeposit], 0);
         vm.stopPrank();
-       
+
         curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         console.log(curveLUSDSpotPrice, "curveLUSDSpotPrice test helper after");
 
@@ -172,7 +184,7 @@ contract BaseTest is DSTest, stdCheats {
     }
 
     function shiftFractionFromSPToCurve(uint256 _divisor) public returns (uint256) {
-        // Put some  LUSD in Curve: shift LUSD from SP to Curve 
+        // Put some  LUSD in Curve: shift LUSD from SP to Curve
         assertEq(chickenBondManager.getAcquiredLUSDInCurveVault(), 0);
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInLUSDVault() / _divisor; // shift fraction of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
@@ -190,7 +202,7 @@ contract BaseTest is DSTest, stdCheats {
     function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
         return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
     }
-    
+
     function diffOrZero(uint256 x, uint256 y) public pure returns (uint256) {
         return x > y ? x - y : 0;
     }
@@ -198,11 +210,11 @@ contract BaseTest is DSTest, stdCheats {
     function logCBMBuckets(string memory _logHeadingText) public view {
         console.log(_logHeadingText);
         console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
-        console.log(chickenBondManager.getAcquiredLUSDInLUSDVault(), "Acquired LUSD in Yearn");
-        console.log(chickenBondManager.getAcquiredLUSDInCurveVault(), "Acquired LUSD in Curve");
-        console.log(chickenBondManager.getPermanentLUSDInLUSDVault(), "Permanent LUSD in Yearn");
-        console.log(chickenBondManager.getPermanentLUSDInCurveVault(), "Permanent LUSD in Curve");
-        console.log(chickenBondManager.getOwnedLUSDInLUSDVault(), "Owned LUSD in SP (Ac. + Perm.)");
-        console.log(chickenBondManager.getOwnedLUSDInCurveVault(), "Owned LUSD in Curve (Ac. + Perm.)");
+        console.log(chickenBondManager.getAcquiredLUSDInSP(), "Acquired LUSD in Yearn");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
+        console.log(chickenBondManager.getPermanentLUSDInSP(), "Permanent LUSD in Yearn");
+        console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
+        console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
+        console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");
     }
 }

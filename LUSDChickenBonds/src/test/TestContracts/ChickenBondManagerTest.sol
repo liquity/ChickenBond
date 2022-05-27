@@ -24,6 +24,29 @@ contract ChickenBondManagerTest is BaseTest {
 
     // --- createBond tests ---
 
+    function testNFTEnumerationWorks() public {
+        uint256 A_bondId_1 = createBondForUser(A,  1e18);
+        uint256 A_bondId_2 = createBondForUser(A,  1e18);
+        uint256 B_bondId_1 = createBondForUser(B,  1e18);
+        uint256 B_bondId_2 = createBondForUser(B,  1e18);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 1);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 2);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 0), 3);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 1), 4);
+
+        // A chickens out the first bond, so it’s removed
+        vm.startPrank(A);
+        chickenBondManager.chickenOut(A_bondId_1);
+        vm.stopPrank();
+
+        uint256 B_bondId_3 = createBondForUser(B,  1e18);
+        uint256 A_bondId_3 = createBondForUser(A,  1e18);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 2);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 6);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 0), 3);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 1), 4);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 2), 5);
+    }
     function testFirstCreateBondDoesNotChangeBackingRatio() public {
         // Get initial backing ratio
         uint256 backingRatioBefore = chickenBondManager.calcSystemBackingRatio();
@@ -302,23 +325,23 @@ contract ChickenBondManagerTest is BaseTest {
     function testCreateBondDoesNotChangePermanentBuckets() public {
         uint256 bondAmount = 10e18;
 
-        uint256 permanentLUSDYTokens_1 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_1 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentYearnLUSD_1 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentCurveYTokens_1 = chickenBondManager.getPermanentLUSDInCurve();
 
         // A creates bond
         createBondForUser(A, bondAmount);
         uint256 bondNFT_A = bondNFT.totalMinted();
 
-        uint256 permanentLUSDYTokens_2 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_2 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentYearnLUSD_2 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentCurveYTokens_2 = chickenBondManager.getPermanentLUSDInCurve();
 
-        assertEq(permanentLUSDYTokens_2, permanentLUSDYTokens_1);
+        assertEq(permanentYearnLUSD_2, permanentYearnLUSD_1);
         assertEq(permanentCurveYTokens_2, permanentCurveYTokens_1);
 
         // B creates bond
         createBondForUser(B, bondAmount);
 
-        // fast forward time 
+        // fast forward time
         vm.warp(block.timestamp + 7 days);
 
         // A chickens in, creating some permanent liquidity
@@ -326,21 +349,21 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(bondNFT_A);
         vm.stopPrank();
 
-        uint256 permanentLUSDYTokens_3 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_3 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentYearnLUSD_3 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentCurveYTokens_3 = chickenBondManager.getPermanentLUSDInCurve();
         // Check permanent LUSD Bucket is non-zero
-        assertGt(permanentLUSDYTokens_3, 0);
-        // Check permanent Curve bucket has not changed 
+        assertGt(permanentYearnLUSD_3, 0);
+        // Check permanent Curve bucket has not changed
         assertEq(permanentCurveYTokens_3, permanentCurveYTokens_2);
 
         // C creates bond
         createBondForUser(C, bondAmount);
 
-        uint256 permanentLUSDYTokens_4 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_4 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentYearnLUSD_4 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentCurveYTokens_4 = chickenBondManager.getPermanentLUSDInCurve();
 
         // Check permanent buckets have not changed from C's new bond
-        assertEq(permanentLUSDYTokens_4, permanentLUSDYTokens_3);
+        assertEq(permanentYearnLUSD_4, permanentYearnLUSD_3);
         assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
     }
 
@@ -560,20 +583,20 @@ contract ChickenBondManagerTest is BaseTest {
 
         // time passes
         vm.warp(block.timestamp + 7 days);
-       
+
         // Get permanent buckets
-        uint256 permanentLUSDYTokens_1 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_1 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentYearnLUSD_1 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentCurveYTokens_1 = chickenBondManager.getPermanentLUSDInCurve();
 
         // A chickens out
         vm.startPrank(A);
         chickenBondManager.chickenOut(bondID_A);
         vm.stopPrank();
-       
+
         // Check permanent buckets haven't changed
-        uint256 permanentLUSDYTokens_2 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_2 = chickenBondManager.yTokensPermanentCurveVault();
-        assertEq(permanentLUSDYTokens_2, permanentLUSDYTokens_1);
+        uint256 permanentYearnLUSD_2 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentCurveYTokens_2 = chickenBondManager.getPermanentLUSDInCurve();
+        assertEq(permanentYearnLUSD_2, permanentYearnLUSD_1);
         assertEq(permanentCurveYTokens_2, permanentCurveYTokens_1);
 
         // B, C create bond
@@ -591,10 +614,10 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Get permanent buckets, check > 0
-        uint256 permanentLUSDYTokens_3 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_3 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentYearnLUSD_3 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentCurveYTokens_3 = chickenBondManager.getPermanentLUSDInCurve();
         // Check LUSD permanent bucket has increased
-        assertGt(permanentLUSDYTokens_3, 0);
+        assertGt(permanentYearnLUSD_3, 0);
         // Check Curve permanent bucket still be 0
         assertEq(permanentCurveYTokens_3, 0);
 
@@ -604,9 +627,9 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent bucekt haven't changed
-        uint256 permanentLUSDYTokens_4 = chickenBondManager.yTokensPermanentLUSDVault();
-        uint256 permanentCurveYTokens_4 = chickenBondManager.yTokensPermanentCurveVault();
-        assertEq(permanentLUSDYTokens_4, permanentLUSDYTokens_3);
+        uint256 permanentYearnLUSD_4 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentCurveYTokens_4 = chickenBondManager.getPermanentLUSDInCurve();
+        assertEq(permanentYearnLUSD_4, permanentYearnLUSD_3);
         assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
     }
 
@@ -1195,15 +1218,15 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(B, bondAmount);
         uint256 B_bondID = bondNFT.totalMinted();
 
-        uint256 permanentLUSDYTokens_1 = chickenBondManager.yTokensPermanentLUSDVault();
+        uint256 permanentYearnLUSD_1 = chickenBondManager.getPermanentLUSDInSP();
 
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        uint256 permanentLUSDYTokens_2 = chickenBondManager.yTokensPermanentLUSDVault();
-        assertGt(permanentLUSDYTokens_2, permanentLUSDYTokens_1);
+        uint256 permanentYearnLUSD_2 = chickenBondManager.getPermanentLUSDInSP();
+        assertGt(permanentYearnLUSD_2, permanentYearnLUSD_1);
 
         // C creates bond
         createBondForUser(C, bondAmount);
@@ -1212,7 +1235,7 @@ contract ChickenBondManagerTest is BaseTest {
         // fast forward time
         vm.warp(block.timestamp + 7 days);
 
-        uint256 permanentLUSDYTokens_3 = chickenBondManager.yTokensPermanentLUSDVault();
+        uint256 permanentYearnLUSD_3 = chickenBondManager.getPermanentLUSDInSP();
 
         // B chickens in
         vm.startPrank(B);
@@ -1220,13 +1243,13 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent LUSD bucket has increased
-        uint256 permanentLUSDYTokens_4 = chickenBondManager.yTokensPermanentLUSDVault();
-        assertGt(permanentLUSDYTokens_4, permanentLUSDYTokens_3);
+        uint256 permanentYearnLUSD_4 = chickenBondManager.getPermanentLUSDInSP();
+        assertGt(permanentYearnLUSD_4, permanentYearnLUSD_3);
 
         // fast forward time
         vm.warp(block.timestamp + 7 days);
 
-        uint256 permanentLUSDYTokens_5 = chickenBondManager.yTokensPermanentLUSDVault();
+        uint256 permanentYearnLUSD_5 = chickenBondManager.getPermanentLUSDInSP();
 
         // C chickens in
         vm.startPrank(C);
@@ -1234,8 +1257,8 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent LUSD bucket has increased
-        uint256 permanentLUSDYTokens_6 = chickenBondManager.yTokensPermanentLUSDVault();
-        assertGt(permanentLUSDYTokens_6, permanentLUSDYTokens_5);
+        uint256 permanentYearnLUSD_6 = chickenBondManager.getPermanentLUSDInSP();
+        assertGt(permanentYearnLUSD_6, permanentYearnLUSD_5);
     }
 
     function testChickenInDoesNotChangePermanentCurveBucket() public {
@@ -1251,7 +1274,7 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(B, bondAmount);
         uint256 B_bondID = bondNFT.totalMinted();
 
-        uint256 permanentCurveYTokens_1 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentCurveYTokens_1 = chickenBondManager.getPermanentLUSDInCurve();
 
         // A chickens in
         vm.startPrank(A);
@@ -1259,7 +1282,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent Curve bucket has not changed
-        uint256 permanentCurveYTokens_2 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentCurveYTokens_2 = chickenBondManager.getPermanentLUSDInCurve();
         assertEq(permanentCurveYTokens_2, permanentCurveYTokens_1);
 
         // C creates bond
@@ -1269,7 +1292,7 @@ contract ChickenBondManagerTest is BaseTest {
         // fast forward time
         vm.warp(block.timestamp + 7 days);
 
-        uint256 permanentCurveYTokens_3 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentCurveYTokens_3 = chickenBondManager.getPermanentLUSDInCurve();
 
         // B chickens in
         vm.startPrank(B);
@@ -1277,13 +1300,13 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent Curve bucket has not changed
-        uint256 permanentCurveYTokens_4 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentCurveYTokens_4 = chickenBondManager.getPermanentLUSDInCurve();
         assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
 
         // fast forward time
         vm.warp(block.timestamp + 7 days);
 
-        uint256 permanentCurveYTokens_5 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentCurveYTokens_5 = chickenBondManager.getPermanentLUSDInCurve();
 
         // C chickens in
         vm.startPrank(C);
@@ -1291,7 +1314,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent Curve bucket has not changed
-        uint256 permanentCurveYTokens_6 = chickenBondManager.yTokensPermanentCurveVault();
+        uint256 permanentCurveYTokens_6 = chickenBondManager.getPermanentLUSDInCurve();
         assertEq(permanentCurveYTokens_6, permanentCurveYTokens_5);
     }
 
@@ -1420,7 +1443,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(totalSLUSDAfter > 0);
     }
 
-    function testRedeemIncreasesCallersLUSDBalance() public {
+    function testRedeemIncreasesCallersYTokenBalance() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1448,23 +1471,23 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
         vm.stopPrank();
 
-        uint256 B_LUSDBalanceBefore = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceBefore = yearnLUSDVault.balanceOf(B);
 
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance / 2;
         vm.startPrank(B);
         chickenBondManager.redeem(sLUSDToRedeem);
 
-        uint256 B_LUSDBalanceAfter = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceAfter = yearnLUSDVault.balanceOf(B);
 
         // Check B's LUSD Balance has increased
-        assertTrue(B_LUSDBalanceAfter > B_LUSDBalanceBefore);
+        assertTrue(B_yTokensBalanceAfter > B_yTokensBalanceBefore);
     }
 
-    function testRedeemDecreasesAcquiredLUSDInYearnByCorrectFraction(uint256 redemptionFraction) public {
-        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9); 
+    function testRedeemDecreasesAcquiredLUSDInSPByCorrectFraction(uint256 redemptionFraction) public {
+        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9);
         // uint256 redemptionFraction = 5e17; // 50%
-        uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage();
+        uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage(redemptionFraction);
         // 1-r(1-f).  Fee is left inside system
         uint256 expectedFractionRemainingAfterRedemption = 1e18 - (redemptionFraction * (1e18 - percentageFee)) / 1e18;
         // Ensure the expected remaining is between 0 and 100%
@@ -1500,7 +1523,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Get acquired LUSD in Yearn before
-        uint256 acquiredLUSDInYearnBefore = chickenBondManager.getAcquiredLUSDInLUSDVault();
+        uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInSP();
 
         // B redeems some sLUSD
         uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
@@ -1514,10 +1537,10 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.redeem(sLUSDToRedeem);
 
         // Check acquired LUSD in Yearn has decreased by correct fraction
-        uint256 acquiredLUSDInYearnAfter = chickenBondManager.getAcquiredLUSDInLUSDVault();
-        uint256 expectedAcquiredLUSDInYearnAfter = acquiredLUSDInYearnBefore * expectedFractionRemainingAfterRedemption / 1e18;
+        uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInSP();
+        uint256 expectedAcquiredLUSDInSPAfter = acquiredLUSDInSPBefore * expectedFractionRemainingAfterRedemption / 1e18;
 
-        assertApproximatelyEqual(acquiredLUSDInYearnAfter, expectedAcquiredLUSDInYearnAfter, 1e9);
+        assertApproximatelyEqual(acquiredLUSDInSPAfter, expectedAcquiredLUSDInSPAfter, 1e9);
     }
 
     // ---
@@ -1528,7 +1551,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testRedeemChargesRedemptionFee() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 ROUNDING_ERROR = 2000;
+        uint256 ROUNDING_ERROR = 6000;
 
        createBondForUser(A, bondAmount);
 
@@ -1554,33 +1577,49 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
         vm.stopPrank();
 
-        uint256 B_LUSDBalanceBefore = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceBefore = yearnLUSDVault.balanceOf(B);
         uint256 backingRatio0 = chickenBondManager.calcSystemBackingRatio();
 
         //assertEq(chickenBondManager.getTotalAcquiredLUSD(), sLUSDToken.totalSupply());
-        assertEq(chickenBondManager.calcRedemptionFeePercentage(), 0);
+        assertEq(chickenBondManager.calcRedemptionFeePercentage(0), 0);
         // B redeems
         uint256 sLUSDToRedeem = sLUSDBalance / 2;
         vm.startPrank(B);
         chickenBondManager.redeem(sLUSDToRedeem);
 
-        uint256 B_LUSDBalanceAfter1 = lusdToken.balanceOf(B);
+        uint256 B_yTokensBalanceAfter1 = yearnLUSDVault.balanceOf(B);
         uint256 backingRatio1 = chickenBondManager.calcSystemBackingRatio();
 
-        // Check B's LUSD Balance has increased by exactly redemption amount:
-        // backing ratio was 1, and redemption fee was still zero
-        assertApproximatelyEqual(B_LUSDBalanceAfter1 - B_LUSDBalanceBefore, sLUSDToRedeem, ROUNDING_ERROR);
-        assertApproximatelyEqual(backingRatio0, backingRatio1, ROUNDING_ERROR);
+        // Check B's Y tokens Balance converted to LUSD has increased by exactly redemption amount after redemption fee,
+        // as backing ratio was 1
+        uint256 redemptionFraction = sLUSDToRedeem * 1e18 / sLUSDBalance;
+        uint256 redemptionFeePercentageExpected = redemptionFraction / chickenBondManager.BETA();
+        assertApproximatelyEqual(
+            (B_yTokensBalanceAfter1 - B_yTokensBalanceBefore) * yearnLUSDVault.pricePerShare() / 1e18,
+            sLUSDToRedeem * (1e18 - redemptionFeePercentageExpected) / 1e18,
+            ROUNDING_ERROR,
+            "Wrong B Y tokens balance increase after 1st redemption"
+        );
+        uint256 backingRatioExpected = backingRatio0 * (1e18 - redemptionFraction * (1e18 - redemptionFeePercentageExpected)/1e18)
+            / (1e18 - redemptionFraction);
+        assertApproximatelyEqual(backingRatio1, backingRatioExpected, ROUNDING_ERROR, "Wrong backing ratio after 1st redemption");
 
         // B redeems again
-        chickenBondManager.redeem(sLUSDToRedeem);
-        uint256 B_LUSDBalanceAfter2 = lusdToken.balanceOf(B);
-        uint256 backingRatio2 = chickenBondManager.calcSystemBackingRatio();
-        // Check B's LUSD Balance has increased by less than redemption amount
+        redemptionFraction = 3e18/4;
+        chickenBondManager.redeem(sLUSDToken.balanceOf(B) * redemptionFraction / 1e18);
+        uint256 B_yTokensBalanceAfter2 = yearnLUSDVault.balanceOf(B);
+        redemptionFeePercentageExpected = redemptionFeePercentageExpected + redemptionFraction / chickenBondManager.BETA();
+        backingRatioExpected = backingRatio1 * (1e18 - redemptionFraction * (1e18 - redemptionFeePercentageExpected)/1e18)
+            / (1e18 - redemptionFraction);
+        // Check B's Y tokens Balance converted to LUSD has increased by less than redemption amount
         // backing ratio was 1, but redemption fee was non zero
-        assertNotApproximatelyEqual(B_LUSDBalanceAfter2 - B_LUSDBalanceAfter2, sLUSDToRedeem, ROUNDING_ERROR);
+        assertGt(
+            sLUSDToRedeem - (B_yTokensBalanceAfter2 - B_yTokensBalanceAfter1) * yearnLUSDVault.pricePerShare() / 1e18,
+            ROUNDING_ERROR,
+            "Wrong B Y tokens balance increase after 2nd redemption"
+        );
         // Now backing ratio should have increased
-        assertNotApproximatelyEqual(backingRatio1, backingRatio2, ROUNDING_ERROR);
+        assertApproximatelyEqual(chickenBondManager.calcSystemBackingRatio(), backingRatioExpected, ROUNDING_ERROR, "Wrong backing ratio after 2nd redemption");
     }
 
     function testRedeemRevertsWhenCallerHasInsufficientSLUSD() public {
@@ -1669,9 +1708,9 @@ contract ChickenBondManagerTest is BaseTest {
 
     // Actual Yearn and Curve balance tests
 
-    // function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInYearnAndCurve() public {}
+    // function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInSPAndCurveVault() public {}
 
-    // function testShiftLUSDFromCurveToSPIncreasesLUSDInYearn() public {}
+    // function testShiftLUSDFromCurveToSPIncreasesLUSDInSP() public {}
     // function testShiftLUSDFromCurveToSPDecreasesLUSDInCurve() public {}
 
     // function testFailShiftLUSDFromCurveToSPWhen0LUSDInCurve() public {}

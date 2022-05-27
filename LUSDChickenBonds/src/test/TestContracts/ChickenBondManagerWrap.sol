@@ -28,9 +28,8 @@ contract ChickenBondManagerWrap is ChickenBondManager {
     {}
 
     // wrappers
-
-    function updateRedemptionRateAndTime(uint256 _decayedBaseRedemptionRate, uint256 _fractionOfSLUSDToRedeem) external {
-        return _updateRedemptionRateAndTime(_decayedBaseRedemptionRate, _fractionOfSLUSDToRedeem);
+    function updateRedemptionFeePercentage(uint256 _fractionOfSLUSDToRedeem) external returns (uint256) {
+        return _updateRedemptionFeePercentage(_fractionOfSLUSDToRedeem);
     }
 
     function minutesPassedSinceLastRedemption() external view returns (uint256) {
