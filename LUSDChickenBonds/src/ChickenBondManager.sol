@@ -325,8 +325,6 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         uint256 lusdToAcquire = accruedSLUSD * backingRatio / 1e18;
         uint256 lusdSurplus = taxedBondAmount - lusdToAcquire;
 
-        assert ((lusdToAcquire + lusdSurplus) <= taxedBondAmount);
-
         // Handle the surplus LUSD from the chicken-in:
         if (!migration) { // In normal mode, add the surplus to the permanent bucket by increasing the permament yToken tracker. This implicitly decreases the acquired LUSD.
             uint256 yTokensToPutInPermanent = calcCorrespondingYTokens(yearnLUSDVault, lusdSurplus, lusdInLUSDVault);
@@ -509,10 +507,10 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         yTokensPermanentLUSDVault = 0;
         yTokensPermanentCurveVault = 0;
 
-        _shiftAllLUSDToSilo();
+        _shiftAllLUSDInSPToSilo();
     }
 
-    function _shiftAllLUSDToSilo() internal {
+    function _shiftAllLUSDInSPToSilo() internal {
         uint256 yTokensToBurnFromLUSDVault = yearnLUSDVault.balanceOf(address(this));
 
         // Convert all Yearn LUSD vault yTokens to LUSD

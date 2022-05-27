@@ -96,7 +96,7 @@ contract MainnetTestSetup is BaseTest {
 
         bondNFT.setAddresses(address(chickenBondManager));
         sLUSDToken.setAddresses(address(chickenBondManager));
-        lusdSilo.initialize(address(chickenBondManager), address(lusdToken));
+        lusdSilo.initialize(address(chickenBondManager));
 
         // Log some current blockchain state
         console.log(block.timestamp, "block.timestamp");
