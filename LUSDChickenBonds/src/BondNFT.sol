@@ -25,7 +25,7 @@ contract BondNFT is ERC721Enumerable, Ownable {
         totalMinted++;
 
         uint256 tokenID = totalMinted;
-        _safeMint(_bonder, tokenID);
+        _mint(_bonder, tokenID);
        
         return tokenID;
     } 

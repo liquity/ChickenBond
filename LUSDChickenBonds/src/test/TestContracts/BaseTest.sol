@@ -78,13 +78,25 @@ contract BaseTest is DSTest, stdCheats {
     }
 
     function assertNotApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin) public {
+        assertNotApproximatelyEqual(_x, _y, _margin, "");
+    }
+
+    function assertNotApproximatelyEqual(uint256 _x, uint256 _y, uint256 _margin, string memory _reason) public {
         uint256 diff = abs(_x, _y);
-        assertGt(diff, _margin);
+        assertGt(diff, _margin, _reason);
     }
 
     function assertGeAndWithinRange(uint256 _x, uint256 _y, uint _margin) public {
         assertGe(_x, _y);
         assertLe(_x - _y, _margin);
+    }
+
+    function assertRelativeError(uint256 _x, uint256 _y, uint _margin) public {
+        assertRelativeError(_x, _y, _margin, "");
+    }
+
+    function assertRelativeError(uint256 _x, uint256 _y, uint _margin, string memory _reason) public {
+        assertLt(abs(_x, _y) * 1e18 / _y, _margin, _reason);
     }
 
     function abs(uint256 x, uint256 y) public pure returns (uint256) {
@@ -193,12 +205,12 @@ contract BaseTest is DSTest, stdCheats {
         return x > y ? x - y : 0;
     }
 
-    function logCBMBuckets(string memory _logHeadingText) public {
+    function logCBMBuckets(string memory _logHeadingText) public view {
         console.log(_logHeadingText);
         console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
-        console.log(chickenBondManager.getAcquiredLUSDInYearn(), "Acquired LUSD in Yearn");
+        console.log(chickenBondManager.getAcquiredLUSDInSP(), "Acquired LUSD in Yearn");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
-        console.log(chickenBondManager.getPermanentLUSDInYearn(), "Permanent LUSD in Yearn");
+        console.log(chickenBondManager.getPermanentLUSDInSP(), "Permanent LUSD in Yearn");
         console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
         console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
         console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");

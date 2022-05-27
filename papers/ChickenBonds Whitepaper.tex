@@ -27,7 +27,11 @@
 
 \title{\textbf{ChickenBonds: Self-Bootstrapping Treasury}}
 \author{Liquity Team}
-\date{April 28, 2021}
+<<<<<<< HEAD
+\date{May 25, 2021}
+=======
+\date{May 24, 2021}
+>>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
 
 \maketitle
 
@@ -52,7 +56,7 @@ More recently, DeFi 2.0 protocols such as Olympus Pro, Ondo and Tokemak have sta
 Chicken Bonds is a major innovation in liquidity acquisition technology and offers strong benefits to DeFi protocols and bond holders, while minimizing risk:
 
 \begin{itemize}
-    \item \textit{Cost-free liquidity accumulation for projects}. Rather than purchasing or renting liquidity, the system freely acquires treasury assets over time. Liquidity acquisition is incentivized by the amplified yields that are attainable by bond holders, enabled by the novel bonding dynamics.
+    \item \textit{Cost-free liquidity accumulation for projects}. Rather than purchasing or renting liquidity, the system freely acquires treasury assets over time in a self-bootstrapping manner. Liquidity acquisition is incentivized by the amplified yields that are attainable by bond holders, enabled by the novel bonding dynamics.
     \item \textit{Risk-free bonding for users}. Bond holders may “chicken out” and withdraw their deposited principal at any time, in lieu of converting it to derivative tokens. Therefore bonding is fully reversible and bond holders are not locked into any commitment to the protocol.
     \item \textit{System stability and resilience}. The Chicken Bonds derivative token bTKN has a hard price floor supported by a direct redemption mechanism. Most of the time, bTKN will in fact trade at a premium above this price floor due to amplified ("boosted") yield earned by the underlying liquidity. Though the premium may vary, the bonding rules guarantee that the price floor can only increase over time. As such, the Chicken Bonds boosted token does not suffer from the high volatility and strong reflexivity inherent to secondary tokens issued by other bonding protocols
 \end{itemize}
@@ -729,11 +733,14 @@ We have tried to validate results from this section without success. For instanc
 We can also consider the evolution of the fair price of bTKN over a given time period and compare it with an expected yield. In the following, we outline two different approaches.
 
 \paragraph{Equating ROI of bonding TKN and holding bTKN}
-We suppose that users would bond TKN rather than stake bTKN if the expected ROI from bonding is higher than of (buying and) holding bTKN, and vice versa. As long as holding bTKN is more attractive than bonding TKN, we can expect buying pressure on bTKN. Conversely, there should be selling pressure on bTKN if bonding is seen as more profitable since people would likely trade their bTKN for TKN. 
+We suppose that users would bond TKN rather than hold bTKN if the expected ROI from bonding is higher than of (buying and) holding bTKN, and vice versa. As long as holding bTKN is more attractive than bonding TKN, we can expect buying pressure on bTKN. Conversely, there should be selling pressure on bTKN if bonding is seen as more profitable since people would likely trade their bTKN for TKN. 
 
 As a consequence, there must be an equilibrium price at which holding bTKN and bonding TKN result in the same ROI for both activities. Due to the yield amplification, it's safe to assume that in the long run, holding bTKN is at least as profitable as staking TKN. We further assume that the price of TKN is already “arbitraged” and adapted to the natural rate $r_m$, which thus carries over to the price of bTKN. Therefore, the equilibrium price for bonding vs. holding should also be meaningful as a metric for the fair price.
 
-We now consider one optimal rebonding period $T_{opt}$, making the simplifying assumption that the price premium $\lambda$ stays constant during that time frame. Thus, the fair price $p_f$ changes from $t$ to $T_{opt}$ at the same rate as the redemption price $p_r$, yielding the ROI of holding bTKN:
+\subparagraph{With constant $\alpha$}
+We consider one optimal rebonding period $T_{opt}$ with a fixed parameter $\alpha$ and suppose that the system is "frozen" during that time frame, i.e. nobody chickens in or out and no new bonds are created. Since the protocol is still earning yield on its treasury $R$, the only quantity that would change during the respective period is $q_a$, but we can neglect the compounding effect for small $r_a$, $r_p$ and $r_d$ and short $T_{opt}$, treating $R$ as constant.
+
+Further, we make the simplifying assumption that the price premium $\lambda$ stays constant during that time frame. Thus, the fair price $p_f$ changes from $t$ to $T_{opt}$ at the same rate as the redemption price $p_r$, yielding the ROI of holding bTKN:
 
 \begin{equation}
   \label{eq:ROI-eq}
@@ -780,6 +787,55 @@ and get:
   p_f = p_r\left(1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}\right) \frac{T_{opt}+\alpha}{T_{opt}}
 \end{equation}
 
+<<<<<<< HEAD
+The following chart plots $p_f$ on the y-axis in function of the Pending Bucket $q_p$ (x-axis) for $\alpha$=(50, 100, 150, 200), with $q_a=1$, $q_d=2$, $S=$1 and $r_a=r_p=r_d=0.1$. As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_comparison_price.png}
+
+Note that the curves are getting for higher $\alpha$ and that all the equations have lower branches, only one of which is shown on the chart (in blue for $\alpha$=50). 
+
+=======
+>>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
+\subparagraph{With $\alpha$ being adjusted by the controller}
+By assuming that the controller will keep the actual rebonding time constant (section \ref{sec:adjustment}), we can solve the approximation formula for $T_{opt}$ (equation \ref{eq:optimal_chicken_in_2}) for $\alpha$, obtaining
+
+\begin{equation}
+  \label{eq:alpha-solved}
+  \alpha = T_{opt}\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}}
+\end{equation} 
+
+In the formula for $B_{ROI}$ as defined above (equation \ref{eq:ROI-bonding}), we can substitute $\alpha$ by equation $\ref{eq:alpha-solved}$ and, after rearranging and simplifying, we get
+
+\begin{equation}
+  \label{eq:BROI-controller}
+    B_{ROI} = \sqrt{\frac{p_f}{p_r}} - 1
+\end{equation} 
+
+Supposing that users will chicken in at the optimal rebonding time and given a target chicken in time $T_t$ aimed for by the controller (see section \ref{sec:adjustment}), we can replace $T_{opt}$ by $T_t$ in formula \ref{eq:ROI-eq2}:
+
+\begin{equation}
+  \label{eq:HROI-controller}
+    H_{ROI} = \frac{T_t}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}
+\end{equation} 
+
+Using the new definitions of $H_{ROI}$ and $B_{ROI}$, we can solve equation \ref{eq:ROI-bonding-holding} for $p_f$, obtaining
+
+\begin{equation}
+  \label{eq:ROI-bonding-holding-controller}
+  p_f = p_r\left(1 + \frac{T_t}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}\right)^2 
+\end{equation}
+
+<<<<<<< HEAD
+The following chart depicts the fair price (y-axis) according to equation \ref{eq:ROI-bonding-holding-controller} in function of the Pending Bucket $q_p$ (x-axis) for $T_t=(60, 120, 240, 480, 960)$, with $q_a=1$, $q_d=2$, $S=$1 and $r_a=r_p=r_d=0.1$.
+As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_controller_price.png}
+
+Note that the impact $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_a$, which influence $p_f$ in the same fashion.
+=======
+
+>>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
+
 \paragraph{Equating ROI of staking TKN and holding bTKN}
 Assuming rational markets and no additional risks for holding bTKN compared to holding (and staking) TKN, we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start. (Or is economically possible under perfectly rational conditions that a portfolio A has a higher yield than a portfolio B with the same risk profile?)
 
@@ -809,7 +865,7 @@ This allows us to reformulate the equation, which could be solved for $\gamma$:
 \subsubsection{Conservative approach}
 This approach is probably not the most accurate or realistic, but at least it can serve as a lower bound for the fair price.
 
-Let’s imagine a user who wants to buy bTKN to sell it after some time $T$, and, being conservative, they don’t want to rely on other users making the same valuations, but to make sure that even reedeming their bTKN they would at least make the gains corresponding to the natural rate.
+Let’s imagine a user who wants to buy bTKN to sell it after some time $T$, and, being conservative, they don’t want to rely on other users making the same valuations, but to make sure that even redeeming their bTKN they would at least make the gains corresponding to the natural rate.
 
 In the following chart, red line would correspond to the natural rate, green one to the redemption price and purple one to the (conservative) fair price.
 
@@ -987,7 +1043,7 @@ The break even point (equation \ref{eq:break_even_2}) and the optimal rebonding 
 
 Simulations have shown that the premium $\lambda$ tends to decrease over time as the system matures. If  $\alpha$ was kept constant, this would mean that the break even and optimal rebonding times would increase throughout the lifetime of the system, making bonds less and less attractive due to a decreasing APR.
 
-To avoid this outcome, the system could automatically adjust $\alpha$ to keep the optimal bonding duration constant. To that end, a controller could track the average (size-weighted) outstanding bond age and decrease $\alpha$ by a certain factor whenever the average age exceeds a given target age.
+To avoid this outcome, the system could automatically adjust $\alpha$ to keep the optimal bonding duration constant. To that end, a controller could track the average (size-weighted) outstanding bond age and decrease $\alpha$ by a certain factor whenever the average age exceeds a given target age $T_a$. Assuming a regular distribution of bond creation dates, we can deduct a target average chicken in time $T_t = 2T_a$.
 
 \subsection{Redemption fee}
   \label{sec:redemption-fee}

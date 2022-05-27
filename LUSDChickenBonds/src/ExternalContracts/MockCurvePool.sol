@@ -1,23 +1,28 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "../utils/console.sol";
-import "../Interfaces/ILUSDToken.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "../Interfaces/ICurvePool.sol";
-import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "../../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import "../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
+import "../test/TestContracts/LUSDTokenTester.sol";
+import "../utils/console.sol";
+
 
 contract MockCurvePool is ERC20, Ownable, ICurvePool {
-    IERC20 public lusdToken;
-   
+    LUSDTokenTester public lusdToken;
+
+    uint256 private constant DEFAULT_PRANK_PRICE = 1e18;
+    uint256 private nextPrankPrice = DEFAULT_PRANK_PRICE;
+
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
 
     function setAddresses(address _lusdTokenAddress) external onlyOwner {
-        lusdToken = ILUSDToken(_lusdTokenAddress);
+        lusdToken = LUSDTokenTester(_lusdTokenAddress);
     }
 
     function add_liquidity(uint256[2] memory _amounts, uint256) external {
+        nextPrankPrice = DEFAULT_PRANK_PRICE;
+
         uint256 lusdAmount = _amounts[0];
         lusdToken.transferFrom(msg.sender, address(this), lusdAmount);
        
@@ -26,6 +31,8 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
     }
 
     function remove_liquidity_one_coin(uint256 _burn_amount, int128, uint256) external {
+        nextPrankPrice = DEFAULT_PRANK_PRICE;
+
         uint lusdAmount = _burn_amount; // mock 1:1 shares:tokens
         lusdToken.transfer(msg.sender, lusdAmount);
 
@@ -52,7 +59,19 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
         return 30e26; // artificial total share token supply balance
     }
 
-    function get_dy_underlying(int128, int128, uint256 dx) external pure returns (uint256) {
-        return dx; // Artificial LUSD-3CRV spot price of 1.0
+    function get_dy_underlying(int128, int128, uint256 dx) external view returns (uint256) {
+        return dx * nextPrankPrice / 1e18;
+    }
+
+    function setNextPrankPrice(uint256 _nextPrankPrice) external {
+        nextPrankPrice = _nextPrankPrice;
+    }
+
+    function unprotectedMint(address _account, uint256 _amount) external {
+        // No check on caller here
+        _mint(_account, _amount);
+
+        // Maintain 1:1 ratio between LP shares and LUSD in the pool
+        lusdToken.unprotectedMint(address(this), _amount);
     }
 }
