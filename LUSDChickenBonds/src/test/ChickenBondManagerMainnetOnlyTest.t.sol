@@ -94,9 +94,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        console.log(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), "staking rewards bal after A chicken-in");
-        console.log(initialYield + taxAmount, "y1 + tax1");
-
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
             initialYield + taxAmount,
@@ -106,7 +103,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         vm.warp(block.timestamp + 600);
 
-        console.log("A");
         // A redeems full
         vm.startPrank(A);
         chickenBondManager.redeem(sLUSDToken.balanceOf(A));
@@ -115,32 +111,18 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Confirm total sLUSD supply is 0
         assertEq(sLUSDToken.totalSupply(), 0, "sLUSD supply not 0 after full redemption");
 
-        console.log("B");
         uint256 acquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
-        console.log(acquiredLUSDBefore, "total ac. LUSD before harvest 2");
+    
         // Yearn LUSD Vault gets some yield
         uint256 secondYield = _harvest();
         uint256 acquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
         uint256 acquiredLUSDIncrease = acquiredLUSDAfter - acquiredLUSDBefore;
-        console.log(chickenBondManager.getTotalAcquiredLUSD(), "total ac. LUSD after harvest 2");
-        console.log(acquiredLUSDIncrease, "total ac. LUSD increase harvest 2");
-
+        
         // B chickens in
         vm.startPrank(B);
         uint256 accruedSLUSD_B = chickenBondManager.calcAccruedSLUSD(B_bondID);
         chickenBondManager.chickenIn(B_bondID);
         vm.stopPrank();
-
-        console.log("C");
-        console.log(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), "staking rewards bal after B chicken-in");
-        console.log(initialYield,  "y1");
-        console.log(secondYield,  "y2");
-        console.log(initialYield + secondYield,  "y1 + y2");
-        console.log(taxAmount,  "tax");
-        console.log(2 * taxAmount,  "2x tax");
-        console.log(initialYield + 2 * taxAmount, "y1 + 2x tax");
-        console.log(initialYield + secondYield +  taxAmount, "y1 + y2 + tax");
-        console.log(initialYield + secondYield + 2 * taxAmount, "y1 + y2 + 2x tax");
 
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
@@ -152,10 +134,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check CBM holds no LUSD
         assertEq(lusdToken.balanceOf(address(chickenBondManager)), 0, "cbm holds non-zero lusd");
 
-        console.log("D");
         // check sLUSD B balance
         assertEq(sLUSDToken.balanceOf(B), accruedSLUSD_B, "sLUSD balance of B doesn't match");
-        console.log("E");
     }
 
     // --- redemption tests ---
@@ -876,7 +856,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     // CBM Yearn and Curve trackers
 
     function testShiftLUSDFromCurveToSPIncreasesCBMAcquiredLUSDInYearnTracker() public {
-        console.log("here");
         uint256 bondAmount = 10e18;
 
         // B and A create bonds

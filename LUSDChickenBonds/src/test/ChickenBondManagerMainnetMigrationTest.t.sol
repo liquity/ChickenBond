@@ -203,7 +203,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         assertEq(chickenBondManager.calcTotalYearnLUSDVaultShareValue(), 0);
     }
 
-    function testMigrationMovesAllLUSDInYearnToCurve() public {
+    function testMigrationMovesAllLUSDInYearnToLUSDSilo() public {
          // Create some bonds
         uint256 bondAmount = 10e18;
         uint A_bondID = createBondForUser(A, bondAmount);
@@ -224,141 +224,29 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 yearnSPLUSD = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
         assertGt(yearnSPLUSD, 0);
 
-        uint256 yearnCurveLUSD3CRVBefore = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        uint256 curveLUSDBefore = curvePool.calc_withdraw_one_coin(yearnCurveLUSD3CRVBefore, 0);
+        uint256 siloLUSDBefore = lusdToken.balanceOf(address(lusdSilo));
+        assertEq(siloLUSDBefore, 0);
      
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
-        uint256 yearnCurveLUSD3CRVAfter = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        uint256 curveLUSDAfter = curvePool.calc_withdraw_one_coin(yearnCurveLUSD3CRVAfter, 0);
+        uint256 siloLUSDAfter = lusdToken.balanceOf(address(lusdSilo));
 
-        uint256 curveLUSDIncrease = curveLUSDAfter - curveLUSDBefore;
+        uint256 siloLUSDIncrease = siloLUSDAfter - siloLUSDBefore;
 
-        uint256 relativeDelta = abs(curveLUSDIncrease, yearnSPLUSD) * 1e18 / yearnSPLUSD;
+        uint256 relativeDelta = abs(siloLUSDIncrease, yearnSPLUSD) * 1e18 / yearnSPLUSD;
 
-        console.log(curveLUSDIncrease, "curveLUSDIncrease");
-        console.log(yearnSPLUSD, "yearnSPLUSD");
-        console.log(relativeDelta, "relative Delta");
-        console.log(1e14, "1e14");
-
-        // Check all Yearn SP LUSD has been moved to Curve, with <0.1% relative error tolerance
-        assertLt(relativeDelta, 1e15);
-    }
-
-    function testMigrationSucceedsWhenMoveCrossesCurvePriceBoundary() public {
-        // Artificially raise Yearn deposit limit
-        vm.startPrank(yearnGovernanceAddress);
-        yearnLUSDVault.setDepositLimit(1e27);
-        vm.stopPrank();
-        
-        // Create some bonds
-        uint256 bondAmount = 100e24;
-        tip(address(lusdToken), A, 100e24);
-        tip(address(lusdToken), B, 100e24);
-        tip(address(lusdToken), C, 100e24);
-        uint A_bondID = createBondForUser(A, bondAmount);
-        uint B_bondID = createBondForUser(B, bondAmount);
-        createBondForUser(C, bondAmount);
-    
-        vm.warp(block.timestamp + 30 days);
-
-        // Chicken some bonds in
-        chickenInForUser(A, A_bondID);
-        chickenInForUser(B, B_bondID); 
-
-        makeCurveSpotPriceAbove1(100_000_000e18);
-
-        // shift small amount  (1 million'th) of LUSD from SP->Curve
-        shiftFractionFromSPToCurve(1000000);
-        uint256 curveSpotPriceBeforeMigration = curvePool.get_dy_underlying(0, 1, 1e18);
-        assertGt(curveSpotPriceBeforeMigration, 1e18);
-
-        // Check Yearn SP Vault is > 0
-        uint256 yearnSPLUSD = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
-
-        uint256 yearnCurveLUSD3CRVBefore = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        uint256 curveLUSDBefore = curvePool.calc_withdraw_one_coin(yearnCurveLUSD3CRVBefore, 0);
-     
-        // Yearn activates migration
-        vm.startPrank(yearnGovernanceAddress);
-        chickenBondManager.activateMigration();
-        vm.stopPrank();
-
-        uint256 yearnCurveLUSD3CRVAfter = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        uint256 curveLUSDAfter = curvePool.calc_withdraw_one_coin(yearnCurveLUSD3CRVAfter, 0);
-
-        uint256 curveLUSDIncrease = curveLUSDAfter - curveLUSDBefore;
-    
-        uint256 relativeDelta = abs(curveLUSDIncrease, yearnSPLUSD) * 1e18 / yearnSPLUSD;
-
-        console.log(curveLUSDIncrease, "curveLUSDIncrease");
-        console.log(yearnSPLUSD, "yearnSPLUSD");
-
-        // Check all Yearn SP LUSD has been moved to Curve, with <0.1% relative error tolerance
-        assertLt(relativeDelta, 1e15);
-
-        // Check curve spot has crossed boundary due to migration, and price is less than 1
-        uint256 curveSpotPriceAfterMigration = curvePool.get_dy_underlying(0, 1, 1e18);
-        assertLt(curveSpotPriceAfterMigration, 1e18);
-    }
-
-    function testMigrationSucceedsWithInitialCurvePriceBelow1() public {
-         // Create some bonds
-        uint256 bondAmount = 100e18;
-        uint A_bondID = createBondForUser(A, bondAmount);
-        uint B_bondID = createBondForUser(B, bondAmount);
-        createBondForUser(C, bondAmount);
-    
-        vm.warp(block.timestamp + 30 days);
-
-        // Chicken some bonds in
-        chickenInForUser(A, A_bondID);
-        chickenInForUser(B, B_bondID); 
-
-        makeCurveSpotPriceAbove1(200_000_000e18);
-        // shift small amount  (1 million'th) of LUSD from SP->Curve
-        shiftFractionFromSPToCurve(1000000);
-        makeCurveSpotPriceBelow1(200_000_000e18);
-
-        uint256 curveSpotPriceBeforeMigration = curvePool.get_dy_underlying(0, 1, 1e18);
-        assertLt(curveSpotPriceBeforeMigration, 1e18);
-
-        // Check Yearn SP Vault is > 0
-        uint256 yearnSPLUSD = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
-
-        uint256 yearnCurveLUSD3CRVBefore = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        uint256 curveLUSDBefore = curvePool.calc_withdraw_one_coin(yearnCurveLUSD3CRVBefore, 0);
-     
-        // Yearn activates migration
-        vm.startPrank(yearnGovernanceAddress);
-        chickenBondManager.activateMigration();
-        vm.stopPrank();
-
-        uint256 yearnCurveLUSD3CRVAfter = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        uint256 curveLUSDAfter = curvePool.calc_withdraw_one_coin(yearnCurveLUSD3CRVAfter, 0);
-
-        uint256 curveLUSDIncrease = curveLUSDAfter - curveLUSDBefore;
-    
-        uint256 relativeDelta = abs(curveLUSDIncrease, yearnSPLUSD) * 1e18 / yearnSPLUSD;
-
-
-        // Check all Yearn SP LUSD has been moved to Curve, with <0.1% relative error tolerance
-        assertLt(relativeDelta, 1e15);
-
-        // Check curve spot has *decreased* further below 1
-        uint256 curveSpotPriceAfterMigration = curvePool.get_dy_underlying(0, 1, 1e18);
-        assertLt(curveSpotPriceAfterMigration, 1e18);
-        assertLt(curveSpotPriceAfterMigration, curveSpotPriceBeforeMigration);
+        // Check all Yearn SP LUSD has been moved to Silo, with <1e-9 relative error tolerance
+        assertLt(relativeDelta, 1e9);
     }
 
     // --- Post-migration logic ---
 
     function testPostMigrationTotalPOLCanBeRedeemedExceptForFinalRedemptionFee() public {
         // Create some bonds
-        uint256 bondAmount = 100e18;
+        uint256 bondAmount = 100000e18;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
@@ -368,20 +256,31 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID); 
+
+        // shift some funds to Curve
+        chickenBondManager.shiftLUSDFromSPToCurve(bondAmount / 5);
      
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
-        // Check POL is only in Curve Vault
+        // Check POL is only in LUSD Silo Vault and Curve
         uint256 polCurve = chickenBondManager.getOwnedLUSDInCurveVault();
-        uint256 acquiredCurve = chickenBondManager.getAcquiredLUSDInCurveVault();
+        uint256 acquiredLUSDInCurve = chickenBondManager.getAcquiredLUSDInCurveVault();
         uint256 polSP = chickenBondManager.getOwnedLUSDInLUSDVault();
-        assertGt(acquiredCurve, 0);
-        assertEq(polCurve, acquiredCurve);
-        assertEq(polSP, 0);
 
+        uint256 acquiredLUSDInSilo = chickenBondManager.getAcquiredLUSDInSilo();
+        uint256 pendingLUSDInSilo = chickenBondManager.getPendingLUSDInSilo();
+        uint rawBalSilo = lusdToken.balanceOf(address(lusdSilo));
+        
+        assertGt(acquiredLUSDInCurve, 0, "ac. lusd in curve !> 0 before redeems");
+        assertEq(polCurve, acquiredLUSDInCurve, "polCurve != ac. in Curve");
+        assertEq(polSP, 0, "pol in SP != 0");
+        assertGt(acquiredLUSDInSilo, 0, "ac. lusd in silo !>0 before redeems");
+        assertGt(pendingLUSDInSilo, 0, "pending lusd in silo !>0 before redeems");
+        assertApproximatelyEqual(pendingLUSDInSilo + acquiredLUSDInSilo, rawBalSilo, rawBalSilo / 1e9, "silo bal != pending + acquired before redeems");  // Within 1e-9 relative error
+        
         assertGt(sLUSDToken.totalSupply(), 0);
 
         // B transfers 10% of his sLUSD to C
@@ -395,37 +294,38 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.startPrank(A);
         chickenBondManager.redeem(sLUSDToken.balanceOf(A));
         vm.stopPrank();
-        assertEq(sLUSDToken.balanceOf(A), 0);
+        assertEq(sLUSDToken.balanceOf(A), 0, "A sLUSD != 0 after redeem");
 
         vm.startPrank(B);
         chickenBondManager.redeem(sLUSDToken.balanceOf(B));
         vm.stopPrank();
-        assertEq(sLUSDToken.balanceOf(B), 0);
-
-        uint256 curveAcquiredLUSDBeforeLastRedeem = chickenBondManager.getAcquiredLUSDInCurveVault();
-        assertGt(curveAcquiredLUSDBeforeLastRedeem, 0);
-        uint256 C_expectedRedemptionFee = curveAcquiredLUSDBeforeLastRedeem * chickenBondManager.calcRedemptionFeePercentage() / 1e18;
-        assertGt(C_expectedRedemptionFee, 0);
+        assertEq(sLUSDToken.balanceOf(B), 0, "B sLUSD != 0 after redeem");
 
         // Final sLUSD holder C redeems
         vm.startPrank(C);
         chickenBondManager.redeem(sLUSDToken.balanceOf(C));
         vm.stopPrank();
-        assertEq(sLUSDToken.balanceOf(C), 0);
+        assertEq(sLUSDToken.balanceOf(C), 0, "C sLUSD !=0 after full redeem");
 
         // Check all sLUSD has been burned
-        assertEq(sLUSDToken.totalSupply(), 0, "slUSD supply != 0");
-
-        // Check only remaining LUSD in acquired bucket is the fee left over from the final redemption
-        uint256 acquiredLUSDInCurve = chickenBondManager.getAcquiredLUSDInCurveVault();
-        console.log(acquiredLUSDInCurve, "acquiredLUSDInCurve");
-        console.log(C_expectedRedemptionFee, "C_expectedRedemptionFee");
-
-        uint tolerance = C_expectedRedemptionFee / 1000; // 0.1% relative error tolerance
-        assertApproximatelyEqual(acquiredLUSDInCurve, C_expectedRedemptionFee, tolerance);
+        assertEq(sLUSDToken.totalSupply(), 0, "slUSD supply != 0 after full redeem");
 
         polSP = chickenBondManager.getOwnedLUSDInLUSDVault();
-        assertEq(polSP, 0);
+        assertEq(polSP, 0,"polSP !=0 after full redeem");
+
+        // Check acquired buckets have been emptied
+        acquiredLUSDInSilo = chickenBondManager.getAcquiredLUSDInSilo();
+        acquiredLUSDInCurve = chickenBondManager.getAcquiredLUSDInCurveVault();
+        assertEq(acquiredLUSDInSilo, 0, "ac. lusd in silo !=0 after full redeem");
+        //TODO: Fails here, as a small remainder (~0.1%) appears to be left in Curve. May be incorrect
+        //calculation in Curve acquired LUSD getter, which itself relies on permanent Curve getter.
+        assertEq(acquiredLUSDInCurve, 0, "ac. lusd in curve !=0 after full redeem");
+
+        // Check only pending LUSD remains in the Silo
+        pendingLUSDInSilo = chickenBondManager.getPendingLUSDInSilo();
+        assertGt(pendingLUSDInSilo, 0, "pending !> 0 after full redeem");
+        rawBalSilo = lusdToken.balanceOf(address(lusdSilo));
+        assertApproximatelyEqual(pendingLUSDInSilo, rawBalSilo, rawBalSilo / 1e9, "silo bal != pending after full redemption");  // Within 1e-9 relative error
     }
 
     function testPostMigrationCreateBondReverts() public {
@@ -493,9 +393,13 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID); 
      
+        // Put some LUSD in Curve
+        chickenBondManager.shiftLUSDFromSPToCurve(10e18); 
+
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
         chickenBondManager.activateMigration();
+        assertTrue(chickenBondManager.migration());
         vm.stopPrank();
 
         vm.expectRevert("CBM: Migration must be not be active");
@@ -590,7 +494,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         assertEq(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
     }
 
-    function testPostMigrationCIIncreasesAcquiredLUSDInCurve() public {
+    function testPostMigrationCIIncreasesAcquiredLUSDInLUSDSilo() public {
         // Create some bonds
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);
@@ -615,17 +519,17 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
-        // Get Curve acquired
-        uint256 acquiredLUSDInCurveBeforeCI = chickenBondManager.getAcquiredLUSDInCurveVault();
-        assertGt(acquiredLUSDInCurveBeforeCI, 0);
+        // Get Silo acquired LUSD
+        uint256 acquiredLUSDInSiloBeforeCI = chickenBondManager.getAcquiredLUSDInSilo();
+        assertGt(acquiredLUSDInSiloBeforeCI, 0);
 
         vm.warp(block.timestamp + 10 days);
         // C chickens in
         chickenInForUser(C, C_bondID); 
 
-       // Check Curve acquired LUSD increases after CI
-        uint256 acquiredLUSDInCurveAfterCI = chickenBondManager.getAcquiredLUSDInCurveVault();
-        assertGt(acquiredLUSDInCurveAfterCI, acquiredLUSDInCurveBeforeCI);
+       // Check Silo acquired LUSD increases after CI
+        uint256 acquiredLUSDInSiloAfterCI = chickenBondManager.getAcquiredLUSDInSilo();
+        assertGt(acquiredLUSDInSiloAfterCI, acquiredLUSDInSiloBeforeCI);
     }
 
     function testPostMigrationCISendsRefundToBonder() public {
@@ -663,6 +567,51 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         // Check C LUSD balance increases
         uint256 C_lusdBalAfterCI = lusdToken.balanceOf(C);
         assertGt(C_lusdBalAfterCI, C_lusdBalBeforeCI);
+    }
+
+    function testPostMigrationCIReducesLUSDSiloPendingBucketAndBalance() public {
+        // Create some bonds
+        uint256 bondAmount = 100e18;
+        uint A_bondID = createBondForUser(A, bondAmount);
+        uint B_bondID = createBondForUser(B, bondAmount);
+        uint C_bondID = createBondForUser(C, bondAmount);
+    
+        vm.warp(block.timestamp + 30 days);
+
+        // Chicken some bonds in
+        chickenInForUser(A, A_bondID);
+        chickenInForUser(B, B_bondID); 
+     
+        // shift some LUSD from SP->Curve
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        shiftFractionFromSPToCurve(10);
+
+        // Check yearn SP vault is > 0
+        assertGt(chickenBondManager.getOwnedLUSDInLUSDVault(), 0);
+
+        // Yearn activates migration
+        vm.startPrank(yearnGovernanceAddress);
+        chickenBondManager.activateMigration();
+        vm.stopPrank();
+
+        // Get Silo LUSD balance and buckets
+        uint pendingLUSDInSilo1 = chickenBondManager.getPendingLUSDInSilo();
+        uint rawPending1 = chickenBondManager.totalPendingLUSD();
+        uint siloBal1 = lusdToken.balanceOf(address(lusdSilo));
+        
+        vm.warp(block.timestamp + 10 days);
+        // C chickens in
+        chickenInForUser(C, C_bondID); 
+
+        // Get Silo LUSD balance and buckets
+        uint pendingLUSDInSilo2 = chickenBondManager.getPendingLUSDInSilo();
+        uint rawPending2 = chickenBondManager.totalPendingLUSD();
+        uint siloBal2 = lusdToken.balanceOf(address(lusdSilo));
+
+        // Check pending bucket and balance decreased
+        assertLt(pendingLUSDInSilo2, pendingLUSDInSilo1);
+        assertLt(rawPending2, rawPending1);
+        assertLt(siloBal2, siloBal1);
     }
 
     function testPostMigrationCIDoesntSendTaxToStakingRewards() public {
@@ -703,7 +652,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         assertEq(lusdBalanceStakingAfterCI,lusdBalanceStakingBeforeCI);  
     }
 
-    function testPostMigrationCOPullsPendingLUSDFromCurve() public {
+    function testPostMigrationCOPullsPendingLUSDFromLUSDSilo() public {
         // Create some bonds
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);
@@ -728,11 +677,12 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
-        // Get acquired LUSD in Curve before
-        uint256 LUSDInCurveBeforeCO = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        uint256 pendingLUSDBeforeCO = chickenBondManager.totalPendingLUSD();   
-        assertGt(LUSDInCurveBeforeCO, 0);
+        // Get pending and total LUSD in Silo before
+        uint256 pendingLUSDBeforeCO = chickenBondManager.getPendingLUSDInSilo();   
+        uint256 siloBalanceBeforeCO = lusdToken.balanceOf(address(lusdSilo));
+
         assertGt(pendingLUSDBeforeCO, 0);
+        assertGt(siloBalanceBeforeCO, 0);
 
         vm.warp(block.timestamp + 10 days);
 
@@ -741,13 +691,13 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenOut(C_bondID); 
         vm.stopPrank();
 
-        uint256 LUSDInCurveAfterCO = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        uint256 pendingLUSDAfterCO = chickenBondManager.totalPendingLUSD();  
-       
-        // Check total LUSD in Curve decreased
-        assertLt(LUSDInCurveAfterCO, LUSDInCurveBeforeCO, "total LUSD in curve didn't decrease");
+        uint256 pendingLUSDAfterCO = chickenBondManager.getPendingLUSDInSilo(); 
+        uint256 siloBalanceAfterCO = lusdToken.balanceOf(address(lusdSilo));
 
         // Check pending LUSD deceased
         assertEq(pendingLUSDAfterCO, 0, "pending didn't decrease"); 
+
+        //Check Silo balance decreased
+        assertLt(siloBalanceAfterCO, siloBalanceBeforeCO);
     }
 }
