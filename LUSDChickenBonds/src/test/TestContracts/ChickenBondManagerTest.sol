@@ -24,6 +24,29 @@ contract ChickenBondManagerTest is BaseTest {
 
     // --- createBond tests ---
 
+    function testNFTEnumerationWorks() public {
+        uint256 A_bondId_1 = createBondForUser(A,  1e18);
+        uint256 A_bondId_2 = createBondForUser(A,  1e18);
+        uint256 B_bondId_1 = createBondForUser(B,  1e18);
+        uint256 B_bondId_2 = createBondForUser(B,  1e18);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 1);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 2);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 0), 3);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 1), 4);
+
+        // A chickens out the first bond, so it’s removed
+        vm.startPrank(A);
+        chickenBondManager.chickenOut(A_bondId_1);
+        vm.stopPrank();
+
+        uint256 B_bondId_3 = createBondForUser(B,  1e18);
+        uint256 A_bondId_3 = createBondForUser(A,  1e18);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 2);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 6);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 0), 3);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 1), 4);
+        assertEq(bondNFT.tokenOfOwnerByIndex(B, 2), 5);
+    }
     function testFirstCreateBondDoesNotChangeBackingRatio() public {
         // Get initial backing ratio
         uint256 backingRatioBefore = chickenBondManager.calcSystemBackingRatio();
@@ -318,7 +341,7 @@ contract ChickenBondManagerTest is BaseTest {
         // B creates bond
         createBondForUser(B, bondAmount);
 
-        // fast forward time 
+        // fast forward time
         vm.warp(block.timestamp + 7 days);
 
         // A chickens in, creating some permanent liquidity
@@ -560,7 +583,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // time passes
         vm.warp(block.timestamp + 7 days);
-       
+
         // Get permanent buckets
         uint256 permanentYearnLUSD_1 = chickenBondManager.getPermanentLUSDInSP();
         uint256 permanentCurveYTokens_1 = chickenBondManager.getPermanentLUSDInCurve();
@@ -569,7 +592,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(A);
         chickenBondManager.chickenOut(bondID_A);
         vm.stopPrank();
-       
+
         // Check permanent buckets haven't changed
         uint256 permanentYearnLUSD_2 = chickenBondManager.getPermanentLUSDInSP();
         uint256 permanentCurveYTokens_2 = chickenBondManager.getPermanentLUSDInCurve();

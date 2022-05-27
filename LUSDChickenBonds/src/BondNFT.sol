@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "../lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /* TODO: 
 - Decide whether we need extra functionality for OpenSea / other markets, e.g. baseTokenURI
-- Decide whether we need an on-chain function for listing all bonds owned by the user, or whether events are sufficient
 */
-contract BondNFT is ERC721, Ownable {
+contract BondNFT is ERC721Enumerable, Ownable {
     address public chickenBondManagerAddress;
     uint256 public tokenSupply; // Total outstanding supply - increases by 1 upon mint, decreases by 1 upon burn.
     uint256 public totalMinted; // Tracks the total ever minted. Used for assigning a unique ID to each new mint.
