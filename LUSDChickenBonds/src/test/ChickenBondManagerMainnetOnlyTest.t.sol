@@ -6,7 +6,7 @@ import "../Interfaces/StrategyAPI.sol";
 
 
 contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
-    function _harvest() internal returns (uint256) {
+    function _spHarvest() internal returns (uint256) {
         // get strategy
         address strategy = yearnSPVault.withdrawalQueue(0);
         // get keeper
@@ -25,6 +25,28 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         return valueIncrease;
     }
 
+    function _curveHarvest() internal returns (uint256) {
+        // get strategy
+        address strategy = yearnCurveVault.withdrawalQueue(0);
+        // get keeper
+        address keeper = StrategyAPI(strategy).keeper();
+
+        // harvest
+        uint256 prevValue = chickenBondManager.calcTotalYearnCurveVaultShareValue();
+        console.log(prevValue, "prevValue");
+        vm.startPrank(keeper);
+        StrategyAPI(strategy).harvest();
+
+        console.log(chickenBondManager.calcTotalYearnCurveVaultShareValue(), "intValue");
+        // some time passes to unlock profits
+        vm.warp(block.timestamp + 600);
+        vm.stopPrank();
+        console.log(chickenBondManager.calcTotalYearnCurveVaultShareValue(), "newValue");
+        uint256 valueIncrease = chickenBondManager.calcTotalYearnCurveVaultShareValue() - prevValue;
+        console.log(valueIncrease, "harvest increase");
+        return valueIncrease;
+    }
+
     // --- chickening in when sTOKEN supply is zero ---
 
     function testFirstChickenInTransfersToRewardsContract() public {
@@ -37,7 +59,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + 600);
 
         // Yearn LUSD Vault gets some yield
-        uint256 initialYield = _harvest();
+        uint256 initialYield = _spHarvest();
 
         // A chickens in
         vm.startPrank(A);
@@ -72,7 +94,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
     }
 
-    function testFirstChickenInAfterRedemptionDepletionTransfersToRewardsContract() public {
+    function testFirstChickenInAfterRedemptionDepletionAndSPHarvestTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
         uint256 taxAmount = _getTaxForAmount(bondAmount);
@@ -87,7 +109,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + 600);
 
         // Yearn LUSD Vault gets some yield
-        uint256 initialYield = _harvest();
+        uint256 initialYield = _spHarvest();
 
         // A chickens in
         vm.startPrank(A);
@@ -115,7 +137,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertEq(sLUSDToken.totalSupply(), 0, "sLUSD supply not 0 after full redemption");
 
         // Yearn LUSD Vault gets some yield
-        uint256 secondYield = _harvest();
+        uint256 secondYield = _spHarvest();
 
         // B chickens in
         vm.startPrank(B);
@@ -137,6 +159,117 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // check sLUSD B balance
         assertEq(sLUSDToken.balanceOf(B), accruedSLUSD_B, "sLUSD balance of B doesn't match");
+    }
+
+    function testFirstChickenInAfterRedemptionDepletionAndCurveHarvestTransfersToRewardsContract() external {
+        uint256 bondAmount1 = 1000e18;
+        uint256 bondAmount2 = 100e18;
+        uint256 taxAmount1 = _getTaxForAmount(bondAmount1);
+        uint256 taxAmount2 = _getTaxForAmount(bondAmount2);
+        uint256 taxedAmount2 = _getTaxedAmount(bondAmount2);
+        tip(address(lusdToken), A, bondAmount1 + bondAmount2);
+
+        // create bond
+        uint256 A_bondID = createBondForUser(A, bondAmount1);
+
+        // wait 100 days
+        vm.warp(block.timestamp + 100 days);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // shift 50% to Curve
+        shiftFractionFromSPToCurve(2);
+
+        uint256 initialPermanentLUSDInSP = chickenBondManager.getPermanentLUSDInSP();
+        uint256 initialPermanentLUSDInCurve = chickenBondManager.getPermanentLUSDInCurve();
+
+        // A redeems full
+        vm.startPrank(A);
+        chickenBondManager.redeem(sLUSDToken.balanceOf(A));
+        // A withdraws from Yearn to make math simpler, otherwis harvest would be shared
+        yearnCurveVault.withdraw(yearnCurveVault.balanceOf(A));
+        vm.stopPrank();
+
+        logCBMBuckets("1 - After redemption");
+        uint256 prevValue = chickenBondManager.calcTotalYearnCurveVaultShareValue();
+        console.log("");
+        console.log(prevValue, "prevValue");
+        console.log(yearnCurveVault.balanceOf(address(chickenBondManager)), "  <---  Y token CBM  bal ----");
+        console.log(yearnCurveVault.pricePerShare(), "pps");
+        console.log(yearnCurveVault.balanceOf(address(chickenBondManager)) * yearnCurveVault.pricePerShare() / 1e18, "Curve value");
+        console.log(curvePool.balanceOf(address(yearnCurveVault)), "LUSD3CRV bal of Yearn Curve vault");
+        console.log(yearnCurveVault.totalSupply(), "Y total supply");
+
+        // harvest curve
+        uint256 curveYield = _spHarvest();
+
+        console.log("");
+        console.log("2 - After harvest");
+        uint256 _curveYield = chickenBondManager.calcTotalYearnCurveVaultShareValue() - prevValue;
+        console.log(_curveYield, "_curveYield");
+        console.log(chickenBondManager.calcTotalYearnCurveVaultShareValue(), "newValue");
+        console.log(yearnCurveVault.balanceOf(address(chickenBondManager)), "  <---  Y token CBM  bal ----");
+        console.log(yearnCurveVault.pricePerShare(), "pps");
+        console.log(yearnCurveVault.balanceOf(address(chickenBondManager)) * yearnCurveVault.pricePerShare() / 1e18, "Curve value");
+        console.log(curvePool.balanceOf(address(yearnCurveVault)), "LUSD3CRV bal of Yearn Curve vault");
+        console.log(yearnCurveVault.totalSupply(), "Y total supply");
+
+        logCBMBuckets("2 - After harvest");
+
+        // create bond
+        A_bondID = createBondForUser(A, bondAmount2);
+
+        // wait 100 days more
+        vm.warp(block.timestamp + 100 days);
+
+        // A chickens in
+        uint256 accruedSLUSD = chickenBondManager.calcAccruedSLUSD(A_bondID);
+
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // checks
+        // Acquired in SP vault
+        assertApproximatelyEqual(
+            chickenBondManager.getAcquiredLUSDInSP(),
+            accruedSLUSD,
+            1,
+            "Acquired LUSD in SP mismatch"
+        );
+        // Permanent in SP vault
+        assertApproximatelyEqual(
+            chickenBondManager.getPermanentLUSDInSP(),
+            initialPermanentLUSDInSP + taxedAmount2 - accruedSLUSD,
+            1,
+            "Permanent LUSD in SP mismatch"
+        );
+
+        // Acquired in Curve vault
+        assertApproximatelyEqual(
+            chickenBondManager.getAcquiredLUSDInCurve(),
+            0,
+            20,
+            "Acquired LUSD in Curve mismatch"
+        );
+        // Permanent in Curve vault
+        assertApproximatelyEqual(
+            chickenBondManager.getPermanentLUSDInCurve(),
+            initialPermanentLUSDInCurve,
+            1,
+            "Permanent LUSD in Curve mismatch"
+        );
+
+        // Balance in rewards contract
+        assertApproximatelyEqual(
+            lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
+            curveYield + taxAmount1 + taxAmount2,
+            50,
+            "Rewards contract balance mismatch"
+        );
     }
 
     // --- redemption tests ---
