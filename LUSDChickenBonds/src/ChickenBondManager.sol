@@ -71,11 +71,16 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     
     When migration mode has been triggered:
 
-    - No tokens are held in the Yearn LUSD vault; all liquidity is in Curve
-    - No token are held in the permanent bucket. Liquidity is either pending, or acquired
+    - No funds are held in the Yearn LUSD vault. Liquidity is held in the Silo and Curve.
+    - No funds are held in the permanent bucket. Liquidity is either pending, or acquired
+    - All pending LUSD is held in the Silo
     - Bond creation and public shifter functions are disabled
     - Users with an existing bond may still chicken in or out
-    - sLUSD holders may still redeem.
+    - Chicken-ins will no longer send the LUSD surplus to the permanent bucket. Instead, they refund the surplus to the bonder
+    - Chicken-outs pull the LUSD from the Silo's pending bucket
+    - sLUSD holders may still redeem
+    - Redemption fees are zero
+    - Redemptions pull funds proportionally from the acquired buckets of the Silo and Curve. 
     */
     bool public migration; 
 
@@ -299,8 +304,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         /* Upon the first chicken-in after a) system deployment or b) redemption of the full sLUSD supply, divert 
         * any earned yield to the sLUSD-LUSD AMM for fairness. 
         *
-        * This is not done in migration mode, since Yearn will not perform further harvests on strategies in v2 vaults after
-        * they have triggered migration.
+        * This is not done in migration mode since there is no need to send rewards to the staking contract.
         */
         if (sLUSDToken.totalSupply() == 0 && !migration) {
             _firstChickenIn();
@@ -335,7 +339,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         sLUSDToken.mint(msg.sender, accruedSLUSD);
         bondNFT.burn(_bondID);
 
-        // transfer the chicken in tax to the LUSD/sLUSD AMM LP Rewards staking contract during normal mode.
+        // Transfer the chicken in tax to the LUSD/sLUSD AMM LP Rewards staking contract during normal mode.
         if (!migration) {
             uint256 yTokensToSwapForTaxLUSD = calcCorrespondingYTokens(yearnLUSDVault, taxAmount, lusdInLUSDVault);
             _transferToRewardsStakingContract(yTokensToSwapForTaxLUSD);
@@ -492,13 +496,16 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     // --- Migration functionality ---
     
+    /* Migration function callable one-time and only by Yearn governance. Pulls all LUSD in the Yearn LUSD vault and dumps it into
+    * a LUSDSilo contract, and moves all permanent LUSD in Curve to the Curve acquired bucket.
+    */
     function activateMigration() external {
         _requireCallerIsYearnGovernance();
-         _requireMigrationNotActive();
+        _requireMigrationNotActive();
 
         migration = true;
 
-        // Zero the permament yTokens trackers.  This implicitly makes all permament liquidity acquired.
+        // Zero the permament yTokens trackers.  This implicitly makes all permament liquidity acquired (and redeemable)
         yTokensPermanentLUSDVault = 0;
         yTokensPermanentCurveVault = 0;
 
