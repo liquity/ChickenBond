@@ -26,14 +26,15 @@ contract DevTestSetup is BaseTest {
         (A, B, C, yearnGovernanceAddress) = (accountsList[0], accountsList[1], accountsList[2], accountsList[9]);
 
         // Give some LUSD to test accounts
-        tip(address(lusdToken), A, 100e18);
-        tip(address(lusdToken), B, 100e18);
-        tip(address(lusdToken), C, 100e18);
+        uint256 initialLUSDAmount = 2000e18;
+        tip(address(lusdToken), A, initialLUSDAmount);
+        tip(address(lusdToken), B, initialLUSDAmount);
+        tip(address(lusdToken), C, initialLUSDAmount);
 
         // Check accounts are funded
-        assertEq(lusdToken.balanceOf(A), 100e18);
-        assertEq(lusdToken.balanceOf(B), 100e18);
-        assertEq(lusdToken.balanceOf(C), 100e18);
+        assertEq(lusdToken.balanceOf(A), initialLUSDAmount);
+        assertEq(lusdToken.balanceOf(B), initialLUSDAmount);
+        assertEq(lusdToken.balanceOf(C), initialLUSDAmount);
 
         // Deploy external mock contracts, and assign corresponding interfaces
         MockCurvePool mockCurvePool = new MockCurvePool("LUSD-3CRV Pool", "LUSD3CRV-f");

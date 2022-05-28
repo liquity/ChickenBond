@@ -188,7 +188,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check Yearn SP Vault is > 0
-        assertGt(chickenBondManager.calcTotalYearnLUSDVaultShareValue(), 0);
+        assertGt(chickenBondManager.calcTotalYearnSPVaultShareValue(), 0);
        
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
@@ -196,7 +196,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Check Yearn SP vault contains 0 LUSD
-        assertEq(chickenBondManager.calcTotalYearnLUSDVaultShareValue(), 0);
+        assertEq(chickenBondManager.calcTotalYearnSPVaultShareValue(), 0);
     }
 
     function testMigrationMovesAllLUSDInYearnToLUSDSilo() public {
@@ -217,7 +217,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check Yearn SP Vault is > 0
-        uint256 yearnSPLUSD = chickenBondManager.calcTotalYearnLUSDVaultShareValue();
+        uint256 yearnSPLUSD = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertGt(yearnSPLUSD, 0);
 
         uint256 siloLUSDBefore = lusdToken.balanceOf(address(lusdSilo));

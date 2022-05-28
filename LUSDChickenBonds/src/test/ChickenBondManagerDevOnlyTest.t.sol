@@ -52,7 +52,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
     }
 
-    function testFirstChickenInAfterRedemptionDepletionTransfersToRewardsContract() public {
+    function testFirstChickenInAfterRedemptionDepletionAndSPHarvestTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
         uint256 taxAmount = _getTaxForAmount(bondAmount);
@@ -112,5 +112,97 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         );
         // check sLUSD B balance
         assertEq(sLUSDToken.balanceOf(B), accruedSLUSD_B, "sLUSD balance of B doesn't match");
+    }
+
+    function testFirstChickenInAfterRedemptionDepletionAndCurveHarvestTransfersToRewardsContract() external {
+        uint256 bondAmount1 = 1000e18;
+        uint256 bondAmount2 = 100e18;
+
+        // create bond
+        uint256 A_bondID = createBondForUser(A, bondAmount1);
+
+        // wait 100 days
+        vm.warp(block.timestamp + 100 days);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // shift 50% to Curve
+        MockCurvePool(address(curvePool)).setNextPrankPrice(105e16);
+        shiftFractionFromSPToCurve(2);
+
+        uint256 initialPermanentLUSDInSP = chickenBondManager.getPermanentLUSDInSP();
+        uint256 initialPermanentLUSDInCurve = chickenBondManager.getPermanentLUSDInCurve();
+
+        // A redeems full
+        uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
+        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
+        uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
+        vm.startPrank(A);
+        chickenBondManager.redeem(sLUSDToken.balanceOf(A));
+        // A withdraws from Yearn to make math simpler, otherwise harvest would be shared
+        yearnCurveVault.withdraw(yearnCurveVault.balanceOf(A));
+        vm.stopPrank();
+
+        // harvest curve
+        uint256 prevValue = chickenBondManager.calcTotalYearnCurveVaultShareValue();
+        MockYearnVault(address(yearnCurveVault)).harvest(1000e18);
+        uint256 curveYield = chickenBondManager.calcTotalYearnCurveVaultShareValue() - prevValue;
+
+        // create bond
+        A_bondID = createBondForUser(A, bondAmount2);
+
+        // wait 100 days more
+        vm.warp(block.timestamp + 100 days);
+
+        // A chickens in
+        uint256 accruedSLUSD = chickenBondManager.calcAccruedSLUSD(A_bondID);
+
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // checks
+        // Acquired in SP vault
+        assertApproximatelyEqual(
+            chickenBondManager.getAcquiredLUSDInSP(),
+            accruedSLUSD,
+            1,
+            "Acquired LUSD in SP mismatch"
+        );
+        // Permanent in SP vault
+        assertApproximatelyEqual(
+            chickenBondManager.getPermanentLUSDInSP(),
+            initialPermanentLUSDInSP + _getTaxedAmount(bondAmount2) - accruedSLUSD,
+            1,
+            "Permanent LUSD in SP mismatch"
+        );
+
+        // Acquired in Curve vault
+        assertApproximatelyEqual(
+            chickenBondManager.getAcquiredLUSDInCurve(),
+            0,
+            20,
+            "Acquired LUSD in Curve mismatch"
+        );
+        // Permanent in Curve vault
+        assertApproximatelyEqual(
+            chickenBondManager.getPermanentLUSDInCurve(),
+            initialPermanentLUSDInCurve,
+            1,
+            "Permanent LUSD in Curve mismatch"
+        );
+
+        // Balance in rewards contract
+        //uint256 yieldFromFirstChickenInRedemptionFee = sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
+        assertApproximatelyEqual(
+            lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
+            //curveYield + _getTaxForAmount(bondAmount1) + _getTaxForAmount(bondAmount2) + yieldFromFirstChickenInRedemptionFee,
+            curveYield + _getTaxForAmount(bondAmount1) + _getTaxForAmount(bondAmount2) + sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18,
+            250,
+            "Rewards contract balance mismatch"
+        );
     }
 }

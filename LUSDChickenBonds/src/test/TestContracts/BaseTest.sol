@@ -185,13 +185,13 @@ contract BaseTest is DSTest, stdCheats {
 
     function shiftFractionFromSPToCurve(uint256 _divisor) public returns (uint256) {
         // Put some  LUSD in Curve: shift LUSD from SP to Curve
-        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        assertEq(chickenBondManager.getAcquiredLUSDInCurve(), 0, "Already some acquired LUSD in Curve");
         uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / _divisor; // shift fraction of LUSD in SP
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
-        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0);
+        assertTrue(chickenBondManager.getAcquiredLUSDInCurve() > 0, "No acquired LUSD in Curve");
 
         uint256 curveSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
-        assertGt(curveSpotPrice, 1e18);
+        assertGe(curveSpotPrice, 1e18, "Curve spot price < 1");
         return lusdToShift;
     }
 
@@ -210,11 +210,22 @@ contract BaseTest is DSTest, stdCheats {
     function logCBMBuckets(string memory _logHeadingText) public view {
         console.log(_logHeadingText);
         console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
-        console.log(chickenBondManager.getAcquiredLUSDInSP(), "Acquired LUSD in Yearn");
+        console.log(chickenBondManager.getAcquiredLUSDInSP(), "Acquired LUSD in SP");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
-        console.log(chickenBondManager.getPermanentLUSDInSP(), "Permanent LUSD in Yearn");
+        console.log(chickenBondManager.getPermanentLUSDInSP(), "Permanent LUSD in SP");
         console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
         console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
         console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");
+    }
+
+    function logState(string memory _logHeadingText) public view {
+        console.log("");
+        logCBMBuckets(_logHeadingText);
+        console.log(chickenBondManager.calcSystemBackingRatio(), "Backing ratio");
+        console.log(sLUSDToken.totalSupply(), "sLUSD total supply");
+        console.log(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), "balance of AMM rewards contract");
+        console.log(yearnSPVault.balanceOf(address(chickenBondManager)),"SP Y tokens in CBM");
+        console.log(yearnCurveVault.balanceOf(address(chickenBondManager)),"Curve Y tokens in CBM");
+        console.log("");
     }
 }
