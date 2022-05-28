@@ -280,6 +280,21 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         _transferToRewardsStakingContract(lusdBalanceDelta);
     }
 
+    function _withdrawFromCurveVaultAndTransferToRewardsStakingContract(uint256 _yTokensToSwap) internal {
+        uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
+        yearnCurveVault.withdraw(_yTokensToSwap);
+        uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
+
+        // obtain LUSD from Curve
+        if (LUSD3CRVBalanceDelta > 0) {
+            uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+            curvePool.remove_liquidity_one_coin(LUSD3CRVBalanceDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);
+
+            uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
+            _transferToRewardsStakingContract(lusdBalanceDelta);
+        }
+    }
+
     // Divert acquired yield to LUSD/sLUSD AMM LP rewards staking contract
     // It happens on the very first chicken in event of the system, or any time that redemptions deplete sLUSD total supply to zero
     function _firstChickenIn() internal {
@@ -305,18 +320,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
             // withdraw LUSD3CRV from Curve Vault
             if (yTokensFromCurveVault > 0) {
-                uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
-                yearnCurveVault.withdraw(yTokensFromCurveVault);
-                uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
-
-                // obtain LUSD from Curve
-                if (LUSD3CRVBalanceDelta > 0) {
-                    uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-                    curvePool.remove_liquidity_one_coin(LUSD3CRVBalanceDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);
-
-                    uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-                    _transferToRewardsStakingContract(lusdBalanceDelta);
-                }
+                _withdrawFromCurveVaultAndTransferToRewardsStakingContract(yTokensFromCurveVault);
             }
         }
     }
