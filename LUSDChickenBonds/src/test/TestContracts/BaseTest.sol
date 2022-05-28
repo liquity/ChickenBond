@@ -208,7 +208,6 @@ contract BaseTest is DSTest, stdCheats {
     }
 
     function logCBMBuckets(string memory _logHeadingText) public view {
-        console.log("");
         console.log(_logHeadingText);
         console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
         console.log(chickenBondManager.getAcquiredLUSDInSP(), "Acquired LUSD in SP");
@@ -217,8 +216,16 @@ contract BaseTest is DSTest, stdCheats {
         console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
         console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
         console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");
+    }
+
+    function logState(string memory _logHeadingText) public view {
+        console.log("");
+        logCBMBuckets(_logHeadingText);
         console.log(chickenBondManager.calcSystemBackingRatio(), "Backing ratio");
         console.log(sLUSDToken.totalSupply(), "sLUSD total supply");
         console.log(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), "balance of AMM rewards contract");
+        console.log(yearnSPVault.balanceOf(address(chickenBondManager)),"SP Y tokens in CBM");
+        console.log(yearnCurveVault.balanceOf(address(chickenBondManager)),"Curve Y tokens in CBM");
+        console.log("");
     }
 }
