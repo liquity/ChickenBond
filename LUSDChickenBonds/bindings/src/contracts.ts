@@ -5,6 +5,7 @@ import { Signer } from "@ethersproject/abstract-signer";
 import bondNFT from "../artifacts/BondNFT.json";
 import chickenBondManager from "../artifacts/ChickenBondManager.json";
 import erc20 from "../artifacts/ERC20.json";
+import lusdSilo from "../artifacts/LUSDSilo.json";
 import lusdTokenTester from "../artifacts/LUSDTokenTester.json";
 import mockCurvePool from "../artifacts/MockCurvePool.json";
 import mockYearnRegistry from "../artifacts/MockYearnRegistry.json";
@@ -16,6 +17,7 @@ import {
   BondNFTFactory,
   ChickenBondManagerFactory,
   ERC20Factory,
+  LUSDSiloFactory,
   LUSDTokenTesterFactory,
   MockCurvePoolFactory,
   MockYearnRegistryFactory,
@@ -47,6 +49,11 @@ export interface LUSDChickenBondContractFactories {
     factory: MockCurvePoolFactory;
   };
 
+  lusdSilo: {
+    contractName: "LUSDSilo";
+    factory: LUSDSiloFactory;
+  };
+
   lusdToken: {
     contractName: "LUSDTokenTester";
     factory: LUSDTokenTesterFactory;
@@ -72,7 +79,7 @@ export interface LUSDChickenBondContractFactories {
     factory: MockYearnRegistryFactory;
   };
 
-  yearnLUSDVault: {
+  yearnSPVault: {
     contractName: "MockYearnVault";
     factory: MockYearnVaultFactory;
   };
@@ -127,12 +134,13 @@ const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   bondNFT: checkArtifact("BondNFT", bondNFT),
   chickenBondManager: checkArtifact("ChickenBondManager", chickenBondManager),
   curvePool: checkArtifact("MockCurvePool", mockCurvePool),
+  lusdSilo: checkArtifact("LUSDSilo", lusdSilo),
   lusdToken: checkArtifact("LUSDTokenTester", lusdTokenTester),
   sLUSDLPRewardsStaking: checkArtifact("Unipool", unipool),
   sLUSDToken: checkArtifact("SLUSDToken", sLUSDToken),
   uniToken: checkArtifact("ERC20", erc20),
   yearnCurveVault: checkArtifact("MockYearnVault", mockYearnVault),
-  yearnLUSDVault: checkArtifact("MockYearnVault", mockYearnVault),
+  yearnSPVault: checkArtifact("MockYearnVault", mockYearnVault),
   yearnRegistry: checkArtifact("MockYearnRegistry", mockYearnRegistry)
 });
 

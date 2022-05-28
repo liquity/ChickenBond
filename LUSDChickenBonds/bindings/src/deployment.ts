@@ -94,6 +94,8 @@ class LUSDChickenBondDeployment {
   private async deployContracts(): Promise<LUSDChickenBondDeployedContracts> {
     const { factories, overrides, config } = this;
 
+    const lusdSilo = await this.deployContract(factories.lusdSilo, overrides);
+
     const lusdToken = await this.deployContract(
       factories.lusdToken,
       AddressZero,
@@ -109,8 +111,8 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const yearnLUSDVault = await this.deployContract(
-      factories.yearnLUSDVault,
+    const yearnSPVault = await this.deployContract(
+      factories.yearnSPVault,
       "LUSD yVault",
       "yvLUSD",
       overrides
@@ -125,7 +127,7 @@ class LUSDChickenBondDeployment {
 
     const yearnRegistry = await this.deployContract(
       factories.yearnRegistry,
-      yearnLUSDVault.contract.address,
+      yearnSPVault.contract.address,
       yearnCurveVault.contract.address,
       lusdToken.contract.address,
       curvePool.contract.address,
@@ -165,12 +167,13 @@ class LUSDChickenBondDeployment {
       {
         bondNFTAddress: bondNFT.contract.address,
         curvePoolAddress: curvePool.contract.address,
+        lusdSiloAddress: lusdSilo.contract.address,
         lusdTokenAddress: lusdToken.contract.address,
         sLUSDLPRewardsStakingAddress: sLUSDLPRewardsStaking.contract.address,
         sLUSDTokenAddress: sLUSDToken.contract.address,
         yearnCurveVaultAddress: yearnCurveVault.contract.address,
         yearnGovernanceAddress: config.yearnGovernanceAddress,
-        yearnLUSDVaultAddress: yearnLUSDVault.contract.address,
+        yearnSPVaultAddress: yearnSPVault.contract.address,
         yearnRegistryAddress: yearnRegistry.contract.address
       },
       config.targetAverageAgeSeconds,
@@ -186,12 +189,13 @@ class LUSDChickenBondDeployment {
       bondNFT,
       chickenBondManager,
       curvePool,
+      lusdSilo,
       lusdToken,
       sLUSDLPRewardsStaking,
       sLUSDToken,
       uniToken,
       yearnCurveVault,
-      yearnLUSDVault,
+      yearnSPVault,
       yearnRegistry
     };
   }
@@ -203,10 +207,7 @@ class LUSDChickenBondDeployment {
       () => deployed.curvePool.contract.setAddresses(deployed.lusdToken.contract.address, overrides),
 
       () =>
-        deployed.yearnLUSDVault.contract.setAddresses(
-          deployed.lusdToken.contract.address,
-          overrides
-        ),
+        deployed.yearnSPVault.contract.setAddresses(deployed.lusdToken.contract.address, overrides),
 
       () =>
         deployed.yearnCurveVault.contract.setAddresses(
