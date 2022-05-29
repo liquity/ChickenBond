@@ -1,8 +1,4 @@
-# ChickenBond
-
-Research and development
-
-## LUSD Chicken Bonds - Technical Readme
+# LUSD Chicken Bonds - Technical Readme
 
 LUSD Chicken bonds is a specific implementation of the General Chicken Bonds model described in the whitepaper.
 
@@ -165,9 +161,9 @@ Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot
 
 LUSD Chicken bonds is connected to three external contracts which are already live on mainnet:
 
-- Yearn LUSD Vault.  ChickenBonds deposits funds here upon bond creation to earn yield.  This vault utilizes the Liquity Stability Pool and the Tokemak LUSD reactor, which generate a return on deposited LUSD, in LUSD. 
+- Yearn SP Vault.  Chicken Bonds deposits funds here upon bond creation, to earn yield. This vault primarily utilizes the Liquity Stability Pool (SP) and secondarily the Tokemak LUSD reactor, which each generate a return on deposited LUSD, in LUSD.
 
-- Curve LUSD3CRV metapool.  Chicken Bonds deposits LUSD here and receives the LUSD3CRV LP token.  This is in turn deposited to the Yearn Curve vault which generates a return on deposited LUSD3CRV, in LUSD3CRV.
+- Curve LUSD3CRV MetaPool. Chicken Bonds deposits LUSD here and receives the LUSD3CRV LP token. This is in turn deposited to the Yearn Curve vault.
 
 - Yearn Curve Vault. LUSD3CRV is deposited here, and the vault generates a return on the deposit, paid in LUSD3CRV.
 
@@ -197,9 +193,51 @@ Each Yearn vault is periodically manually harvested by the Yearn team in order t
 TODO (grab from PR)
 
 ## Migration mode
-TODO (grab from PR)
 
+Yearn will in the not-too-distant future (<11 months) deploy v3 vaults.  Around that time, they will deprecate existing v2 vaults and deploy replacement v3 versions. Specifically, they will:
 
+- Disable deposits to the deprecated v2 vault
+- Cease harvesting yield on the deprecated v2 vault
 
+In case of deprecation of the SP LUSD and Curve LUSD3CRV vaults, we'd like to launch a new Chicken Bonds system that is hooked up to v3 vaults, and encourage users to migrate their funds. 
 
+We need to ensure that when Yearn deprecate the v2 vaults:
 
+- All LUSD can be extracted from the old Chicken Bonds system, via a combination of redemptions and chicken-outs 
+
+- LUSD does not remain in the Yearn SP vault. The ceasing of harvesting means that if liquidations occur, the liquidation ETH gain would not be recycled back to LUSD, causing a permanent loss to the Chicken Bonds system, and by extension, losses to bonders & sLUSD holders.
+
+### Migration functionality
+
+The system contains an `LUSDSilo` contract which is empty and unused during normal mode.
+
+`ChickenBondManager` contains a function `activateMigration`, callable one-time and only by Yearn Governance. Yearn have agreed to call this function when they deprecate the v2 vaults we're using. `activateMigration` does the following:
+
+- Raise a `migration` mode flag
+- Move all permanent LUSD from permanent bucket to acquired bucket (thus making it redeemable)
+- Shift all LUSD currently in the Yearn LUSD vault to the LUSD Silo (thus making all pending LUSD, and some acquired, now in the Silo)
+
+### Post-migration logic
+
+Migration mode activation triggers the following logic changes:
+
+`createBond`: disabled
+
+`shiftLUSDFromSPToCurve`, `shiftLUSDFromCurveToSP`: disabled
+
+`chickenOut`: LUSD is withdrawn from the Curve pool's pending LUSD bucket (since, post-migration, all pending LUSD is now in Curve)
+
+`chickenIn`:
+- Does not increase the permanent bucket with the LUSD surplus
+- Instead, refunds the surplus LUSD to the bonder
+- No first-chicken-in yield is sent to AMM reward. Reasoning: yields should cease after yearn trigger migration mode
+- No tax is sent to AMM rewards. Reasoning: no need to maintain AMM LP incentives in migration mode. It's fine and desirable for LPs to pull funds and redeem their sLUSD. 
+
+## Fee share functionality
+
+We will participate in Yearn's partnership program whereby they send a share of the vault fees back to the Chicken Bonds system:
+https://docs.yearn.finance/partners/introduction
+
+_"any protocol that integrates yVaults can earn up to a 50% profit share from their contributed TVL."_
+
+We assume they will send us the fee share in LUSD from the Yearn governance address. `ChickenBondManager` has a `sendFeeShare` function, callable only by them, which transfers the LUSD and deposits it to the Yearn SP vault in normal mode. It's disabled in migration mode, since harvests/fees will not occur.
