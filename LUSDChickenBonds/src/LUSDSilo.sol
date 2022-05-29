@@ -2,7 +2,7 @@ pragma solidity ^0.8.10;
 
 import "./Interfaces/IChickenBondManager.sol";
 import "./Interfaces/ILUSDToken.sol";
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract LUSDSilo is Ownable {
     ILUSDToken public lusdToken; 
