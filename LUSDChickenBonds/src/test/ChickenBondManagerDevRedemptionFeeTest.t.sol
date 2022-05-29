@@ -6,9 +6,9 @@ import "./TestContracts/DevTestSetup.sol";
 contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
 
     // _updateRedemptionRateAndTime
-    function _checkUpdateRedemptionRate(uint256 _decayedBaseRedemptionRate, uint256 _fractionOfSLUSDToRedeem, uint256 _expectedRate) internal {
+    function _checkUpdateRedemptionRate(uint256 _decayedBaseRedemptionRate, uint256 _fractionOfBLUSDToRedeem, uint256 _expectedRate) internal {
         chickenBondManager.setBaseRedemptionRate(_decayedBaseRedemptionRate);
-        uint256 newBaseRedemptionRate = chickenBondManager.calcRedemptionFeePercentage(_fractionOfSLUSDToRedeem);
+        uint256 newBaseRedemptionRate = chickenBondManager.calcRedemptionFeePercentage(_fractionOfBLUSDToRedeem);
         //console.log("r:", newBaseRedemptionRate);
         //console.log("e:", _expectedRate);
         assertEq(newBaseRedemptionRate, _expectedRate, "Redemption rate mismatch");
@@ -20,34 +20,34 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
         chickenBondManager.setLastRedemptionTime(currentTime);
 
         uint256 decayedBaseRedemptionRate = 0;
-        uint256 fractionOfSLUSDToRedeem = 0;
+        uint256 fractionOfBLUSDToRedeem = 0;
         uint256 expectedRate = 0;
-        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfSLUSDToRedeem, expectedRate);
+        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfBLUSDToRedeem, expectedRate);
 
         decayedBaseRedemptionRate = 1e16;
-        fractionOfSLUSDToRedeem = chickenBondManager.BETA() - 1;
+        fractionOfBLUSDToRedeem = chickenBondManager.BETA() - 1;
         expectedRate = decayedBaseRedemptionRate;
-        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfSLUSDToRedeem, expectedRate);
+        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfBLUSDToRedeem, expectedRate);
 
         decayedBaseRedemptionRate = 1e16;
-        fractionOfSLUSDToRedeem = chickenBondManager.BETA();
+        fractionOfBLUSDToRedeem = chickenBondManager.BETA();
         expectedRate = decayedBaseRedemptionRate + 1;
-        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfSLUSDToRedeem, expectedRate);
+        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfBLUSDToRedeem, expectedRate);
 
         decayedBaseRedemptionRate = 1e16;
-        fractionOfSLUSDToRedeem = 2e16; // 2%
+        fractionOfBLUSDToRedeem = 2e16; // 2%
         expectedRate = 2e16;
-        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfSLUSDToRedeem, expectedRate);
+        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfBLUSDToRedeem, expectedRate);
 
         decayedBaseRedemptionRate = 1e18;
-        fractionOfSLUSDToRedeem = 2e16;
+        fractionOfBLUSDToRedeem = 2e16;
         expectedRate = 1e18;
-        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfSLUSDToRedeem, expectedRate);
+        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfBLUSDToRedeem, expectedRate);
 
         decayedBaseRedemptionRate = 1e16;
-        fractionOfSLUSDToRedeem = 2e18;
+        fractionOfBLUSDToRedeem = 2e18;
         expectedRate = 1e18;
-        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfSLUSDToRedeem, expectedRate);
+        _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfBLUSDToRedeem, expectedRate);
     }
 
     function checkUpdadeRedemptionTime(uint256 _currentTime, uint256 _lastRedemptionTime, uint256 _expectedTime) internal {

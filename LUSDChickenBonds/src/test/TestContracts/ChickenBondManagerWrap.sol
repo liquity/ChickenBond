@@ -28,16 +28,16 @@ contract ChickenBondManagerWrap is ChickenBondManager {
     {}
 
     // wrappers
-    function updateRedemptionFeePercentage(uint256 _fractionOfSLUSDToRedeem) external returns (uint256) {
-        return _updateRedemptionFeePercentage(_fractionOfSLUSDToRedeem);
+    function updateRedemptionFeePercentage(uint256 _fractionOfBLUSDToRedeem) external returns (uint256) {
+        return _updateRedemptionFeePercentage(_fractionOfBLUSDToRedeem);
     }
 
     function minutesPassedSinceLastRedemption() external view returns (uint256) {
         return _minutesPassedSinceLastRedemption();
     }
 
-    function calcAccruedSLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio, uint256 _accrualParameter) external view returns (uint256) {
-        return _calcAccruedSLUSD(_startTime, _lusdAmount, _backingRatio, _accrualParameter);
+    function calcAccruedBLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio, uint256 _accrualParameter) external view returns (uint256) {
+        return _calcAccruedBLUSD(_startTime, _lusdAmount, _backingRatio, _accrualParameter);
     }
 
     // setters
