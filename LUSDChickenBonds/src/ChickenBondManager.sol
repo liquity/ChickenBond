@@ -298,6 +298,8 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     // Divert acquired yield to LUSD/sLUSD AMM LP rewards staking contract
     // It happens on the very first chicken in event of the system, or any time that redemptions deplete sLUSD total supply to zero
     function _firstChickenIn() internal {
+        assert(!migration);
+
         /* Assumption: When there have been no chicken ins since the sLUSD supply was set to 0 (either due to system deployment, or full sLUSD redemption),
         /* all acquired LUSD must necessarily be pure yield.
         */
