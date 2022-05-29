@@ -4,16 +4,6 @@ Research and development
 
 # LUSD ChickenBonds
 
-## Running the project
-
-
-ChickenBonds is a Foundry project in `/LUSDChickenBonds`.  
-
-Install Foundry:
-https://github.com/gakonst/foundry
-Run tests with `forge test`.
-
-Core contracts are found in `src`.
 
 ## TODO List
 
@@ -87,8 +77,14 @@ At any time they may **chicken out** and reclaim their entire principle, or **ch
 
 sLUSD may always be redeemed for a proportional share of the system’s acquired LUSD.
 
-However, LUSD Chicken Bonds contains additional functionality:
-**TODO**
+However, LUSD Chicken Bonds contains additional functionality for the purposes of peg stabilization and migration. The funds held by the protocol are split across two yield-bearing Yearn vaults, referred to as the **Yearn SP Vault** and the **Yearn Curve Vault**. The former deposits funds to the Liquity Stability Pool, and the latter deposits funds into the Curve LUSD3CRV MetaPool.
+
+The LUSD Chicken Bonds system has public shifter functions which are callable by anyone and move LUSD between the vaults, subject to price constraints. The purpose of these is to allow anyone to tighten the Curve pool’s LUSD spot price dollar peg, by moving system funds between the yield-bearing vaults (and thus to or from the Curve pool).
+
+Additionally, the system contains logic for a “migration mode” which may be triggered only by a single privileged admin - namely the Yearn Finance governance address:
+0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52
+
+When Yearn upgrade their vaults from v2 to v3, they will freeze deposits and cease harvesting yield. Migration mode allows the LUSD Chicken Bonds system to wind down gracefully, and allows all funds to be redeemed or withdrawn, so that users, if they so choose, may redeposit their funds to a new LUSD Chicken Bonds version which will be connected up to Yearn’s v3 vaults.
 
 
 ## Project structure
@@ -105,6 +101,17 @@ However, LUSD Chicken Bonds contains additional functionality:
 - `LUSDChickenBonds/src/Proxy/` - Contains a Chicken Bonds operations script for combining transactions, for use with DSProxy
 - LUSDChickenBonds/src/utils` - Contains basic math and logging utilities used in the core smart contracts.
 
+## Running the project
+
+ChickenBonds is a Foundry project in `/LUSDChickenBonds`.  
+
+Install Foundry:
+https://github.com/gakonst/foundry
+Run all with `forge test`.
+
+For mainnet fork testing, please set the env variable `ETH_RPC_URL` equal to your API key for a Ethereum RPC node service such as Alchemy or Infura.
+
+Core contracts are found in `src`, and tests are in `src/test`/
 
 ## Global Liquidity Buckets
 
@@ -117,7 +124,6 @@ The **permanent** bucket contains all protocol-owned LUSD. It is untouched by re
 The **acquired** bucket contains all LUSD held by the protocol which may be redeemed by burning sLUSD. 
 
 ### Yield sources
-
 
 The Chicken Bonds system deposits LUSD to external Yearn vaults - the Yearn SP vault, and the Yearn Curve vault -  which generate yield.
 
@@ -143,6 +149,20 @@ In migration mode, no funds are permanent. The buckets are split in this manner:
 - Pending LUSD in the LUSD Silo
 - Acquired LUSD in the LUSD Silo
 - Acquired LUSD in Curve
+
+## Shifter functions
+
+The two system shifter functions are public and permissionless.  They are:
+
+`shiftLUSDFromSPToCurve`
+And
+`shiftLUSDFromCurveToSP`.
+
+when the LUSD spot price in the Curve is > 1, anyone may shift LUSD from the Liquity Stability Pool to the Curve pool, thus moving the spot price back toward 1 - improving the dollar peg.  Conversely, when the spot price is < 1, anyone may shift LUSD out of the Curve pool, which increases the price toward 1.
+
+Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot price by bringing it closer to 1, yet must not cause it to cross the boundary of 1.
+
+Shifter functions are enabled only in normal mode.
 
 ### Flow of funds between individual buckets
 
@@ -192,7 +212,12 @@ The following getter functions in the smart contract perform these calculations 
 
 
 ## Shifter functions
-TODO
+
+The two system shifter functions are public and permissionless.  They are: `shiftLUSDFromSPToCurve` and `shiftLUSDFromCurveToSP`.
+
+When the LUSD spot price in the Curve is > 1, anyone may shift LUSD from the Liquity Stability Pool to the Curve pool (routed via the corresponding Yearn vaults), thus moving the spot price back toward 1 - improving the dollar peg. Conversely, when the spot price is < 1, anyone may shift LUSD from the Curve pool and into the Stability Pool, which increases the price toward 1.
+
+Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot price by bringing it closer to 1 - yet, must not cause it to cross the boundary of 1. Shifter functions are enabled in normal mode and disabled in migration mode.
 
 
 ## Core smart contract architecture
