@@ -237,6 +237,8 @@ Migration mode activation triggers the following logic changes:
 - No first-chicken-in yield is sent to AMM reward. Reasoning: yields should cease after yearn trigger migration mode
 - No tax is sent to AMM rewards. Reasoning: no need to maintain AMM LP incentives in migration mode. It's fine and desirable for LPs to pull funds and redeem their sLUSD. 
 
+`redeem`: pulls funds proportionally from the Silo acquired bucket (as LUSD) and the Curve acquired bucket (as yTokens for the Yearn Curve vault)
+
 ## Fee share functionality
 
 We will participate in Yearn's partnership program whereby they send a share of the vault fees back to the Chicken Bonds system:
