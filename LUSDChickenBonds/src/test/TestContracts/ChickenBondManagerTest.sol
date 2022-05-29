@@ -1103,7 +1103,7 @@ contract ChickenBondManagerTest is BaseTest {
         bondNFT.ownerOf(B_bondID);
     }
 
-    function testChickenInChargesTax() public {
+    function testChickenInChargesChickenInFee() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1127,13 +1127,13 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // check rewards contract has received rewards
-        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), _getTaxForAmount(bondAmount), 1, "Wrong tax diverted to rewards contract");
-        // check accrued amount is reduced by tax
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), _getChickenInFeeForAmount(bondAmount), 1, "Wrong Chicken In fee diverted to rewards contract");
+        // check accrued amount is reduced by Chicken In fee
         assertApproximatelyEqual(
             sLUSDToken.balanceOf(B),
-            _getTaxedAmount(chickenBondManager.calcAccruedSLUSD(B_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
+            _getAmountMinusChickenInFee(chickenBondManager.calcAccruedSLUSD(B_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
             1000,
-            "Wrong tax applied to B"
+            "Wrong Chicken In fee applied to B"
         );
 
         // 10 minutes passes
@@ -1146,13 +1146,13 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // check rewards contract has received rewards
-        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), 2 * _getTaxForAmount(bondAmount), 2, "Wrong tax diverted to rewards contract");
-        // check accrued amount is reduced by tax
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), 2 * _getChickenInFeeForAmount(bondAmount), 2, "Wrong Chicken In fee diverted to rewards contract");
+        // check accrued amount is reduced by Chicken In fee
         assertApproximatelyEqual(
             sLUSDToken.balanceOf(A),
-            _getTaxedAmount(chickenBondManager.calcAccruedSLUSD(A_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
+            _getAmountMinusChickenInFee(chickenBondManager.calcAccruedSLUSD(A_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
             1000,
-            "Wrong tax applied to A"
+            "Wrong Chicken In fee applied to A"
         );
     }
 
