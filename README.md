@@ -49,7 +49,7 @@ Run all with `forge test`.
 
 For mainnet fork testing, please set the env variable `ETH_RPC_URL` equal to your API key for a Ethereum RPC node service such as Alchemy or Infura.
 
-Core contracts are found in `src`, and tests are in `src/test`/
+Core contracts are found in `src`, and tests are in `src/test/`
 
 ## Global Liquidity Buckets
 
