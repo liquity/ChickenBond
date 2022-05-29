@@ -150,20 +150,6 @@ In migration mode, no funds are permanent. The buckets are split in this manner:
 - Acquired LUSD in the LUSD Silo
 - Acquired LUSD in Curve
 
-## Shifter functions
-
-The two system shifter functions are public and permissionless.  They are:
-
-`shiftLUSDFromSPToCurve`
-And
-`shiftLUSDFromCurveToSP`.
-
-when the LUSD spot price in the Curve is > 1, anyone may shift LUSD from the Liquity Stability Pool to the Curve pool, thus moving the spot price back toward 1 - improving the dollar peg.  Conversely, when the spot price is < 1, anyone may shift LUSD out of the Curve pool, which increases the price toward 1.
-
-Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot price by bringing it closer to 1, yet must not cause it to cross the boundary of 1.
-
-Shifter functions are enabled only in normal mode.
-
 ### Flow of funds between individual buckets
 
 For the global permanent and acquired buckets, the split is updated by shifter functions which move funds between the SP vault and the Curve pool. Here is an outline of how funds flow between buckets from various system operations:
