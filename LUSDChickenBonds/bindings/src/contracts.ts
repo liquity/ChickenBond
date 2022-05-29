@@ -11,7 +11,7 @@ import mockCurvePool from "../artifacts/MockCurvePool.json";
 import mockYearnRegistry from "../artifacts/MockYearnRegistry.json";
 import mockYearnVault from "../artifacts/MockYearnVault.json";
 import sLUSDToken from "../artifacts/SLUSDToken.json";
-import unipool from "../artifacts/Unipool.json";
+import mockCurveLiquidityGaugeV4 from "../artifacts/MockCurveLiquidityGaugeV4.json";
 
 import {
   BondNFTFactory,
@@ -23,7 +23,7 @@ import {
   MockYearnRegistryFactory,
   MockYearnVaultFactory,
   SLUSDTokenFactory,
-  UnipoolFactory
+  MockCurveLiquidityGaugeV4Factory
 } from "./generated/types";
 
 import {
@@ -59,9 +59,9 @@ export interface LUSDChickenBondContractFactories {
     factory: LUSDTokenTesterFactory;
   };
 
-  sLUSDLPRewardsStaking: {
-    contractName: "Unipool";
-    factory: UnipoolFactory;
+  curveLiquidityGauge: {
+    contractName: "MockCurveLiquidityGaugeV4";
+    factory: MockCurveLiquidityGaugeV4Factory;
   };
 
   sLUSDToken: {
@@ -136,7 +136,7 @@ const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   curvePool: checkArtifact("MockCurvePool", mockCurvePool),
   lusdSilo: checkArtifact("LUSDSilo", lusdSilo),
   lusdToken: checkArtifact("LUSDTokenTester", lusdTokenTester),
-  sLUSDLPRewardsStaking: checkArtifact("Unipool", unipool),
+  curveLiquidityGauge: checkArtifact("MockCurveLiquidityGaugeV4", mockCurveLiquidityGaugeV4),
   sLUSDToken: checkArtifact("SLUSDToken", sLUSDToken),
   uniToken: checkArtifact("ERC20", erc20),
   yearnCurveVault: checkArtifact("MockYearnVault", mockYearnVault),
