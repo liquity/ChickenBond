@@ -567,7 +567,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     // --- Helper functions ---
 
-    function _getCurveLUSDSpotPrice() public view returns (uint256) {
+    function _getCurveLUSDSpotPrice() internal view returns (uint256) {
         // Get the Curve spot price of LUSD: the amount of 3CRV that would be received by swapping 1 LUSD
         return curvePool.get_dy_underlying(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
     }
@@ -739,10 +739,6 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         return updatedAccrualParameter;
     }
 
-    function getBondData(uint256 _bondID) external view returns (uint256, uint256) {
-        return (idToBondData[_bondID].lusdAmount, idToBondData[_bondID].startTime);
-    }
-
     /* Placeholder function that returns a simple total acquired LUSD metric equal to the sum of:
     *
     * Yearn LUSD vault balance
@@ -779,66 +775,6 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         }
 
         return acquiredLUSDInSP;
-    }
-
-    function getTotalLPAndLUSDInCurve() public view returns (uint256, uint256) {
-        uint256 LUSD3CRVInCurve = calcTotalYearnCurveVaultShareValue();
-        uint256 totalLUSDInCurve;
-        if (LUSD3CRVInCurve > 0) {
-            totalLUSDInCurve = curvePool.calc_withdraw_one_coin(LUSD3CRVInCurve, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL);
-        }
-
-        return (LUSD3CRVInCurve, totalLUSDInCurve);
-    }
-
-    function getAcquiredLUSDInCurve() public view returns (uint256) {
-        uint256 acquiredLUSDInCurve;
-
-        // Get the LUSD value of the LUSD-3CRV tokens
-        (, uint256 totalLUSDInCurve) = getTotalLPAndLUSDInCurve();
-        if (totalLUSDInCurve > permanentLUSDInCurve) {
-            acquiredLUSDInCurve = totalLUSDInCurve - permanentLUSDInCurve;
-        }
-
-        return acquiredLUSDInCurve;
-    }
-
-    function getPermanentLUSDInSP() external view returns (uint256) {
-        return permanentLUSDInSP;
-    }
-
-    function getPermanentLUSDInCurve() external view returns (uint256) {
-        return permanentLUSDInCurve;
-    }
-
-    function getPendingLUSDInSilo() public view returns (uint256) {
-        return migration ? totalPendingLUSD : 0;
-    }
-
-    function getAcquiredLUSDInSilo() public view returns (uint256) {
-        if (!migration) { // In normal mode the silo doesn't contain any system funds
-            return 0;
-        } else { // In migration mode the silo contains some acquired LUSD, and all the pending LUSD
-            return lusdToken.balanceOf(lusdSiloAddress) - totalPendingLUSD;
-        }
-    }
-
-    // Calculates the LUSD value of this contract's Yearn LUSD Vault yTokens held by the ChickenBondManager
-    function calcTotalYearnSPVaultShareValue() public view returns (uint256) {
-        uint256 totalYTokensHeldByCBM = yearnSPVault.balanceOf(address(this));
-        return totalYTokensHeldByCBM * yearnSPVault.pricePerShare() / 1e18;
-    }
-
-    // Calculates the LUSD3CRV value of LUSD Curve Vault yTokens held by the ChickenBondManager
-    function calcTotalYearnCurveVaultShareValue() public view returns (uint256) {
-        uint256 totalYTokensHeldByCBM = yearnCurveVault.balanceOf(address(this));
-        return totalYTokensHeldByCBM * yearnCurveVault.pricePerShare() / 1e18;
-    }
-
-    // Calculates the LUSD value of this contract, including Yearn LUSD Vault and Curve Vault
-    function calcTotalLUSDValue() external view returns (uint256) {
-        (, uint256 totalLUSDInCurve) = getTotalLPAndLUSDInCurve();
-        return calcTotalYearnSPVaultShareValue() + totalLUSDInCurve;
     }
 
     // Returns the yTokens needed to make a partial withdrawal of the CBM's total vault deposit
@@ -887,7 +823,18 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         require(msg.sender == yearnGovernanceAddress, "CBM: Only Yearn Governance can call");
     }
 
-    // --- External getter convenience functions ---
+    // --- Getter convenience functions ---
+
+    // Bond getters
+
+    function getBondData(uint256 _bondID) external view returns (uint256, uint256) {
+        return (idToBondData[_bondID].lusdAmount, idToBondData[_bondID].startTime);
+    }
+
+    function getIdToBondData(uint256 _bondID) external view returns (uint256, uint256) {
+        BondData memory bond = idToBondData[_bondID];
+        return (bond.lusdAmount, bond.startTime);
+    }
 
     function calcAccruedSLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
@@ -903,6 +850,38 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         return _calcBondSLUSDCap(_getTaxedBondAmount(bond.lusdAmount), backingRatio);
     }
 
+    // Native vault token value getters
+
+    // Calculates the LUSD value of this contract's Yearn LUSD Vault yTokens held by the ChickenBondManager
+    function calcTotalYearnSPVaultShareValue() public view returns (uint256) {
+        uint256 totalYTokensHeldByCBM = yearnSPVault.balanceOf(address(this));
+        return totalYTokensHeldByCBM * yearnSPVault.pricePerShare() / 1e18;
+    }
+
+    // Calculates the LUSD3CRV value of LUSD Curve Vault yTokens held by the ChickenBondManager
+    function calcTotalYearnCurveVaultShareValue() public view returns (uint256) {
+        uint256 totalYTokensHeldByCBM = yearnCurveVault.balanceOf(address(this));
+        return totalYTokensHeldByCBM * yearnCurveVault.pricePerShare() / 1e18;
+    }
+
+    // Calculates the LUSD value of this contract, including Yearn LUSD Vault and Curve Vault
+    function calcTotalLUSDValue() external view returns (uint256) {
+        (, uint256 totalLUSDInCurve) = getTotalLPAndLUSDInCurve();
+        return calcTotalYearnSPVaultShareValue() + totalLUSDInCurve;
+    }
+
+    function getTotalLPAndLUSDInCurve() public view returns (uint256, uint256) {
+        uint256 LUSD3CRVInCurve = calcTotalYearnCurveVaultShareValue();
+        uint256 totalLUSDInCurve;
+        if (LUSD3CRVInCurve > 0) {
+            totalLUSDInCurve = curvePool.calc_withdraw_one_coin(LUSD3CRVInCurve, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL);
+        }
+
+        return (LUSD3CRVInCurve, totalLUSDInCurve);
+    }
+
+    // Acquired getters
+
     function getTotalAcquiredLUSD() external view returns (uint256) {
         uint256 lusdInSP = calcTotalYearnSPVaultShareValue();
         return _getTotalAcquiredLUSD(lusdInSP);
@@ -913,6 +892,44 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         return _getAcquiredLUSDInSP(lusdInSP);
     }
 
+    function getAcquiredLUSDInCurve() public view returns (uint256) {
+        uint256 acquiredLUSDInCurve;
+
+        // Get the LUSD value of the LUSD-3CRV tokens
+        (, uint256 totalLUSDInCurve) = getTotalLPAndLUSDInCurve();
+        if (totalLUSDInCurve > permanentLUSDInCurve) {
+            acquiredLUSDInCurve = totalLUSDInCurve - permanentLUSDInCurve;
+        }
+
+        return acquiredLUSDInCurve;
+    }
+
+    function getAcquiredLUSDInSilo() public view returns (uint256) {
+        if (!migration) { // In normal mode the silo doesn't contain any system funds
+            return 0;
+        } else { // In migration mode the silo contains some acquired LUSD, and all the pending LUSD
+            return lusdToken.balanceOf(lusdSiloAddress) - totalPendingLUSD;
+        }
+    }
+
+    // Permanent getters
+
+    function getPermanentLUSDInSP() external view returns (uint256) {
+        return permanentLUSDInSP;
+    }
+
+    function getPermanentLUSDInCurve() external view returns (uint256) {
+        return permanentLUSDInCurve;
+    }
+
+    // Pending getter
+
+    function getPendingLUSDInSilo() external view returns (uint256) {
+        return migration ? totalPendingLUSD : 0;
+    }
+
+    // Owned getters
+
     function getOwnedLUSDInSP() external view returns (uint256) {
         return getAcquiredLUSDInSP() + permanentLUSDInSP;
     }
@@ -920,6 +937,8 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     function getOwnedLUSDInCurve() external view returns (uint256) {
         return getAcquiredLUSDInCurve() + permanentLUSDInCurve;
     }
+
+    // Other getters
 
     function calcSystemBackingRatio() public view returns (uint256) {
         uint256 lusdInSP = calcTotalYearnSPVaultShareValue();
@@ -929,10 +948,5 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     function calcUpdatedAccrualParameter() external view returns (uint256) {
         (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
         return updatedAccrualParameter;
-    }
-
-    function getIdToBondData(uint256 _bondID) external view returns (uint256, uint256) {
-        BondData memory bond = idToBondData[_bondID];
-        return (bond.lusdAmount, bond.startTime);
     }
 }
