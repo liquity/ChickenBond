@@ -1127,7 +1127,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // check rewards contract has received rewards
-        assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), _getTaxForAmount(bondAmount), 1, "Wrong tax diverted to rewards contract");
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), _getTaxForAmount(bondAmount), 1, "Wrong tax diverted to rewards contract");
         // check accrued amount is reduced by tax
         assertApproximatelyEqual(
             sLUSDToken.balanceOf(B),
@@ -1146,7 +1146,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // check rewards contract has received rewards
-        assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), 2 * _getTaxForAmount(bondAmount), 2, "Wrong tax diverted to rewards contract");
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), 2 * _getTaxForAmount(bondAmount), 2, "Wrong tax diverted to rewards contract");
         // check accrued amount is reduced by tax
         assertApproximatelyEqual(
             sLUSDToken.balanceOf(A),

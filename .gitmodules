@@ -7,6 +7,3 @@
 [submodule "LUSDChickenBonds/lib/forge-std"]
 	path = LUSDChickenBonds/lib/forge-std
 	url = https://github.com/brockelmore/forge-std
-[submodule "LUSDChickenBonds/lib/uniswapV2"]
-	path = LUSDChickenBonds/lib/uniswapV2
-	url = https://github.com/Uniswap/v2-core

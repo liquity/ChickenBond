@@ -8,6 +8,7 @@ import "./BaseTest.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
 import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
+import  "../../ExternalContracts/MockCurveLiquidityGaugeV4.sol";
 import "./LUSDTokenTester.sol";
 
 
@@ -65,9 +66,8 @@ contract DevTestSetup is BaseTest {
 
         lusdSilo = new LUSDSilo();
 
-        // Deploy LUSD/sLUSD AMM LP Rewards staking contract
-        IERC20 uniToken = new ERC20("Uniswap LP Token", "UNI"); // mock Uniswap LP token
-        sLUSDLPRewardsStaking = new Unipool(address(lusdToken), address(uniToken));
+        // Deploy LUSD/sLUSD AMM LP Rewards contract
+        curveLiquidityGauge = ICurveLiquidityGaugeV4(address(new MockCurveLiquidityGaugeV4()));
 
         ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
             bondNFTAddress: address(bondNFT),
@@ -77,7 +77,7 @@ contract DevTestSetup is BaseTest {
             yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
-            sLUSDLPRewardsStakingAddress: address(sLUSDLPRewardsStaking),
+            curveLiquidityGaugeAddress: address(curveLiquidityGauge),
             yearnGovernanceAddress: yearnGovernanceAddress,
             lusdSiloAddress: address(lusdSilo)
         });

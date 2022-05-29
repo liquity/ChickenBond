@@ -13,8 +13,8 @@ import "./Interfaces/ISLUSDToken.sol";
 import "./Interfaces/IYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
 import "./Interfaces/IYearnRegistry.sol";
-import "./LPRewards/Interfaces/IUnipool.sol";
 import "./Interfaces/IChickenBondManager.sol";
+import "./Interfaces/ICurveLiquidityGaugeV4.sol";
 
 
 contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
@@ -32,7 +32,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     IYearnVault immutable public yearnSPVault;
     IYearnVault immutable public yearnCurveVault;
     IYearnRegistry immutable public yearnRegistry;
-    IUnipool immutable public sLUSDLPRewardsStaking;
+    ICurveLiquidityGaugeV4 immutable public curveLiquidityGauge;
 
     address immutable public yearnGovernanceAddress;
 
@@ -52,7 +52,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         address yearnRegistryAddress;
         address yearnGovernanceAddress;
         address sLUSDTokenAddress;
-        address sLUSDLPRewardsStakingAddress;
+        address curveLiquidityGaugeAddress;
         address lusdSiloAddress;
     }
 
@@ -164,7 +164,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         accrualAdjustmentMultiplier = 1e18 - _accrualAdjustmentRate;
         accrualAdjustmentPeriodSeconds = _accrualAdjustmentPeriodSeconds;
 
-        sLUSDLPRewardsStaking = IUnipool(_externalContractAddresses.sLUSDLPRewardsStakingAddress);
+        curveLiquidityGauge = ICurveLiquidityGaugeV4(_externalContractAddresses.curveLiquidityGaugeAddress);
         CHICKEN_IN_AMM_TAX = _CHICKEN_IN_AMM_TAX;
 
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure
@@ -172,7 +172,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         lusdToken.approve(address(yearnSPVault), MAX_UINT256);
         lusdToken.approve(address(curvePool), MAX_UINT256);
         curvePool.approve(address(yearnCurveVault), MAX_UINT256);
-        lusdToken.approve(address(sLUSDLPRewardsStaking), MAX_UINT256);
+        lusdToken.approve(address(curveLiquidityGauge), MAX_UINT256);
 
         // Check that the system is hooked up to the correct latest Yearn vaults
         assert(address(yearnSPVault) == yearnRegistry.latestVault(address(lusdToken)));
@@ -261,7 +261,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     // transfer _yTokensToSwap to the LUSD/sLUSD AMM LP Rewards staking contract
     function _transferToRewardsStakingContract(uint256 _lusdToTransfer) internal {
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        sLUSDLPRewardsStaking.pullRewardAmount(_lusdToTransfer);
+        curveLiquidityGauge.deposit_reward_token(address(lusdToken), _lusdToTransfer);
 
         assert(lusdBalanceBefore - lusdToken.balanceOf(address(this)) == _lusdToTransfer);
     }

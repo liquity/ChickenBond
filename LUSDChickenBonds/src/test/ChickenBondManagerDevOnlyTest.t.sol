@@ -25,7 +25,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
 
         // Checks
-        assertApproximatelyEqual(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), initialYield + taxAmount, 2, "Balance of rewards contract doesn't match");
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), initialYield + taxAmount, 2, "Balance of rewards contract doesn't match");
 
         // check sLUSD A balance
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
@@ -46,7 +46,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
 
         // Checks
-        assertEq(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), taxAmount, "Balance of rewards contract doesn't match");
+        assertEq(lusdToken.balanceOf(address(curveLiquidityGauge)), taxAmount, "Balance of rewards contract doesn't match");
 
         // check sLUSD A balance
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
@@ -105,7 +105,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // Checks
         uint256 yieldFromFirstChickenInRedemptionFee = sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
-            lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
+            lusdToken.balanceOf(address(curveLiquidityGauge)),
             initialYield + secondYield + 2 * taxAmount + yieldFromFirstChickenInRedemptionFee,
             5,
             "Balance of rewards contract doesn't match"
@@ -198,7 +198,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // Balance in rewards contract
         //uint256 yieldFromFirstChickenInRedemptionFee = sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
-            lusdToken.balanceOf(address(sLUSDLPRewardsStaking)),
+            lusdToken.balanceOf(address(curveLiquidityGauge)),
             //curveYield + _getTaxForAmount(bondAmount1) + _getTaxForAmount(bondAmount2) + yieldFromFirstChickenInRedemptionFee,
             curveYield + _getTaxForAmount(bondAmount1) + _getTaxForAmount(bondAmount2) + sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18,
             250,

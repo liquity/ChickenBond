@@ -155,12 +155,7 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const sLUSDLPRewardsStaking = await this.deployContract(
-      factories.sLUSDLPRewardsStaking,
-      lusdToken.contract.address,
-      uniToken.contract.address,
-      overrides
-    );
+    const curveLiquidityGauge = await this.deployContract(factories.curveLiquidityGauge, overrides);
 
     const chickenBondManager = await this.deployContract(
       factories.chickenBondManager,
@@ -169,7 +164,7 @@ class LUSDChickenBondDeployment {
         curvePoolAddress: curvePool.contract.address,
         lusdSiloAddress: lusdSilo.contract.address,
         lusdTokenAddress: lusdToken.contract.address,
-        sLUSDLPRewardsStakingAddress: sLUSDLPRewardsStaking.contract.address,
+        curveLiquidityGaugeAddress: curveLiquidityGauge.contract.address,
         sLUSDTokenAddress: sLUSDToken.contract.address,
         yearnCurveVaultAddress: yearnCurveVault.contract.address,
         yearnGovernanceAddress: config.yearnGovernanceAddress,
@@ -191,7 +186,7 @@ class LUSDChickenBondDeployment {
       curvePool,
       lusdSilo,
       lusdToken,
-      sLUSDLPRewardsStaking,
+      curveLiquidityGauge,
       sLUSDToken,
       uniToken,
       yearnCurveVault,

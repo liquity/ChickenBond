@@ -12,9 +12,8 @@ import "../../LUSDSilo.sol";
 import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/ICurvePool.sol";
+import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
 import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import "../../LPRewards/Interfaces/IUnipool.sol";
-import "../../LPRewards/Unipool.sol";
 
 
 contract BaseTest is DSTest, stdCheats {
@@ -33,7 +32,7 @@ contract BaseTest is DSTest, stdCheats {
     IYearnVault yearnSPVault;
     IYearnVault yearnCurveVault;
     IYearnRegistry yearnRegistry;
-    IUnipool sLUSDLPRewardsStaking;
+    ICurveLiquidityGaugeV4 curveLiquidityGauge;
 
     address yearnGovernanceAddress;
     address liquitySPAddress;
@@ -223,7 +222,7 @@ contract BaseTest is DSTest, stdCheats {
         logCBMBuckets(_logHeadingText);
         console.log(chickenBondManager.calcSystemBackingRatio(), "Backing ratio");
         console.log(sLUSDToken.totalSupply(), "sLUSD total supply");
-        console.log(lusdToken.balanceOf(address(sLUSDLPRewardsStaking)), "balance of AMM rewards contract");
+        console.log(lusdToken.balanceOf(address(curveLiquidityGauge)), "balance of AMM rewards contract");
         console.log(yearnSPVault.balanceOf(address(chickenBondManager)),"SP Y tokens in CBM");
         console.log(yearnCurveVault.balanceOf(address(chickenBondManager)),"Curve Y tokens in CBM");
         console.log("");

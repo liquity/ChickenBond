@@ -12,7 +12,7 @@ import MockCurvePool from "../../out/MockCurvePool.sol/MockCurvePool.json";
 import MockYearnRegistry from "../../out/MockYearnRegistry.sol/MockYearnRegistry.json";
 import MockYearnVault from "../../out/MockYearnVault.sol/MockYearnVault.json";
 import SLUSDToken from "../../out/SLUSDToken.sol/SLUSDToken.json";
-import Unipool from "../../out/Unipool.sol/Unipool.json";
+import MockCurveLiquidityGaugeV4 from "../../out/MockCurveLiquidityGaugeV4.sol/MockCurveLiquidityGaugeV4.json";
 
 const getTupleType = (components: ParamType[], flexible: boolean) => {
   if (components.every(component => component.name)) {
@@ -149,7 +149,7 @@ const contractArtifacts = Object.entries({
   MockYearnRegistry,
   MockYearnVault,
   SLUSDToken,
-  Unipool
+  MockCurveLiquidityGaugeV4
 });
 
 const contracts = contractArtifacts.map(([contractName, { abi }]) => ({
