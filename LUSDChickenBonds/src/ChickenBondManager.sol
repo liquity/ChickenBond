@@ -755,7 +755,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     * In practice, the total acquired LUSD calculation will depend on the specifics of how Yearn vaults calculate
     their balances and incorporate the yield, and whether we implement a toll on chicken-ins (and therefore divert some permanent DEX liquidity) */
     function _getTotalAcquiredLUSD(uint256 _lusdInSP) internal view returns (uint256) {
-        return  _getAcquiredLUSDInSP(_lusdInSP) + getAcquiredLUSDInCurve();
+        return  _getAcquiredLUSDInSP(_lusdInSP) + getAcquiredLUSDInCurve() + getAcquiredLUSDInSilo();
     }
 
     function _getAcquiredLUSDInSP(uint256 _lusdInSP) internal view returns (uint256) {
