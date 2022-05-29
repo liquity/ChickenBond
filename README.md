@@ -207,11 +207,15 @@ We need to ensure that when Yearn deprecate the v2 vaults:
 
 - LUSD does not remain in the Yearn SP vault. The ceasing of harvesting means that if liquidations occur, the liquidation ETH gain would not be recycled back to LUSD, causing a permanent loss to the Chicken Bonds system, and by extension, losses to bonders & sLUSD holders.
 
+A proxy upgrade pattern was briefly considered: it would have been simple to give Yearn control over setting the v3 vault addresses in `ChickenBondManager`, and directly migrating system funds from v2 -> v3 vaults. However, as Chicken Bonds may one day hold hundreds of millions of dollars worth of funds, we deemed this too great a responsibility - it would in theory be possible for a rogue actor with such capability to create fake v3 vault contracts and drain all Chicken Bond system funds. 
+
+For better trust minimization we instead opted for a "wind down" approach where Yearn governance can _prepare_ the system for migration by making all funds redeemable, and moving the LUSD contents of the Yearn SP vault to a safe "Silo" that is not exposed to Liquity liquidations. When suitable v3 vaults are live, we would deploy a fresh instance of LUSD Chicken Bonds connected up to them - and encourage users to manually migrate.
+
 ### Migration functionality
 
 The system contains an `LUSDSilo` contract which is empty and unused during normal mode.
 
-`ChickenBondManager` contains a function `activateMigration`, callable one-time and only by Yearn Governance. Yearn have agreed to call this function when they deprecate the v2 vaults we're using. `activateMigration` does the following:
+The `ChickenBondManager` contract contains a function `activateMigration`, callable one-time and only by Yearn Governance. Yearn have agreed to call this function when they deprecate the v2 vaults that Chicken Bonds is connected to. `activateMigration` does the following:
 
 - Raise a `migration` mode flag
 - Move all permanent LUSD from permanent bucket to acquired bucket (thus making it redeemable)
