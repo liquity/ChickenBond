@@ -70,11 +70,11 @@ All funds held by the system (pending, acquired and permanent) are held inside o
 
 ### Individual Liquidity Buckets
 
-The global **permanent** and **acquired** buckets are split across both Yearn SP and the Curve pool (with its LP tokens deposited to the Yearn Curve vault for yield generation).  
+The global **permanent** and **acquired** buckets are split across both Yearn SP vault and the Curve pool (with its LP tokens deposited to the Yearn Curve vault for yield generation).  
 
 The **pending** bucket is held purely by the Yearn SP vault in normal mode, and purely by the LUSD Silo in migration mode.
 
-The buckets are split into in the following manner normal mode:
+The buckets are split in the following manner in normal mode:
 
 - Pending LUSD in the Yearn SP vault (constitutes all pending LUSD)
 - Permanent LUSD in the Yearn SP Vault
@@ -84,13 +84,13 @@ The buckets are split into in the following manner normal mode:
 
 In migration mode, no funds are permanent. The buckets are split in this manner:
 
-- Pending LUSD in the LUSD Silo
+- Pending LUSD in the LUSD Silo (constitutes all pending LUSD)
 - Acquired LUSD in the LUSD Silo
 - Acquired LUSD in Curve
 
 ### Flow of funds between individual buckets
 
-For the global permanent and acquired buckets, the split is updated by shifter functions which move funds between the SP vault and the Curve pool. Here is an outline of how funds flow between buckets from various system operations:
+For the global permanent and acquired buckets, the split is updated by shifter functions which move funds between the SP vault and the Curve pool. Here is an outline of how funds flow between buckets due to various system operations:
 
 `createBond:` deposits the bonded LUSD to the Yearn SP vault pending bucket
 
@@ -104,30 +104,30 @@ For the global permanent and acquired buckets, the split is updated by shifter f
 
 `chickenOut (normal mode):` Withdraws all of the bond’s LUSD from the Yearn SP vault pending bucket
 
-`chickenOut (normal mode):` Withdraws all of the bond’s LUSD from the LUSD Silo pending bucket
+`chickenOut (migration mode):` Withdraws all of the bond’s LUSD from the LUSD Silo pending bucket
 
 `redeem(normal mode):` Pulls funds proportionally from the Yearn SP vault acquired bucket and the Curve acquired bucket (sends yTokens, and does not unwrap to LUSD)
 
 `redeem(migration mode)`: Pulls redeemed funds proportionally from the LUSD Silo acquired bucket (as LUSD) and the Curve acquired bucket (as yTokens)
 
 `shiftLUSDFromSPToCurve`:
-- Moves some acquired LUSD from the Yearn SP vault acquired bucket to the Curve acquired bucket
-- Moves some permanent LUSD from the Yearn SP vault permanent bucket to the Curve permanent bucket
+- Moves some LUSD from the Yearn SP vault acquired bucket to the Curve acquired bucket
+- Moves some LUSD from the Yearn SP vault permanent bucket to the Curve permanent bucket
 
 `shiftLUSDFromCurveToSP:`
-- Moves acquired LUSD in Curve to the Yearn SP vault acquired bucket
-- Moves permanent LUSD in Curve to the Yearn SP vault permanent bucket
+- Moves some LUSD from Curve acquired bucket to the Yearn SP vault acquired bucket
+- Moves some LUSD from Curve permanent bucket to the Yearn SP vault permanent bucket
 
 
 ### Tracking individual bucket quantities
 
-The pending bucket and individual permanent buckets are tracked by state variables in `ChickenBondManager`, and updated when funds are added/removed.  Specifically, they are:
+The **pending** bucket and individual **permanent** buckets are tracked by state variables in `ChickenBondManager`, and updated when funds are added/removed.  Specifically, these state variables are:
 
 - `totalPendingLUSD`
 - `permanentLUSDInYearnSPVault`
 - `permanentLUSDInYearnCurveVault`
 
-Individual acquired buckets are not explicitly tracked via state variables. Rather, the acquired LUSD in a given pool (Yearn SP or Curve) is calculated based on the total funds held in the pool, minus any pending or permanent funds in that pool.  
+Individual **acquired** buckets are not explicitly tracked via state variables. Rather, the acquired LUSD in a given pool (Yearn SP vault or Curve) is calculated based on the total funds held in the pool, minus any pending and permanent funds in that pool.  
 
 The following getter functions in the smart contract perform these calculations for individual acquired buckets:
 - `getAcquiredLUSDInSPVault()`
