@@ -6,7 +6,7 @@ import "../Interfaces/StrategyAPI.sol";
 
 
 contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
-    function _spHarvest() internal returns (uint256) {
+    function _spHarvestAndFastForward() internal returns (uint256) {
         // get strategy
         address strategy = yearnSPVault.withdrawalQueue(0);
         // get keeper
@@ -24,7 +24,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         return valueIncrease;
     }
 
-    function _curveHarvest() internal returns (uint256) {
+    function _curveHarvestAndFastForward() internal returns (uint256) {
         // get strategy
         address strategy = yearnCurveVault.withdrawalQueue(0);
         // get keeper
@@ -54,7 +54,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + 600);
 
         // Yearn LUSD Vault gets some yield
-        uint256 initialYield = _spHarvest();
+        uint256 initialYield = _spHarvestAndFastForward();
 
         // A chickens in
         vm.startPrank(A);
@@ -104,7 +104,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + 600);
 
         // Yearn LUSD Vault gets some yield
-        uint256 initialYield = _spHarvest();
+        uint256 initialYield = _spHarvestAndFastForward();
 
         // A chickens in
         vm.startPrank(A);
@@ -132,7 +132,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertEq(bLUSDToken.totalSupply(), 0, "bLUSD supply not 0 after full redemption");
 
         // Yearn LUSD Vault gets some yield
-        uint256 secondYield = _spHarvest();
+        uint256 secondYield = _spHarvestAndFastForward();
 
         // B chickens in
         vm.startPrank(B);
@@ -186,8 +186,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.redeem(bLUSDToken.balanceOf(A));
         vm.stopPrank();
 
-        // harvest curve
-        uint256 curveYield = _curveHarvest();
+        // harvest curve and fast forward time to unlock profits
+        uint256 curveYield = _curveHarvestAndFastForward();
         // TODO:
         //assertGt(curveYield, 0, "Yield generated in Curve vault should be greater than zero")
 
@@ -206,10 +206,17 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // checks
+        assertRelativeError(
+            chickenBondManager.calcSystemBackingRatio(),
+            1e18,
+            8e14, // 0.08%
+            "Backing ration should be 1"
+        );
+
         // Acquired in SP vault
         assertApproximatelyEqual(
             chickenBondManager.getAcquiredLUSDInSP(),
-            accruedBLUSD,
+            accruedBLUSD, // backing ratio is 1, so this will match
             1,
             "Acquired LUSD in SP mismatch"
         );
