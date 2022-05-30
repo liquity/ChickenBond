@@ -37,7 +37,7 @@ When Yearn upgrade their vaults from v2 to v3, they will freeze deposits and cea
 -  `LUSDChickenBonds/src/test/` - Foundry tests in Solidity for both development and mainnet fork testing. Contains unit tests and simple Foundry fuzz tests.
 - `LUSDChickenBonds/src/Interfaces/` - Solidity interfaces for core system contracts and external integrations
 - `LUSDChickenBonds/src/Proxy/` - Contains a Chicken Bonds operations script for combining transactions, for use with DSProxy
-- LUSDChickenBonds/src/utils` - Contains basic math and logging utilities used in the core smart contracts.
+- `LUSDChickenBonds/src/utils` - Contains basic math and logging utilities used in the core smart contracts.
 
 ## Running the project
 
@@ -208,7 +208,7 @@ The "alpha" parameter of the accrual function variable (call it `accrualParamete
 
 The controller's logic is simple in theory: every `accrualAdjustmentPeriodSeconds` seconds, determine the size-weighted average age of pending bonds (in seconds) and compare it to `targetAverageAgeSeconds`. If the average is higher than the target, reduce `accrualParameter` by a fixed percentage (`accrualAdjustmentRate`).
 
-The reduction results in an immediate step-increase of the accrued sLUSD amounts of pending bonds. This is expected to increase the likelihood of bonders chickening in, which would result in a reduction of the average outstanding bond age, eventually dropping below the target.
+The reduction results in an immediate step-increase of the accrued bLUSD amounts of pending bonds. This is expected to increase the likelihood of bonders chickening in, which would result in a reduction of the average outstanding bond age, eventually dropping below the target.
 
 ### Implementation notes
 
