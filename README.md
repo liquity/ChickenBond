@@ -59,7 +59,7 @@ The **pending** bucket contains the LUSD of all open bonds. It is untouched by r
 
 The **permanent** bucket contains all protocol-owned LUSD. It is untouched by redemptions, and remains permanently owned by the protocol in normal mode.
 
-The **acquired** bucket contains all LUSD held by the protocol which may be redeemed by burning sLUSD. 
+The **acquired** bucket contains all LUSD held by the protocol which may be redeemed by burning bLUSD. 
 
 
 
@@ -156,7 +156,7 @@ Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot
 
 ## Core smart contract architecture
 
-- `ChickenBondManager:` this contract contains the majority of system logic. It contains public state-changing functionality for bonding, chickening in and out, shifting protocol funds between vaults, and redeeming sLUSD. It also contains several getters for the various bucket quantities.
+- `ChickenBondManager:` this contract contains the majority of system logic. It contains public state-changing functionality for bonding, chickening in and out, shifting protocol funds between vaults, and redeeming bLUSD. It also contains several getters for the various bucket quantities.
 
 
 - `BondNFT:` is the ERC721 which mints bond NFTs upon creation.  A bond NFT entitles the holder to take actions related to the corresponding bond i.e. chickening in or out.
@@ -164,7 +164,7 @@ Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot
 
 - `LUSDSilo:` is a simple container contract that is only utilized in migration mode. Upon migration, it receives all of the system funds that were previously held in the SP vault. 
 
-- `SLUSDToken:` the token contract for sLUSD. Standard ERC20 functionality.
+- `BLUSDToken:` the token contract for bLUSD. Standard ERC20 functionality.
 
 
 ## External integrations
@@ -188,7 +188,7 @@ Each Yearn vault is periodically manually harvested by the Yearn team in order t
 
 - `chickenIn(bondID):` removes the given bond from the system and burns the bond NFT. Makes a portion of the bonded LUSD “acquired” and redeemable, and the remainder of the bonded LUSD permanently protocol-owned.  The split between these two quantities is determined such that the global system backing ratio remains constant.
 
-- `redeem(_sLUSDAmount):` Burns the provided sLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total sLUSD burned.  Funds are drawn proportionally from the Yearn SP and Curve vaults and sent to the redeemer.
+- `redeem(_bLUSDAmount):` Burns the provided bLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the Yearn SP and Curve vaults and sent to the redeemer.
 
 
 - `shiftLUSDFromSPToCurve(_lusdAmount):` Shifts the given LUSD amount from the Yearn SP vault to Curve, and deposits the received LP tokens to the Curve vault. Pulls funds from the acquired and permanent buckes in the SP vault, and moves them to the acquired and permanent buckets in the Curve vault, respectively. Only succeeds if the shift improves the LUSD peg.
@@ -200,7 +200,7 @@ Each Yearn vault is periodically manually harvested by the Yearn team in order t
 - `activateMigration():` Callable only by Yearn Governance. Pulls all funds from the Yearn SP vault and transfers them to a trusted Silo contract. Moves all funds in permanent buckets to their corresponding acquired buckets, thus making all system funds (except for the pending bucket) redeemable.
 
 ## Controller
-The system incorporates an asymmetrical controller, designed to maintain the economic attractiveness of bonding. Without any form of control it seems likely that the break-even bonding time would increase. As the system matures, it may be necessary to steepen the sLUSD accrual curve. Controlling the accrual curve successfully should have the effect of keeping the break-even time and optimal rebonding time below some acceptable upper bound.
+The system incorporates an asymmetrical controller, designed to maintain the economic attractiveness of bonding. Without any form of control it seems likely that the break-even bonding time would increase. As the system matures, it may be necessary to steepen the bLUSD accrual curve. Controlling the accrual curve successfully should have the effect of keeping the break-even time and optimal rebonding time below some acceptable upper bound.
 
 ### Accrual parameter control
 
@@ -229,7 +229,7 @@ We need to ensure that when Yearn deprecate the v2 vaults:
 
 - All LUSD can be extracted from the old Chicken Bonds system, via a combination of redemptions and chicken-outs 
 
-- LUSD does not remain in the Yearn SP vault. The ceasing of harvesting means that if liquidations occur, the liquidation ETH gain would not be recycled back to LUSD, causing a permanent loss to the Chicken Bonds system, and by extension, losses to bonders & sLUSD holders.
+- LUSD does not remain in the Yearn SP vault. The ceasing of harvesting means that if liquidations occur, the liquidation ETH gain would not be recycled back to LUSD, causing a permanent loss to the Chicken Bonds system, and by extension, losses to bonders & bLUSD holders.
 
 A proxy upgrade pattern was briefly considered: it would have been simple to give Yearn control over setting the v3 vault addresses in `ChickenBondManager`, and directly migrating system funds from v2 -> v3 vaults. However, as Chicken Bonds may one day hold hundreds of millions of dollars worth of funds, we deemed this too great a responsibility - it would in theory be possible for a rogue actor with such capability to create fake v3 vault contracts and drain all Chicken Bond system funds. 
 
@@ -259,7 +259,7 @@ Migration mode activation triggers the following logic changes:
 - Does not increase the permanent bucket with the LUSD surplus
 - Instead, refunds the surplus LUSD to the bonder
 - No first-chicken-in yield is sent to AMM reward. Reasoning: yields should cease after yearn trigger migration mode
-- No tax is sent to AMM rewards. Reasoning: no need to maintain AMM LP incentives in migration mode. It's fine and desirable for LPs to pull funds and redeem their sLUSD. 
+- No tax is sent to AMM rewards. Reasoning: no need to maintain AMM LP incentives in migration mode. It's fine and desirable for LPs to pull funds and redeem their bLUSD. 
 
 `redeem`: pulls funds proportionally from the Silo acquired bucket (as LUSD) and the Curve acquired bucket (as yTokens for the Yearn Curve vault)
 
