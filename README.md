@@ -9,11 +9,11 @@ The system has two goals:
 
 ## Overview of mechanics
 
-The core mechanics remain the same as outlined in the whitepaper. A user bonds LUSD, and accrues an sLUSD balance over time on a smooth sub-linear schedule.
+The core mechanics remain the same as outlined in the whitepaper. A user bonds LUSD, and accrues an bLUSD balance over time on a smooth sub-linear schedule.
 
-At any time they may **chicken out** and reclaim their entire principal, or **chicken in** and give up their principal in exchange for freshly minted sLUSD.
+At any time they may **chicken out** and reclaim their entire principal, or **chicken in** and give up their principal in exchange for freshly minted bLUSD.
 
-sLUSD may always be redeemed for a proportional share of the system’s acquired LUSD.
+bLUSD may always be redeemed for a proportional share of the system’s acquired LUSD.
 
 However, LUSD Chicken Bonds contains additional functionality for the purposes of peg stabilization and migration. The funds held by the protocol are split across two yield-bearing Yearn vaults, referred to as the **Yearn SP Vault** and the **Yearn Curve Vault**. The former deposits funds to the Liquity Stability Pool, and the latter deposits funds into the Curve LUSD3CRV MetaPool.
 
