@@ -5,7 +5,7 @@ import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "./utils/console.sol";
 
-contract SLUSDToken is ERC20, Ownable {
+contract BLUSDToken is ERC20, Ownable {
 
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
   
@@ -16,17 +16,17 @@ contract SLUSDToken is ERC20, Ownable {
         renounceOwnership();
     }
 
-    function mint(address _to, uint256 _sLUSDAmount) external {
+    function mint(address _to, uint256 _bLUSDAmount) external {
         _requireCallerIsChickenBondsManager();
-        _mint(_to, _sLUSDAmount);
+        _mint(_to, _bLUSDAmount);
     }
 
-    function burn(address _from, uint256 _sLUSDAmount) external {
+    function burn(address _from, uint256 _bLUSDAmount) external {
         _requireCallerIsChickenBondsManager();
-        _burn(_from, _sLUSDAmount);
+        _burn(_from, _bLUSDAmount);
     }
 
     function _requireCallerIsChickenBondsManager() internal view {
-        require(msg.sender == chickenBondManagerAddress, "SLUSDToken: Caller must be ChickenBondManager");
+        require(msg.sender == chickenBondManagerAddress, "BLUSDToken: Caller must be ChickenBondManager");
     }
 }

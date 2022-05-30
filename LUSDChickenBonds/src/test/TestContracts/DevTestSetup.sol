@@ -59,20 +59,20 @@ contract DevTestSetup is BaseTest {
         yearnRegistry = IYearnRegistry(address(mockYearnRegistry));
 
         // Deploy core ChickenBonds system
-        sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
+        bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
 
         lusdSilo = new LUSDSilo();
 
-        // Deploy LUSD/sLUSD AMM LP Rewards contract
+        // Deploy LUSD/bLUSD AMM LP Rewards contract
         curveLiquidityGauge = ICurveLiquidityGaugeV4(address(new MockCurveLiquidityGaugeV4()));
 
         ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
             bondNFTAddress: address(bondNFT),
             lusdTokenAddress: address(lusdToken),
-            sLUSDTokenAddress: address(sLUSDToken),
+            bLUSDTokenAddress: address(bLUSDToken),
             curvePoolAddress: address(curvePool),
             yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
@@ -89,10 +89,10 @@ contract DevTestSetup is BaseTest {
             MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
             ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
             ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
-            CHICKEN_IN_AMM_TAX                 // _CHICKEN_IN_AMM_TAX
+            CHICKEN_IN_AMM_FEE                 // _CHICKEN_IN_AMM_FEE
         );
 
         bondNFT.setAddresses(address(chickenBondManager));
-        sLUSDToken.setAddresses(address(chickenBondManager));
+        bLUSDToken.setAddresses(address(chickenBondManager));
     }
 }

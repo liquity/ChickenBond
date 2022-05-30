@@ -52,7 +52,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         vm.stopPrank();
 
         // checks
-        assertGt(sLUSDToken.balanceOf(A), 0, "Should have received some sLUSD");
+        assertGt(bLUSDToken.balanceOf(A), 0, "Should have received some bLUSD");
     }
 
     function testChickenOut() public {
@@ -78,7 +78,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         vm.warp(block.timestamp + 30 days);
 
         // chicken-in
-        uint256 accruedSLUSD = chickenBondManager.calcAccruedSLUSD(bondId);
+        uint256 accruedBLUSD = chickenBondManager.calcAccruedBLUSD(bondId);
         uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
         chickenBondOperationsScript.chickenIn(bondId);
@@ -88,14 +88,14 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
 
         // redeem
         vm.startPrank(A);
-        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
-        sLUSDToken.approve(address(chickenBondOperationsScript), sLUSDBalance);
-        chickenBondOperationsScript.redeemAndWithdraw(sLUSDBalance / 2);
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        bLUSDToken.approve(address(chickenBondOperationsScript), bLUSDBalance);
+        chickenBondOperationsScript.redeemAndWithdraw(bLUSDBalance / 2);
         vm.stopPrank();
 
         // checks
         // fraction redeeemed: 1/2; redemption fee: 1/4; 1/2*(1 - 4) = 3/8
-        uint256 expectedLUSDBalance = accruedSLUSD * backingRatio / 1e18 * 3/8;
+        uint256 expectedLUSDBalance = accruedBLUSD * backingRatio / 1e18 * 3/8;
         assertEq(lusdToken.balanceOf(A) - previousBalance, expectedLUSDBalance, "LUSD balance doesn't match");
     }
 }

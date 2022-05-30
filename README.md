@@ -61,6 +61,9 @@ The **permanent** bucket contains all protocol-owned LUSD. It is untouched by re
 
 The **acquired** bucket contains all LUSD held by the protocol which may be redeemed by burning sLUSD. 
 
+![Chicken bond buckets drawio](https://user-images.githubusercontent.com/701095/170958185-fb2242aa-07f9-41ac-9384-294c5ecfa4db.png)
+
+
 ### Yield sources
 
 The Chicken Bonds system deposits LUSD to external Yearn vaults - the Yearn SP vault, and the Yearn Curve vault -  which generate yield.

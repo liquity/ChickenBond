@@ -11,7 +11,7 @@ import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 contract ChickenBondOperationsScript {
     IChickenBondManager immutable chickenBondManager;
     IERC20 immutable lusdToken;
-    IERC20 immutable sLUSDToken;
+    IERC20 immutable bLUSDToken;
     ICurvePool immutable curvePool;
     IYearnVault immutable public yearnSPVault;
     IYearnVault immutable public yearnCurveVault;
@@ -23,7 +23,7 @@ contract ChickenBondOperationsScript {
 
         chickenBondManager = _chickenBondManager;
         lusdToken = _chickenBondManager.lusdToken();
-        sLUSDToken = _chickenBondManager.sLUSDToken();
+        bLUSDToken = _chickenBondManager.bLUSDToken();
         curvePool = _chickenBondManager.curvePool();
         yearnSPVault = _chickenBondManager.yearnSPVault();
         yearnCurveVault = _chickenBondManager.yearnCurveVault();
@@ -56,26 +56,26 @@ contract ChickenBondOperationsScript {
     }
 
     function chickenIn(uint256 _bondID) external {
-        uint256 balanceBefore = sLUSDToken.balanceOf(address(this));
+        uint256 balanceBefore = bLUSDToken.balanceOf(address(this));
 
         // Chicken in
         chickenBondManager.chickenIn(_bondID);
 
-        uint256 balanceAfter = sLUSDToken.balanceOf(address(this));
+        uint256 balanceAfter = bLUSDToken.balanceOf(address(this));
         assert(balanceAfter > balanceBefore);
 
-        // send sLUSD to owner
-        sLUSDToken.transfer(msg.sender, balanceAfter - balanceBefore);
+        // send bLUSD to owner
+        bLUSDToken.transfer(msg.sender, balanceAfter - balanceBefore);
     }
 
-    function redeemAndWithdraw(uint256 _sLUSDToRedeem) external {
-        // pull first sLUSD if needed:
-        uint256 proxyBalance = sLUSDToken.balanceOf(address(this));
-        if (proxyBalance < _sLUSDToRedeem) {
-            sLUSDToken.transferFrom(msg.sender, address(this), _sLUSDToRedeem - proxyBalance);
+    function redeemAndWithdraw(uint256 _bLUSDToRedeem) external {
+        // pull first bLUSD if needed:
+        uint256 proxyBalance = bLUSDToken.balanceOf(address(this));
+        if (proxyBalance < _bLUSDToRedeem) {
+            bLUSDToken.transferFrom(msg.sender, address(this), _bLUSDToRedeem - proxyBalance);
         }
 
-        (uint256 yTokensFromSPVault, uint256 yTokensFromCurveVault, ) = chickenBondManager.redeem(_sLUSDToRedeem);
+        (uint256 yTokensFromSPVault, uint256 yTokensFromCurveVault, ) = chickenBondManager.redeem(_bLUSDToRedeem);
 
         // The LUSD deltas from SP/Curve withdrawals are the amounts to send to the redeemer
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));

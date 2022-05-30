@@ -6,7 +6,7 @@ import {stdCheats} from "forge-std/stdlib.sol";
 import "forge-std/Vm.sol";
 import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
-import "../../SLUSDToken.sol";
+import "../../BLUSDToken.sol";
 import "../../BondNFT.sol";
 import "../../LUSDSilo.sol";
 import "./ChickenBondManagerWrap.sol";
@@ -22,7 +22,7 @@ contract BaseTest is DSTest, stdCheats {
     // Core ChickenBond contracts
     ChickenBondManagerWrap chickenBondManager;
     BondNFT bondNFT;
-    SLUSDToken sLUSDToken;
+    BLUSDToken bLUSDToken;
     LUSDSilo lusdSilo;
 
     // Integrations
@@ -37,7 +37,7 @@ contract BaseTest is DSTest, stdCheats {
     address yearnGovernanceAddress;
     address liquitySPAddress;
 
-    uint256 CHICKEN_IN_AMM_TAX = 1e16; // 1%
+    uint256 CHICKEN_IN_AMM_FEE = 1e16; // 1%
 
     address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
     address constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
@@ -194,12 +194,12 @@ contract BaseTest is DSTest, stdCheats {
         return lusdToShift;
     }
 
-    function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
-        return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
+    function _getChickenInFeeForAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * chickenBondManager.CHICKEN_IN_AMM_FEE() / 1e18;
     }
 
-    function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
-        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
+    function _getAmountMinusChickenInFee(uint256 _amount) internal view returns (uint256) {
+        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_FEE()) / 1e18;
     }
 
     function diffOrZero(uint256 x, uint256 y) public pure returns (uint256) {
@@ -221,7 +221,7 @@ contract BaseTest is DSTest, stdCheats {
         console.log("");
         logCBMBuckets(_logHeadingText);
         console.log(chickenBondManager.calcSystemBackingRatio(), "Backing ratio");
-        console.log(sLUSDToken.totalSupply(), "sLUSD total supply");
+        console.log(bLUSDToken.totalSupply(), "bLUSD total supply");
         console.log(lusdToken.balanceOf(address(curveLiquidityGauge)), "balance of AMM rewards contract");
         console.log(yearnSPVault.balanceOf(address(chickenBondManager)),"SP Y tokens in CBM");
         console.log(yearnCurveVault.balanceOf(address(chickenBondManager)),"Curve Y tokens in CBM");

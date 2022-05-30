@@ -14,7 +14,7 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             uint256 _minimumAccrualParameter,
             uint256 _accrualAdjustmentRate,
             uint256 _accrualAdjustmentPeriodSeconds,
-            uint256 _CHICKEN_IN_AMM_TAX
+            uint256 _CHICKEN_IN_AMM_FEE
         )
         ChickenBondManager(
             _externalContractAddresses,
@@ -23,21 +23,21 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             _minimumAccrualParameter,
             _accrualAdjustmentRate,
             _accrualAdjustmentPeriodSeconds,
-            _CHICKEN_IN_AMM_TAX
+            _CHICKEN_IN_AMM_FEE
         )
     {}
 
     // wrappers
-    function updateRedemptionFeePercentage(uint256 _fractionOfSLUSDToRedeem) external returns (uint256) {
-        return _updateRedemptionFeePercentage(_fractionOfSLUSDToRedeem);
+    function updateRedemptionFeePercentage(uint256 _fractionOfBLUSDToRedeem) external returns (uint256) {
+        return _updateRedemptionFeePercentage(_fractionOfBLUSDToRedeem);
     }
 
     function minutesPassedSinceLastRedemption() external view returns (uint256) {
         return _minutesPassedSinceLastRedemption();
     }
 
-    function calcAccruedSLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio, uint256 _accrualParameter) external view returns (uint256) {
-        return _calcAccruedSLUSD(_startTime, _lusdAmount, _backingRatio, _accrualParameter);
+    function calcAccruedBLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio, uint256 _accrualParameter) external view returns (uint256) {
+        return _calcAccruedBLUSD(_startTime, _lusdAmount, _backingRatio, _accrualParameter);
     }
 
     // setters

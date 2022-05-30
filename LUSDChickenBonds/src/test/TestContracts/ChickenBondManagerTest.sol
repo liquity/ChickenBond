@@ -182,7 +182,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(totalPendingLUSDAfter == 35e18);
     }
 
-    function testCreateBondReducesLUSDBalanceOfBonder() public {
+    function testCreateBondReducebLUSDBalanceOfBonder() public {
         // Get A balance before
         uint256 balanceBefore = lusdToken.balanceOf(A);
 
@@ -302,7 +302,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(ownerOfID2After, B);
     }
 
-    function testCreateBondTransfersLUSDToYearnVault() public {
+    function testCreateBondTransferbLUSDToYearnVault() public {
         // Get Yearn vault balance before
         uint256 yearnVaultBalanceBefore = lusdToken.balanceOf(address(yearnSPVault));
 
@@ -422,7 +422,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_bondStartTime, 0);
     }
 
-    function testChickenOutTransfersLUSDToBonder() public {
+    function testChickenOutTransferbLUSDToBonder() public {
         // A, B create bond
         uint256 bondAmount = 171e17;
 
@@ -633,9 +633,9 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
     }
 
-    // --- calcsLUSD Accrual tests ---
+    // --- calcbLUSD Accrual tests ---
 
-    function testCalcAccruedSLUSDReturns0for0StartTime() public {
+    function testCalcAccruedBLUSDReturns0for0StartTime() public {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
@@ -643,11 +643,11 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 A_bondID = bondNFT.totalMinted();
 
-        uint256 A_accruedSLUSD = chickenBondManager.calcAccruedSLUSD(A_bondID);
-        assertEq(A_accruedSLUSD, 0);
+        uint256 A_accruedBLUSD = chickenBondManager.calcAccruedBLUSD(A_bondID);
+        assertEq(A_accruedBLUSD, 0);
     }
 
-    function testCalcAccruedSLUSDReturnsNonZeroSLUSDForNonZeroInterval(uint256 _interval) public {
+    function testCalcAccruedBLUSDReturnsNonZeroBLUSDForNonZeroInterval(uint256 _interval) public {
         // --- Test first bond ---
         vm.assume(_interval > 0 && _interval < 5200 weeks);  // 0 < interval < 100 years
 
@@ -661,8 +661,8 @@ contract ChickenBondManagerTest is BaseTest {
         // Time passes
         vm.warp(block.timestamp + _interval);
 
-        uint256 A_accruedSLUSD = chickenBondManager.calcAccruedSLUSD(A_bondID);
-        assertTrue(A_accruedSLUSD > 0);
+        uint256 A_accruedBLUSD = chickenBondManager.calcAccruedBLUSD(A_bondID);
+        assertTrue(A_accruedBLUSD > 0);
 
         // --- Test subsequent bond ---
 
@@ -681,12 +681,12 @@ contract ChickenBondManagerTest is BaseTest {
         // Time interval passes
         vm.warp(block.timestamp + _interval);
 
-        // Check accrued sLUSD < sLUSD Cap
-        assertTrue(chickenBondManager.calcAccruedSLUSD(B_bondID) < chickenBondManager.calcBondSLUSDCap(B_bondID));
+        // Check accrued bLUSD < bLUSD Cap
+        assertTrue(chickenBondManager.calcAccruedBLUSD(B_bondID) < chickenBondManager.calcBondBLUSDCap(B_bondID));
     }
 
     // TODO: convert to fuzz test
-    function testCalcAccruedSLUSDNeverReachesCap(uint256 _interval) public {
+    function testCalcAccruedBLUSDNeverReachesCap(uint256 _interval) public {
          // --- Test first bond ---
         vm.assume(_interval > 0 && _interval < 5200 weeks);  // 0 < interval < 100 years
 
@@ -700,8 +700,8 @@ contract ChickenBondManagerTest is BaseTest {
         // Time passes
         vm.warp(block.timestamp + _interval);
 
-        // Check accrued sLUSD < sLUSD Cap
-        assertTrue(chickenBondManager.calcAccruedSLUSD(A_bondID) < chickenBondManager.calcBondSLUSDCap(A_bondID));
+        // Check accrued bLUSD < bLUSD Cap
+        assertTrue(chickenBondManager.calcAccruedBLUSD(A_bondID) < chickenBondManager.calcBondBLUSDCap(A_bondID));
 
         // --- Test subsequent bond ---
         vm.warp(block.timestamp + 30 days);
@@ -719,11 +719,11 @@ contract ChickenBondManagerTest is BaseTest {
         // Time passes
         vm.warp(block.timestamp + _interval);
 
-        // Check accrued sLUSD < sLUSD Cap
-        assertTrue(chickenBondManager.calcAccruedSLUSD(B_bondID) < chickenBondManager.calcBondSLUSDCap(B_bondID));
+        // Check accrued bLUSD < bLUSD Cap
+        assertTrue(chickenBondManager.calcAccruedBLUSD(B_bondID) < chickenBondManager.calcBondBLUSDCap(B_bondID));
     }
 
-    function testCalcAccruedSLUSDIsMonotonicIncreasingWithTime(uint256 _interval) public {
+    function testCalcAccruedBLUSDIsMonotonicIncreasingWithTime(uint256 _interval) public {
         // --- Test first bond ---
         vm.assume( _interval > 0 && _interval < 5200 weeks);  // 0 < interval < 100 years
 
@@ -734,10 +734,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 bondID_A = bondNFT.totalMinted();
 
-        uint256 accruedSLUSD_A = chickenBondManager.calcAccruedSLUSD(bondID_A);
+        uint256 accruedBLUSD_A = chickenBondManager.calcAccruedBLUSD(bondID_A);
         vm.warp(block.timestamp + _interval);
-        uint256 newAccruedSLUSD_A = chickenBondManager.calcAccruedSLUSD(bondID_A);
-        assertTrue(newAccruedSLUSD_A > accruedSLUSD_A);
+        uint256 newAccruedBLUSD_A = chickenBondManager.calcAccruedBLUSD(bondID_A);
+        assertTrue(newAccruedBLUSD_A > accruedBLUSD_A);
 
         // time passes
         vm.warp(block.timestamp + 30 days);
@@ -754,13 +754,13 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 bondID_B = bondNFT.totalMinted();
 
-        uint256 accruedSLUSD_B = chickenBondManager.calcAccruedSLUSD(bondID_B);
+        uint256 accruedBLUSD_B = chickenBondManager.calcAccruedBLUSD(bondID_B);
         vm.warp(block.timestamp + _interval);
-        uint256 newAccruedSLUSD_B = chickenBondManager.calcAccruedSLUSD(bondID_B);
-        assertTrue(newAccruedSLUSD_B > accruedSLUSD_B);
+        uint256 newAccruedBLUSD_B = chickenBondManager.calcAccruedBLUSD(bondID_B);
+        assertTrue(newAccruedBLUSD_B > accruedBLUSD_B);
     }
 
-    function testCalcSLUSDAccrualReturns0AfterBonderChickenOut() public {
+    function testCalcBLUSDAccrualReturns0AfterBonderChickenOut() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -769,18 +769,18 @@ contract ChickenBondManagerTest is BaseTest {
 
         vm.warp(block.timestamp + 30 days);
 
-        // Check A's accrued SLUSD is > 0
-        uint256 A_accruedSLUSDBefore = chickenBondManager.calcAccruedSLUSD(A_bondID);
-        assertGt(A_accruedSLUSDBefore, 0);
+        // Check A's accrued BLUSD is > 0
+        uint256 A_accruedBLUSDBefore = chickenBondManager.calcAccruedBLUSD(A_bondID);
+        assertGt(A_accruedBLUSDBefore, 0);
 
         // A chickens out
         vm.startPrank(A);
         chickenBondManager.chickenOut(A_bondID);
         vm.stopPrank();
 
-        // Check A's accrued SLUSD is 0
-        uint256 A_accruedSLUSDAfter = chickenBondManager.calcAccruedSLUSD(A_bondID);
-        assertEq(A_accruedSLUSDAfter, 0);
+        // Check A's accrued BLUSD is 0
+        uint256 A_accruedBLUSDAfter = chickenBondManager.calcAccruedBLUSD(A_bondID);
+        assertEq(A_accruedBLUSDAfter, 0);
 
         // A, B create bonds
         createBondForUser(A, bondAmount);
@@ -791,20 +791,20 @@ contract ChickenBondManagerTest is BaseTest {
 
         vm.warp(block.timestamp + 30 days);
 
-        // Check B's accrued sLUSD > 0
-        uint256 B_accruedSLUSDBefore = chickenBondManager.calcAccruedSLUSD(B_bondID);
-        assertGt(B_accruedSLUSDBefore, 0);
+        // Check B's accrued bLUSD > 0
+        uint256 B_accruedBLUSDBefore = chickenBondManager.calcAccruedBLUSD(B_bondID);
+        assertGt(B_accruedBLUSDBefore, 0);
 
         // B chickens out
         vm.startPrank(B);
         chickenBondManager.chickenOut(B_bondID);
 
-        // Check B's accrued sLUSD == 0
-        uint256 B_accruedSLUSDAfter = chickenBondManager.calcAccruedSLUSD(B_bondID);
-        assertEq(B_accruedSLUSDAfter, 0);
+        // Check B's accrued bLUSD == 0
+        uint256 B_accruedBLUSDAfter = chickenBondManager.calcAccruedBLUSD(B_bondID);
+        assertEq(B_accruedBLUSDAfter, 0);
     }
 
-    function testCalcSLUSDAccrualReturns0ForNonBonder() public {
+    function testCalcBLUSDAccrualReturns0ForNonBonder() public {
           // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -815,9 +815,9 @@ contract ChickenBondManagerTest is BaseTest {
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
-        // Check accrued sLUSD for a nonexistent bond is 0
-        uint256 accruedSLUSD = chickenBondManager.calcAccruedSLUSD(unusedBondID);
-        assertEq(accruedSLUSD, 0);
+        // Check accrued bLUSD for a nonexistent bond is 0
+        uint256 accruedBLUSD = chickenBondManager.calcAccruedBLUSD(unusedBondID);
+        assertEq(accruedBLUSD, 0);
     }
 
     // --- calcSystemBackingRatio tests ---
@@ -866,7 +866,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         createBondForUser(A, bondAmount);
 
-        tip(address(sLUSDToken), B, 5e18);
+        tip(address(bLUSDToken), B, 5e18);
 
         uint256 currentTime = block.timestamp;
 
@@ -894,7 +894,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_bondStartTime, 0);
     }
 
-    function testChickenInTransfersAccruedSLUSDToBonder() public {
+    function testChickenInTransfersAccruedBLUSDToBonder() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -905,22 +905,22 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // Get B sLUSD balance before
-        uint256 B_sLUSDBalanceBefore = sLUSDToken.balanceOf(B);
+        // Get B bLUSD balance before
+        uint256 B_bLUSDBalanceBefore = bLUSDToken.balanceOf(B);
 
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
-        // Get B's accrued sLUSD and confirm it is non-zero
-        uint256 B_accruedSLUSD = chickenBondManager.calcAccruedSLUSD(B_bondID);
+        // Get B's accrued bLUSD and confirm it is non-zero
+        uint256 B_accruedBLUSD = chickenBondManager.calcAccruedBLUSD(B_bondID);
 
         // B chickens in
         vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
-        // Check B's sLUSD balance has increased by correct amount
-        uint256 B_sLUSDBalanceAfter = sLUSDToken.balanceOf(B);
-        assertEq(B_sLUSDBalanceAfter, B_sLUSDBalanceBefore + B_accruedSLUSD);
+        // Check B's bLUSD balance has increased by correct amount
+        uint256 B_bLUSDBalanceAfter = bLUSDToken.balanceOf(B);
+        assertEq(B_bLUSDBalanceAfter, B_bLUSDBalanceBefore + B_accruedBLUSD);
     }
 
     function testChickenInDoesNotChangeBondHolderLUSDBalance() public {
@@ -944,7 +944,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
-        // Check B's sLUSD balance has increased by correct amount
+        // Check B's bLUSD balance has increased by correct amount
         uint256 B_LUSDBalanceAfter = lusdToken.balanceOf(B);
         assertEq(B_LUSDBalanceAfter, B_LUSDBalanceBefore);
     }
@@ -1103,7 +1103,7 @@ contract ChickenBondManagerTest is BaseTest {
         bondNFT.ownerOf(B_bondID);
     }
 
-    function testChickenInChargesTax() public {
+    function testChickenInChargesChickenInFee() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1127,13 +1127,13 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // check rewards contract has received rewards
-        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), _getTaxForAmount(bondAmount), 1, "Wrong tax diverted to rewards contract");
-        // check accrued amount is reduced by tax
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), _getChickenInFeeForAmount(bondAmount), 1, "Wrong Chicken In fee diverted to rewards contract");
+        // check accrued amount is reduced by Chicken In fee
         assertApproximatelyEqual(
-            sLUSDToken.balanceOf(B),
-            _getTaxedAmount(chickenBondManager.calcAccruedSLUSD(B_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
+            bLUSDToken.balanceOf(B),
+            _getAmountMinusChickenInFee(chickenBondManager.calcAccruedBLUSD(B_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
             1000,
-            "Wrong tax applied to B"
+            "Wrong Chicken In fee applied to B"
         );
 
         // 10 minutes passes
@@ -1146,13 +1146,13 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // check rewards contract has received rewards
-        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), 2 * _getTaxForAmount(bondAmount), 2, "Wrong tax diverted to rewards contract");
-        // check accrued amount is reduced by tax
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), 2 * _getChickenInFeeForAmount(bondAmount), 2, "Wrong Chicken In fee diverted to rewards contract");
+        // check accrued amount is reduced by Chicken In fee
         assertApproximatelyEqual(
-            sLUSDToken.balanceOf(A),
-            _getTaxedAmount(chickenBondManager.calcAccruedSLUSD(A_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
+            bLUSDToken.balanceOf(A),
+            _getAmountMinusChickenInFee(chickenBondManager.calcAccruedBLUSD(A_startTime, bondAmount, backingRatio, chickenBondManager.calcUpdatedAccrualParameter())),
             1000,
-            "Wrong tax applied to A"
+            "Wrong Chicken In fee applied to A"
         );
     }
 
@@ -1320,7 +1320,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     // --- redemption tests ---
 
-    function testRedeemDecreasesCallersSLUSDBalance() public {
+    function testRedeemDecreasesCallersBLUSDBalance() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1329,34 +1329,34 @@ contract ChickenBondManagerTest is BaseTest {
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
-        // Confirm A's sLUSD balance is zero
-        uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance == 0);
+        // Confirm A's bLUSD balance is zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance == 0);
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
-        // Check A's sLUSD balance is non-zero
-        A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance > 0);
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
 
         // A transfers his LUSD to B
-        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
-        sLUSDToken.transfer(B, sLUSDBalance);
-        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        bLUSDToken.transfer(B, bLUSDBalance);
+        assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
 
-        // B redeems some sLUSD
-        uint256 sLUSDToRedeem = sLUSDBalance / 2;
+        // B redeems some bLUSD
+        uint256 bLUSDToRedeem = bLUSDBalance / 2;
         vm.startPrank(B);
-        chickenBondManager.redeem(sLUSDToRedeem);
+        chickenBondManager.redeem(bLUSDToRedeem);
 
-        // Check B's sLUSD balance has decreased
-        uint256 B_sLUSDBalanceAfter = sLUSDToken.balanceOf(B);
-        assertTrue(B_sLUSDBalanceAfter < sLUSDBalance);
-        assertTrue(B_sLUSDBalanceAfter > 0);
+        // Check B's bLUSD balance has decreased
+        uint256 B_bLUSDBalanceAfter = bLUSDToken.balanceOf(B);
+        assertTrue(B_bLUSDBalanceAfter < bLUSDBalance);
+        assertTrue(B_bLUSDBalanceAfter > 0);
     }
 
     function testRedeemDecreasesTotalAcquiredLUSD() public {
@@ -1368,31 +1368,31 @@ contract ChickenBondManagerTest is BaseTest {
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
-        // Confirm A's sLUSD balance is zero
-        uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance == 0);
+        // Confirm A's bLUSD balance is zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance == 0);
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
-        // Check A's sLUSD balance is non-zero
-        A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance > 0);
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
 
         // A transfers his LUSD to B
-        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
-        sLUSDToken.transfer(B, sLUSDBalance);
-        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        bLUSDToken.transfer(B, bLUSDBalance);
+        assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
 
         uint256 totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
 
-        // B redeems some sLUSD
-        uint256 sLUSDToRedeem = sLUSDBalance / 2;
+        // B redeems some bLUSD
+        uint256 bLUSDToRedeem = bLUSDBalance / 2;
         vm.startPrank(B);
-        chickenBondManager.redeem(sLUSDToRedeem);
+        chickenBondManager.redeem(bLUSDToRedeem);
 
         uint256 totalAcquiredLUSDAfter = chickenBondManager.getTotalAcquiredLUSD();
 
@@ -1401,7 +1401,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(totalAcquiredLUSDAfter > 0);
     }
 
-    function testRedeemDecreasesTotalSLUSDSupply() public {
+    function testRedeemDecreasesTotalBLUSDSupply() public {
          // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1410,37 +1410,37 @@ contract ChickenBondManagerTest is BaseTest {
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
-        // Confirm A's sLUSD balance is zero
-        uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance == 0);
+        // Confirm A's bLUSD balance is zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance == 0);
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
-        // Check A's sLUSD balance is non-zero
-        A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance > 0);
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
 
         // A transfers his LUSD to B
-        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
-        sLUSDToken.transfer(B, sLUSDBalance);
-        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        bLUSDToken.transfer(B, bLUSDBalance);
+        assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
 
-        uint256 totalSLUSDBefore = sLUSDToken.totalSupply();
+        uint256 totalBLUSDBefore = bLUSDToken.totalSupply();
 
-        // B redeems some sLUSD
-        uint256 sLUSDToRedeem = sLUSDBalance / 2;
+        // B redeems some bLUSD
+        uint256 bLUSDToRedeem = bLUSDBalance / 2;
         vm.startPrank(B);
-        chickenBondManager.redeem(sLUSDToRedeem);
+        chickenBondManager.redeem(bLUSDToRedeem);
 
-        uint256 totalSLUSDAfter = sLUSDToken.totalSupply();
+        uint256 totalBLUSDAfter = bLUSDToken.totalSupply();
 
-         // Check total sLUSD supply has decreased and is non-zero
-        assertTrue(totalSLUSDAfter < totalSLUSDBefore);
-        assertTrue(totalSLUSDAfter > 0);
+         // Check total bLUSD supply has decreased and is non-zero
+        assertTrue(totalBLUSDAfter < totalBLUSDBefore);
+        assertTrue(totalBLUSDAfter > 0);
     }
 
     function testRedeemIncreasesCallersYTokenBalance() public {
@@ -1452,31 +1452,31 @@ contract ChickenBondManagerTest is BaseTest {
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
-        // Confirm A's sLUSD balance is zero
-        uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance == 0);
+        // Confirm A's bLUSD balance is zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance == 0);
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
-        // Check A's sLUSD balance is non-zero
-        A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance > 0);
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
 
         // A transfers his LUSD to B
-        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
-        sLUSDToken.transfer(B, sLUSDBalance);
-        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        bLUSDToken.transfer(B, bLUSDBalance);
+        assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
 
         uint256 B_yTokensBalanceBefore = yearnSPVault.balanceOf(B);
 
-        // B redeems some sLUSD
-        uint256 sLUSDToRedeem = sLUSDBalance / 2;
+        // B redeems some bLUSD
+        uint256 bLUSDToRedeem = bLUSDBalance / 2;
         vm.startPrank(B);
-        chickenBondManager.redeem(sLUSDToRedeem);
+        chickenBondManager.redeem(bLUSDToRedeem);
 
         uint256 B_yTokensBalanceAfter = yearnSPVault.balanceOf(B);
 
@@ -1501,40 +1501,40 @@ contract ChickenBondManagerTest is BaseTest {
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
-        // Confirm A's sLUSD balance is zero
-        uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertEq(A_sLUSDBalance, 0);
+        // Confirm A's bLUSD balance is zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertEq(A_bLUSDBalance, 0);
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
-        // Check A's sLUSD balance is non-zero
-        A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertGt(A_sLUSDBalance, 0);
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertGt(A_bLUSDBalance, 0);
 
         // A transfers his LUSD to B
-        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertGt(sLUSDBalance, 0);
-        sLUSDToken.transfer(B, sLUSDBalance);
-        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
-        assertEq(sLUSDToken.totalSupply(), sLUSDToken.balanceOf(B));
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertGt(bLUSDBalance, 0);
+        bLUSDToken.transfer(B, bLUSDBalance);
+        assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
+        assertEq(bLUSDToken.totalSupply(), bLUSDToken.balanceOf(B));
         vm.stopPrank();
 
         // Get acquired LUSD in Yearn before
         uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInSP();
 
-        // B redeems some sLUSD
-        uint256 sLUSDToRedeem = sLUSDBalance * redemptionFraction / 1e18;
+        // B redeems some bLUSD
+        uint256 bLUSDToRedeem = bLUSDBalance * redemptionFraction / 1e18;
 
-        assertGt(sLUSDToRedeem, 0);
+        assertGt(bLUSDToRedeem, 0);
 
-        assertTrue(sLUSDToRedeem != 0);
+        assertTrue(bLUSDToRedeem != 0);
         vm.startPrank(B);
 
-        assertEq(sLUSDToRedeem, sLUSDToken.totalSupply() * redemptionFraction / 1e18);
-        chickenBondManager.redeem(sLUSDToRedeem);
+        assertEq(bLUSDToRedeem, bLUSDToken.totalSupply() * redemptionFraction / 1e18);
+        chickenBondManager.redeem(bLUSDToRedeem);
 
         // Check acquired LUSD in Yearn has decreased by correct fraction
         uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInSP();
@@ -1558,45 +1558,45 @@ contract ChickenBondManagerTest is BaseTest {
         // 10 minutes passes
         vm.warp(block.timestamp + 600);
 
-        // Confirm A's sLUSD balance is zero
-        uint256 A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance == 0);
+        // Confirm A's bLUSD balance is zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance == 0);
 
         uint256 A_bondID = bondNFT.totalMinted();
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
-        // Check A's sLUSD balance is non-zero
-        A_sLUSDBalance = sLUSDToken.balanceOf(A);
-        assertTrue(A_sLUSDBalance > 0);
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
 
         // A transfers his LUSD to B
-        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
-        sLUSDToken.transfer(B, sLUSDBalance);
-        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        bLUSDToken.transfer(B, bLUSDBalance);
+        assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
 
         uint256 B_yTokensBalanceBefore = yearnSPVault.balanceOf(B);
         uint256 backingRatio0 = chickenBondManager.calcSystemBackingRatio();
 
-        //assertEq(chickenBondManager.getTotalAcquiredLUSD(), sLUSDToken.totalSupply());
+        //assertEq(chickenBondManager.getTotalAcquiredLUSD(), bLUSDToken.totalSupply());
         assertEq(chickenBondManager.calcRedemptionFeePercentage(0), 0);
         // B redeems
-        uint256 sLUSDToRedeem = sLUSDBalance / 2;
+        uint256 bLUSDToRedeem = bLUSDBalance / 2;
         vm.startPrank(B);
-        chickenBondManager.redeem(sLUSDToRedeem);
+        chickenBondManager.redeem(bLUSDToRedeem);
 
         uint256 B_yTokensBalanceAfter1 = yearnSPVault.balanceOf(B);
         uint256 backingRatio1 = chickenBondManager.calcSystemBackingRatio();
 
         // Check B's Y tokens Balance converted to LUSD has increased by exactly redemption amount after redemption fee,
         // as backing ratio was 1
-        uint256 redemptionFraction = sLUSDToRedeem * 1e18 / sLUSDBalance;
+        uint256 redemptionFraction = bLUSDToRedeem * 1e18 / bLUSDBalance;
         uint256 redemptionFeePercentageExpected = redemptionFraction / chickenBondManager.BETA();
         assertApproximatelyEqual(
             (B_yTokensBalanceAfter1 - B_yTokensBalanceBefore) * yearnSPVault.pricePerShare() / 1e18,
-            sLUSDToRedeem * (1e18 - redemptionFeePercentageExpected) / 1e18,
+            bLUSDToRedeem * (1e18 - redemptionFeePercentageExpected) / 1e18,
             ROUNDING_ERROR,
             "Wrong B Y tokens balance increase after 1st redemption"
         );
@@ -1606,7 +1606,7 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B redeems again
         redemptionFraction = 3e18/4;
-        chickenBondManager.redeem(sLUSDToken.balanceOf(B) * redemptionFraction / 1e18);
+        chickenBondManager.redeem(bLUSDToken.balanceOf(B) * redemptionFraction / 1e18);
         uint256 B_yTokensBalanceAfter2 = yearnSPVault.balanceOf(B);
         redemptionFeePercentageExpected = redemptionFeePercentageExpected + redemptionFraction / chickenBondManager.BETA();
         backingRatioExpected = backingRatio1 * (1e18 - redemptionFraction * (1e18 - redemptionFeePercentageExpected)/1e18)
@@ -1614,7 +1614,7 @@ contract ChickenBondManagerTest is BaseTest {
         // Check B's Y tokens Balance converted to LUSD has increased by less than redemption amount
         // backing ratio was 1, but redemption fee was non zero
         assertGt(
-            sLUSDToRedeem - (B_yTokensBalanceAfter2 - B_yTokensBalanceAfter1) * yearnSPVault.pricePerShare() / 1e18,
+            bLUSDToRedeem - (B_yTokensBalanceAfter2 - B_yTokensBalanceAfter1) * yearnSPVault.pricePerShare() / 1e18,
             ROUNDING_ERROR,
             "Wrong B Y tokens balance increase after 2nd redemption"
         );
@@ -1622,7 +1622,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertApproximatelyEqual(chickenBondManager.calcSystemBackingRatio(), backingRatioExpected, ROUNDING_ERROR, "Wrong backing ratio after 2nd redemption");
     }
 
-    function testRedeemRevertsWhenCallerHasInsufficientSLUSD() public {
+    function testRedeemRevertsWhenCallerHasInsufficientBLUSD() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1637,25 +1637,25 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
 
-        // A transfers some sLUSD to B
-        uint256 sLUSDBalance = sLUSDToken.balanceOf(A);
-        sLUSDToken.transfer(B, sLUSDBalance);
-        assertEq(sLUSDBalance, sLUSDToken.balanceOf(B));
+        // A transfers some bLUSD to B
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        bLUSDToken.transfer(B, bLUSDBalance);
+        assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
 
-        uint256 B_sLUSDBalance = sLUSDToken.balanceOf(B);
-        assertGt(B_sLUSDBalance, 0);
+        uint256 B_bLUSDBalance = bLUSDToken.balanceOf(B);
+        assertGt(B_bLUSDBalance, 0);
 
         // B tries to redeem more LUSD than they have
         vm.startPrank(B);
         vm.expectRevert("ERC20: burn amount exceeds balance");
-        chickenBondManager.redeem(B_sLUSDBalance + 1);
+        chickenBondManager.redeem(B_bLUSDBalance + 1);
 
-        // Reverts on transfer rather than burn, since it tries to redeem more than the total SLUSD supply, and therefore tries
+        // Reverts on transfer rather than burn, since it tries to redeem more than the total BLUSD supply, and therefore tries
         // to withdraw more LUSD than is held by the system
         // TODO: Fix. Seems to revert with no reason string (or not catch it)?
         // vm.expectRevert("ERC20: transfer amount exceeds balance");
-        // chickenBondManager.redeem(B_sLUSDBalance + sLUSDToken.totalSupply());
+        // chickenBondManager.redeem(B_bLUSDBalance + bLUSDToken.totalSupply());
     }
 
     function testRedeemRevertsWithZeroInputAmount() public {
@@ -1674,11 +1674,11 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        // Check B's sLUSD balance is zero
-        uint256 B_sLUSDBalance = sLUSDToken.balanceOf(B);
-        assertEq(B_sLUSDBalance, 0);
+        // Check B's bLUSD balance is zero
+        uint256 B_bLUSDBalance = bLUSDToken.balanceOf(B);
+        assertEq(B_bLUSDBalance, 0);
 
-        // B tries to redeem with 0 sLUSD balance
+        // B tries to redeem with 0 bLUSD balance
         vm.startPrank(B);
         vm.expectRevert("CBM: Amount must be > 0");
         chickenBondManager.redeem(0);
@@ -1696,12 +1696,12 @@ contract ChickenBondManagerTest is BaseTest {
         // confirm acquired LUSD is 0
         assertEq(chickenBondManager.getTotalAcquiredLUSD(), 0);
 
-        // Cheat: tip 5e18 sLUSD to B
-        tip(address(sLUSDToken), B, 5e18);
-        uint256 B_sLUSDBalance = sLUSDToken.balanceOf(B);
-        assertEq(B_sLUSDBalance, 5e18);
+        // Cheat: tip 5e18 bLUSD to B
+        tip(address(bLUSDToken), B, 5e18);
+        uint256 B_bLUSDBalance = bLUSDToken.balanceOf(B);
+        assertEq(B_bLUSDBalance, 5e18);
 
-        // B tries to redeem his sLUSD while there is 0 total acquired LUSD
+        // B tries to redeem his bLUSD while there is 0 total acquired LUSD
         vm.startPrank(B);
         chickenBondManager.redeem(5e18);
     }
@@ -1710,8 +1710,8 @@ contract ChickenBondManagerTest is BaseTest {
 
     // function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInSPAndCurveVault() public {}
 
-    // function testShiftLUSDFromCurveToSPIncreasesLUSDInSP() public {}
-    // function testShiftLUSDFromCurveToSPDecreasesLUSDInCurve() public {}
+    // function testShiftLUSDFromCurveToSPIncreasebLUSDInSP() public {}
+    // function testShiftLUSDFromCurveToSPDecreasebLUSDInCurve() public {}
 
     // function testFailShiftLUSDFromCurveToSPWhen0LUSDInCurve() public {}
 
