@@ -36,7 +36,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     address immutable public yearnGovernanceAddress;
 
-    uint256 immutable public CHICKEN_IN_AMM_TAX;
+    uint256 immutable public CHICKEN_IN_AMM_FEE;
 
     uint256 private permanentLUSDInSP;    // Yearn Liquity Stability Pool vault
     uint256 private permanentLUSDInCurve; // Yearn Curve LUSD-3CRV vault
@@ -144,7 +144,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         uint256 _minimumAccrualParameter,
         uint256 _accrualAdjustmentRate,
         uint256 _accrualAdjustmentPeriodSeconds,
-        uint256 _CHICKEN_IN_AMM_TAX
+        uint256 _CHICKEN_IN_AMM_FEE
     )
     {
         bondNFT = IBondNFT(_externalContractAddresses.bondNFTAddress);
@@ -165,7 +165,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         accrualAdjustmentPeriodSeconds = _accrualAdjustmentPeriodSeconds;
 
         curveLiquidityGauge = ICurveLiquidityGaugeV4(_externalContractAddresses.curveLiquidityGaugeAddress);
-        CHICKEN_IN_AMM_TAX = _CHICKEN_IN_AMM_TAX;
+        CHICKEN_IN_AMM_FEE = _CHICKEN_IN_AMM_FEE;
 
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
@@ -267,7 +267,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     }
 
     function _withdrawFromSPVaultAndTransferToRewardsStakingContract(uint256 _yTokensToSwap) internal {
-        // Pull the tax amount from Yearn LUSD vault
+        // Pull the LUSD amount from Yearn LUSD vault
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
         yearnSPVault.withdraw(_yTokensToSwap);
 
@@ -333,7 +333,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         uint256 updatedAccrualParameter = _updateAccrualParameter();
 
         BondData memory bond = idToBondData[_bondID];
-        (uint256 taxAmount, uint256 taxedBondAmount) = _getTaxedBond(bond.lusdAmount);
+        (uint256 chickenInFeeAmount, uint256 bondAmountMinusChickenInFee) = _getBondWithChickenInFeeApplied(bond.lusdAmount);
 
         /* Upon the first chicken-in after a) system deployment or b) redemption of the full bLUSD supply, divert
         * any earned yield to the bLUSD-LUSD AMM for fairness.
@@ -346,7 +346,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
         uint256 lusdInSP = calcTotalYearnSPVaultShareValue();
         uint256 backingRatio = _calcSystemBackingRatio(lusdInSP);
-        uint256 accruedBLUSD = _calcAccruedBLUSD(bond.startTime, taxedBondAmount, backingRatio, updatedAccrualParameter);
+        uint256 accruedBLUSD = _calcAccruedBLUSD(bond.startTime, bondAmountMinusChickenInFee, backingRatio, updatedAccrualParameter);
 
         delete idToBondData[_bondID];
 
@@ -357,7 +357,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         /* Get the LUSD amount to acquire from the bond, and the remaining surplus. Acquire LUSD in proportion to the system's
         current backing ratio,* in order to maintain said ratio. */
         uint256 lusdToAcquire = accruedBLUSD * backingRatio / 1e18;
-        uint256 lusdSurplus = taxedBondAmount - lusdToAcquire;
+        uint256 lusdSurplus = bondAmountMinusChickenInFee - lusdToAcquire;
 
         // Handle the surplus LUSD from the chicken-in:
         if (!migration) { // In normal mode, add the surplus to the permanent bucket by increasing the permament yToken tracker. This implicitly decreases the acquired LUSD.
@@ -370,10 +370,10 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         bLUSDToken.mint(msg.sender, accruedBLUSD);
         bondNFT.burn(_bondID);
 
-        // Transfer the chicken in tax to the LUSD/bLUSD AMM LP Rewards staking contract during normal mode.
+        // Transfer the chicken in fee to the LUSD/bLUSD AMM LP Rewards staking contract during normal mode.
         if (!migration) {
-            uint256 yTokensToSwapForTaxLUSD = _calcCorrespondingYTokens(yearnSPVault, taxAmount, lusdInSP);
-            _withdrawFromSPVaultAndTransferToRewardsStakingContract(yTokensToSwapForTaxLUSD);
+            uint256 yTokensToSwapForChickenInFeeLUSD = _calcCorrespondingYTokens(yearnSPVault, chickenInFeeAmount, lusdInSP);
+            _withdrawFromSPVaultAndTransferToRewardsStakingContract(yTokensToSwapForChickenInFeeLUSD);
         }
     }
 
@@ -607,20 +607,20 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         return (block.timestamp - lastRedemptionTime) / SECONDS_IN_ONE_MINUTE;
     }
 
-    function _getTaxedBond(uint256 _bondLUSDAmount) internal view returns (uint256, uint256) {
-        // Apply zero tax in migration mode
+    function _getBondWithChickenInFeeApplied(uint256 _bondLUSDAmount) internal view returns (uint256, uint256) {
+        // Apply zero fee in migration mode
         if (migration) {return (0, _bondLUSDAmount);}
 
-        // Otherwise, apply the constant tax rate
-        uint256 taxAmount = _bondLUSDAmount * CHICKEN_IN_AMM_TAX / 1e18;
-        uint256 taxedBondAmount = _bondLUSDAmount - taxAmount;
+        // Otherwise, apply the constant fee rate
+        uint256 chickenInFeeAmount = _bondLUSDAmount * CHICKEN_IN_AMM_FEE / 1e18;
+        uint256 bondAmountMinusChickenInFee = _bondLUSDAmount - chickenInFeeAmount;
 
-        return (taxAmount, taxedBondAmount);
+        return (chickenInFeeAmount, bondAmountMinusChickenInFee);
     }
 
-    function _getTaxedBondAmount(uint256 _bondLUSDAmount) internal view returns (uint256) {
-        (, uint256 taxedBondAmount) = _getTaxedBond(_bondLUSDAmount);
-        return taxedBondAmount;
+    function _getBondAmountMinusChickenInFee(uint256 _bondLUSDAmount) internal view returns (uint256) {
+        (, uint256 bondAmountMinusChickenInFee) = _getBondWithChickenInFeeApplied(_bondLUSDAmount);
+        return bondAmountMinusChickenInFee;
     }
 
     // Internal getter for calculating accrued LUSD based on BondData struct
@@ -839,7 +839,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     function calcAccruedBLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
         (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
-        return _calcAccruedBLUSD(bond.startTime, _getTaxedBondAmount(bond.lusdAmount), calcSystemBackingRatio(), updatedAccrualParameter);
+        return _calcAccruedBLUSD(bond.startTime, _getBondAmountMinusChickenInFee(bond.lusdAmount), calcSystemBackingRatio(), updatedAccrualParameter);
     }
 
     function calcBondBLUSDCap(uint256 _bondID) external view returns (uint256) {
@@ -847,7 +847,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
         BondData memory bond = idToBondData[_bondID];
 
-        return _calcBondBLUSDCap(_getTaxedBondAmount(bond.lusdAmount), backingRatio);
+        return _calcBondBLUSDCap(_getBondAmountMinusChickenInFee(bond.lusdAmount), backingRatio);
     }
 
     // Native vault token value getters

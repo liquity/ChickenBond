@@ -14,7 +14,7 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             uint256 _minimumAccrualParameter,
             uint256 _accrualAdjustmentRate,
             uint256 _accrualAdjustmentPeriodSeconds,
-            uint256 _CHICKEN_IN_AMM_TAX
+            uint256 _CHICKEN_IN_AMM_FEE
         )
         ChickenBondManager(
             _externalContractAddresses,
@@ -23,7 +23,7 @@ contract ChickenBondManagerWrap is ChickenBondManager {
             _minimumAccrualParameter,
             _accrualAdjustmentRate,
             _accrualAdjustmentPeriodSeconds,
-            _CHICKEN_IN_AMM_TAX
+            _CHICKEN_IN_AMM_FEE
         )
     {}
 
