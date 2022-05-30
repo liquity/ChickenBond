@@ -193,7 +193,21 @@ Each Yearn vault is periodically manually harvested by the Yearn team in order t
 - `activateMigration():` Callable only by Yearn Governance. Pulls all funds from the Yearn SP vault and transfers them to a trusted Silo contract. Moves all funds in permanent buckets to their corresponding acquired buckets, thus making all system funds (except for the pending bucket) redeemable.
 
 ## Controller
-TODO (grab from PR)
+The system incorporates an asymmetrical controller, designed to maintain the economic attractiveness of bonding. Without any form of control it seems likely that the break-even bonding time would increase. As the system matures, it may be necessary to steepen the sLUSD accrual curve. Controlling the accrual curve successfully should have the effect of keeping the break-even time and optimal rebonding time below some acceptable upper bound.
+
+### Accrual parameter control
+
+The "alpha" parameter of the accrual function variable (call it `accrualParameter` in the code) and implement a simple asymmetrical controller that adjusts this parameter in one direction only (reducing it by a small percentage, making the accrual slightly faster each time).
+
+The controller's logic is simple in theory: every `accrualAdjustmentPeriodSeconds` seconds, determine the size-weighted average age of pending bonds (in seconds) and compare it to `targetAverageAgeSeconds`. If the average is higher than the target, reduce `accrualParameter` by a fixed percentage (`accrualAdjustmentRate`).
+
+The reduction results in an immediate step-increase of the accrued sLUSD amounts of pending bonds. This is expected to increase the likelihood of bonders chickening in, which would result in a reduction of the average outstanding bond age, eventually dropping below the target.
+
+### Implementation notes
+
+Even though there's no way to "schedule" periodic tasks to be executed in EVM, the controller is implemented to appear as if adjustments were being performed regularly at timestamps given by the formula `deploymentTimestamp + n * accrualAdjustmentPeriodSeconds`, where `n` is a positive integer. This means that all view functions that evaluate a bond's accrued bTKN now calculate the number of adjustments (if any) that need to be applied to accrualParameter under the hood, and use an updated accrual parameter when evaluating the accrual function.
+
+Mutating functions that have an effect on the average age (`createBond()`, `chickenOut()` and `chickenIn()`) also start by calculating the updated value of `accrualParameter` and committing it to storage before making any changes that would change the average age. This is to ensure that `accrualParameter` gets updated to the same value that it would have been if the update was made at exactly the most recent "scheduled" adjustment timestamp.
 
 ## Migration mode
 
