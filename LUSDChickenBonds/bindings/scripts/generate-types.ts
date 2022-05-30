@@ -11,7 +11,7 @@ import LUSDTokenTester from "../../out/LUSDTokenTester.sol/LUSDTokenTester.json"
 import MockCurvePool from "../../out/MockCurvePool.sol/MockCurvePool.json";
 import MockYearnRegistry from "../../out/MockYearnRegistry.sol/MockYearnRegistry.json";
 import MockYearnVault from "../../out/MockYearnVault.sol/MockYearnVault.json";
-import SLUSDToken from "../../out/SLUSDToken.sol/SLUSDToken.json";
+import BLUSDToken from "../../out/BLUSDToken.sol/BLUSDToken.json";
 import MockCurveLiquidityGaugeV4 from "../../out/MockCurveLiquidityGaugeV4.sol/MockCurveLiquidityGaugeV4.json";
 
 const getTupleType = (components: ParamType[], flexible: boolean) => {
@@ -148,7 +148,7 @@ const contractArtifacts = Object.entries({
   MockCurvePool,
   MockYearnRegistry,
   MockYearnVault,
-  SLUSDToken,
+  BLUSDToken,
   MockCurveLiquidityGaugeV4
 });
 

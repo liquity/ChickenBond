@@ -8,7 +8,7 @@ import "../test/TestContracts/LUSDTokenTester.sol";
 
 
 contract MockYearnVault is ERC20, Ownable {
-    // ISLUSDToken public sLUSDToken;
+    // IBLUSDToken public bLUSDToken;
     LUSDTokenTester public token;
 
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}

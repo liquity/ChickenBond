@@ -19,7 +19,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID); 
 
-        // Reverts for sLUSD holder
+        // Reverts for bLUSD holder
         vm.startPrank(A); 
         vm.expectRevert("CBM: Only Yearn Governance can call");
         chickenBondManager.activateMigration();
@@ -277,34 +277,34 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         assertGt(pendingLUSDInSilo, 0, "pending lusd in silo !>0 before redeems");
         assertApproximatelyEqual(pendingLUSDInSilo + acquiredLUSDInSilo, rawBalSilo, rawBalSilo / 1e9, "silo bal != pending + acquired before redeems");  // Within 1e-9 relative error
         
-        assertGt(sLUSDToken.totalSupply(), 0);
+        assertGt(bLUSDToken.totalSupply(), 0);
 
-        // B transfers 10% of his sLUSD to C
-        uint256 C_sLUSD = sLUSDToken.balanceOf(B) / 10;
-        assertGt(C_sLUSD, 0);
+        // B transfers 10% of his bLUSD to C
+        uint256 C_bLUSD = bLUSDToken.balanceOf(B) / 10;
+        assertGt(C_bLUSD, 0);
         vm.startPrank(B);
-        sLUSDToken.transfer(C, C_sLUSD);
+        bLUSDToken.transfer(C, C_bLUSD);
         vm.stopPrank();
 
-        // All sLUSD holders redeem
+        // All bLUSD holders redeem
         vm.startPrank(A);
-        chickenBondManager.redeem(sLUSDToken.balanceOf(A));
+        chickenBondManager.redeem(bLUSDToken.balanceOf(A));
         vm.stopPrank();
-        assertEq(sLUSDToken.balanceOf(A), 0, "A sLUSD != 0 after redeem");
+        assertEq(bLUSDToken.balanceOf(A), 0, "A bLUSD != 0 after redeem");
 
         vm.startPrank(B);
-        chickenBondManager.redeem(sLUSDToken.balanceOf(B));
+        chickenBondManager.redeem(bLUSDToken.balanceOf(B));
         vm.stopPrank();
-        assertEq(sLUSDToken.balanceOf(B), 0, "B sLUSD != 0 after redeem");
+        assertEq(bLUSDToken.balanceOf(B), 0, "B bLUSD != 0 after redeem");
 
-        // Final sLUSD holder C redeems
+        // Final bLUSD holder C redeems
         vm.startPrank(C);
-        chickenBondManager.redeem(sLUSDToken.balanceOf(C));
+        chickenBondManager.redeem(bLUSDToken.balanceOf(C));
         vm.stopPrank();
-        assertEq(sLUSDToken.balanceOf(C), 0, "C sLUSD !=0 after full redeem");
+        assertEq(bLUSDToken.balanceOf(C), 0, "C bLUSD !=0 after full redeem");
 
-        // Check all sLUSD has been burned
-        assertEq(sLUSDToken.totalSupply(), 0, "slUSD supply != 0 after full redeem");
+        // Check all bLUSD has been burned
+        assertEq(bLUSDToken.totalSupply(), 0, "bLUSD supply != 0 after full redeem");
 
         polSP = chickenBondManager.getOwnedLUSDInSP();
         assertEq(polSP, 0,"polSP !=0 after full redeem");
@@ -559,7 +559,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         assertGt(C_lusdBalAfterCI, C_lusdBalBeforeCI);
     }
 
-    function testPostMigrationCIReducesLUSDSiloPendingBucketAndBalance() public {
+    function testPostMigrationCIReducebLUSDSiloPendingBucketAndBalance() public {
         // Create some bonds
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);

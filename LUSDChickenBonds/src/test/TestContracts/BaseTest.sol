@@ -6,7 +6,7 @@ import {stdCheats} from "forge-std/stdlib.sol";
 import "forge-std/Vm.sol";
 import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
-import "../../SLUSDToken.sol";
+import "../../BLUSDToken.sol";
 import "../../BondNFT.sol";
 import "../../LUSDSilo.sol";
 import "./ChickenBondManagerWrap.sol";
@@ -22,7 +22,7 @@ contract BaseTest is DSTest, stdCheats {
     // Core ChickenBond contracts
     ChickenBondManagerWrap chickenBondManager;
     BondNFT bondNFT;
-    SLUSDToken sLUSDToken;
+    BLUSDToken bLUSDToken;
     LUSDSilo lusdSilo;
 
     // Integrations
@@ -221,7 +221,7 @@ contract BaseTest is DSTest, stdCheats {
         console.log("");
         logCBMBuckets(_logHeadingText);
         console.log(chickenBondManager.calcSystemBackingRatio(), "Backing ratio");
-        console.log(sLUSDToken.totalSupply(), "sLUSD total supply");
+        console.log(bLUSDToken.totalSupply(), "bLUSD total supply");
         console.log(lusdToken.balanceOf(address(curveLiquidityGauge)), "balance of AMM rewards contract");
         console.log(yearnSPVault.balanceOf(address(chickenBondManager)),"SP Y tokens in CBM");
         console.log(yearnCurveVault.balanceOf(address(chickenBondManager)),"Curve Y tokens in CBM");

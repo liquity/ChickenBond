@@ -60,32 +60,32 @@ contract MainnetTestSetup is BaseTest {
         liquitySPAddress = MAINNET_LIQUITY_SP_ADDRESS;
 
         // Deploy core ChickenBonds system
-        sLUSDToken = new SLUSDToken("sLUSDToken", "SLUSD");
+        bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
 
         lusdSilo = new LUSDSilo();
 
-        // Deploy LUSD/sLUSD AMM Curve V2 pool and LiquidityGauge V4
+        // Deploy LUSD/bLUSD AMM Curve V2 pool and LiquidityGauge V4
         ICurveFactory curveFactory = ICurveFactory(MAINNET_CURVE_V2_FACTORY_ADDRESS);
-        address[4] memory sLUSDCurvePoolCoins = [address(sLUSDToken), address(lusdToken), address(0), address(0)];
-        address sLUSDCurvePoolAddress = curveFactory.deploy_plain_pool(
-            "sLUSD_LUSD",               // name
-            "sLUSDLUSDC",              // symbol
-            sLUSDCurvePoolCoins,        // coins
+        address[4] memory bLUSDCurvePoolCoins = [address(bLUSDToken), address(lusdToken), address(0), address(0)];
+        address bLUSDCurvePoolAddress = curveFactory.deploy_plain_pool(
+            "bLUSD_LUSD",               // name
+            "bLUSDLUSDC",              // symbol
+            bLUSDCurvePoolCoins,        // coins
             1000,                       // A
             4000000,                    // fee
             1,                          // asset type
             1                           // implementation idx
         );
-        address curveLiquidityGaugeAddress = curveFactory.deploy_gauge(sLUSDCurvePoolAddress);
+        address curveLiquidityGaugeAddress = curveFactory.deploy_gauge(bLUSDCurvePoolAddress);
         curveLiquidityGauge = ICurveLiquidityGaugeV4(curveLiquidityGaugeAddress);
 
         ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
             bondNFTAddress: address(bondNFT),
             lusdTokenAddress: address(lusdToken),
-            sLUSDTokenAddress: address(sLUSDToken),
+            bLUSDTokenAddress: address(bLUSDToken),
             curvePoolAddress: address(curvePool),
             yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
@@ -111,7 +111,7 @@ contract MainnetTestSetup is BaseTest {
         vm.stopPrank();
 
         bondNFT.setAddresses(address(chickenBondManager));
-        sLUSDToken.setAddresses(address(chickenBondManager));
+        bLUSDToken.setAddresses(address(chickenBondManager));
         lusdSilo.initialize(address(chickenBondManager));
 
         // Log some current blockchain state
@@ -123,9 +123,9 @@ contract MainnetTestSetup is BaseTest {
         console.log(address(yearnCurveVault), "Yearn Curve vault address");
         console.log(address(curvePool), "Curve pool address");
         console.log(address(chickenBondManager), "ChickenBondManager address");
-        console.log(address(sLUSDToken), "sLUSDToken address");
+        console.log(address(bLUSDToken), "bLUSDToken address");
         console.log(address(bondNFT), "BondNFT address");
-        console.log(sLUSDCurvePoolAddress, "Curve sLUSD/LUSD pool address");
+        console.log(bLUSDCurvePoolAddress, "Curve bLUSD/LUSD pool address");
         console.log(curveLiquidityGaugeAddress, "Curve Liquidity Gauge address");
     }
 

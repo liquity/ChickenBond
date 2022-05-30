@@ -1,9 +1,9 @@
 pragma solidity ^0.8.10;
-import "../../SLUSDToken.sol";
+import "../../BLUSDToken.sol";
 
-contract SLUSDTokenTester is SLUSDToken {
+contract BLUSDTokenTester is BLUSDToken {
 
-    constructor(string memory name_, string memory symbol_) SLUSDToken(name_, symbol_) {}
+    constructor(string memory name_, string memory symbol_) BLUSDToken(name_, symbol_) {}
 
     function unprotectedMint(address _account, uint256 _amount) external {
         // No check on caller here
