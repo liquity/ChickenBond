@@ -2,8 +2,8 @@
 pragma solidity ^0.8.10;
 
 import "../utils/console.sol";
-import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "../../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "../test/TestContracts/LUSDTokenTester.sol";
 
 

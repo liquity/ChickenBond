@@ -1,5 +1,9 @@
 pragma solidity ^0.8.10;
 
+// Dummy contract to get Slither to work
+// It expects every build artifact to include "bytecode"
+contract QuickSortIsNotAContract {}
+
 // Implementation of QuickSort in Solidity strictly for testing purposes (e.g. used in Foundry).
 function _partition(uint[] memory arr, int lo, int hi) pure returns (int p) {
     int i = lo - 1;
