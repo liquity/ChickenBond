@@ -2,9 +2,9 @@
 pragma solidity ^0.8.10;
 
 import "ds-test/test.sol";
-import {stdCheats} from "../../../lib/forge-std/src/stdlib.sol";
-import "../../../lib/forge-std/src/Vm.sol";
-import "../../../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {stdCheats} from "forge-std/stdlib.sol";
+import "forge-std/Vm.sol";
+import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
 import "../../BLUSDToken.sol";
 import "../../BondNFT.sol";
@@ -13,7 +13,7 @@ import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/ICurvePool.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
-import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
+import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 
 contract BaseTest is DSTest, stdCheats {

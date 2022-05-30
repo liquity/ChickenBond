@@ -1,76 +1,4 @@
-# ChickenBond
-
-Research and development
-
-# LUSD ChickenBonds
-
-## Running the project
-
-
-ChickenBonds is a Foundry project in `/LUSDChickenBonds`.  
-
-Install Foundry:
-https://github.com/gakonst/foundry
-Run tests with `forge test`.
-
-Core contracts are found in `src`.
-
-## TODO List
-
-### Initialization
-
-- [ ] 50:50 split upon the very first chicken-in to initialize the bTKN/TKN pool. 
-- [ ] Market price = redemption price = 1
-- [ ] Forbid chicken-ins during 1 week (tbd)
-- [ ] Forbid redemptions during 1 month (tbd)
-
-### Base functionality
-- [x] BondNFT 
-- [x] sLUSDToken
-- [x] mock Curve pool
-- [x] mock Yearn LUSD and Curve vaults
-- [x] createBond
-- [x] chickenIn 
-- [x] chickenOut
-- [x] redeem 
-- [x] Change accrual function to asymptotic curve, remove cap constraint
-- [x] refund functionality inside chickenIn
-- [x] Shifting functions
-- [ ] **Replace refund functionality with permanent bucket**
-- [x] **Liquity-like redemption fee**
-- [x] Extract common functionality in core contracts 
-- [x] Extract common setup functionality in unit tests
-- [ ] Basic math function for converting to/from 18 digit fractions
-- [ ] Implement main events
-- [ ] Settle on best Solidity version to use (OZ contracts are v8+, and Slither detects v8+)
-- [ ] Add return values to all state-changing functions for integrations
-- [x] Tax on chicken in + incentive for bTKN/TKN pool
-- [x] Adapt shifting function: revert when Curve price crosses boundary 
-
-### External contracts integrations 
-- [x] Determine most accurate way to compute `totalAccruedLUSD` from Yearn and Curve
-- [x] Determine Curve trade quantity calculation for shifting functions (we simply revert if the price crosses the $1.0 boundary)
-- [x] Implement Yearn Registry check for latest vaults  and migration functionality
-- [x] Connect to real Yearn and Curve contracts
-- [x] Mainnet hard fork testing  
-
-### Security
-- [ ] Create thorough unit test plan: negative tests, multiple bonds per user, etc. 
-- [ ] **Create list of system properties/invariants and add `asserts`**
-- [ ] **More extensive testing for edge cases (e.g. pending harvests, harvest losses, external calls to Yearn/Curve reverting, etc)**
-- [ ] Run Slither / MythX
-- [ ] **Systemic fuzzing** (Dani?)
-
-### Design 
-- [ ] **Determine redemption fee formula **
-- [ ] **Determine sLUSD accrual function  / controller**
-- [ ] Decide on NFT enumeration (i.e. getting all of a user's bonds), and/or extra trade functionality
-
-
-==================
-
-
-## LUSD Chicken Bonds - Technical Readme
+# LUSD Chicken Bonds - Technical Readme
 
 LUSD Chicken bonds is a specific implementation of the General Chicken Bonds model described in the whitepaper.
 
@@ -83,12 +11,18 @@ The system has two goals:
 
 The core mechanics remain the same as outlined in the whitepaper. A user bonds LUSD, and accrues an sLUSD balance over time on a smooth sub-linear schedule.
 
-At any time they may **chicken out** and reclaim their entire principle, or **chicken in** and give up their principal in exchange for freshly minted sLUSD.
+At any time they may **chicken out** and reclaim their entire principal, or **chicken in** and give up their principal in exchange for freshly minted sLUSD.
 
 sLUSD may always be redeemed for a proportional share of the system’s acquired LUSD.
 
-However, LUSD Chicken Bonds contains additional functionality:
-**TODO**
+However, LUSD Chicken Bonds contains additional functionality for the purposes of peg stabilization and migration. The funds held by the protocol are split across two yield-bearing Yearn vaults, referred to as the **Yearn SP Vault** and the **Yearn Curve Vault**. The former deposits funds to the Liquity Stability Pool, and the latter deposits funds into the Curve LUSD3CRV MetaPool.
+
+The LUSD Chicken Bonds system has public shifter functions which are callable by anyone and move LUSD between the vaults, subject to Curve spot price constraints. The purpose of these is to allow anyone to tighten the Curve pool’s LUSD spot price dollar peg, by moving system funds between the yield-bearing vaults (and thus to or from the Curve pool).
+
+Additionally, the system contains logic for a “migration mode” which may be triggered only by a single privileged admin - namely the Yearn Finance governance address:
+0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52
+
+When Yearn upgrade their vaults from v2 to v3, they will freeze deposits and cease harvesting yield. Migration mode allows the LUSD Chicken Bonds system to wind down gracefully, and allows all funds to be redeemed or withdrawn, so that users, if they so choose, may redeposit their funds to a new LUSD Chicken Bonds version which will be connected up to Yearn’s v3 vaults.
 
 
 ## Project structure
@@ -105,6 +39,17 @@ However, LUSD Chicken Bonds contains additional functionality:
 - `LUSDChickenBonds/src/Proxy/` - Contains a Chicken Bonds operations script for combining transactions, for use with DSProxy
 - LUSDChickenBonds/src/utils` - Contains basic math and logging utilities used in the core smart contracts.
 
+## Running the project
+
+ChickenBonds is a Foundry project in `/LUSDChickenBonds`.  
+
+Install Foundry:
+https://github.com/gakonst/foundry
+Run all with `forge test`.
+
+For mainnet fork testing, please set the env variable `ETH_RPC_URL` equal to your API key for a Ethereum RPC node service such as Alchemy or Infura.
+
+Core contracts are found in `src`, and tests are in `src/test/`
 
 ## Global Liquidity Buckets
 
@@ -118,7 +63,6 @@ The **acquired** bucket contains all LUSD held by the protocol which may be rede
 
 ### Yield sources
 
-
 The Chicken Bonds system deposits LUSD to external Yearn vaults - the Yearn SP vault, and the Yearn Curve vault -  which generate yield.
 
 All funds held by the system (pending, acquired and permanent) are held inside one of the vaults and generate yield - all of which is added to the acquired bucket.
@@ -126,11 +70,11 @@ All funds held by the system (pending, acquired and permanent) are held inside o
 
 ### Individual Liquidity Buckets
 
-The global **permanent** and **acquired** buckets are split across both Yearn SP and the Curve pool (with its LP tokens deposited to the Yearn Curve vault for yield generation).  
+The global **permanent** and **acquired** buckets are split across both Yearn SP vault and the Curve pool (with its LP tokens deposited to the Yearn Curve vault for yield generation).  
 
 The **pending** bucket is held purely by the Yearn SP vault in normal mode, and purely by the LUSD Silo in migration mode.
 
-The buckets are split into in the following manner normal mode:
+The buckets are split in the following manner in normal mode:
 
 - Pending LUSD in the Yearn SP vault (constitutes all pending LUSD)
 - Permanent LUSD in the Yearn SP Vault
@@ -140,13 +84,13 @@ The buckets are split into in the following manner normal mode:
 
 In migration mode, no funds are permanent. The buckets are split in this manner:
 
-- Pending LUSD in the LUSD Silo
+- Pending LUSD in the LUSD Silo (constitutes all pending LUSD)
 - Acquired LUSD in the LUSD Silo
 - Acquired LUSD in Curve
 
 ### Flow of funds between individual buckets
 
-For the global permanent and acquired buckets, the split is updated by shifter functions which move funds between the SP vault and the Curve pool. Here is an outline of how funds flow between buckets from various system operations:
+For the global permanent and acquired buckets, the split is updated by shifter functions which move funds between the SP vault and the Curve pool. Here is an outline of how funds flow between buckets due to various system operations:
 
 `createBond:` deposits the bonded LUSD to the Yearn SP vault pending bucket
 
@@ -160,30 +104,30 @@ For the global permanent and acquired buckets, the split is updated by shifter f
 
 `chickenOut (normal mode):` Withdraws all of the bond’s LUSD from the Yearn SP vault pending bucket
 
-`chickenOut (normal mode):` Withdraws all of the bond’s LUSD from the LUSD Silo pending bucket
+`chickenOut (migration mode):` Withdraws all of the bond’s LUSD from the LUSD Silo pending bucket
 
 `redeem(normal mode):` Pulls funds proportionally from the Yearn SP vault acquired bucket and the Curve acquired bucket (sends yTokens, and does not unwrap to LUSD)
 
 `redeem(migration mode)`: Pulls redeemed funds proportionally from the LUSD Silo acquired bucket (as LUSD) and the Curve acquired bucket (as yTokens)
 
 `shiftLUSDFromSPToCurve`:
-- Moves some acquired LUSD from the Yearn SP vault acquired bucket to the Curve acquired bucket
-- Moves some permanent LUSD from the Yearn SP vault permanent bucket to the Curve permanent bucket
+- Moves some LUSD from the Yearn SP vault acquired bucket to the Curve acquired bucket
+- Moves some LUSD from the Yearn SP vault permanent bucket to the Curve permanent bucket
 
 `shiftLUSDFromCurveToSP:`
-- Moves acquired LUSD in Curve to the Yearn SP vault acquired bucket
-- Moves permanent LUSD in Curve to the Yearn SP vault permanent bucket
+- Moves some LUSD from Curve acquired bucket to the Yearn SP vault acquired bucket
+- Moves some LUSD from Curve permanent bucket to the Yearn SP vault permanent bucket
 
 
 ### Tracking individual bucket quantities
 
-The pending bucket and individual permanent buckets are tracked by state variables in `ChickenBondManager`, and updated when funds are added/removed.  Specifically, they are:
+The **pending** bucket and individual **permanent** buckets are tracked by state variables in `ChickenBondManager`, and updated when funds are added/removed.  Specifically, these state variables are:
 
 - `totalPendingLUSD`
 - `permanentLUSDInYearnSPVault`
 - `permanentLUSDInYearnCurveVault`
 
-Individual acquired buckets are not explicitly tracked via state variables. Rather, the acquired LUSD in a given pool (Yearn SP or Curve) is calculated based on the total funds held in the pool, minus any pending or permanent funds in that pool.  
+Individual **acquired** buckets are not explicitly tracked via state variables. Rather, the acquired LUSD in a given pool (Yearn SP vault or Curve) is calculated based on the total funds held in the pool, minus any pending and permanent funds in that pool.  
 
 The following getter functions in the smart contract perform these calculations for individual acquired buckets:
 - `getAcquiredLUSDInSPVault()`
@@ -192,7 +136,12 @@ The following getter functions in the smart contract perform these calculations 
 
 
 ## Shifter functions
-TODO
+
+The two system shifter functions are public and permissionless.  They are: `shiftLUSDFromSPToCurve` and `shiftLUSDFromCurveToSP`.
+
+When the LUSD spot price in the Curve is > 1, anyone may shift LUSD from the Liquity Stability Pool to the Curve pool (routed via the corresponding Yearn vaults), thus moving the spot price back toward 1 - improving the dollar peg. Conversely, when the spot price is < 1, anyone may shift LUSD from the Curve pool and into the Stability Pool, which increases the price toward 1.
+
+Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot price by bringing it closer to 1 - yet, must not cause it to cross the boundary of 1. Shifter functions are enabled in normal mode and disabled in migration mode.
 
 
 ## Core smart contract architecture
@@ -203,7 +152,7 @@ TODO
 - `BondNFT:` is the ERC721 which mints bond NFTs upon creation.  A bond NFT entitles the holder to take actions related to the corresponding bond i.e. chickening in or out.
 
 
--`LUSDSilo:` is a simple container contract that is only utilized in migration mode. Upon migration, it receives all of the system funds that were previously held in the SP vault. 
+- `LUSDSilo:` is a simple container contract that is only utilized in migration mode. Upon migration, it receives all of the system funds that were previously held in the SP vault. 
 
 - `SLUSDToken:` the token contract for sLUSD. Standard ERC20 functionality.
 
@@ -212,9 +161,9 @@ TODO
 
 LUSD Chicken bonds is connected to three external contracts which are already live on mainnet:
 
-- Yearn LUSD Vault.  ChickenBonds deposits funds here upon bond creation to earn yield.  This vault utilizes the Liquity Stability Pool and the Tokemak LUSD reactor, which generate a return on deposited LUSD, in LUSD. 
+- Yearn SP Vault.  Chicken Bonds deposits funds here upon bond creation, to earn yield. This vault primarily utilizes the Liquity Stability Pool (SP) and secondarily the Tokemak LUSD reactor, which each generate a return on deposited LUSD, in LUSD.
 
-- Curve LUSD3CRV metapool.  Chicken Bonds deposits LUSD here and receives the LUSD3CRV LP token.  This is in turn deposited to the Yearn Curve vault which generates a return on deposited LUSD3CRV, in LUSD3CRV.
+- Curve LUSD3CRV MetaPool. Chicken Bonds deposits LUSD here and receives the LUSD3CRV LP token. This is in turn deposited to the Yearn Curve vault.
 
 - Yearn Curve Vault. LUSD3CRV is deposited here, and the vault generates a return on the deposit, paid in LUSD3CRV.
 
@@ -244,9 +193,57 @@ Each Yearn vault is periodically manually harvested by the Yearn team in order t
 TODO (grab from PR)
 
 ## Migration mode
-TODO (grab from PR)
 
+Yearn will in the not-too-distant future (<11 months) deploy v3 vaults.  Around that time, they will deprecate existing v2 vaults and deploy replacement v3 versions. Specifically, they will:
 
+- Disable deposits to the deprecated v2 vault
+- Cease harvesting yield on the deprecated v2 vault
 
+In case of deprecation of the SP LUSD and Curve LUSD3CRV vaults, we'd like to launch a new Chicken Bonds system that is hooked up to v3 vaults, and encourage users to migrate their funds. 
 
+We need to ensure that when Yearn deprecate the v2 vaults:
 
+- All LUSD can be extracted from the old Chicken Bonds system, via a combination of redemptions and chicken-outs 
+
+- LUSD does not remain in the Yearn SP vault. The ceasing of harvesting means that if liquidations occur, the liquidation ETH gain would not be recycled back to LUSD, causing a permanent loss to the Chicken Bonds system, and by extension, losses to bonders & sLUSD holders.
+
+A proxy upgrade pattern was briefly considered: it would have been simple to give Yearn control over setting the v3 vault addresses in `ChickenBondManager`, and directly migrating system funds from v2 -> v3 vaults. However, as Chicken Bonds may one day hold hundreds of millions of dollars worth of funds, we deemed this too great a responsibility - it would in theory be possible for a rogue actor with such capability to create fake v3 vault contracts and drain all Chicken Bond system funds. 
+
+For better trust minimization we instead opted for a "wind down" approach where Yearn governance can _prepare_ the system for migration by making all funds redeemable, and moving the LUSD contents of the Yearn SP vault to a safe "Silo" that is not exposed to Liquity liquidations. When suitable v3 vaults are live, we would deploy a fresh instance of LUSD Chicken Bonds connected up to them - and encourage users to manually migrate.
+
+### Migration functionality
+
+The system contains an `LUSDSilo` contract which is empty and unused during normal mode.
+
+The `ChickenBondManager` contract contains a function `activateMigration`, callable one-time and only by Yearn Governance. Yearn have agreed to call this function when they deprecate the v2 vaults that Chicken Bonds is connected to. `activateMigration` does the following:
+
+- Raise a `migration` mode flag
+- Move all permanent LUSD from permanent bucket to acquired bucket (thus making it redeemable)
+- Shift all LUSD currently in the Yearn LUSD vault to the LUSD Silo (thus making all pending LUSD, and some acquired, now in the Silo)
+
+### Post-migration logic
+
+Migration mode activation triggers the following logic changes:
+
+`createBond`: disabled
+
+`shiftLUSDFromSPToCurve`, `shiftLUSDFromCurveToSP`: disabled
+
+`chickenOut`: LUSD is withdrawn from the Curve pool's pending LUSD bucket (since, post-migration, all pending LUSD is now in Curve)
+
+`chickenIn`:
+- Does not increase the permanent bucket with the LUSD surplus
+- Instead, refunds the surplus LUSD to the bonder
+- No first-chicken-in yield is sent to AMM reward. Reasoning: yields should cease after yearn trigger migration mode
+- No tax is sent to AMM rewards. Reasoning: no need to maintain AMM LP incentives in migration mode. It's fine and desirable for LPs to pull funds and redeem their sLUSD. 
+
+`redeem`: pulls funds proportionally from the Silo acquired bucket (as LUSD) and the Curve acquired bucket (as yTokens for the Yearn Curve vault)
+
+## Fee share functionality
+
+We will participate in Yearn's partnership program whereby they send a share of the vault fees back to the Chicken Bonds system:
+https://docs.yearn.finance/partners/introduction
+
+_"any protocol that integrates yVaults can earn up to a 50% profit share from their contributed TVL."_
+
+We assume they will send us the fee share in LUSD from the Yearn governance address. `ChickenBondManager` has a `sendFeeShare` function, callable only by them, which transfers the LUSD and deposits it to the Yearn SP vault in normal mode. It's disabled in migration mode, since harvests/fees will not occur.

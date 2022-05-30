@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
+import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 interface ICurvePool is IERC20 { 
     function add_liquidity(uint256[2] memory _amounts, uint256 _min_mint_amount) external;
