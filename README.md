@@ -243,7 +243,7 @@ The `ChickenBondManager` contract contains a function `activateMigration`, calla
 
 - Raise a `migration` mode flag
 - Move all permanent LUSD from permanent bucket to acquired bucket (thus making it redeemable)
-- Shift all LUSD currently in the Yearn LUSD vault to the LUSD Silo (thus making all pending LUSD, and some acquired, now in the Silo)
+- Shift all LUSD currently in the Yearn SP vault to the LUSD Silo (thus relocating all pending LUSD, and some of the acquired LUSD, to the Silo)
 
 ### Post-migration logic
 
