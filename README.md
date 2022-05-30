@@ -152,7 +152,7 @@ Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot
 - `BondNFT:` is the ERC721 which mints bond NFTs upon creation.  A bond NFT entitles the holder to take actions related to the corresponding bond i.e. chickening in or out.
 
 
--`LUSDSilo:` is a simple container contract that is only utilized in migration mode. Upon migration, it receives all of the system funds that were previously held in the SP vault. 
+- `LUSDSilo:` is a simple container contract that is only utilized in migration mode. Upon migration, it receives all of the system funds that were previously held in the SP vault. 
 
 - `SLUSDToken:` the token contract for sLUSD. Standard ERC20 functionality.
 
