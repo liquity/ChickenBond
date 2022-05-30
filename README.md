@@ -61,7 +61,6 @@ The **permanent** bucket contains all protocol-owned LUSD. It is untouched by re
 
 The **acquired** bucket contains all LUSD held by the protocol which may be redeemed by burning sLUSD. 
 
-![Chicken bond buckets drawio](https://user-images.githubusercontent.com/701095/170958185-fb2242aa-07f9-41ac-9384-294c5ecfa4db.png)
 
 
 ### Yield sources
@@ -90,6 +89,14 @@ In migration mode, no funds are permanent. The buckets are split in this manner:
 - Pending LUSD in the LUSD Silo (constitutes all pending LUSD)
 - Acquired LUSD in the LUSD Silo
 - Acquired LUSD in Curve
+
+### Example buckets state
+
+![Chicken bond buckets drawio](https://user-images.githubusercontent.com/701095/170958185-fb2242aa-07f9-41ac-9384-294c5ecfa4db.png)
+
+_This diagram shows an example state of the individual buckets in normal mode.  Exact quantities in each individual **acquired** and **permament** bucket will vary over time - their sizes depend on the history of shift events and the magnitude and and timing of early chicken-ins._
+
+
 
 ### Flow of funds between individual buckets
 
