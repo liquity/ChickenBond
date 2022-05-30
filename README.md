@@ -45,9 +45,13 @@ ChickenBonds is a Foundry project in `/LUSDChickenBonds`.
 
 Install Foundry:
 https://github.com/gakonst/foundry
-Run all with `forge test`.
 
-For mainnet fork testing, please set the env variable `ETH_RPC_URL` equal to your API key for a Ethereum RPC node service such as Alchemy or Infura.
+### Running tests
+
+The bulk of significant testing has been done using a mainnet fork, since ChickenBonds will heavily depend on the deployed Yearn vaults and Curve pool.
+
+For mainnet fork testing in Foundry, please set the env variable `ETH_RPC_URL` equal to your API key for a Ethereum RPC node service such as Alchemy or Infura. Run all mainnet tests with:
+forge test --fork-url $ETH_RPC_URL
 
 Core contracts are found in `src`, and tests are in `src/test/`
 
