@@ -134,10 +134,10 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const sLUSDToken = await this.deployContract(
-      factories.sLUSDToken,
-      "sLUSDToken",
-      "SLUSD",
+    const bLUSDToken = await this.deployContract(
+      factories.bLUSDToken,
+      "bLUSDToken",
+      "BLUSD",
       overrides
     );
 
@@ -165,7 +165,7 @@ class LUSDChickenBondDeployment {
         lusdSiloAddress: lusdSilo.contract.address,
         lusdTokenAddress: lusdToken.contract.address,
         curveLiquidityGaugeAddress: curveLiquidityGauge.contract.address,
-        sLUSDTokenAddress: sLUSDToken.contract.address,
+        bLUSDTokenAddress: bLUSDToken.contract.address,
         yearnCurveVaultAddress: yearnCurveVault.contract.address,
         yearnGovernanceAddress: config.yearnGovernanceAddress,
         yearnSPVaultAddress: yearnSPVault.contract.address,
@@ -187,7 +187,7 @@ class LUSDChickenBondDeployment {
       lusdSilo,
       lusdToken,
       curveLiquidityGauge,
-      sLUSDToken,
+      bLUSDToken,
       uniToken,
       yearnCurveVault,
       yearnSPVault,
@@ -217,7 +217,7 @@ class LUSDChickenBondDeployment {
         ),
 
       () =>
-        deployed.sLUSDToken.contract.setAddresses(
+        deployed.bLUSDToken.contract.setAddresses(
           deployed.chickenBondManager.contract.address,
           overrides
         )

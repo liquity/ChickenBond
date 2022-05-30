@@ -10,7 +10,7 @@ import lusdTokenTester from "../artifacts/LUSDTokenTester.json";
 import mockCurvePool from "../artifacts/MockCurvePool.json";
 import mockYearnRegistry from "../artifacts/MockYearnRegistry.json";
 import mockYearnVault from "../artifacts/MockYearnVault.json";
-import sLUSDToken from "../artifacts/SLUSDToken.json";
+import bLUSDToken from "../artifacts/BLUSDToken.json";
 import mockCurveLiquidityGaugeV4 from "../artifacts/MockCurveLiquidityGaugeV4.json";
 
 import {
@@ -22,7 +22,7 @@ import {
   MockCurvePoolFactory,
   MockYearnRegistryFactory,
   MockYearnVaultFactory,
-  SLUSDTokenFactory,
+  BLUSDTokenFactory,
   MockCurveLiquidityGaugeV4Factory
 } from "./generated/types";
 
@@ -64,9 +64,9 @@ export interface LUSDChickenBondContractFactories {
     factory: MockCurveLiquidityGaugeV4Factory;
   };
 
-  sLUSDToken: {
-    contractName: "SLUSDToken";
-    factory: SLUSDTokenFactory;
+  bLUSDToken: {
+    contractName: "BLUSDToken";
+    factory: BLUSDTokenFactory;
   };
 
   uniToken: {
@@ -137,7 +137,7 @@ const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   lusdSilo: checkArtifact("LUSDSilo", lusdSilo),
   lusdToken: checkArtifact("LUSDTokenTester", lusdTokenTester),
   curveLiquidityGauge: checkArtifact("MockCurveLiquidityGaugeV4", mockCurveLiquidityGaugeV4),
-  sLUSDToken: checkArtifact("SLUSDToken", sLUSDToken),
+  bLUSDToken: checkArtifact("BLUSDToken", bLUSDToken),
   uniToken: checkArtifact("ERC20", erc20),
   yearnCurveVault: checkArtifact("MockYearnVault", mockYearnVault),
   yearnSPVault: checkArtifact("MockYearnVault", mockYearnVault),
