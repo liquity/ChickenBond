@@ -37,7 +37,7 @@ contract BaseTest is DSTest, stdCheats {
     address yearnGovernanceAddress;
     address liquitySPAddress;
 
-    uint256 CHICKEN_IN_AMM_TAX = 1e16; // 1%
+    uint256 CHICKEN_IN_AMM_FEE = 1e16; // 1%
 
     address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
     address constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
@@ -194,12 +194,12 @@ contract BaseTest is DSTest, stdCheats {
         return lusdToShift;
     }
 
-    function _getTaxForAmount(uint256 _amount) internal view returns (uint256) {
-        return _amount * chickenBondManager.CHICKEN_IN_AMM_TAX() / 1e18;
+    function _getChickenInFeeForAmount(uint256 _amount) internal view returns (uint256) {
+        return _amount * chickenBondManager.CHICKEN_IN_AMM_FEE() / 1e18;
     }
 
-    function _getTaxedAmount(uint256 _amount) internal view returns (uint256) {
-        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_TAX()) / 1e18;
+    function _getAmountMinusChickenInFee(uint256 _amount) internal view returns (uint256) {
+        return _amount * (1e18 - chickenBondManager.CHICKEN_IN_AMM_FEE()) / 1e18;
     }
 
     function diffOrZero(uint256 x, uint256 y) public pure returns (uint256) {

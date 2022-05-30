@@ -47,7 +47,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testFirstChickenInTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 taxAmount = _getTaxForAmount(bondAmount);
+        uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -62,7 +62,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
 
         // Checks
-        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), initialYield + taxAmount, 7, "Balance of rewards contract doesn't match");
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), initialYield + chickenInFeeAmount, 7, "Balance of rewards contract doesn't match");
 
         // check sLUSD A balance
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
@@ -71,7 +71,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testFirstChickenInWithoutInitialYield() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 taxAmount = _getTaxForAmount(bondAmount);
+        uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -83,7 +83,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
 
         // Checks
-        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), taxAmount, 1, "Balance of rewards contract doesn't match");
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), chickenInFeeAmount, 1, "Balance of rewards contract doesn't match");
 
         // check sLUSD A balance
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
@@ -92,7 +92,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testFirstChickenInAfterRedemptionDepletionAndSPHarvestTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 taxAmount = _getTaxForAmount(bondAmount);
+        uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -113,7 +113,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            initialYield + taxAmount,
+            initialYield + chickenInFeeAmount,
             12,
             "Balance of rewards contract after A's chicken-in doesn't match"
         );
@@ -144,7 +144,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 yieldFromFirstChickenInRedemptionFee = sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            initialYield + secondYield + 2 * taxAmount + yieldFromFirstChickenInRedemptionFee,
+            initialYield + secondYield + 2 * chickenInFeeAmount + yieldFromFirstChickenInRedemptionFee,
             20,
             "Balance of rewards contract after B's chicken-in doesn't match"
         );
@@ -159,9 +159,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testFirstChickenInAfterRedemptionDepletionAndCurveHarvestTransfersToRewardsContract() external {
         uint256 bondAmount1 = 1000e18;
         uint256 bondAmount2 = 100e18;
-        uint256 taxAmount1 = _getTaxForAmount(bondAmount1);
-        uint256 taxAmount2 = _getTaxForAmount(bondAmount2);
-        uint256 taxedAmount2 = _getTaxedAmount(bondAmount2);
+        uint256 chickenInFeeAmount1 = _getChickenInFeeForAmount(bondAmount1);
+        uint256 chickenInFeeAmount2 = _getChickenInFeeForAmount(bondAmount2);
+        uint256 amountMinusChickenInFee2 = _getAmountMinusChickenInFee(bondAmount2);
         tip(address(lusdToken), A, bondAmount1 + bondAmount2);
 
         // create bond
@@ -238,7 +238,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Permanent in SP vault
         assertApproximatelyEqual(
             chickenBondManager.getPermanentLUSDInSP(),
-            initialPermanentLUSDInSP + taxedAmount2 - accruedSLUSD,
+            initialPermanentLUSDInSP + amountMinusChickenInFee2 - accruedSLUSD,
             1,
             "Permanent LUSD in SP mismatch"
         );
@@ -261,7 +261,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Balance in rewards contract
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            curveYield + taxAmount1 + taxAmount2,
+            curveYield + chickenInFeeAmount1 + chickenInFeeAmount2,
             50,
             "Rewards contract balance mismatch"
         );

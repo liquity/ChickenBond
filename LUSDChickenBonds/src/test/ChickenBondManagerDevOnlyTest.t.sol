@@ -9,7 +9,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
     function testFirstChickenInTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 taxAmount = _getTaxForAmount(bondAmount);
+        uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -25,7 +25,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
 
         // Checks
-        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), initialYield + taxAmount, 2, "Balance of rewards contract doesn't match");
+        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), initialYield + chickenInFeeAmount, 2, "Balance of rewards contract doesn't match");
 
         // check sLUSD A balance
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
@@ -34,7 +34,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
     function testFirstChickenInWithoutInitialYield() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 taxAmount = _getTaxForAmount(bondAmount);
+        uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -46,7 +46,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
 
         // Checks
-        assertEq(lusdToken.balanceOf(address(curveLiquidityGauge)), taxAmount, "Balance of rewards contract doesn't match");
+        assertEq(lusdToken.balanceOf(address(curveLiquidityGauge)), chickenInFeeAmount, "Balance of rewards contract doesn't match");
 
         // check sLUSD A balance
         assertEq(sLUSDToken.balanceOf(A), accruedSLUSD_A, "sLUSD balance of A doesn't match");
@@ -55,7 +55,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
     function testFirstChickenInAfterRedemptionDepletionAndSPHarvestTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
-        uint256 taxAmount = _getTaxForAmount(bondAmount);
+        uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -106,7 +106,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         uint256 yieldFromFirstChickenInRedemptionFee = sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            initialYield + secondYield + 2 * taxAmount + yieldFromFirstChickenInRedemptionFee,
+            initialYield + secondYield + 2 * chickenInFeeAmount + yieldFromFirstChickenInRedemptionFee,
             5,
             "Balance of rewards contract doesn't match"
         );
@@ -175,7 +175,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // Permanent in SP vault
         assertApproximatelyEqual(
             chickenBondManager.getPermanentLUSDInSP(),
-            initialPermanentLUSDInSP + _getTaxedAmount(bondAmount2) - accruedSLUSD,
+            initialPermanentLUSDInSP + _getAmountMinusChickenInFee(bondAmount2) - accruedSLUSD,
             1,
             "Permanent LUSD in SP mismatch"
         );
@@ -199,8 +199,8 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         //uint256 yieldFromFirstChickenInRedemptionFee = sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            //curveYield + _getTaxForAmount(bondAmount1) + _getTaxForAmount(bondAmount2) + yieldFromFirstChickenInRedemptionFee,
-            curveYield + _getTaxForAmount(bondAmount1) + _getTaxForAmount(bondAmount2) + sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18,
+            //curveYield + _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2) + yieldFromFirstChickenInRedemptionFee,
+            curveYield + _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2) + sLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18,
             250,
             "Rewards contract balance mismatch"
         );

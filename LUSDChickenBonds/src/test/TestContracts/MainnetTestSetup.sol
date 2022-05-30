@@ -102,7 +102,7 @@ contract MainnetTestSetup is BaseTest {
             MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
             ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
             ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
-            CHICKEN_IN_AMM_TAX                 // _CHICKEN_IN_AMM_TAX
+            CHICKEN_IN_AMM_FEE                 // _CHICKEN_IN_AMM_FEE
         );
 
         // Add LUSD as reward token for Curve Liquidity Gauge, and set ChickenBondManager as distributor

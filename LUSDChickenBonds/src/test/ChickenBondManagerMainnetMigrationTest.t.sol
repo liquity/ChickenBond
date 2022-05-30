@@ -604,7 +604,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         assertLt(siloBal2, siloBal1);
     }
 
-    function testPostMigrationCIDoesntSendTaxToStakingRewards() public {
+    function testPostMigrationCIDoesntSendChickenInFeeToStakingRewards() public {
         // Create some bonds
         uint256 bondAmount = 100e18;
         uint A_bondID = createBondForUser(A, bondAmount);
