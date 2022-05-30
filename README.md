@@ -61,7 +61,7 @@ The **permanent** bucket contains all protocol-owned LUSD. It is untouched by re
 
 The **acquired** bucket contains all LUSD held by the protocol which may be redeemed by burning sLUSD. 
 
-![Chicken bond buckets drawio](https://user-images.githubusercontent.com/701095/170957098-86ded57e-75b8-4d94-8355-1f37383aac25.png)
+![Chicken bond buckets drawio](https://user-images.githubusercontent.com/701095/170958185-fb2242aa-07f9-41ac-9384-294c5ecfa4db.png)
 
 
 ### Yield sources
