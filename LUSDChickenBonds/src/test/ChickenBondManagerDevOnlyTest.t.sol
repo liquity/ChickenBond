@@ -147,9 +147,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.stopPrank();
 
         // harvest curve
-        uint256 prevValue = chickenBondManager.calcTotalYearnCurveVaultShareValue();
+        uint256 prevValue = chickenBondManager.getTotalLUSDInCurve();
         MockYearnVault(address(yearnCurveVault)).harvest(1000e18);
-        uint256 curveYield = chickenBondManager.calcTotalYearnCurveVaultShareValue() - prevValue;
+        uint256 curveYield = chickenBondManager.getTotalLUSDInCurve() - prevValue;
 
         // create bond
         A_bondID = createBondForUser(A, bondAmount2);
@@ -164,11 +164,15 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        // checks
+        // Checks
+
+        // Backing ratio
+        assertEq(chickenBondManager.calcSystemBackingRatio(), 1e18, "Backing ratio should be 1");
+
         // Acquired in SP vault
         assertApproximatelyEqual(
             chickenBondManager.getAcquiredLUSDInSP(),
-            accruedBLUSD,
+            accruedBLUSD, // backing ratio is 1, so this will match
             1,
             "Acquired LUSD in SP mismatch"
         );
