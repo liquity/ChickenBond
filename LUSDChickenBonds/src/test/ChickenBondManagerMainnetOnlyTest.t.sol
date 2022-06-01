@@ -24,6 +24,21 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         return valueIncrease;
     }
 
+    function _logYearn(string memory _desc) internal view {
+        uint256 totalYTokensHeldByCBM = yearnCurveVault.balanceOf(address(chickenBondManager));
+        uint256 pps = yearnCurveVault.pricePerShare();
+        uint256 LUSD3CRVInCurve = totalYTokensHeldByCBM *  pps / 1e18;
+        uint256 lusdInCurve = curvePool.calc_withdraw_one_coin(LUSD3CRVInCurve, 0);
+
+        console.log("");
+        console.log(_desc);
+        console.log(totalYTokensHeldByCBM, "totalYTokensHeldByCBM");
+        console.log(pps, "price per share");
+        console.log(LUSD3CRVInCurve, "LUSD3CRVInCurve");
+        console.log(lusdInCurve, "lusdInCurve");
+        console.log("");
+    }
+
     function _generateCurveRevenue() internal {
         vm.startPrank(A);
         // Approve tokens
@@ -45,7 +60,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function _curveHarvestAndFastForward() internal returns (uint256) {
         uint256 prevValue = chickenBondManager.getTotalLUSDInCurve();
+        _logYearn("initial");
         _generateCurveRevenue();
+        _logYearn("after swaps");
 
         // harvest from both strategies in the vault
         for (uint256 i = 0; i < 2; i++) {
@@ -58,10 +75,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             vm.startPrank(keeper);
             StrategyAPI(strategy).harvest();
             vm.stopPrank();
+            _logYearn("after harvest");
         }
 
         // some time passes to unlock profits
         vm.warp(block.timestamp + 30 days);
+        //_logYearn("after 30 days");
 
         uint256 newValue = chickenBondManager.getTotalLUSDInCurve();
         uint256 curveYield = newValue - prevValue;
@@ -69,6 +88,54 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         return curveYield;
     }
 
+    function testCurveAddSingleLiquidityUSDT() public {
+        IERC20 usdt = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+        ICurvePool curve3Pool = ICurvePool(0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7);
+
+        uint256 usdtAmount = 2000e6;
+        tip(address(usdt), A, usdtAmount);
+
+        uint256 LUSD3CRVInCurve = 277310911324027141180;
+
+        console.log(curvePool.calc_withdraw_one_coin(LUSD3CRVInCurve, 0), "LUSD in Curve, initial");
+
+        vm.startPrank(A);
+        //console.log(usdt.balanceOf(A), "USDT balance");
+        //console.log(_3crvToken.balanceOf(A), "3CRV balance");
+        //console.log(usdt.allowance(A, address(curve3Pool)), "allowed");
+
+        // approve USDT
+        bytes memory payload = abi.encodeWithSignature("approve(address,uint256)", address(curve3Pool), usdtAmount);
+        //console.logBytes(payload);
+        //usdt.approve(address(curve3Pool), usdtAmount);
+        address(usdt).call(payload);
+        //address(usdt).call("0x095ea7b3000000000000000000000000bebc44782c7db0a1a60cb6fe97d0b483032ff1c70000000000000000000000000000000000000000000000000000000077359400");
+        //address(usdt).call("0x086c40f6000000000000000000000000bebc44782c7db0a1a60cb6fe97d0b483032ff1c70000000000000000000000000000000000000000000000000000000077359400");
+        //console.log(usdt.allowance(A, address(curve3Pool)), "allowed");
+        //console.log("wtf");
+
+        // Add (USDT single sided) liquidity to 3Pool
+        curve3Pool.add_liquidity([0, 0, usdtAmount], 0);
+        //console.log(usdt.balanceOf(A), "USDT balance");
+        uint256 _3CRVBal = _3crvToken.balanceOf(A);
+        //console.log(_3crvToken.balanceOf(A), "3CRV balance");
+
+        console.log(curvePool.calc_withdraw_one_coin(LUSD3CRVInCurve, 0), "LUSD in Curve, after 3Pool add liquidity");
+        console.log(curvePool.calc_withdraw_one_coin(LUSD3CRVInCurve, 1), "3CRV in Curve, after 3Pool add liquidity");
+
+        // Approve 3CRV to Curve LUSD3CRV Pool
+        _3crvToken.approve(address(curvePool), _3CRVBal);
+        // Add (3CRV single sided) liquidity to Curve LUSD3CRV Pool
+        curvePool.add_liquidity([0, _3CRVBal], 0);
+        //console.log(_3crvToken.balanceOf(A), "3CRV balance");
+
+        console.log(curvePool.calc_withdraw_one_coin(LUSD3CRVInCurve, 0), "LUSD in Curve, after LUSD3CRV Pool add liquidity");
+        console.log(curvePool.calc_withdraw_one_coin(LUSD3CRVInCurve, 1), "3CRV in Curve, after LUSD3CRV Pool add liquidity");
+
+        vm.stopPrank();
+
+        assertEq(uint256(0), uint256(1));
+    }
     // --- chickening in when sTOKEN supply is zero ---
 
     function testFirstChickenInTransfersToRewardsContract() public {
@@ -216,6 +283,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // harvest curve and fast forward time to unlock profits
         uint256 curveYield = _curveHarvestAndFastForward();
         assertGt(curveYield, 0, "Yield generated in Curve vault should be greater than zero");
+        assertEq(uint256(0), uint256(1));
+        return;
 
         // create bond
         A_bondID = createBondForUser(A, bondAmount2);

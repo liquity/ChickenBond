@@ -20,6 +20,7 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
         lusdToken = LUSDTokenTester(_lusdTokenAddress);
     }
 
+    function add_liquidity(uint256[3] memory _amounts, uint256) external {}
     function add_liquidity(uint256[2] memory _amounts, uint256) external {
         nextPrankPrice = DEFAULT_PRANK_PRICE;
 
