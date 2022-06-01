@@ -277,7 +277,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             lusdToken.balanceOf(address(curveLiquidityGauge)),
             //curveYield + chickenInFeeAmount1 + chickenInFeeAmount2 + yieldFromFirstChickenInRedemptionFee,
             curveYield + _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2) + bLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18,
-            6e10, // 0.000006 %
+            13e10, // 0.000013 %
             "Rewards contract balance mismatch"
         );
     }
