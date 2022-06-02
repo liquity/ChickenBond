@@ -10,3 +10,6 @@
 [submodule "LQTYChickenBonds/lib/forge-std"]
 	path = LQTYChickenBonds/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "LQTYChickenBonds/lib/openzeppelin-contracts"]
+	path = LQTYChickenBonds/lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
