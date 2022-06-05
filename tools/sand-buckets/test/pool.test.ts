@@ -4,7 +4,7 @@ import { Contract } from "@ethersproject/contracts";
 import { AlchemyProvider } from "@ethersproject/providers";
 import { Decimal } from "@liquity/lib-base";
 
-import { approxEq, StableSwapPool } from "../src/pool";
+import { approxEq, StableSwapMetaPool, StableSwapPool } from "../src/pool";
 
 const totalSupplyAbi = ["function totalSupply() view returns (uint256)"];
 
@@ -15,6 +15,7 @@ const curvePoolAbi = [
   "function balances(uint256 i) view returns (uint256)",
   "function get_virtual_price() view returns (uint256)",
   "function get_dy(int128 i, int128 j, uint256 dx) view returns (uint256)",
+  "function get_dy_underlying(int128 i, int128 j, uint256 dx) view returns (uint256)",
   ...totalSupplyAbi
 ];
 
@@ -41,7 +42,15 @@ const numberify =
   (x: BigNumber) =>
     Number(decimalify(decimals)(x));
 
-const clonePool = async (pool: Contract, decimals: number[], blockTag: number, coin?: Contract) => {
+interface ClonePoolParams {
+  pool: Contract;
+  decimals: number[];
+  blockTag: number;
+  coin?: Contract;
+  rates?: number[];
+}
+
+const clonePool = async ({ pool, decimals, blockTag, coin, rates }: ClonePoolParams) => {
   const [fee, adminFee, A, totalSupply] = await Promise.all([
     pool.fee({ blockTag }).then(decimalify()),
     pool.admin_fee({ blockTag }).then(decimalify()),
@@ -49,18 +58,19 @@ const clonePool = async (pool: Contract, decimals: number[], blockTag: number, c
     (coin ?? pool).totalSupply({ blockTag }).then(numberify())
   ]);
 
-  const X = await Promise.all(
+  const balances = await Promise.all(
     decimals.map((d, i) => pool.balances(i, { blockTag }).then(numberify(d)))
   );
 
-  return new StableSwapPool(
-    decimals.length,
-    Number(fee.mul(1e8)),
-    Number(adminFee.mul(1e8)),
-    A.toNumber(),
-    X,
+  return new StableSwapPool({
+    n: decimals.length,
+    A: A.toNumber(),
+    fee: Number(fee.mul(1e8)),
+    adminFee: Number(adminFee.mul(1e8)),
+    balances,
+    rates,
     totalSupply
-  );
+  });
 };
 
 const approxEq10D = approxEq(1e-10);
@@ -75,20 +85,45 @@ test("StableSwapPool calculates the same virtual price as on-chain", async t => 
     lusdPool.get_virtual_price({ blockTag }).then(numberify())
   ]);
 
-  const baseClone = await clonePool(basePool, [18, 6, 6], blockTag, baseCoin);
-  const lusdClone = await clonePool(lusdPool, [18, 18], blockTag);
-  lusdClone.X[1] *= baseVirtualPrice;
+  const baseClone = await clonePool({
+    pool: basePool,
+    decimals: [18, 6, 6],
+    blockTag,
+    coin: baseCoin
+  });
 
-  t.true(approxEq10D(baseVirtualPrice, baseClone.getVirtualPrice()));
-  t.true(approxEq10D(lusdVirtualPrice, lusdClone.getVirtualPrice()));
+  const { A, fee, adminFee, balances, totalSupply } = await clonePool({
+    pool: lusdPool,
+    decimals: [18, 18],
+    blockTag
+  });
+
+  const lusdMeta = new StableSwapMetaPool({
+    basePool: baseClone,
+    A,
+    fee,
+    adminFee,
+    balances,
+    totalSupply
+  });
+
+  t.true(approxEq10D(baseVirtualPrice, baseClone.virtualPrice));
+  t.true(approxEq10D(lusdVirtualPrice, lusdMeta.virtualPrice));
 
   const dx = 1e6;
 
   const baseDY = await basePool.get_dy(0, 1, Decimal.from(dx).hex, { blockTag }).then(numberify(6));
   t.true(approxEq6D(baseDY, baseClone.dy(0, 1, dx)[0]));
 
-  const lusdDY = await lusdPool.get_dy(0, 1, Decimal.from(dx).hex, { blockTag }).then(numberify());
-  t.true(approxEq6D(lusdDY, lusdClone.dy(0, 1, dx)[0] / baseVirtualPrice));
+  const lusdDY01 = await lusdPool
+    .get_dy_underlying(0, 1, Decimal.from(dx).hex, { blockTag })
+    .then(numberify());
+  t.true(approxEq6D(lusdDY01, lusdMeta.dyUnderlying(0, 1, dx)));
+
+  const lusdDY10 = await lusdPool
+    .get_dy_underlying(1, 0, Decimal.from(dx).hex, { blockTag })
+    .then(numberify());
+  t.true(approxEq6D(lusdDY10, lusdMeta.dyUnderlying(1, 0, dx)));
 
   // const initialLusd = 1000000;
   // const lp = lusdClone.addLiquidity([initialLusd, 0]);
