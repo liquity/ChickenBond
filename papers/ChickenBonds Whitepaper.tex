@@ -27,11 +27,7 @@
 
 \title{\textbf{ChickenBonds: Self-Bootstrapping Treasury}}
 \author{Liquity Team}
-<<<<<<< HEAD
 \date{May 25, 2021}
-=======
-\date{May 24, 2021}
->>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
 
 \maketitle
 
@@ -234,6 +230,7 @@ t > \frac{\alpha}{\lambda-1}
 The actual rate of return from bonding depends on $\lambda$ and the shape (steepness) of the accrual curve $s(t)$ given by the parameter $\alpha$.
 
 \subsection{Optimal rebonding strategy}
+  \label{sec:rebonding_strategy}
 When people bond, they get an accruing balance of bTKN that they can trade in against the bonded amount of TKN fixed at the beginning. That is, the system doesn't auto-compound the accrued profits from bonding. In order to benefit from a compounding effect, bond holders can chicken in, sell their received bTKN for TKN and reinvest the TKN to create a new, larger bond, and repeat that process over and over again.
 
 In the following, we analyze the optimal rebonding strategy for users with a sufficiently long time horizon by deriving a time period that maximizes the profitability of (regular) rebonding for a given system configuration.
@@ -556,24 +553,130 @@ and express the PV of the Permanent Bucket in terms of the Acquired Bucket:
 
 \begin{equation}
   \label{eq:naive-2}
-   p_f = \frac{PV(AcquiredBucket) + \frac{q_d}{q_a} \cdot \frac{r_d}{r_a} \cdot d_f \cdot PV(AcquiredBucket)}{S}
+   p_f = \frac{PV(AcquiredBucket) + \frac{q_d}{q_a} \frac{r_d}{r_a} d_f PV(AcquiredBucket)}{S}
 \end{equation}
 
 Recalling that $PV(AcquiredBucket) = q_a$, we can derive that
 
 \begin{equation}
   \label{eq:naive-3}
-   p_f = \frac{q_a + q_d \cdot \frac{r_d}{r_a} \cdot d_f}{S}
+   p_f = \frac{q_a + q_d \frac{r_d}{r_a} d_f}{S}
 \end{equation}
 
-Regarding the Pending Bucket, we know that its content will eventually transition into the two other buckets (chicken in) or leave the system (chicken out). On the other hand, bonders have an incentive to rebond after chickening in (see TODO), increasing the Pending Bucket shortly after. If we assume for simplicity that the two effects cancel out in aggregate and suppose $r_p = r_a$, we can extend the fair price formula to:
+Regarding the Pending Bucket, we know that its content will eventually transition into the two other buckets (chicken in) or leave the system (chicken out), and that the protocol will mint more bTKN. On the other hand, bonders have an incentive to rebond after chickening in (see section \ref{sec:rebonding_strategy}), increasing the Pending Bucket shortly after. If we assume for simplicity that all effects cancel out in aggregate and suppose $r_p = r_a$, we can extend the fair price formula to:
 
 \begin{equation}
   \label{eq:naive-4}
-   p_f = \frac{q_a + q_p + q_d \cdot \frac{r_d}{r_a} \cdot d_f}{S}
+   p_f = \frac{q_a + q_p + q_d \frac{r_d}{r_a} d_f}{S}
 \end{equation}
 
-We call this the \textit{naive formula} since it's overly simplified, glossing over the fact that rebonding may have a different impact on the price than assumed. 
+We call this the \textit{naive formula}. Although the formula looks oversimplified (glossing over the fact that rebonding may have a different impact on the price than assumed), it turns out to have interesting properties which seem to validate it to some extent.
+
+\paragraph{Growth rate of bTKN supply and Treasury value}
+This property posits that in the long run the bTKN supply $S$ should grow at roughly the same pace as the total value of the Treasury (denoted by $R_v$). Since the bTKN constitutes an economic share in the system, a faster growth rate of $S$ relative to $R_v$ would imply a future dilution of bTKN, while a slower growth rate would amount to a future appreciation. We can expect the market to factor such effects into the current price of bTKN, implying that the fair price $p_f$ should correspond to the price which results in the same growth rate for both:
+
+\begin{equation}
+  \label{eq:same_growth_rate}
+  \frac{\Delta S}{S} = \frac{\Delta R_v}{R_v}
+\end{equation}
+
+%Only the simple naive formula fulfills the property that it can also be used for R_v 
+
+While the Treasury $R$ consists of the three buckets, its real value $R_v$ doesn't necessarily equal the sum of their content $q_a+q_d+q_p$ since not every bucket may achieve the same return as the market rate $r_m$. Supposing that $r_a=r_p=r_m \neq r_d$, we can try to estimate $R_v$ by applying correction factors $c_d$ and $c_p$ to $q_d$ and $q_p$ respectively. This allows us to value the current Treasury as
+
+\begin{equation}
+  \label{eq:correction-factors}
+  R_v = q_a + c_d q_d + c_p q_p
+\end{equation}
+
+If we take the yield on $R$ into account and suppose that all bond holders who chicken in immediately sell the received bTKN for TKN and rebond them, we can express the absolute change of $R_v$ for a given time step $\Delta t$ (measured in days) as
+
+\begin{equation}
+  \label{eq:treasury-growth}
+  \Delta R_v = \frac{\Delta t}{365} r_m (q_a + q_p) + \frac{\Delta t}{365} r_d  q_d + c_p \Delta S p_f 
+\end{equation}
+
+with the last term expressing the value change due to the influx of new TKN from rebonding based on an exchange at the current fair price. Note that the rebonded capital needs to be corrected by $c_p$, whereas no correction factor is required for the yield as it becomes part of the Acquired Bucket (and given $r_a=r_m$).
+
+$\Delta S$ stands for the change in bTKN supply $S$ per $\Delta t$, which will be rebonded in entirety according to our assumption. To express $\Delta S$, we consider $q_p$ as the representation of all bond holders in aggregate and assume that the same fraction of $q_p$ is chickened in each time unit $\Delta t$. 
+
+Given the optimal rebonding time $T_{opt}$ (measured in days), we can thus treat the chickened-in fraction  $\frac{q_p}{T_{opt} \Delta t}$ for a given time unit $\Delta t$ as if it was one aggregate bond which has accrued $s(T_{opt})$ bTKN upon chicken in. Thus, we have
+
+\begin{equation}
+  \label{}
+  \Delta S = s(T_{opt}) = \frac{q_p}{T_{opt} \Delta t} \frac{1}{p_r} \frac{T_{opt}}{T_{opt}+\alpha} = \frac{q_p}{\Delta t} \frac{S}{q_a} \frac{1}{T_{opt}+\alpha}
+\end{equation}
+
+Similarly, for the version with a controller targeting an average chicken in time $T_t$ (see section \ref{sec:adjustment}), using equation $\ref{eq:alpha-solved}$ for $\alpha$, we can derive
+
+\begin{equation}
+  \label{}
+  \Delta S = \frac{q_p}{\Delta t} \frac{S}{q_a} \frac{1}{T_t+\alpha}
+  = \frac{q_p}{\Delta t} \frac{S}{q_a} \frac{1}{T_t+ T_t\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}}}  
+\end{equation}
+
+
+
+The question is how to determine the correction factors in equations \ref{eq:correction-factors} and \ref{eq:treasury-growth} and how it affects the resulting fair price estimation. Using the naive fair price (equation $\ref{eq:naive-4}$), we have:
+
+\begin{equation}
+  \label{}
+   c_d=q_d \frac{r_d}{r_a}, c_p=1
+\end{equation}
+
+In other words, we're not correcting the Pending Bucket but supposing that rebonding cancels out the effect of chicken ins on the fair price, consisting in a transition of funds from $q_p$ to $q_a$ and $q_d$ and the minting of more bTKN.
+
+We can now plot equation $\ref{eq:same_growth_rate}$ for the two versions with and without a dynamically controlled $\alpha$:
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_growth_price.png}
+
+The purple line depicts the fair price (y-axis) as a solution of equation $\ref{eq:same_growth_rate}$ in function of the Pending Bucket $q_p$ (x-axis) for $q_a=1$, $q_d=2$, $S=1$, $r_a=r_p=0.1$, $r_d=0.05$ and a fixed $\alpha=30$. 
+
+The red line shows the fair price for the controlled version for a $T_t=30$ and a variable $\alpha$.
+
+As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in green. We can clearly see that the upper branch of the purple curve as well as the red curve approximate the naive fair price formula (equation $\ref{eq:naive-3}$) for sufficiently large $q_p$. 
+
+This basically means that the naive fair price formula satisfies the property that the Treasury value and the bTKN supply grow at the same rate under the assumption that current users keep recycling their bonds (and no new users are creating bonds).
+
+\pagebreak
+
+What happens if we discount the effect of $q_p$ on the fair price by setting $c_p=0.7$ for example?
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_growth_price_2.png}
+
+Note that the two versions of the fair price resulting from $\ref{eq:same_growth_rate}$ are still very similar for large $q_p$. However, they now diverge from the corrected fair price formula shown in green given by:
+
+\begin{equation}
+  \label{eq:corrected-naive}
+   p_f = \frac{q_a + 0.7q_p + q_d \frac{r_d}{r_a} d_f}{S}
+\end{equation}
+
+This seems to imply that only the naive fair price formula with $c_p=1$ satisfies the property of an equal growth of $R_v$ and $S$. 
+
+%Observation: only naive fair price formula without correction factor fulfills property for all $c_p$
+
+%Observation: fair price does NOT make rebonding neutral with regard to the fair price if r_d =/= r_m. Price goes up if r_d>r_m. If the two rates are equal, then rebonding is neutral regardless of the chicken in time iff c_o = 1.
+
+%Conclusion: the naive fair price formula fulfills the property, meaning that we don't need to discount the pending bucket just for the fact of being pending.
+
+%General conclusion: too many constraints influencing $p_f$
+
+%Regarding $q_d$, we can take the correction factor $c_d=q_d \frac{r_d}{r_a}$ from the naive formula above (equation \ref{eq:naive-3}). For $q_p$ we suppose that the Pending Bucket will eventually transition into the Acquired and the Permanent Buckets according to a split determined by the optimal rebonding time. In other words, we're discounting the fraction of the Pending Bucket with $c_p$ that we expect to become part of the Permanent Bucket, neglecting the possibility of chicken outs.
+
+\paragraph{Immediate effect of rebonding on the fair price}
+Can we thus deduct that (optimal) rebonding has no direct impact on the naive fair price at all?
+
+It turns out that this is only true for the special case where $r_d = r_a$. Otherwise, the result may look like this:
+
+\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_rebonding.png}
+
+For $r_d < r_a$, rebonding negatively impacts the fair price, as can be seen in the chart above which shows the fair price before (green) and after (blue) rebonding the entire Pending Bucket at $T_{opt}$ for $q_a=1$, $q_d=2$, $S=1$, $r_a=r_p=0.1$, $r_d=0.05$ and a fixed $\alpha=30$. 
+
+This intuitively makes sense since it results in a larger portion of $R$ earning a lower yield (the later users chicken in and rebond, the larger the effect). 
+
+On the other hand, the parameter $\alpha$ has no influence on the resulting price curve, which also doesn't depend on whether the controller is turned on or not (and what time $T_t$ it targets).
+
+One explanation for this seemingly contradictory result could be that while rebonding as such negatively impacts the naive fair price, the (higher) yield on the Pending Bucket compensates for this, ensuring that the Treasury and the bTKN supply growth at the same rate as a whole.
 
 \subsubsection{Recursive approach}
 Instead of assuming that the effects of chicken ins and rebonding cancel out, we can try to estimate the future changes to the buckets based on historic user behavior or expected optimal behavior.
@@ -787,15 +890,12 @@ and get:
   p_f = p_r\left(1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}\right) \frac{T_{opt}+\alpha}{T_{opt}}
 \end{equation}
 
-<<<<<<< HEAD
 The following chart plots $p_f$ on the y-axis in function of the Pending Bucket $q_p$ (x-axis) for $\alpha$=(50, 100, 150, 200), with $q_a=1$, $q_d=2$, $S=$1 and $r_a=r_p=r_d=0.1$. As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
 \includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_comparison_price.png}
 
-Note that the curves are getting for higher $\alpha$ and that all the equations have lower branches, only one of which is shown on the chart (in blue for $\alpha$=50). 
+Note that the curves are increasing for higher $\alpha$ and that all the equations have lower branches, only one of which is shown on the chart (in blue for $\alpha$=50). 
 
-=======
->>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
 \subparagraph{With $\alpha$ being adjusted by the controller}
 By assuming that the controller will keep the actual rebonding time constant (section \ref{sec:adjustment}), we can solve the approximation formula for $T_{opt}$ (equation \ref{eq:optimal_chicken_in_2}) for $\alpha$, obtaining
 
@@ -825,16 +925,12 @@ Using the new definitions of $H_{ROI}$ and $B_{ROI}$, we can solve equation \ref
   p_f = p_r\left(1 + \frac{T_t}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}\right)^2 
 \end{equation}
 
-<<<<<<< HEAD
-The following chart depicts the fair price (y-axis) according to equation \ref{eq:ROI-bonding-holding-controller} in function of the Pending Bucket $q_p$ (x-axis) for $T_t=(60, 120, 240, 480, 960)$, with $q_a=1$, $q_d=2$, $S=$1 and $r_a=r_p=r_d=0.1$.
+The following chart depicts the fair price (y-axis) according to equation \ref{eq:ROI-bonding-holding-controller} in function of the Pending Bucket $q_p$ (x-axis) for $T_t=(60, 120, 240, 480, 960)$, with $q_a=1$, $q_d=2$, $S=1$ and $r_a=r_p=r_d=0.1$.
 As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
 \includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_controller_price.png}
 
-Note that the impact $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_a$, which influence $p_f$ in the same fashion.
-=======
-
->>>>>>> 7f347e49321ccf98d1f12593aa36f017eab387fc
+Note that the impact of $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_a$, which influence $p_f$ in the same fashion.
 
 \paragraph{Equating ROI of staking TKN and holding bTKN}
 Assuming rational markets and no additional risks for holding bTKN compared to holding (and staking) TKN, we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start. (Or is economically possible under perfectly rational conditions that a portfolio A has a higher yield than a portfolio B with the same risk profile?)
