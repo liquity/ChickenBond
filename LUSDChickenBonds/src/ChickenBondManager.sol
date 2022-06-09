@@ -456,13 +456,13 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         curvePool.add_liquidity([lusdBalanceDelta, 0], 0);
         uint256 lusd3CRVBalanceDelta = curvePool.balanceOf(address(this)) - lusd3CRVBalanceBefore;
 
-        (, uint256 lusdInCurveBefore) = getTotalLPAndLUSDInCurve();
+        uint256 lusdInCurveBefore = getTotalLUSDInCurve();
         // Deposit the received LUSD3CRV-f to Yearn Curve vault
         yearnCurveVault.deposit(lusd3CRVBalanceDelta);
 
         /* Record the portion of LUSD added to the the permanent Yearn Curve bucket,
         assuming that receipt of yTokens increases both the permanent and acquired Yearn Curve buckets by the same factor. */
-        (, uint256 lusdInCurve) = getTotalLPAndLUSDInCurve();
+        uint256 lusdInCurve = getTotalLUSDInCurve();
         uint256 permanentLUSDCurveIncrease = (lusdInCurve - lusdInCurveBefore) * ratioPermanentToOwned / 1e18;
 
         permanentLUSDInCurve += permanentLUSDCurveIncrease;
@@ -866,8 +866,14 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     // Calculates the LUSD value of this contract, including Yearn LUSD Vault and Curve Vault
     function calcTotalLUSDValue() external view returns (uint256) {
-        (, uint256 totalLUSDInCurve) = getTotalLPAndLUSDInCurve();
+        uint256 totalLUSDInCurve = getTotalLUSDInCurve();
         return calcTotalYearnSPVaultShareValue() + totalLUSDInCurve;
+    }
+
+    function getTotalLUSDInCurve() public view returns (uint256) {
+        (, uint256 totalLUSDInCurve) = getTotalLPAndLUSDInCurve();
+
+        return totalLUSDInCurve;
     }
 
     function getTotalLPAndLUSDInCurve() public view returns (uint256, uint256) {
@@ -896,7 +902,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         uint256 acquiredLUSDInCurve;
 
         // Get the LUSD value of the LUSD-3CRV tokens
-        (, uint256 totalLUSDInCurve) = getTotalLPAndLUSDInCurve();
+        uint256 totalLUSDInCurve = getTotalLUSDInCurve();
         if (totalLUSDInCurve > permanentLUSDInCurve) {
             acquiredLUSDInCurve = totalLUSDInCurve - permanentLUSDInCurve;
         }

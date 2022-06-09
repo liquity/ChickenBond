@@ -41,6 +41,10 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
 
     function remove_liquidity(uint256 burn_amount, uint256[2] memory _min_amounts) external {}
 
+    function exchange(int128 i, int128 j, uint256 dx, uint256 min_dy, address _receiver) external returns (uint256) {}
+
+    function exchange_underlying(int128 i, int128 j, uint256 dx, uint256 min_dy, address _receiver) external returns (uint256) {}
+
     /* Simplified LP shares calculators. Shares issued/burned 1:1 with deposited/withdrawn LUSD respectively.
     * In practice, the conversion will be more complicated and will depend on the pool proportions and sizes. */
     function calc_withdraw_one_coin(uint256 _burn_amount, int128) external pure returns (uint256) {

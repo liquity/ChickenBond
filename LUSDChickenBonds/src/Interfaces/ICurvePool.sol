@@ -10,6 +10,10 @@ interface ICurvePool is IERC20 {
 
     function remove_liquidity_one_coin(uint256 _burn_amount, int128 i, uint256 _min_received) external;
 
+    function exchange(int128 i, int128 j, uint256 dx, uint256 min_dy, address _receiver) external returns (uint256);
+
+    function exchange_underlying(int128 i, int128 j, uint256 dx, uint256 min_dy, address _receiver) external returns (uint256);
+
     function calc_withdraw_one_coin(uint256 _burn_amount, int128 i) external view returns (uint256);
 
     function calc_token_amount(uint256[2] memory _amounts, bool _is_deposit) external view returns (uint256);

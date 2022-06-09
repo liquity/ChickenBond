@@ -24,22 +24,49 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         return valueIncrease;
     }
 
-    function _curveHarvestAndFastForward() internal returns (uint256) {
-        // get strategy
-        address strategy = yearnCurveVault.withdrawalQueue(0);
-        // get keeper
-        address keeper = StrategyAPI(strategy).keeper();
+    function _generateCurveRevenue() internal {
+        vm.startPrank(A);
+        // Approve tokens
+        lusdToken.approve(address(curvePool), type(uint256).max);
+        _3crvToken.approve(address(curvePool), type(uint256).max);
 
-        // harvest
-        uint256 prevValue = chickenBondManager.calcTotalYearnCurveVaultShareValue();
-        vm.startPrank(keeper);
-        StrategyAPI(strategy).harvest();
+        uint256 lusdAmount = 1e25;
+        uint256 _3CRVAmount;
+        // fund account
+        tip(address(lusdToken), A, lusdAmount);
+
+        // swap back and forth several times
+        for (uint256 i = 0; i < 2; i++){
+            _3CRVAmount = curvePool.exchange(0, 1, lusdAmount, 0, A);
+            lusdAmount = curvePool.exchange(1, 0, _3CRVAmount, 0, A);
+        }
+        vm.stopPrank();
+    }
+
+    function _curveHarvestAndFastForward() internal returns (uint256) {
+        uint256 prevValue = chickenBondManager.getTotalLUSDInCurve();
+        _generateCurveRevenue();
+
+        // harvest from both strategies in the vault
+        for (uint256 i = 0; i < 2; i++) {
+            // get strategy
+            address strategy = yearnCurveVault.withdrawalQueue(i);
+            // get keeper
+            address keeper = StrategyAPI(strategy).keeper();
+
+            // harvest
+            vm.startPrank(keeper);
+            StrategyAPI(strategy).harvest();
+            vm.stopPrank();
+        }
 
         // some time passes to unlock profits
         vm.warp(block.timestamp + 30 days);
-        vm.stopPrank();
-        uint256 valueIncrease = chickenBondManager.calcTotalYearnCurveVaultShareValue() - prevValue;
-        return valueIncrease;
+
+        uint256 newValue = chickenBondManager.getTotalLUSDInCurve();
+        uint256 curveYield = newValue - prevValue;
+
+        return curveYield;
     }
 
     // --- chickening in when sTOKEN supply is zero ---
@@ -188,8 +215,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // harvest curve and fast forward time to unlock profits
         uint256 curveYield = _curveHarvestAndFastForward();
-        // TODO:
-        //assertGt(curveYield, 0, "Yield generated in Curve vault should be greater than zero")
+        assertGt(curveYield, 0, "Yield generated in Curve vault should be greater than zero");
 
         // create bond
         A_bondID = createBondForUser(A, bondAmount2);
@@ -205,12 +231,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        // checks
+        // Checks
+
+        // Backing ratio
         assertRelativeError(
             chickenBondManager.calcSystemBackingRatio(),
             1e18,
             8e14, // 0.08%
-            "Backing ration should be 1"
+            "Backing ratio should be 1"
         );
 
         // Acquired in SP vault
@@ -249,7 +277,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             lusdToken.balanceOf(address(curveLiquidityGauge)),
             //curveYield + chickenInFeeAmount1 + chickenInFeeAmount2 + yieldFromFirstChickenInRedemptionFee,
             curveYield + _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2) + bLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18,
-            4e10, // 0.000004 %
+            13e10, // 0.000013 %
             "Rewards contract balance mismatch"
         );
     }
