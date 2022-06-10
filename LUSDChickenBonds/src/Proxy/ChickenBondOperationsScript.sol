@@ -68,6 +68,20 @@ contract ChickenBondOperationsScript {
         bLUSDToken.transfer(msg.sender, balanceAfter - balanceBefore);
     }
 
+    function redeem(uint256 _bLUSDToRedeem) external {
+        // pull first bLUSD if needed:
+        uint256 proxyBalance = bLUSDToken.balanceOf(address(this));
+        if (proxyBalance < _bLUSDToRedeem) {
+            bLUSDToken.transferFrom(msg.sender, address(this), _bLUSDToRedeem - proxyBalance);
+        }
+
+        (uint256 yTokensFromSPVault, uint256 yTokensFromCurveVault, ) = chickenBondManager.redeem(_bLUSDToRedeem);
+
+        // Send yTokens to the redeemer
+        if (yTokensFromSPVault > 0) {yearnSPVault.transfer(msg.sender, yTokensFromSPVault);}
+        if (yTokensFromCurveVault > 0) {yearnCurveVault.transfer(msg.sender, yTokensFromCurveVault);}
+    }
+
     function redeemAndWithdraw(uint256 _bLUSDToRedeem) external {
         // pull first bLUSD if needed:
         uint256 proxyBalance = bLUSDToken.balanceOf(address(this));
