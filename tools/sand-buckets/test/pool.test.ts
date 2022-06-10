@@ -4,7 +4,8 @@ import { Contract } from "@ethersproject/contracts";
 import { AlchemyProvider } from "@ethersproject/providers";
 import { Decimal } from "@liquity/lib-base";
 
-import { approxEq, StableSwapMetaPool, StableSwapPool } from "../src/pool";
+import { StableSwapMetaPool, StableSwapPool } from "../src/pool";
+import { approxEq } from "../src/utils";
 
 const totalSupplyAbi = ["function totalSupply() view returns (uint256)"];
 
@@ -107,6 +108,8 @@ test("StableSwapPool calculates the same virtual price as on-chain", async t => 
     totalSupply
   });
 
+  // console.log(lusdMeta);
+
   t.true(approxEq10D(baseVirtualPrice, baseClone.virtualPrice));
   t.true(approxEq10D(lusdVirtualPrice, lusdMeta.virtualPrice));
 
@@ -124,15 +127,31 @@ test("StableSwapPool calculates the same virtual price as on-chain", async t => 
     .get_dy_underlying(1, 0, Decimal.from(dx).hex, { blockTag })
     .then(numberify());
   t.true(approxEq6D(lusdDY10, lusdMeta.dyUnderlying(1, 0, dx)));
-
-  // const initialLusd = 1000000;
-  // const lp = lusdClone.addLiquidity([initialLusd, 0]);
-
-  // for (let i = 0; i < 2; ++i) {
-  //   lusdClone.exchange(0, 1, 100000);
-  //   lusdClone.exchange(1, 0, 100000);
-  // }
-
-  // const finalLusd = lusdClone.removeLiquidityOneCoin(lp, 0);
-  // console.log(finalLusd - initialLusd);
 });
+
+// // LUSD pool at block 14956624
+// const p = new StableSwapMetaPool({
+//   A: 500,
+//   fee: 0.0004,
+//   adminFee: 0.5,
+//   totalSupply: 64834777.599998474,
+//   balances: [
+//     5524820.395973736, // LUSD
+//     59122746.01788371 // 3CRV
+//   ],
+
+//   basePool: new StableSwapPool({
+//     n: 3,
+//     A: 2000,
+//     fee: 0.0001,
+//     adminFee: 0.5,
+//     totalSupply: 1477659350.4041927,
+//     balances: [
+//       243777440.13653034, // DAI
+//       242039603.039747, // USDC
+//       1023877924.909114 // USDT
+//     ]
+//   })
+// });
+
+// console.log(p.dyUnderlying(0, 1, 1));

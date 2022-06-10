@@ -16,6 +16,7 @@
     "test": "ava"
   },
   "ava": {
+    "timeout": "60s",
     "extensions": [
       "ts"
     ],

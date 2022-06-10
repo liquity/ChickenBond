@@ -1,58 +1,22 @@
 import assert from "assert";
 
-const MAX_ITERATIONS = 256;
-const EPSILON = 1e-6;
-
-export const approxEq =
-  (epsilon = EPSILON) =>
-  (a: number, b: number) =>
-    Math.abs(a - b) < epsilon;
-
-const add = (a: number, b: number) => a + b;
-const sub = (a: number, b: number) => a - b;
-const mul = (a: number, b: number) => a * b;
-
-const sum = (x: number[]) => x.reduce(add, 0);
-const prod = (x: number[]) => x.reduce(mul, 1);
-
-const zeros = (n: number) => new Array<number>(n).fill(0);
-const ones = (n: number) => new Array<number>(n).fill(1);
-
-const set = <T>(arr: T[], i: number, newValue: T) =>
-  arr.map((oldValue, k) => (k === i ? newValue : oldValue));
-
-// const mapAdd = <T>(as: number[], b: number) => as.map(a => a + b);
-// const mapSub = <T>(as: number[], b: number) => as.map(a => a - b);
-const mapMul = <T>(as: number[], b: number) => as.map(a => a * b);
-
-const zipWith =
-  <T, U, V>(f: (t: T, u: U) => V) =>
-  (ts: T[], us: U[]) =>
-    ts.map((t, i) => f(t, us[i]));
-
-const zipAdd = zipWith(add);
-const zipSub = zipWith(sub);
-const zipMul = zipWith(mul);
-
-const iterate =
-  <T>(found: (curr: T, prev: T) => boolean, maxIterations = MAX_ITERATIONS) =>
-  (first: T, getNext: (prev: T) => T): T => {
-    let prev = first;
-
-    for (let i = 0; i < maxIterations; i++) {
-      const curr = getNext(prev);
-
-      if (found(curr, prev)) {
-        return curr;
-      }
-
-      prev = curr;
-    }
-
-    throw new Error(`not found within ${maxIterations} iterations`);
-  };
-
-const converge = iterate(approxEq());
+import {
+  binSearchDesc,
+  converge,
+  flow2,
+  flow3,
+  mapMul,
+  nonNegative,
+  ones,
+  positive,
+  prod,
+  set,
+  sum,
+  zeros,
+  zipAdd,
+  zipMul,
+  zipSub
+} from "./utils";
 
 export interface StableSwapConstants {
   n: number;
@@ -60,10 +24,23 @@ export interface StableSwapConstants {
   Ann: number;
 }
 
+export interface StableSwapConstantsWithFee extends StableSwapConstants {
+  fee: number;
+  adminFee: number;
+  baseFee: number;
+}
+
+const assertNonNegative = (x: number): number => {
+  assert(x >= 0);
+  return x;
+};
+
 // See https://atulagarwal.dev/posts/curveamm/stableswap/ for an explanation of the formula
-export const D =
+const D =
   ({ n, nn, Ann }: Readonly<StableSwapConstants>) =>
   (X: number[]) => {
+    assert(X.every(nonNegative));
+
     const S = sum(X);
     const P = prod(X);
 
@@ -72,24 +49,181 @@ export const D =
       return 0;
     }
 
-    return converge(S, D => {
-      const D_P = D ** (n + 1) / (nn * P);
-      return ((Ann * S + D_P * n) * D) / ((Ann - 1) * D + (n + 1) * D_P);
-    });
+    return assertNonNegative(
+      converge(S, D => {
+        const D_P = D ** (n + 1) / (nn * P);
+        return ((Ann * S + D_P * n) * D) / ((Ann - 1) * D + (n + 1) * D_P);
+      })
+    );
   };
 
 // See https://atulagarwal.dev/posts/curveamm/stableswap/ for an explanation of the formula
-export const y_D =
+const y_D =
   ({ n, nn, Ann }: Readonly<StableSwapConstants>) =>
   (i: number, D: number, X: number[]) => {
+    assert(X.every(nonNegative));
+
     const X_ = X.filter((_, j) => j !== i);
     const S_ = sum(X_);
     const P_ = prod(X_);
     const b = S_ + D / Ann;
     const c = D ** (n + 1) / (nn * P_ * Ann);
 
-    return converge(D, y => (y * y + c) / (2 * y + b - D));
+    return assertNonNegative(converge(D, y => (y * y + c) / (2 * y + b - D)));
   };
+
+const constants = (n: number, A: number): StableSwapConstants => ({
+  n,
+  nn: n ** n,
+  // See https://github.com/asquare08/AMM-Models/blob/main/Curve%20AMM%20plots.ipynb for the
+  // difference between Ann = A vs. (A * n) vs. (A * n ** n)
+  // Curve uses A * n
+  // (See https://github.com/curvefi/curve-contract/blob/b0bbf77f8f93c9c5f4e415bce9cd71f0cdee960e/contracts/pools/3pool/StableSwap3Pool.vy#L204)
+  Ann: A * n
+});
+
+const constants2 = (constantsOrA: number | Readonly<StableSwapConstants>): StableSwapConstants =>
+  typeof constantsOrA === "number" ? constants(2, constantsOrA) : constantsOrA;
+
+const y2 =
+  (constantsOrA: number | Readonly<StableSwapConstants>, D: number) =>
+  (x: number): number =>
+    y_D(constants2(constantsOrA))(1, D, [x, 0]);
+
+const dydxYFromXY =
+  (D_Ann: number) =>
+  (x: number, y: number): [dydx: number, y: number] => {
+    return [(x * y + D_Ann / x) / (x * y + D_Ann / y), y];
+  };
+
+// (D / Ann) * (D / n) ** n;
+const D_Ann = ({ n, nn, Ann }: Readonly<StableSwapConstants>, D: number) =>
+  D ** (n + 1) / (Ann * nn);
+
+// For a 2-pool with amplification A, invariant D and balance on one side x,
+// finds the spot price dy/dx and the other side's balance y.
+export const dydxYFromX = (constantsOrA: number | Readonly<StableSwapConstants>, D: number) => {
+  const c = constants2(constantsOrA);
+  const y = y2(c, D);
+  const f = dydxYFromXY(D_Ann(c, D));
+
+  return (x: number) => f(x, y(x));
+};
+
+// There must be a better way to do this...
+export const xyFromDydx: (A: number, D: number) => (dydx: number) => [x: number, y: number] = (
+  A,
+  D
+) => binSearchDesc(0, D / 2, 1e-9)(dydxYFromX(A, D));
+
+// export const xyFromDydx = (A: number, D: number) => {
+//   const c = constants2(A);
+//   const d = D_Ann(c, D);
+//   const dydxY = dydxYFromX(c, D);
+
+//   return (targetDydx: number): [x: number, y: number] => {
+//     const x = converge(D / 2, x => {
+//       const [dydx, y] = dydxY(x);
+//       const d2ydx2 = (2 * d * (-dydx * (-dydx / y + 1 / x) + y / (x * x))) / (x * y * y + d);
+
+//       return x - (targetDydx - dydx) / d2ydx2;
+//     });
+
+//     const [, y] = dydxY(x);
+//     return [x, y];
+//   };
+// };
+
+export const findDxThatSetsYOverX =
+  (targetYOverX: number) =>
+  ({ fee, adminFee, ...constants }: Readonly<StableSwapConstantsWithFee>) => {
+    const r = fee * (1 - adminFee);
+    const r1 = 1 - r;
+
+    return (x: number, y: number): number => {
+      assert(targetYOverX * x <= y);
+
+      const ry = r * y;
+      const D0 = D(constants)([x, y]);
+      const f = dydxYFromX(constants, D0);
+
+      const x_ = converge(D0, x_ => {
+        const [dydx, y_] = f(x_);
+        return x_ - (r1 * y_ + ry - targetYOverX * x_) / (r1 * -dydx - targetYOverX);
+      });
+
+      const dx = x_ - x;
+      assert(dx >= -1e-9);
+
+      return Math.max(dx, 0);
+    };
+  };
+
+export const findBalancingDx = findDxThatSetsYOverX(1);
+
+export const findDxThatSplitsPool = (targetXOverXPlusY: number) =>
+  findDxThatSetsYOverX((1 - targetXOverXPlusY) / targetXOverXPlusY);
+
+const xyAfterDeposit =
+  ({ baseFee, adminFee, ...constants }: Readonly<StableSwapConstantsWithFee>) =>
+  (xy: [x: number, y: number]) => {
+    const D0 = D(constants)(xy);
+
+    return (d: [dx: number, dy: number]) => {
+      const xy1 = zipAdd(xy, d);
+      const D1 = D(constants)(xy1);
+      const ideal = mapMul(xy, D1 / D0);
+      const diff = zipSub(xy1, ideal).map(Math.abs);
+      const fee = mapMul(diff, baseFee * adminFee);
+
+      return zipSub(xy1, fee) as [x: number, y: number];
+    };
+  };
+
+const dx0 = (dx: number): [dx: number, dy: number] => [dx, 0];
+
+export const findOneCoinDepositThatSetsYOverX =
+  (targetYOverX: number) =>
+  (constants: Readonly<StableSwapConstantsWithFee>) =>
+  (x: number, y: number) =>
+    flow2(
+      binSearchDesc(
+        0,
+        2 * (y / targetYOverX - x), // XXX
+        1e-9
+      )(flow3(dx0, xyAfterDeposit(constants)([x, y]), ([x, y]) => [y / x])),
+      ([dx]) => dx
+    )(targetYOverX);
+
+export const findBalancingOneCoinDeposit = findOneCoinDepositThatSetsYOverX(1);
+
+const xAfterOneCoinWithdrawal =
+  ({ baseFee, adminFee, ...constants }: Readonly<StableSwapConstantsWithFee>) =>
+  ([x, y]: [x: number, y: number]) => {
+    const D0 = D(constants)([x, y]);
+
+    return (burnFraction: number): number => {
+      const D1 = D0 * (1 - burnFraction);
+      const x1 = y2(constants, D1)(y);
+
+      const xr = x - baseFee * (x * (D1 / D0) - x1);
+      const yr = y + baseFee * (y * (D1 / D0) - y);
+
+      const dx = xr - y2(constants, D1)(yr);
+      return x1 * adminFee + (x - dx) * (1 - adminFee);
+    };
+  };
+
+export const findOneCoinWithdrawalThatSetsYOverX =
+  (targetYOverX: number) =>
+  (constants: Readonly<StableSwapConstantsWithFee>) =>
+  (x: number, y: number) =>
+    flow2(
+      binSearchDesc(0, 1, 1e-9)(flow2(xAfterOneCoinWithdrawal(constants)([x, y]), x2 => [x2 / y])),
+      ([burnFraction]) => burnFraction
+    )(1 / targetYOverX);
+
+export const findBalancingOneCoinWithdrawal = findOneCoinWithdrawalThatSetsYOverX(1);
 
 export interface StableSwapPoolParams {
   n: number;
@@ -102,7 +236,7 @@ export interface StableSwapPoolParams {
 }
 
 export interface StableSwapPoolProperties
-  extends StableSwapConstants,
+  extends StableSwapConstantsWithFee,
     Required<StableSwapPoolParams> {}
 
 export class StableSwapPool {
@@ -120,23 +254,25 @@ export class StableSwapPool {
   private readonly _rates;
 
   constructor(params: Readonly<StableSwapPoolParams>) {
-    const {
-      n,
-      A,
-      fee = 0,
-      adminFee = 0,
-      balances = zeros(n),
-      rates = ones(n),
-      totalSupply
-    } = params;
+    const { n, A, fee = 0, adminFee = 0 } = params;
+    assert(n >= 2);
+    assert(A !== 0);
+    assert(0 <= fee && fee <= 1);
+    assert(0 <= adminFee && adminFee <= 1);
 
+    const balances = params.balances?.slice() ?? zeros(n);
     assert(balances.length === n);
+    assert(balances.every(nonNegative));
+
+    const rates = params.rates?.slice() ?? ones(n);
     assert(rates.length === n);
+    assert(rates.every(nonNegative));
 
-    const nn = n ** n;
-    // See https://github.com/curvefi/curve-contract/blob/b0bbf77f8f93c9c5f4e415bce9cd71f0cdee960e/contracts/pools/3pool/StableSwap3Pool.vy#L204
-    const Ann = A * n; // XXX Huh, shouldn't this be A * n**n?
+    const { nn, Ann } = constants(n, A);
+    const totalSupply = params.totalSupply ?? D({ n, nn, Ann })(zipMul(balances, rates));
+    assert(totalSupply >= 0);
 
+    this.totalSupply = totalSupply;
     this.n = n;
     this.A = A;
     this.nn = nn;
@@ -146,8 +282,18 @@ export class StableSwapPool {
     this.baseFee = (fee * n) / (4 * (n - 1));
     this.balances = balances;
     this._rates = rates;
+  }
 
-    this.totalSupply = totalSupply ?? D({ n, nn, Ann })(zipMul(balances, rates));
+  clone() {
+    return new StableSwapPool({
+      A: this.A,
+      n: this.n,
+      fee: this.fee,
+      adminFee: this.adminFee,
+      balances: this.balances,
+      rates: this._rates,
+      totalSupply: this.totalSupply
+    });
   }
 
   get rates() {
@@ -171,6 +317,7 @@ export class StableSwapPool {
   }
 
   dy(i: number, j: number, dx: number): [dy: number, dyFee: number] {
+    assert(dx >= 0);
     const dyNoFee = this.balances[j] - this.y(i, j, this.balances[i] + dx);
     const dyFee = dyNoFee * this.fee;
 
@@ -193,6 +340,7 @@ export class StableSwapPool {
   }
 
   calcTokenAmount(amounts: number[], isDeposit: boolean): number {
+    assert(amounts.every(nonNegative));
     const newBalances = (isDeposit ? zipAdd : zipSub)(this.balances, amounts);
 
     const D0 = this.D();
@@ -218,19 +366,34 @@ export class StableSwapPool {
   }
 
   addLiquidity(amounts: number[]): number {
+    assert(amounts.every(nonNegative));
     const newBalances = zipAdd(this.balances, amounts);
 
     if (this.totalSupply === 0) {
-      assert(amounts.every(amount => amount > 0));
+      assert(amounts.every(positive));
       this._storeBalances(newBalances);
       return (this.totalSupply = this.D());
     }
 
     const [mint, fees] = this.calcTokenAmountWithFees(newBalances);
-    this._storeBalances(zipSub(newBalances, mapMul(fees, this.adminFee)));
-    this.totalSupply += mint;
 
-    return mint;
+    assert(mint >= -1e-9);
+    const clampedMint = Math.max(mint, 0);
+
+    this._storeBalances(zipSub(newBalances, mapMul(fees, this.adminFee)));
+    this.totalSupply += clampedMint;
+
+    return clampedMint;
+  }
+
+  removeLiquidity(burn: number) {
+    assert(burn <= this.totalSupply);
+
+    const amounts = this.balances.map(balance => balance * (burn / this.totalSupply));
+    this._storeBalances(zipSub(this.balances, amounts));
+    this.totalSupply -= burn;
+
+    return amounts;
   }
 
   calcWithdrawOneCoin(burn: number, i: number): [dy: number, dyFee: number] {
@@ -277,6 +440,18 @@ export class StableSwapMetaPool extends StableSwapPool {
 
     this.basePool = basePool;
     this.rate0 = rate0;
+  }
+
+  clone() {
+    return new StableSwapMetaPool({
+      A: this.A,
+      fee: this.fee,
+      adminFee: this.adminFee,
+      balances: this.balances,
+      rate0: this.rate0,
+      totalSupply: this.totalSupply,
+      basePool: this.basePool.clone()
+    });
   }
 
   get rates() {
