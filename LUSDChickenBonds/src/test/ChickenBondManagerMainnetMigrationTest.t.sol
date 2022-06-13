@@ -264,7 +264,6 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         // Check POL is only in LUSD Silo Vault and Curve
         uint256 polCurve = chickenBondManager.getOwnedLUSDInCurve();
         uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 acquiredYTokensBefore = yearnCurveVault.balanceOf(address(chickenBondManager));
         uint256 polSP = chickenBondManager.getOwnedLUSDInSP();
 
         uint256 acquiredLUSDInSilo = chickenBondManager.getAcquiredLUSDInSilo();
