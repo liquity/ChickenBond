@@ -27,14 +27,14 @@
 
 \title{\textbf{Chicken Bonds: Self-Bootstrapping Liquidity}}
 \author{Liquity Team}
-\date{June 8, 2021}
+\date{June 15, 2021}
 
 \maketitle
 
 \section*{Abstract}
-Chicken Bonds are a novel product for DAOs/projects to bootstrap protocol owned liquidity (POL) at no cost while boosting yield opportunities for their end users. The yield amplification is achieved by directing additional yield from POL and users bonding tokens (TKN) to newly issued “boosted” tokens (bTKN). 
+Chicken Bonds are a novel product for DAOs/projects to bootstrap protocol owned liquidity (POL) at no cost while boosting yield opportunities for their end users. The yield amplification is achieved by directing additional yield from POL and users bonding underlying tokens (TKN) to newly issued “boosted” tokens (bTKN). 
 
-Acting as an autonomous self-bootstrapping treasury, the protocol is powered by an innovative bonding mechanism: users may deposit TKN in exchange for an accruing balance of bTKN. At any time, bond holders can either retrieve their principal foregoing the accrued amount ("chicken out") or trade it in against the accrued bTKN ("chicken in").
+Acting as an autonomous self-bootstrapping treasury, the protocol is powered by an innovative bonding mechanism: users may deposit TKN in exchange for an accruing balance of bTKN. At any time, bond holders can either retrieve their principal foregoing the accrued amount (“chicken out”) or trade it in for the accrued bTKN (“chicken in”).
 
 The TKN acquired by the system backs the bTKN supply: while a portion of the TKN in the treasury is directly redeemable by bTKN holders, another portion is contributing permanently to the redeemable value through its yield. Along with the yield retained from pending bonds, the bTKN benefits from a rapidly rising price floor,  making it an attractive investment.
 
@@ -47,16 +47,18 @@ DeFi summer 2020 has led to an abundance of DeFi projects, making it increasingl
 
 More recently, DeFi 2.0 protocols such as Olympus Pro, Ondo and Tokemak have started offering alternative ways to acquire liquidity, which are more similar to leasing or buying. While tackling the issue of stickiness, they are still costly and may not be affordable for all projects.
 
-Chicken Bonds is a major innovation in liquidity acquisition technology and offers strong benefits to DeFi protocols and bond holders, while minimizing risk:
+Chicken Bonds is a major innovation in liquidity acquisition technology and works with any underlying token (TKN) that can be used to earn yield, e.g. in a DEX, a lending protocol or through native staking.
+
+The system offers strong benefits to DeFi protocols and bond holders, while minimizing risk:
 
 \begin{itemize}
     \item \textit{Cost-free liquidity accumulation for projects}. Rather than purchasing or renting liquidity, the system freely acquires treasury assets over time in a self-bootstrapping manner. Liquidity acquisition is incentivized by the amplified yields that are attainable by bond holders, enabled by the novel bonding dynamics.
-    \item \textit{Risk-free bonding for users}. Bond holders may “chicken out” and withdraw their deposited principal at any time, in lieu of converting it to derivative tokens. Therefore bonding is fully reversible and bond holders are not locked into any commitment to the protocol.
-    \item \textit{System stability and resilience}. The Chicken Bonds derivative token bTKN has a hard price floor supported by a direct redemption mechanism. Most of the time, bTKN will in fact trade at a premium above this price floor due to amplified ("boosted") yield earned by the underlying liquidity. Though the premium may vary, the bonding rules guarantee that the price floor can only increase over time. As such, the Chicken Bonds boosted token does not suffer from the high volatility and strong reflexivity inherent to secondary tokens issued by other bonding protocols
+    \item \textit{Risk-free and flexible bonding for users}. Bond holders may “chicken out” and withdraw their deposited principal at any time, in lieu of converting it to “boosted” tokens (bTKN). Therefore bonding is fully reversible and bond holders are not locked into any commitment to the protocol. Furthermore, bonds are represented as NFTs and can thus be sold on the secondary market, which can be attractive for bonds that have accumulated a significant amount of bTKN.
+    \item \textit{System stability and resilience}. The Chicken Bonds derivative token bTKN has a hard price floor supported by a direct redemption mechanism. Most of the time, bTKN will in fact trade at a premium above this price floor due to amplified (“boosted”) yield earned by the underlying liquidity. Though the premium may vary, the bonding rules guarantee that the price floor can only increase over time. As such, the Chicken Bonds boosted token does not suffer from the high volatility and strong reflexivity inherent to secondary tokens issued by other bonding protocols
 \end{itemize}
 
 \section{Treasury}
-The protocol operates a \textit{Treasury R} consisting of three logical parts ("buckets"):  \textit{Pending Bucket}, \textit{Acquired Bucket} and \textit{Permanent Bucket}.
+The protocol operates a \textit{Treasury R} consisting of three logical parts (“buckets”):  \textit{Pending Bucket}, \textit{Acquired Bucket} and \textit{Permanent Bucket}.
 
 Each bucket contains a certain quantity of TKN or other assets whose value can be readily expressed in TKN. We suppose that the assets in the buckets can be invested in a third-party protocol (e.g. staked natively or deposited to a DEX) to generate yield while being withdrawable at any time. 
 
@@ -105,7 +107,9 @@ Bonding is the main use case that allows the system to build up its treasury by 
 
 Users can bond any amount $b$ of TKN at any time in exchange for a position called \textit{Chicken Bond}, represented by an NFT. The bonded TKN is added to the \textit{Pending Bucket} where it earns a yield for the system's Treasury.
 
-A Chicken Bond accrues a virtual balance $s(t)$ of bTKN over time, according to a curve that asymptotically approaches a "cap" ensuring the invariant of a never decreasing redemption price.
+A Chicken Bond accrues a virtual balance $s(t)$ of bTKN over time, according to a curve that asymptotically approaches a "cap" ensuring the invariant of a never decreasing redemption price. 
+
+The protocol may exclude a portion of the bonded amount from accruing bTKN, and divert it as an incentive to LPs of a bTKN/TKN exchange pair when the user opts to chicken in (see \ref{sec:chicken-in}). We therefore call this portion the chicken-in fee (see \ref{sec:chicken-in-fee}).
 
 The accrual curve can be of the form 
 
@@ -148,7 +152,7 @@ As an alternative, the bond holder may sell their NFT on the secondary market. T
 
 \subsubsection{Chicken in}
 \label{sec:chicken-in}
-A user that chickens in loses the bonded TKN in exchange for the accrued balance of bTKN that is minted and paid out by the protocol. A \textit{payout tax} may be charged on the accrued balance (reducing the user’s payout) in order to incentivize liquidity for a bTKN/TKN exchange pair (see \ref{sec:payout-tax}).
+A user that chickens in loses the bonded TKN in exchange for the accrued balance of bTKN that is minted and paid out by the protocol. 
 
 Instead of keeping the received bTKN, the user may sell it on the open market and opt to reinvest the proceeds by creating a new, typically larger bond (aka as “rebonding”, see below).
 
@@ -177,6 +181,8 @@ The two amounts are then added to the Acquired and the Permanent Bucket, so that
   \label{eq:chicken-in-qp}
     q_p(t+1) := q_p(t) - b
 \end{equation}
+
+Note that a portion of the bonded amount may be diverted as an incentive for bTKN/TKN LPs (see \ref{sec:chicken-in-fee}) instead of being split between the mentioned buckets.
 
 \subsection{Redemption}
 \label{sec:redemption}
@@ -351,8 +357,8 @@ Note that as $\lambda > 1$, $\frac{e}{\lambda} < e$, so $0 < W(\frac{e}{\lambda}
 
 TODO: Prove that it’s greater than break even time?
 
-\paragraph{With rebonding and bTKN AMM tax}
-Let’s call $\tau$ the tax to be used as rewards for bTKN/TKN DEX pair.
+\paragraph{With rebonding and chicken-in fee}
+Let’s call $\tau$ the fee to be used as rewards for bTKN/TKN DEX pair.
 
 At time $t$, when the user chickens in and rebonds, the new bond amount $b'$ will be:
 \begin{equation}
@@ -463,8 +469,8 @@ Comparing \ref{eq:optimal_chicken_in_2} and \ref{eq:break_even_2}, we can immedi
 
 Simulations show a very close result to result from previous section for optimal rebonding time.
 
-\paragraph{With tax to reward bTKN/TKN AMM}
- Let’s call $\tau$ the tax applied to the initial bond amount before chickening in, then we would have:
+\paragraph{With a chicken-in fee}
+ Let’s call $\tau$ the fee applied to the initial bond amount before chickening in, then we would have:
 
 \[
 a(t) = \frac{s(t) \cdot p_f - b}{b} \frac{365}{t} = \frac{\frac{b(1-\tau)}{p_r} \frac{t}{t+\alpha} p_f - b}{b} \frac{365}{t}
@@ -522,13 +528,13 @@ t = \frac{\alpha p_r + \alpha \sqrt{(1-\tau)p_f p_r}}{(1-\tau)p_f-p_r}
 \]
 
 \begin{equation}
-  \label{eq:optimal_chicken_in_1_tax}
+  \label{eq:optimal_chicken_in_1_fee}
 t = \alpha \frac{p_r + \sqrt{(1-\tau)p_f p_r}}{(1-\tau)p_f-p_r}
 \end{equation}
 
 In terms of the $\lambda$ defined in \ref{sec:economics}:
 \begin{equation}
-  \label{eq:optimal_chicken_in_2_tax}
+  \label{eq:optimal_chicken_in_2_fee}
 t = \alpha \frac{1 + \sqrt{(1-\tau)\lambda}}{(1-\tau)\lambda - 1}
 \end{equation}
 
@@ -674,7 +680,7 @@ This intuitively makes sense since it results in a larger portion of $R$ earning
 
 On the other hand, the parameter $\alpha$ has no influence on the resulting price curve, which also doesn't depend on whether the controller is turned on or not (and what time $T_t$ it targets).
 
-One explanation for this seemingly contradictory result could be that while rebonding as such negatively impacts the naive fair price, the (higher) yield on the Pending Bucket compensates for this, ensuring that the Treasury and the bTKN supply growth at the same rate as a whole.
+One explanation for this seemingly contradictory result could be that while rebonding as such negatively impacts the naive fair price, the (higher) yield on the Pending Bucket compensates for this, ensuring that the Treasury and the bTKN supply grow at the same rate as a whole.
 
 \subsubsection{Recursive approach}
 Instead of assuming that the effects of chicken ins and rebonding cancel out, we can try to estimate the future changes to the buckets based on historic user behavior or expected optimal behavior.
@@ -1117,7 +1123,7 @@ Right after launch, the initial bTKN supply is 0 as the token is only minted upo
 
 Meanwhile, the protocol is already earning yield on the Pending Bucket before anybody chickens in. Giving this yield to the bond holder who chickens ins first wouldn't seem fair. 
 
-To tackle these problems, we can define the initial redemption price at the time of the first chicken in to be $p_r = 1$. The protocol thus needs to mint the same amount of bTKN as the amount of TKN acquired by the protocol up to that time. The accumulated yield of the Pending Bucket, which would normally belong to the Acquired Bucket, can be used to reward the LPs bootstrapping bTKN/TKN DEX pair (see \ref{sec:payout-tax}).
+To tackle these problems, we can define the initial redemption price at the time of the first chicken in to be $p_r = 1$. The protocol thus needs to mint the same amount of bTKN as the amount of TKN acquired by the protocol up to that time. The accumulated yield of the Pending Bucket, which would normally belong to the Acquired Bucket, can be used to reward the LPs bootstrapping bTKN/TKN DEX pair (see \ref{sec:chicken-in-fee}).
 
 \subsection{Two-bucket version}
 \label{sec:two-bucket}
@@ -1128,7 +1134,7 @@ This makes bonding more sustainable in the long run even without a Permanent Buc
 
 \subsection{Automatically adjusting the steepness $\alpha$ of the accrual curve}
   \label{sec:adjustment}
-The break even point (equation \ref{eq:break_even_2}) and the optimal rebonding time (equations \ref{eq:opt-rebonding}, \ref{eq:optimal_chicken_in_2} and \ref{eq:optimal_chicken_in_2_tax}) heavily depend on the premium $\lambda$ as well as on $\alpha$, i.e. the steepness of the bTKN accrual curve $s(t)$. 
+The break even point (equation \ref{eq:break_even_2}) and the optimal rebonding time (equations \ref{eq:opt-rebonding}, \ref{eq:optimal_chicken_in_2} and \ref{eq:optimal_chicken_in_2_fee}) heavily depend on the premium $\lambda$ as well as on $\alpha$, i.e. the steepness of the bTKN accrual curve $s(t)$. 
 
 Simulations have shown that the premium $\lambda$ tends to decrease over time as the system matures. If  $\alpha$ was kept constant, this would mean that the break even and optimal rebonding times would increase throughout the lifetime of the system, making bonds less and less attractive due to a decreasing APR.
 
@@ -1142,10 +1148,10 @@ In both cases, the captured fee increases the fair price by the same amount, in 
 
 Inspired by Liquity's redemption fee, an exponentially decaying fee schedule can be used to efficiently throttle redemptions: the fee is dynamically increased upon every redemption in function of the redeemed amount, decaying over time to a minimum when no redemptions take place.
 
-\subsection{Chicken in tax to incentivize bTKN/TKN LPs}
-  \label{sec:payout-tax}
+\subsection{Chicken-in fee to incentivize bTKN/TKN LPs}
+  \label{sec:chicken-in-fee}
 Having a liquid bTKN/TKN market is crucial for bond holders to exit their positions or to rebond.
-For that purpose, the system may incentivize LPs that provide liquidity to a bTKN/TKN DEX pair. 
+For that purpose, the system may incentivize LPs providing liquidity to a bTKN/TKN DEX pair by diverting a portion of the bonded amount upon every chicken-in. 
 
 As a matter of fact, TKN and bTKN will be more strongly correlated in price than two random volatile assets, reducing the expected impermanent loss. The correlation between the two assets may influence the choice of the AMM, leaving room for custom trading curves optimized for lower slippage.
 
