@@ -81,6 +81,8 @@ test("StableSwapPool calculates the same virtual price and dy as on-chain", asyn
   const latestBlock = await provider.getBlock("latest");
   const blockTag = latestBlock.number - 10;
 
+  t.log({ blockTag });
+
   const [baseVirtualPrice, lusdVirtualPrice] = await Promise.all([
     basePool.get_virtual_price({ blockTag }).then(numberify()),
     lusdPool.get_virtual_price({ blockTag }).then(numberify())
