@@ -10,15 +10,17 @@ on:
     paths:
       - ".github/workflows/contracts.yml"
       - "LUSDChickenBonds/**"
+      - "LQTYChickenBonds/**"
 
   pull_request:
     paths:
       - ".github/workflows/contracts.yml"
       - "LUSDChickenBonds/**"
+      - "LQTYChickenBonds/**"
 
 jobs:
-  dev-test:
-    name: Dev tests
+  dev-test-lusd:
+    name: LUSD Dev tests
     runs-on: ubuntu-latest
 
     steps:
@@ -40,8 +42,8 @@ jobs:
           -vvv
           --match-contract ChickenBondManagerDev
 
-  mainnet-test:
-    name: Mainnet tests
+  mainnet-test-lusd:
+    name: LUSD Mainnet tests
     runs-on: ubuntu-latest
 
     steps:
@@ -64,4 +66,53 @@ jobs:
           forge test
           -vvv
           --match-contract ChickenBondManagerMainnet
+          --fork-url ${{ secrets.ETH_RPC_URL }}
+
+  dev-test-lqty:
+    name: LQTY Dev tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          # TODO pin this down once Foundry starts versioning releases
+          version: nightly
+
+      - name: Run dev tests
+        working-directory: LQTYChickenBonds
+        run: >-
+          forge test
+          -vvv
+          --match-contract LQTYChickenBondManagerDev
+
+  mainnet-test-lqty:
+    name: LQTY Mainnet tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          # TODO pin this down once Foundry starts versioning releases
+          version: nightly
+
+      - name: Run mainnet tests
+        working-directory: LQTYChickenBonds
+        env:
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        run: >-
+          forge test
+          -vvv
+          --match-contract LQTYChickenBondManagerMainnet
           --fork-url ${{ secrets.ETH_RPC_URL }}
