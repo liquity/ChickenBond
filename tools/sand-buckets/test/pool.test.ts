@@ -77,7 +77,7 @@ const clonePool = async ({ pool, decimals, blockTag, coin, rates }: ClonePoolPar
 const approxEq10D = approxEq(1e-10);
 const approxEq6D = approxEq(1e-6);
 
-test("StableSwapPool calculates the same virtual price as on-chain", async t => {
+test("StableSwapPool calculates the same virtual price and dy as on-chain", async t => {
   const latestBlock = await provider.getBlock("latest");
   const blockTag = latestBlock.number - 10;
 
