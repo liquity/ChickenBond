@@ -379,6 +379,38 @@ const reduceRatio = (p: StableSwapPool, targetYOverX: number) => {
   p.exchange(0, 1, dx);
 };
 
+testProp(
+  "Given a 2-pool with no fees, " +
+    "the marginal profit of depositing one coin at dydx > 1 " +
+    "then withdrawing at (1 / dydx) is roughly (dydx - 1)",
+  [
+    fc
+      .record({
+        n: fc.constant(2),
+        A: fc.float({ max: 5000 }).filter(nonZero),
+        fee: fc.constant(0),
+        adminFee: fc.constant(0),
+        dydx: fc.float({ min: 1.001, max: 2 })
+      })
+      .map(params => ({
+        ...params,
+        balances: xyFromDydx(params.A, 1e9)(params.dydx) // make it a big pool
+      }))
+  ],
+  (t, { dydx, ...params }) => {
+    const p = new StableSwapPool(params);
+    const [x, y] = p.balances;
+    const dx = 1;
+    const lp = p.addLiquidity([dx, 0]);
+    // at the reciprocal of the original y / x ratio, price is dydx' = 1 / dydx
+    reduceRatio(p, x / y);
+    const dx2 = p.removeLiquidityOneCoin(lp, 0);
+
+    t.true(roughApproxEq((dx2 - dx) / dx, dydx - 1));
+  }
+  // { numRuns: 500000 }
+);
+
 const notEqualPair = ([a, b]: [number, number]) => !approxEq(a, b);
 
 testProp(
