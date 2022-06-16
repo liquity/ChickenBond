@@ -177,12 +177,13 @@ testProp(
 testProp(
   "Given a 2-pool, exchange(0, 1, dx) adds exactly dx to the left side of the pool",
   [fc.tuple(balance(), balance()).chain(poolParams()), fc.float()],
-  (t, params, x) => {
+  (t, params, dx) => {
     const p = new StableSwapPool(params);
-    const [a] = p.balances;
-    p.exchange(0, 1, x);
+    const [x] = p.balances;
+    p.exchange(0, 1, dx);
+    const [x2] = p.balances;
 
-    t.true(approxEq(p.balances[0], a + x));
+    t.true(approxEq(x2, x + dx));
   }
   // { numRuns: 1000000 }
 );
