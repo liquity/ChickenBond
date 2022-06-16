@@ -134,7 +134,7 @@ export const xyFromDydx: (A: number, D: number) => (dydx: number) => [x: number,
 //   };
 // };
 
-export const findDxThatSetsYOverX =
+export const dxThatSetsYOverX =
   (targetYOverX: number) =>
   ({ fee, adminFee, ...constants }: Readonly<StableSwapConstantsWithFee>) => {
     const r = fee * (1 - adminFee);
@@ -159,10 +159,10 @@ export const findDxThatSetsYOverX =
     };
   };
 
-export const findBalancingDx = findDxThatSetsYOverX(1);
+export const balancingDx = dxThatSetsYOverX(1);
 
-export const findDxThatSplitsPool = (targetXOverXPlusY: number) =>
-  findDxThatSetsYOverX((1 - targetXOverXPlusY) / targetXOverXPlusY);
+export const dxThatSplitsPool = (targetXOverXPlusY: number) =>
+  dxThatSetsYOverX((1 - targetXOverXPlusY) / targetXOverXPlusY);
 
 const xyAfterDeposit =
   ({ baseFee, adminFee, ...constants }: Readonly<StableSwapConstantsWithFee>) =>
@@ -182,7 +182,7 @@ const xyAfterDeposit =
 
 const dx0 = (dx: number): [dx: number, dy: number] => [dx, 0];
 
-export const findOneCoinDepositThatSetsYOverX =
+export const oneCoinDepositThatSetsYOverX =
   (targetYOverX: number) =>
   (constants: Readonly<StableSwapConstantsWithFee>) =>
   (x: number, y: number) =>
@@ -195,7 +195,7 @@ export const findOneCoinDepositThatSetsYOverX =
       ([dx]) => dx
     )(targetYOverX);
 
-export const findBalancingOneCoinDeposit = findOneCoinDepositThatSetsYOverX(1);
+export const balancingOneCoinDeposit = oneCoinDepositThatSetsYOverX(1);
 
 const xAfterOneCoinWithdrawal =
   ({ baseFee, adminFee, ...constants }: Readonly<StableSwapConstantsWithFee>) =>
@@ -214,7 +214,7 @@ const xAfterOneCoinWithdrawal =
     };
   };
 
-export const findOneCoinWithdrawalThatSetsYOverX =
+export const oneCoinWithdrawalThatSetsYOverX =
   (targetYOverX: number) =>
   (constants: Readonly<StableSwapConstantsWithFee>) =>
   (x: number, y: number) =>
@@ -223,7 +223,7 @@ export const findOneCoinWithdrawalThatSetsYOverX =
       ([burnFraction]) => burnFraction
     )(1 / targetYOverX);
 
-export const findBalancingOneCoinWithdrawal = findOneCoinWithdrawalThatSetsYOverX(1);
+export const balancingOneCoinWithdrawal = oneCoinWithdrawalThatSetsYOverX(1);
 
 export interface StableSwapPoolParams {
   n: number;

@@ -3,13 +3,13 @@ import { testProp, fc } from "ava-fast-check";
 import { mapMul, nonZero, zipDiv, zipSub } from "../src/utils";
 
 import {
+  balancingDx,
+  balancingOneCoinDeposit,
+  balancingOneCoinWithdrawal,
+  dxThatSetsYOverX,
   dydxYFromX,
-  findBalancingDx,
-  findBalancingOneCoinDeposit,
-  findBalancingOneCoinWithdrawal,
-  findDxThatSetsYOverX,
-  findOneCoinDepositThatSetsYOverX,
-  findOneCoinWithdrawalThatSetsYOverX,
+  oneCoinDepositThatSetsYOverX,
+  oneCoinWithdrawalThatSetsYOverX,
   StableSwapPool,
   StableSwapPoolParams,
   xyFromDydx
@@ -218,7 +218,7 @@ testProp(
   (t, [params, targetYOverX]) => {
     const p = new StableSwapPool(params);
     const [x, y] = p.balances;
-    p.exchange(0, 1, findDxThatSetsYOverX(targetYOverX)(p)(x, y));
+    p.exchange(0, 1, dxThatSetsYOverX(targetYOverX)(p)(x, y));
     const [x2, y2] = p.balances;
 
     t.true(approxEq(x2 * targetYOverX, y2));
@@ -232,7 +232,7 @@ testProp(
   (t, params) => {
     const p = new StableSwapPool(params);
     const [x, y] = p.balances;
-    p.exchange(0, 1, findBalancingDx(p)(x, y));
+    p.exchange(0, 1, balancingDx(p)(x, y));
     const [x2, y2] = p.balances;
 
     t.true(approxEq(x2, y2));
@@ -246,7 +246,7 @@ testProp(
   (t, params) => {
     const p = new StableSwapPool(params);
     const [x, y] = p.balances;
-    p.addLiquidity([findBalancingOneCoinDeposit(p)(x, y), 0]);
+    p.addLiquidity([balancingOneCoinDeposit(p)(x, y), 0]);
     const [x2, y2] = p.balances;
 
     t.true(approxEq(x2, y2));
@@ -260,7 +260,7 @@ testProp(
   (t, params) => {
     const p = new StableSwapPool(params);
     const [x, y] = p.balances;
-    p.removeLiquidityOneCoin(p.totalSupply * findBalancingOneCoinWithdrawal(p)(y, x), 1);
+    p.removeLiquidityOneCoin(p.totalSupply * balancingOneCoinWithdrawal(p)(y, x), 1);
     const [x2, y2] = p.balances;
 
     t.true(approxEq(x2, y2));
@@ -315,7 +315,7 @@ testProp(
       return fc.tuple(
         fc.constant(params),
         // don't imbalance the pool in the other direction
-        fc.float({ max: findBalancingOneCoinDeposit(p)(x, y) })
+        fc.float({ max: balancingOneCoinDeposit(p)(x, y) })
       );
     })
   ],
@@ -339,7 +339,7 @@ testProp(
       return fc.tuple(
         fc.constant(params),
         // don't imbalance the pool in the other direction
-        fc.float({ max: p.totalSupply * findBalancingOneCoinWithdrawal(p)(y, x) })
+        fc.float({ max: p.totalSupply * balancingOneCoinWithdrawal(p)(y, x) })
       );
     })
   ],
@@ -367,7 +367,7 @@ const yOverX = ([x, y]: number[]) => y / x;
 
 const reduceRatio = (p: StableSwapPool, targetYOverX: number) => {
   const [x, y] = p.balances;
-  const dx = findDxThatSetsYOverX(targetYOverX)(p)(x, y);
+  const dx = dxThatSetsYOverX(targetYOverX)(p)(x, y);
   p.exchange(0, 1, dx);
 };
 
@@ -406,13 +406,13 @@ testProp(
   (t, [params, [improvedYOverX, initialYOverX], [improvedXOverY, flippedXOverY]]) => {
     const [x, y] = [1, initialYOverX];
     const p = new StableSwapPool({ ...params, balances: [x, y] });
-    const dx = findOneCoinDepositThatSetsYOverX(improvedYOverX)(p)(x, y);
+    const dx = oneCoinDepositThatSetsYOverX(improvedYOverX)(p)(x, y);
     const mint = p.addLiquidity([dx, 0]);
 
     reduceRatio(p, 1 / flippedXOverY); // make the pool left-heavy
 
     const [x2, y2] = p.balances;
-    const burn = findOneCoinWithdrawalThatSetsYOverX(1 / improvedXOverY)(p)(x2, y2);
+    const burn = oneCoinWithdrawalThatSetsYOverX(1 / improvedXOverY)(p)(x2, y2);
     const dx2 = p.removeLiquidityOneCoin(burn, 0);
 
     t.true(approxGt(dx2 / burn, dx / mint));
