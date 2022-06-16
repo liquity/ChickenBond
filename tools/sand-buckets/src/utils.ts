@@ -77,23 +77,10 @@ export const binSearchDesc = (min: number, max: number, epsilon = EPSILON) => {
       let left = min;
       let right = max;
 
-      let i = 0;
       for (;;) {
         const x = (left + right) / 2;
         const [y, ...rest] = f(x);
         const diff = yToFind - y;
-
-        if (i++ > 100) {
-          throw Object.assign(new Error(`boom`), {
-            min,
-            max,
-            x,
-            y,
-            yToFind,
-            yMin: f(min)[0],
-            yMax: f(max)[0]
-          });
-        }
 
         if (approxZero(epsilon)(diff)) {
           return [x, ...rest];
