@@ -1,0 +1,45 @@
+name: Modeling
+
+env:
+  CI: true
+  FORCE_COLOR: true
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/bindings.yml"
+      - "tools/sand-buckets/**"
+
+  pull_request:
+    paths:
+      - ".github/workflows/bindings.yml"
+      - "tools/sand-buckets/**"
+
+jobs:
+  test:
+    name: Property tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js & Yarn
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: yarn
+        env:
+          # Workaround for https://github.com/actions/setup-node/issues/317
+          FORCE_COLOR: 0
+
+      - name: Install dependencies
+        working-directory: tools/sand-buckets
+        run: yarn install --frozen-lockfile
+
+      - name: Run tests
+        working-directory: tools/sand-buckets
+        run: yarn test
