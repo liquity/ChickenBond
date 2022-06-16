@@ -120,3 +120,9 @@ export const flow3 =
 //   (...u: U) =>
 //   (...t: T): V =>
 //     f(...t)(...u);
+
+export const check = (requirement: boolean, message: string) => {
+  if (!requirement) {
+    throw new Error(message);
+  }
+};

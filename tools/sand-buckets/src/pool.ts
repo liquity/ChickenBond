@@ -2,6 +2,7 @@ import assert from "assert";
 
 import {
   binSearchDesc,
+  check,
   converge,
   flow2,
   flow3,
@@ -153,9 +154,9 @@ export const dxThatSetsYOverX =
       });
 
       const dx = x_ - x;
-      assert(dx >= -1e-9);
+      assert(approxPositive(dx));
 
-      return Math.max(dx, 0);
+      return clamped(dx);
     };
   };
 
@@ -224,6 +225,9 @@ export const oneCoinWithdrawalThatSetsYOverX =
     )(1 / targetYOverX);
 
 export const balancingOneCoinWithdrawal = oneCoinWithdrawalThatSetsYOverX(1);
+
+const approxPositive = (x: number) => x > -1e-9;
+const clamped = (x: number) => Math.max(x, 0);
 
 export interface StableSwapPoolParams {
   n: number;
@@ -335,7 +339,8 @@ export class StableSwapPool {
 
   private _storeBalances(newBalances: number[]) {
     newBalances.forEach((balance, i) => {
-      this.balances[i] = balance;
+      assert(approxPositive(balance));
+      this.balances[i] = clamped(balance);
     });
   }
 
@@ -359,7 +364,10 @@ export class StableSwapPool {
       return Math.abs(newBalance - idealBalance) * this.baseFee;
     });
 
-    const D2 = this.D(zipSub(newBalances, fees));
+    const balancesAfterFees = zipSub(newBalances, fees);
+    check(balancesAfterFees.every(approxPositive), "impossible liquidity change");
+
+    const D2 = this.D(balancesAfterFees.map(clamped));
     const mintBurn = this.totalSupply * (D2 / D0 - 1);
 
     return [mintBurn, fees];
@@ -377,8 +385,8 @@ export class StableSwapPool {
 
     const [mint, fees] = this.calcTokenAmountWithFees(newBalances);
 
-    assert(mint >= -1e-9);
-    const clampedMint = Math.max(mint, 0);
+    check(approxPositive(mint), "impossible deposit");
+    const clampedMint = clamped(mint);
 
     this._storeBalances(zipSub(newBalances, mapMul(fees, this.adminFee)));
     this.totalSupply += clampedMint;

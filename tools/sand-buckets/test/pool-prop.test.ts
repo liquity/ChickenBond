@@ -89,20 +89,27 @@ testProp(
   // { numRuns: 1000000 }
 );
 
-const wontThrow = (f: () => void) => {
+const wontThrow = (msgPattern: string | RegExp) => (f: () => void) => {
   try {
     f();
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (error instanceof Error && error.message.match(msgPattern)) {
+      return false;
+    }
+
+    // Let other errors through
+    return true;
   }
 };
 
 // When depositing in a different ratio than the pool's current balances, certain combination of
-// amounts won't work, because they would decrease the invariant "D" of the pool after the deduction
-// of fees.
+// amounts won't work, because they would either decrease the invariant "D" of the pool or turn
+// some coin balance negative after the deduction of fees.
 const canDepositInto = (params: StableSwapPoolParams) => (amount: number[]) =>
-  wontThrow(() => new StableSwapPool(params).addLiquidity(amount));
+  wontThrow(/impossible (deposit|liquidity change)/i)(() =>
+    new StableSwapPool(params).addLiquidity(amount)
+  );
 
 testProp(
   "Deposit homogeneity",
