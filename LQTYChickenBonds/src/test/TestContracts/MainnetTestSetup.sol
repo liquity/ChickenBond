@@ -17,10 +17,10 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
 
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
-    uint256 constant MAINNET_PINNED_BLOCK =  1648476300;
+    uint256 constant MAINNET_PINNED_BLOCK =  1655208977;
 
     function setUp() public {
-        // pinBlock(MAINNET_PINNED_BLOCK);
+        //pinBlock(MAINNET_PINNED_BLOCK);
         pinBlock(block.timestamp);
 
         accounts = new Accounts();
@@ -48,6 +48,7 @@ contract MainnetTestSetup is BaseTest {
         bancorNetworkInfo = IBancorNetworkInfo(MAINNET_BANCOR_NETWORK_INFO_ADDRESS);
         //bancorNetwork = IBancorNetwork(MAINNET_BANCOR_NETWORK_ADDRESS);
         bancorNetwork = IBancorNetwork(bancorNetworkInfo.network());
+        bntLQTYToken = IERC20(bancorNetworkInfo.poolToken(MAINNET_LQTY_TOKEN_ADDRESS));
 
         // Deploy core ChickenBonds system
         bLQTYToken = new BLQTYToken("bLQTYToken", "BLQTY");
@@ -107,6 +108,7 @@ contract MainnetTestSetup is BaseTest {
         console.log(address(bondNFT), "BondNFT address");
         console.log(address(bancorNetworkInfo), "Bancor Network Info address");
         console.log(address(bancorNetwork), "Bancor Network address");
+        console.log(bancorNetworkInfo.poolToken(MAINNET_LQTY_TOKEN_ADDRESS), "Bancor Network LQTY pool token");
         console.log(address(pickleJar), "Pickle Jar address");
         console.log(bLQTYCurvePoolAddress, "Curve bLQTY/LQTY pool address");
         console.log(curveLiquidityGaugeAddress, "Curve Liquidity Gauge address");

@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "./Interfaces/IBancorNetwork.sol";
-import "./Interfaces/IBancorNetworkInfo.sol";
-import "./Interfaces/jar.sol";
 
 import "./utils/ChickenMath.sol";
+
+import "./Interfaces/jar.sol";
+import "./Interfaces/IBancorNetwork.sol";
+import "./Interfaces/IBancorNetworkInfo.sol";
+import "./Interfaces/ICurveLiquidityGaugeV4.sol";
 
 import "./Interfaces/IBondNFT.sol";
 import "./Interfaces/IBLQTYToken.sol";
 import "./Interfaces/ILQTYChickenBondManager.sol";
-import "./Interfaces/ICurveLiquidityGaugeV4.sol";
 
 //import "forge-std/console.sol";
 
 
-contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager {
+contract LQTYChickenBondManager is ChickenMath, ILQTYChickenBondManager {
     // ChickenBonds contracts and addresses
     IBondNFT immutable public bondNFT;
 
@@ -26,13 +26,11 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
     IBLQTYToken immutable public bLQTYToken;
 
     // External contracts and addresses
+    IJar immutable public pickleJar;
     IBancorNetwork immutable public bancorNetwork;
     IBancorNetworkInfo immutable public bancorNetworkInfo;
-    IERC20 immutable public bntLQTY;
-    IJar immutable public pickleJar;
-    ICurveLiquidityGaugeV4 immutable public curveLiquidityGauge;
-
-    uint256 immutable public CHICKEN_IN_AMM_FEE;
+    IERC20 immutable public bntLQTYToken;                         // Bancor LQTY pool taken
+    ICurveLiquidityGaugeV4 immutable public curveLiquidityGauge;  // For bLQTY/LQTY AMM rewards
 
     // --- Data structures ---
 
@@ -53,12 +51,13 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
     uint256 private pendingLQTY;
     uint256 private permanentLQTY;
 
-    uint256 public totalWeightedStartTimes; // Sum of `lqtyAmount * startTime` for all outstanding bonds (used to tell weighted average bond age)
     uint256 public lastRedemptionTime; // The timestamp of the latest redemption
     uint256 public baseRedemptionRate; // The latest base redemption rate
-    mapping (uint256 => BondData) public idToBondData;
+    mapping (uint256 => BondData) private idToBondData;
 
     // --- Constants ---
+
+    uint256 immutable public CHICKEN_IN_AMM_FEE;
 
     uint256 constant MAX_UINT256 = type(uint256).max;
 
@@ -91,6 +90,8 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
 
     // The duration of an adjustment period in seconds. The controller performs at most one adjustment per every period.
     uint256 public immutable accrualAdjustmentPeriodSeconds;
+
+    uint256 public totalWeightedStartTimes; // Sum of `lqtyAmount * startTime` for all outstanding bonds (used to tell weighted average bond age)
 
     // The number of seconds it takes to accrue 50% of the cap, represented as an 18 digit fixed-point number.
     uint256 public accrualParameter;
@@ -133,7 +134,7 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         pickleJar = IJar(_externalContractAddresses.pickleJarAddress);
         bancorNetworkInfo = IBancorNetworkInfo(_externalContractAddresses.bancorNetworkInfoAddress);
         bancorNetwork = IBancorNetwork(bancorNetworkInfo.network());
-        bntLQTY = IERC20(bancorNetworkInfo.poolToken(_externalContractAddresses.lqtyTokenAddress));
+        bntLQTYToken = IERC20(bancorNetworkInfo.poolToken(_externalContractAddresses.lqtyTokenAddress));
         curveLiquidityGauge = ICurveLiquidityGaugeV4(_externalContractAddresses.curveLiquidityGaugeAddress);
         CHICKEN_IN_AMM_FEE = _CHICKEN_IN_AMM_FEE;
 
@@ -142,13 +143,11 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         lqtyToken.approve(_externalContractAddresses.pickleJarAddress, MAX_UINT256);
         lqtyToken.approve(address(bancorNetwork), MAX_UINT256);
         lqtyToken.approve(_externalContractAddresses.curveLiquidityGaugeAddress, MAX_UINT256);
-
-        renounceOwnership();
     }
 
     // --- User-facing functions ---
 
-    function createBond(uint256 _lqtyAmount) external {
+    function createBond(uint256 _lqtyAmount) external returns (uint256) {
         _requireNonZeroAmount(_lqtyAmount);
 
         _updateAccrualParameter();
@@ -162,18 +161,20 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         bondData.startTime = block.timestamp;
         idToBondData[bondID] = bondData;
 
+        // Funds from outstanding bonds belong to Pending bucket until they are chickened in or out
         pendingLQTY += _lqtyAmount;
+
+        // We need to keep track of weighted bond ages to update the accrual parameter
         totalWeightedStartTimes += _lqtyAmount * block.timestamp;
 
+        // Pull LQTY from user
         lqtyToken.transferFrom(msg.sender, address(this), _lqtyAmount);
 
         // Deposit the LQTY to Pickle Jar
         pickleJar.deposit(_lqtyAmount);
-    }
 
-    /* NOTE: chickenOut and chickenIn require the caller to pass their correct _bondID. This can be gleaned from their past
-    * emitted createBond event.
-    */
+        return bondID;
+    }
 
     function chickenOut(uint256 _bondID) external {
         _requireCallerOwnsBond(_bondID);
@@ -188,17 +189,16 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
 
         uint256 previousLQTYBalance = lqtyToken.balanceOf(address(this));
 
-        // TODO:
         /* In practice, there could be edge cases where the pendingLQTY is not fully backed:
         * - Pickle Jar hack that drains LQTY
-        * - ...?
+        * - ...? (TODO)
         *
         * TODO: decide how to handle chickenOuts if/when the recorded pendingLQTY is not fully backed by actual
         * LQTY in the Pickle Jar. */
 
-        uint256 lqtyInPickleJar = pickleJar.balanceOf(address(this));
+        uint256 pTokensInPickleJar = pickleJar.balanceOf(address(this));
         uint256 pTokensForBond = bond.lqtyAmount * 1e18 / pickleJar.getRatio();
-        uint256 pTokensToWithdraw = Math.min(pTokensForBond, lqtyInPickleJar);  // avoids revert due to rounding error if system contains only 1 bonder
+        uint256 pTokensToWithdraw = Math.min(pTokensForBond, pTokensInPickleJar);  // avoids revert due to rounding error if system contains only 1 bonder
         pickleJar.withdraw(pTokensToWithdraw);
 
         uint256 lqtyToWithdraw = lqtyToken.balanceOf(address(this)) - previousLQTYBalance;
@@ -212,6 +212,7 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         uint256 lqtyBalanceDelta;
 
         uint256 pTokensFromPickleJar = _calcCorrespondingPTokens(_lqtyAmount, _lqtyInPickleJar);
+
         if (pTokensFromPickleJar > 0) {
             uint256 lqtyBalanceBefore = lqtyToken.balanceOf(address(this));
             pickleJar.withdraw(pTokensFromPickleJar);
@@ -224,18 +225,26 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
     // Divert acquired yield to LQTY/bLQTY AMM LP rewards staking contract
     // It happens on the very first chicken in event of the system, or any time that redemptions deplete bLQTY total supply to zero
     function _firstChickenIn() internal {
-        /* Assumption: When there have been no chicken ins since the bLQTY supply was set to 0 (either due to system deployment, or full bLQTY redemption),
-        /* all acquired LQTY must necessarily be pure yield.
-        */
+        // Assumption: When there have been no chicken ins since the bLQTY supply was set to 0 (either due to system deployment, or full bLQTY redemption),
+        // all acquired LQTY must necessarily be pure yield.
 
         uint256 lqtyInPickleJar = calcTotalPickleJarShareValue();
-        uint256 lqtyFromInitialYieldInPickleJar = _getAcquiredLQTY(lqtyInPickleJar);
+        uint256 lqtyFromInitialYieldInPickleJar = _getAcquiredLQTYInPickleJar(lqtyInPickleJar);
+        uint256 lqtyWithdrawnFromPickleJar;
         if (lqtyFromInitialYieldInPickleJar > 0) {
-            uint256 lqtyWithdrawn = _withdrawFromPickleJar(lqtyFromInitialYieldInPickleJar, lqtyInPickleJar);
-            if (lqtyWithdrawn > 0) {
-                lqtyToken.transfer(address(curveLiquidityGauge), lqtyWithdrawn);
+            lqtyWithdrawnFromPickleJar = _withdrawFromPickleJar(lqtyFromInitialYieldInPickleJar, lqtyInPickleJar);
+            if (lqtyWithdrawnFromPickleJar > 0) {
+                curveLiquidityGauge.deposit_reward_token(address(lqtyToken), lqtyWithdrawnFromPickleJar);
             }
         }
+
+        // Revenue generated in bancor, only possible if it’s a “second first chicken-in”, i.e,
+        // if acquired was depleted through redemptions, but permanent kept generating yield.
+        // Bancor has a cooldown period of 7 days for withdrawals, so it would be quite complex to manage this asynchronously.
+        // Instead we just make it all permanent.
+        // TODO: Can it be >?
+        assert(permanentLQTY <= calcTotalBancorPoolShareValue());
+        permanentLQTY = calcTotalBancorPoolShareValue();
     }
 
     function chickenIn(uint256 _bondID) external {
@@ -254,8 +263,10 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         (uint256 chickenInFeeAmount, uint256 bondAmountMinusChickenInFee) = _getBondWithChickenInFeeApplied(bond.lqtyAmount);
 
         uint256 lqtyInPickleJar = calcTotalPickleJarShareValue();
+        uint256 lqtyAcquiredInPickleJar = _getAcquiredLQTYInPickleJar(lqtyInPickleJar);
+        uint256 lqtyAcquiredInBancorPool = getAcquiredLQTYInBancorPool();
         uint256 accruedLQTY = _calcAccruedAmount(bond.startTime, bondAmountMinusChickenInFee, updatedAccrualParameter);
-        uint256 backingRatio = _calcSystemBackingRatio(lqtyInPickleJar);
+        uint256 backingRatio = _calcSystemBackingRatio(lqtyAcquiredInPickleJar + lqtyAcquiredInBancorPool);
         uint256 accruedBLQTY = accruedLQTY * 1e18 / backingRatio;
 
         delete idToBondData[_bondID];
@@ -264,36 +275,49 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         pendingLQTY -= bond.lqtyAmount;
         totalWeightedStartTimes -= bond.lqtyAmount * bond.startTime;
 
-        // Add the surplus to the permanent bucket by depositing into Bancor
+        // As Bancor autocompounds, and permanent revenue should go to acquired bucket,
+        // we subtract the generated fees from the amount to deposit to Bancor
+        // to avoid having to withdraw from Bancor as much as possible
         uint256 lqtySurplus = bondAmountMinusChickenInFee - accruedLQTY;
+        uint256 lqtyToDepositToBancor = lqtySurplus > lqtyAcquiredInBancorPool ?
+            lqtySurplus - lqtyAcquiredInBancorPool :
+            lqtySurplus;
 
-        uint256 lqtyWithdrawn = _withdrawFromPickleJar(lqtySurplus + chickenInFeeAmount, lqtyInPickleJar);
+        // Add the surplus to the permanent bucket by depositing into Bancor
+        permanentLQTY = permanentLQTY + lqtySurplus;
+
         // Due to rounding errors, obtained LQTY amount can differ from requested amount
         // We dump this error to Chicken in fee, and leave permament amount untouched
-        chickenInFeeAmount = lqtyWithdrawn - lqtySurplus;
+        // Theoretically it may happen that the rounding error was even bigger than the fee
+        // (in that case we set the fee to zero)
+        uint256 lqtyWithdrawn = _withdrawFromPickleJar(lqtyToDepositToBancor + chickenInFeeAmount, lqtyInPickleJar);
+        chickenInFeeAmount = lqtyWithdrawn > lqtyToDepositToBancor ? lqtyWithdrawn - lqtyToDepositToBancor : 0;
 
-        bancorNetwork.deposit(address(lqtyToken), lqtySurplus);
+        // Deposit to Bancor
+        bancorNetwork.deposit(address(lqtyToken), lqtyToDepositToBancor);
+
+        // Transfer the chicken in fee to the LQTY/bLQTY AMM LP Rewards staking contract during normal mode.
+        if (chickenInFeeAmount > 0) {
+            curveLiquidityGauge.deposit_reward_token(address(lqtyToken), chickenInFeeAmount);
+        }
 
         bLQTYToken.mint(msg.sender, accruedBLQTY);
         bondNFT.burn(_bondID);
 
-        // Transfer the chicken in fee to the LQTY/bLQTY AMM LP Rewards staking contract during normal mode.
-        if (chickenInFeeAmount > 0) {
-            lqtyToken.transfer(address(curveLiquidityGauge), chickenInFeeAmount);
-        }
     }
 
-
-    function redeem(uint256 _bLQTYToRedeem) external returns (uint256) {
+    function redeem(uint256 _bLQTYToRedeem) external returns (uint256, uint256) {
         _requireNonZeroAmount(_bLQTYToRedeem);
+        uint256 totalBLQTYSupply = bLQTYToken.totalSupply();
+        require(_bLQTYToRedeem <= totalBLQTYSupply, "Amount to redeem bigger than total supply");
 
-        // Leave redemption fees in the acquired bucket
-        uint256 fractionOfBLQTYToRedeem = _bLQTYToRedeem * 1e18 / bLQTYToken.totalSupply();
+        uint256 fractionOfBLQTYToRedeem = _bLQTYToRedeem * 1e18 / totalBLQTYSupply;
+
         // Calculate redemption fraction to withdraw, given that we leave the fee inside the acquired bucket.
         uint256 redemptionFeePercentage = _updateRedemptionFeePercentage(fractionOfBLQTYToRedeem);
         uint256 fractionOfAcquiredLQTYToWithdraw = fractionOfBLQTYToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
 
-        // Calculate the LQTY to withdraw from , and send the corresponding pTokens to redeemer
+        // Calculate the LQTY to withdraw from Pickle, and send the corresponding pTokens to redeemer
         uint256 lqtyInPickleJar = calcTotalPickleJarShareValue();
         uint256 pTokensFromPickleJar;
         if (lqtyInPickleJar > 0) {
@@ -303,12 +327,22 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
             pickleJar.transfer(msg.sender, pTokensFromPickleJar);
         }
 
-        _requireNonZeroAmount(pTokensFromPickleJar);
+        // Redeem also from the Acquired bucket in Bancor generated through auto-compounded fees
+        // Redemption fee will also stay in the acquired bucket, as we are not modifying `permanentLQTY`.
+        uint256 lqtyToWithdrawFromBancorPool = getAcquiredLQTYInBancorPool() * fractionOfAcquiredLQTYToWithdraw / 1e18;
+        // Calculate the pool tokens to withdraw from Bancor, and send them to redeemer
+        uint256 bnTokensFromBancorPool;
+        if (lqtyToWithdrawFromBancorPool > 0) {
+            bnTokensFromBancorPool = bancorNetworkInfo.underlyingToPoolToken(address(lqtyToken), lqtyToWithdrawFromBancorPool);
+            bntLQTYToken.transfer(msg.sender, bnTokensFromBancorPool);
+        }
+
+        _requireNonZeroAmount(pTokensFromPickleJar + bnTokensFromBancorPool);
 
         // Burn the redeemed bLQTY
         bLQTYToken.burn(msg.sender, _bLQTYToRedeem);
 
-        return pTokensFromPickleJar;
+        return (pTokensFromPickleJar, bnTokensFromBancorPool);
     }
 
     // --- Helper functions ---
@@ -475,19 +509,17 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         return updatedAccrualParameter;
     }
 
-    function _calcSystemBackingRatio(uint256 _lqtyInPickleJar) internal view returns (uint256) {
+    function _calcSystemBackingRatio(uint256 _totalAcquiredLQTY) internal view returns (uint256) {
         uint256 totalBLQTYSupply = bLQTYToken.totalSupply();
-        uint256 totalAcquiredLQTY = _getAcquiredLQTY(_lqtyInPickleJar);
 
-        /* TODO: Determine how to define the backing ratio when there is 0 bLQTY and 0 totalAcquiredLQTY,
-        * i.e. before the first chickenIn. For now, return a backing ratio of 1. Note: Both quantities would be 0
-        * also when the bLQTY supply is fully redeemed.
+        /* We define the backing ratio as 1 when there is 0 bLQTY and 0 totalAcquiredLQTY,
+        * i.e. before the first chickenIn.
+        * Note: Both quantities would be 0 also when the bLQTY supply is fully redeemed.
         */
-        //if (totalBLQTYSupply == 0  && totalAcquiredLQTY == 0) {return 1e18;}
-        //if (totalBLQTYSupply == 0) {return MAX_UINT256;}
-        if (totalBLQTYSupply == 0) {return 1e18;}
+        if (totalBLQTYSupply == 0) { return 1e18; }
+        assert(_totalAcquiredLQTY > 0);
 
-        return  totalAcquiredLQTY * 1e18 / totalBLQTYSupply;
+        return _totalAcquiredLQTY * 1e18 / totalBLQTYSupply;
     }
 
     // Internal getter for calculating the bond bLQTY cap based on bonded amount and backing ratio
@@ -496,7 +528,15 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         return _bondedAmount * 1e18 / _backingRatio;
     }
 
-    function _getAcquiredLQTY(uint256 _lqty) internal view returns (uint256) {
+    // Internal getters for acquired bucket
+
+    // Total Acquired bucket
+    function _getAcquiredLQTY(uint256 _lqtyInPickleJar) internal view returns (uint256) {
+        return _getAcquiredLQTYInPickleJar(_lqtyInPickleJar) + getAcquiredLQTYInBancorPool();
+    }
+
+    // Acquired bucket in Pickle
+    function _getAcquiredLQTYInPickleJar(uint256 _lqty) internal view returns (uint256) {
         uint256 pendingLQTYCached = pendingLQTY;
 
         /* In principle, the acquired LQTY is always the delta between the LQTY deposited to Pickle and the total pending LQTY.
@@ -507,19 +547,29 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         * TODO: Determine if this is the only situation whereby the delta can be negative. Potentially enforce some minimum
         * chicken-in value so that acquired LQTY always more than covers any rounding error in the share value.
         */
-        uint256 acquiredLQTY;
+        if (_lqty <= pendingLQTYCached) { return 0; }
 
-        // Acquired LQTY is what's left after subtracting pending and permament portions
-        if (_lqty > pendingLQTYCached) {
-            acquiredLQTY = _lqty - pendingLQTYCached;
-        }
-
-        return acquiredLQTY;
+        // Acquired LQTY is what's left after subtracting pending portion
+        return _lqty - pendingLQTYCached;
     }
+
+    // Acquired bucket in Bancor (generated by auto-compounded revenue)
+    function getAcquiredLQTYInBancorPool() public view returns (uint256) {
+        // TODO: Can it be negative?
+        //console.log(permanentLQTY, "permane");
+        //console.log(calcTotalBancorPoolShareValue(), "calcTotalBancorPoolShareValue");
+
+        return calcTotalBancorPoolShareValue() - permanentLQTY;
+    }
+
 
     // Returns the pTokens needed to make a partial withdrawal of the CBM's total jar deposit
     function _calcCorrespondingPTokens(uint256 _wantedTokenAmount, uint256 _CBMTotalJarDeposit) internal view returns (uint256) {
         uint256 pTokensHeldByCBM = pickleJar.balanceOf(address(this));
+
+        // Rounding can cause total jar deposit to be lower than wanted amount (and make withdrawal to revert when withdrawing all)
+        if (_wantedTokenAmount > _CBMTotalJarDeposit) { return pTokensHeldByCBM; }
+
         uint256 pTokensToBurn = pTokensHeldByCBM * _wantedTokenAmount / _CBMTotalJarDeposit;
         return pTokensToBurn;
     }
@@ -540,11 +590,6 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
 
     function getBondData(uint256 _bondID) external view returns (uint256, uint256) {
         return (idToBondData[_bondID].lqtyAmount, idToBondData[_bondID].startTime);
-    }
-
-    function getIdToBondData(uint256 _bondID) external view returns (uint256, uint256) {
-        BondData memory bond = idToBondData[_bondID];
-        return (bond.lqtyAmount, bond.startTime);
     }
 
     function calcAccruedLQTY(uint256 _bondID) external view returns (uint256) {
@@ -580,9 +625,13 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         return totalPTokensHeldByCBM * pickleJar.getRatio() / 1e18;
     }
 
+    function calcTotalBancorPoolShareValue() public view returns (uint256) {
+        return bancorNetworkInfo.poolTokenToUnderlying(address(lqtyToken), bntLQTYToken.balanceOf(address(this)));
+    }
+
     // Calculates the LQTY value of this contract, including Pickle LQTY Jar and Bancor pool
     function calcTotalLQTYValue() external view returns (uint256) {
-        return calcTotalPickleJarShareValue() + getPermanentLQTY();
+        return calcTotalPickleJarShareValue() + calcTotalBancorPoolShareValue();
     }
 
     // Bucket getters
@@ -596,19 +645,19 @@ contract LQTYChickenBondManager is Ownable, ChickenMath, ILQTYChickenBondManager
         return _getAcquiredLQTY(lqty);
     }
 
-    function getPermanentLQTY() public view returns (uint256) {
-        return bancorNetworkInfo.poolTokenToUnderlying(address(bntLQTY), bntLQTY.balanceOf(address(this)));
+    function getPermanentLQTY() external view returns (uint256) {
+        return permanentLQTY;
     }
 
     function getOwnedLQTY() external view returns (uint256) {
-        return getAcquiredLQTY() + getPermanentLQTY();
+        return getAcquiredLQTY() + permanentLQTY;
     }
 
     // Other getters
 
     function calcSystemBackingRatio() public view returns (uint256) {
-        uint256 lqtyInPickleJar = calcTotalPickleJarShareValue();
-        return _calcSystemBackingRatio(lqtyInPickleJar);
+        uint256 totalAcquiredLQTY = getAcquiredLQTY();
+        return _calcSystemBackingRatio(totalAcquiredLQTY);
     }
 
     function calcUpdatedAccrualParameter() external view returns (uint256) {

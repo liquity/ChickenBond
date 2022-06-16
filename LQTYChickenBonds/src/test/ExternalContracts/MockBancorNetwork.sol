@@ -5,10 +5,10 @@ import { IBancorNetwork } from "../../Interfaces/IBancorNetwork.sol";
 
 
 contract MockBancorNetwork is IBancorNetwork {
-    ERC20PresetMinterPauser immutable public bntLQTY;
+    ERC20PresetMinterPauser immutable public bntLQTYToken;
 
     constructor() {
-        bntLQTY = new ERC20PresetMinterPauser("Bancor Network LQTY pool token", "bntLQTY");
+        bntLQTYToken = new ERC20PresetMinterPauser("Bancor Network LQTY pool token", "bntLQTYToken");
     }
 
     /**
@@ -67,15 +67,15 @@ contract MockBancorNetwork is IBancorNetwork {
      *   native token case)
      */
     function deposit(address pool, uint256 tokenAmount) external payable returns (uint256) {
-        uint256 currentBalance = bntLQTY.balanceOf(address(this));
+        uint256 currentBalance = bntLQTYToken.balanceOf(address(this));
         uint256 bntAmount;
         if (currentBalance == 0) {
             bntAmount = tokenAmount;
         } else {
-            bntAmount = tokenAmount * bntLQTY.totalSupply() / currentBalance;
+            bntAmount = tokenAmount * bntLQTYToken.totalSupply() / currentBalance;
         }
 
-        bntLQTY.mint(msg.sender, bntAmount);
+        bntLQTYToken.mint(msg.sender, bntAmount);
         IERC20(pool).transferFrom(msg.sender, address(this), tokenAmount);
 
         return bntAmount;

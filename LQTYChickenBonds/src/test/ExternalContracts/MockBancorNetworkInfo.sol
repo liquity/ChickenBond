@@ -5,6 +5,8 @@ import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import { IBancorNetwork } from "../../Interfaces/IBancorNetwork.sol";
 import { IBancorNetworkInfo, TradingLiquidity, WithdrawalAmounts } from "../../Interfaces/IBancorNetworkInfo.sol";
 import "./MockBancorNetwork.sol";
+import "forge-std/console.sol";
+
 
 contract MockBancorNetworkInfo is IBancorNetworkInfo {
     IBancorNetwork immutable public network;
@@ -64,7 +66,7 @@ contract MockBancorNetworkInfo is IBancorNetworkInfo {
      * @dev returns the pool token contract for a given pool
      */
     function poolToken(address /*pool*/) external view returns (address) {
-        return address(MockBancorNetwork(address(network)).bntLQTY());
+        return address(MockBancorNetwork(address(network)).bntLQTYToken());
     }
 
     /**
@@ -133,29 +135,31 @@ contract MockBancorNetworkInfo is IBancorNetworkInfo {
     /**
      * @dev converts the specified pool token amount to the underlying token amount
      */
-    function poolTokenToUnderlying(address pool, uint256 poolTokenAmount) external view returns (uint256) {
-        uint256 bntLQTYSupply = IERC20(pool).totalSupply();
+    function poolTokenToUnderlying(address /*pool*/, uint256 poolTokenAmount) external view returns (uint256) {
+        ERC20PresetMinterPauser bntLQTYToken = MockBancorNetwork(address(network)).bntLQTYToken();
+        uint256 bntLQTYTokenSupply = bntLQTYToken.totalSupply();
         uint256 lqtyBalance = lqtyToken.balanceOf(address(network));
 
-        if (bntLQTYSupply == 0) {
+        if (bntLQTYTokenSupply == 0) {
             return 0;
         }
 
-        return poolTokenAmount * lqtyBalance / bntLQTYSupply;
+        return poolTokenAmount * lqtyBalance / bntLQTYTokenSupply;
     }
 
     /**
      * @dev converts the specified underlying base token amount to pool token amount
      */
-    function underlyingToPoolToken(address pool, uint256 tokenAmount) external view returns (uint256) {
-        uint256 bntLQTYSupply = IERC20(pool).totalSupply();
+    function underlyingToPoolToken(address /*pool*/, uint256 tokenAmount) external view returns (uint256) {
+        ERC20PresetMinterPauser bntLQTYToken = MockBancorNetwork(address(network)).bntLQTYToken();
+        uint256 bntLQTYTokenSupply = bntLQTYToken.totalSupply();
         uint256 lqtyBalance = lqtyToken.balanceOf(address(network));
 
         if (lqtyBalance == 0) {
             return 0;
         }
 
-        return tokenAmount * bntLQTYSupply / lqtyBalance;
+        return tokenAmount * bntLQTYTokenSupply / lqtyBalance;
     }
 
     /**

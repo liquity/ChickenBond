@@ -40,6 +40,9 @@ contract LQTYChickenBondManagerWrap is LQTYChickenBondManager {
         uint256 bondBLQTYCap = _calcBondBLQTYCap(_lqtyAmount, _backingRatio);
         return _calcAccruedAmount(_startTime, bondBLQTYCap, _accrualParameter);
     }
+    function calcCorrespondingPTokens(uint256 _wantedTokenAmount, uint256 _CBMTotalJarDeposit) external view returns (uint256) {
+        return _calcCorrespondingPTokens(_wantedTokenAmount, _CBMTotalJarDeposit);
+    }
 
     // setters
 

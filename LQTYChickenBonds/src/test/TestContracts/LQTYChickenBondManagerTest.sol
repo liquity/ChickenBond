@@ -1106,7 +1106,12 @@ contract LQTYChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // check rewards contract has received rewards
-        assertApproximatelyEqual(lqtyToken.balanceOf(address(curveLiquidityGauge)), _getChickenInFeeForAmount(bondAmount), 1, "Wrong Chicken In fee diverted to rewards contract");
+        assertApproximatelyEqual(
+            lqtyToken.balanceOf(address(curveLiquidityGauge)),
+            _getChickenInFeeForAmount(bondAmount),
+            10,
+            "Wrong Chicken In fee diverted to rewards contract"
+        );
         // check accrued amount is reduced by Chicken In fee
         assertApproximatelyEqual(
             bLQTYToken.balanceOf(B),
@@ -1125,7 +1130,12 @@ contract LQTYChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // check rewards contract has received rewards
-        assertApproximatelyEqual(lqtyToken.balanceOf(address(curveLiquidityGauge)), 2 * _getChickenInFeeForAmount(bondAmount), 2, "Wrong Chicken In fee diverted to rewards contract");
+        assertApproximatelyEqual(lqtyToken.balanceOf(
+                address(curveLiquidityGauge)),
+            2 * _getChickenInFeeForAmount(bondAmount),
+            10,
+            "Wrong Chicken In fee diverted to rewards contract"
+        );
         // check accrued amount is reduced by Chicken In fee
         assertApproximatelyEqual(
             bLQTYToken.balanceOf(A),
@@ -1540,6 +1550,37 @@ contract LQTYChickenBondManagerTest is BaseTest {
     }
 
     function testRedeemRevertsWhenCallerHasInsufficientBLQTY() public {
+        // A and B create bonds
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+        uint256 B_bondID = createBondForUser(B, bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // A and B chicken in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+        vm.startPrank(B);
+        chickenBondManager.chickenIn(B_bondID);
+        vm.stopPrank();
+
+        // A transfers some bLQTY to B
+        uint256 bLQTYBalance = bLQTYToken.balanceOf(B);
+        vm.startPrank(A);
+        bLQTYToken.transfer(B, 1);
+        vm.stopPrank();
+        assertEq(bLQTYToken.balanceOf(B), bLQTYBalance + 1);
+
+        // B tries to redeem more LQTY than they have
+        vm.startPrank(B);
+        vm.expectRevert("ERC20: burn amount exceeds balance");
+        chickenBondManager.redeem(bLQTYBalance + 2);
+    }
+
+    function testRedeemRevertsWhenAmountIsBiggerThanSupply() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -1565,14 +1606,8 @@ contract LQTYChickenBondManagerTest is BaseTest {
 
         // B tries to redeem more LQTY than they have
         vm.startPrank(B);
-        vm.expectRevert("ERC20: burn amount exceeds balance");
+        vm.expectRevert("Amount to redeem bigger than total supply");
         chickenBondManager.redeem(B_bLQTYBalance + 1);
-
-        // Reverts on transfer rather than burn, since it tries to redeem more than the total BLQTY supply, and therefore tries
-        // to withdraw more LQTY than is held by the system
-        // TODO: Fix. Seems to revert with no reason string (or not catch it)?
-        // vm.expectRevert("ERC20: transfer amount exceeds balance");
-        // chickenBondManager.redeem(B_bLQTYBalance + bLQTYToken.totalSupply());
     }
 
     function testRedeemRevertsWithZeroInputAmount() public {
@@ -1702,7 +1737,8 @@ contract LQTYChickenBondManagerTest is BaseTest {
         pickleJar.withdraw(shares);
 
         // Check that the CBM received at least all of it's share value
-        assertGeAndWithinRange(lqtyToken.balanceOf(address(chickenBondManager)), CBMShareLQTYValue, 1e9);
+        assertGe(lqtyToken.balanceOf(address(chickenBondManager)), CBMShareLQTYValue, "CBM received less LQTY");
+        assertRelativeError(lqtyToken.balanceOf(address(chickenBondManager)), CBMShareLQTYValue, 1e9, "LQTY balance error too big");
     }
 
     // Test calculated share value does not change over time, ceteris paribus
@@ -1919,6 +1955,7 @@ contract LQTYChickenBondManagerTest is BaseTest {
 
         uint256 bondID = createBondForUser(A, 100e18);
         vm.warp(block.timestamp + interval);
+
         chickenInForUser(A, bondID);
 
         uint256 accrualParameter = chickenBondManager.accrualParameter();

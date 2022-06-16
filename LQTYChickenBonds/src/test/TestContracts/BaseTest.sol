@@ -24,6 +24,7 @@ contract BaseTest is Test {
     IJar pickleJar;
     IBancorNetworkInfo bancorNetworkInfo;
     IBancorNetwork bancorNetwork;
+    IERC20 bntLQTYToken;
     ICurveLiquidityGaugeV4 curveLiquidityGauge;
 
     uint256 CHICKEN_IN_AMM_FEE = 1e16; // 1%
