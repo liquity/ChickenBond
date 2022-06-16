@@ -74,14 +74,34 @@ const clonePool = async ({ pool, decimals, blockTag, coin, rates }: ClonePoolPar
   });
 };
 
+const metaPoolParams = (p: StableSwapMetaPool) => ({
+  A: p.A,
+  fee: p.fee,
+  adminFee: p.adminFee,
+  totalSupply: p.totalSupply,
+  balances: p.balances,
+
+  basePool: {
+    n: p.basePool.n,
+    A: p.basePool.A,
+    fee: p.basePool.fee,
+    adminFee: p.basePool.adminFee,
+    totalSupply: p.basePool.totalSupply,
+    balances: p.basePool.balances
+  }
+});
+
 const approxEq10D = approxEq(1e-10);
 const approxEq6D = approxEq(1e-6);
 
 test("StableSwapPool calculates the same virtual price and dy as on-chain", async t => {
+  const assert = <T extends unknown[]>(name: string, f: (...args: T) => boolean, ...args: T) => {
+    t.log({ [name]: [...args] });
+    t.true(f(...args));
+  };
+
   const latestBlock = await provider.getBlock("latest");
   const blockTag = latestBlock.number - 10;
-
-  t.log({ blockTag });
 
   const [baseVirtualPrice, lusdVirtualPrice] = await Promise.all([
     basePool.get_virtual_price({ blockTag }).then(numberify()),
@@ -110,25 +130,26 @@ test("StableSwapPool calculates the same virtual price and dy as on-chain", asyn
     totalSupply
   });
 
-  // console.log(lusdMeta);
+  t.log({ blockTag });
+  t.log(metaPoolParams(lusdMeta));
 
-  t.true(approxEq10D(baseVirtualPrice, baseClone.virtualPrice));
-  t.true(approxEq10D(lusdVirtualPrice, lusdMeta.virtualPrice));
+  assert("baseVirtualPrice", approxEq10D, baseVirtualPrice, baseClone.virtualPrice);
+  assert("lusdVirtualPrice", approxEq10D, lusdVirtualPrice, lusdMeta.virtualPrice);
 
   const dx = 1e6;
 
   const baseDY = await basePool.get_dy(0, 1, Decimal.from(dx).hex, { blockTag }).then(numberify(6));
-  t.true(approxEq6D(baseDY, baseClone.dy(0, 1, dx)[0]));
+  assert("baseDY", approxEq6D, baseDY, baseClone.dy(0, 1, dx)[0]);
 
   const lusdDY01 = await lusdPool
     .get_dy_underlying(0, 1, Decimal.from(dx).hex, { blockTag })
     .then(numberify());
-  t.true(approxEq6D(lusdDY01, lusdMeta.dyUnderlying(0, 1, dx)));
+  assert("lusdDY01", approxEq6D, lusdDY01, lusdMeta.dyUnderlying(0, 1, dx));
 
   const lusdDY10 = await lusdPool
     .get_dy_underlying(1, 0, Decimal.from(dx).hex, { blockTag })
     .then(numberify());
-  t.true(approxEq6D(lusdDY10, lusdMeta.dyUnderlying(1, 0, dx)));
+  assert("lusdDY10", approxEq6D, lusdDY10, lusdMeta.dyUnderlying(1, 0, dx));
 });
 
 // // LUSD pool at block 14956624
