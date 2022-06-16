@@ -382,11 +382,11 @@ const reduceRatio = (p: StableSwapPool, targetYOverX: number) => {
 const notEqualPair = ([a, b]: [number, number]) => !approxEq(a, b);
 
 testProp(
-  // Only testing for 0.04% fee and 0.5% admin fee, which are the immutable parameters of the
+  // Only testing for 0.04% fee and 0.5% admin fee, which are immutable parameters of the
   // LUSD-3CRV pool.
   // At very large values (which are unrealistic) the property starts to break down.
-  // Technically, we're testing withdrawals in the range "price < 1 / (1 - fee)", but at low
-  // percentages, this doesn't make a big difference.
+  // Technically, we're testing withdrawals in the range "price < 1 / (1 + fee)", but at low
+  // percentages, this doesn't make a big difference compared to (1 - fee).
   "Depositing while price > (1 + fee) and withdrawing while price < (1 - fee) is profitable",
   [
     fc
