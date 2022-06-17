@@ -5,8 +5,6 @@ import "./TestContracts/MainnetTestSetup.sol";
 
 
 contract LQTYChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
-    address constant MAINNET_BNT_TOKEN_ADDRESS = 0x1F573D6Fb3F13d689FF844B4cE37794d79a7FF1C;
-
     function _pickleHarvestAndFastForward() internal returns (uint256) {
         // harvest
         uint256 prevValue = chickenBondManager.calcTotalPickleJarShareValue();
@@ -18,32 +16,6 @@ contract LQTYChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + 600);
         vm.stopPrank();
         uint256 valueIncrease = chickenBondManager.calcTotalPickleJarShareValue() - prevValue;
-        return valueIncrease;
-    }
-
-    function _generateBancorRevenue() internal returns (uint256) {
-        IERC20 bntToken = IERC20(MAINNET_BNT_TOKEN_ADDRESS);
-
-        vm.startPrank(A);
-        // Approve tokens
-        lqtyToken.approve(address(bancorNetwork), type(uint256).max);
-        bntToken.approve(address(bancorNetwork), type(uint256).max);
-
-        uint256 prevValue = chickenBondManager.calcTotalBancorPoolShareValue();
-
-        uint256 lqtyAmount = 1e22;
-        uint256 bntAmount;
-        // fund account
-        deal(address(lqtyToken), A, lqtyAmount, false);
-
-        // swap back and forth several times
-        for (uint256 i = 0; i < 2; i++){
-            bntAmount = bancorNetwork.tradeBySourceAmount(address(lqtyToken), MAINNET_BNT_TOKEN_ADDRESS, lqtyAmount, 1, 9999999999, A);
-            lqtyAmount = bancorNetwork.tradeBySourceAmount(MAINNET_BNT_TOKEN_ADDRESS, address(lqtyToken), bntAmount, 1, 9999999999, A);
-        }
-        vm.stopPrank();
-
-        uint256 valueIncrease = chickenBondManager.calcTotalBancorPoolShareValue() - prevValue;
         return valueIncrease;
     }
 
@@ -191,7 +163,7 @@ contract LQTYChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // harvest bancor and fast forward time to unlock profits
-        uint256 bancorYield = _generateBancorRevenue();
+        uint256 bancorYield = _generateBancorRevenue(1e22, 2);
         assertGt(bancorYield, 0, "Yield generated in Bancor vault should be greater than zero");
 
         // create bond
@@ -221,7 +193,7 @@ contract LQTYChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertApproximatelyEqual(
             chickenBondManager.getAcquiredLQTY(),
             accruedBLQTY, // backing ratio is 1, so this will match
-            1,
+            10,
             "Acquired LQTY mismatch"
         );
 
@@ -239,9 +211,12 @@ contract LQTYChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertApproximatelyEqual(
             previousPermanentLQTY + bancorYield + (_getAmountMinusChickenInFee(bondAmount2) - accruedBLQTY), // backing ratio is 1
             chickenBondManager.getPermanentLQTY() ,
-            1,
+            10,
             "Permanent LQTY mismatch"
         );
+
+        // Acquired in Bancor is therefore zero
+        assertEq(chickenBondManager.getAcquiredLQTYInBancorPool(), 0, "Acquired in Bancor should be zero");
     }
 
     // --- redemption tests ---

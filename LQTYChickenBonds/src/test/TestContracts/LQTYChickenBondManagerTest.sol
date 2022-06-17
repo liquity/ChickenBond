@@ -1250,6 +1250,84 @@ contract LQTYChickenBondManagerTest is BaseTest {
         assertGt(permanentLQTY_6, permanentLQTY_5);
     }
 
+    function testChickenInWithBancorAcquiredLowerThanSurplus() public {
+        // A, B create bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        createBondForUser(B, bondAmount);
+        uint256 B_bondID = bondNFT.totalMinted();
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        uint256 permanentLQTY_1 = chickenBondManager.getPermanentLQTY();
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        _generateBancorRevenue(1e18, 2);
+
+        uint256 bondAmountMinusChickenInFee = _getAmountMinusChickenInFee(bondAmount);
+        uint256 accruedLQTY = chickenBondManager.calcAccruedLQTY(B_bondID);
+        uint256 lqtySurplus = bondAmountMinusChickenInFee - accruedLQTY;
+
+        // B chickens in
+        vm.startPrank(B);
+        chickenBondManager.chickenIn(B_bondID);
+        vm.stopPrank();
+
+        // Check permanent LQTY bucket has increased the right amount
+        uint256 permanentLQTY_2 = chickenBondManager.getPermanentLQTY();
+        assertEq(permanentLQTY_2, permanentLQTY_1 + lqtySurplus);
+    }
+
+    function testChickenInWithBancorAcquiredGreaterThanSurplus() public {
+        // A, B create bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        createBondForUser(B, bondAmount);
+        uint256 B_bondID = bondNFT.totalMinted();
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        uint256 permanentLQTY_1 = chickenBondManager.getPermanentLQTY();
+
+        // fast forward time
+        vm.warp(block.timestamp + 7 days);
+
+        _generateBancorRevenue(1e22, 2);
+
+        uint256 bondAmountMinusChickenInFee = _getAmountMinusChickenInFee(bondAmount);
+        uint256 accruedLQTY = chickenBondManager.calcAccruedLQTY(B_bondID);
+        uint256 lqtySurplus = bondAmountMinusChickenInFee - accruedLQTY;
+
+        // B chickens in
+        vm.startPrank(B);
+        chickenBondManager.chickenIn(B_bondID);
+        vm.stopPrank();
+
+        // Check permanent LQTY bucket has increased the right amount
+        uint256 permanentLQTY_2 = chickenBondManager.getPermanentLQTY();
+        assertEq(permanentLQTY_2, permanentLQTY_1 + lqtySurplus);
+    }
+
     // --- redemption tests ---
 
     function testRedeemDecreasesCallersBLQTYBalance() public {
@@ -1455,7 +1533,8 @@ contract LQTYChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Get acquired LQTY in Pickle before
-        uint256 acquiredLQTYBefore = chickenBondManager.getAcquiredLQTY();
+        uint256 acquiredLQTYBefore = chickenBondManager.getAcquiredLQTYInPickleJar();
+        assertGt(acquiredLQTYBefore, 0, "No Acquired funds is Pickle before redemption!");
 
         // B redeems some bLQTY
         uint256 bLQTYToRedeem = bLQTYBalance * redemptionFraction / 1e18;
@@ -1469,7 +1548,68 @@ contract LQTYChickenBondManagerTest is BaseTest {
         chickenBondManager.redeem(bLQTYToRedeem);
 
         // Check acquired LQTY in Pickle has decreased by correct fraction
-        uint256 acquiredLQTYAfter = chickenBondManager.getAcquiredLQTY();
+        uint256 acquiredLQTYAfter = chickenBondManager.getAcquiredLQTYInPickleJar();
+        uint256 expectedAcquiredLQTYAfter = acquiredLQTYBefore * expectedFractionRemainingAfterRedemption / 1e18;
+
+        assertApproximatelyEqual(acquiredLQTYAfter, expectedAcquiredLQTYAfter, 1e9);
+    }
+
+    function testRedeemDecreasesAcquiredLQTYInBancorPoolByCorrectFraction(uint256 redemptionFraction) public {
+        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9);
+        // uint256 redemptionFraction = 5e17; // 50%
+        uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage(redemptionFraction);
+        // 1-r(1-f).  Fee is left inside system
+        uint256 expectedFractionRemainingAfterRedemption = 1e18 - (redemptionFraction * (1e18 - percentageFee)) / 1e18;
+        // Ensure the expected remaining is between 0 and 100%
+        assertTrue(expectedFractionRemainingAfterRedemption > 0 && expectedFractionRemainingAfterRedemption < 1e18);
+
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // Confirm A's bLQTY balance is zero
+        uint256 A_bLQTYBalance = bLQTYToken.balanceOf(A);
+        assertEq(A_bLQTYBalance, 0);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's bLQTY balance is non-zero
+        A_bLQTYBalance = bLQTYToken.balanceOf(A);
+        assertGt(A_bLQTYBalance, 0);
+
+        // A transfers his LQTY to B
+        uint256 bLQTYBalance = bLQTYToken.balanceOf(A);
+        assertGt(bLQTYBalance, 0);
+        bLQTYToken.transfer(B, bLQTYBalance);
+        assertEq(bLQTYBalance, bLQTYToken.balanceOf(B));
+        assertEq(bLQTYToken.totalSupply(), bLQTYToken.balanceOf(B));
+        vm.stopPrank();
+
+        _generateBancorRevenue(1e21, 1);
+
+        // Get acquired LQTY in Pickle before
+        uint256 acquiredLQTYBefore = chickenBondManager.getAcquiredLQTYInBancorPool();
+        assertGt(acquiredLQTYBefore, 0, "No Acquired funds is Bancor before redemption!");
+
+        // B redeems some bLQTY
+        uint256 bLQTYToRedeem = bLQTYBalance * redemptionFraction / 1e18;
+
+        assertGt(bLQTYToRedeem, 0);
+
+        assertTrue(bLQTYToRedeem != 0);
+        vm.startPrank(B);
+
+        assertEq(bLQTYToRedeem, bLQTYToken.totalSupply() * redemptionFraction / 1e18);
+        chickenBondManager.redeem(bLQTYToRedeem);
+
+        // Check acquired LQTY in Pickle has decreased by correct fraction
+        uint256 acquiredLQTYAfter = chickenBondManager.getAcquiredLQTYInBancorPool();
         uint256 expectedAcquiredLQTYAfter = acquiredLQTYBefore * expectedFractionRemainingAfterRedemption / 1e18;
 
         assertApproximatelyEqual(acquiredLQTYAfter, expectedAcquiredLQTYAfter, 1e9);

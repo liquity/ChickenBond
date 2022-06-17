@@ -113,4 +113,85 @@ contract LQTYChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // check bLQTY B balance
         assertEq(bLQTYToken.balanceOf(B), accruedBLQTY_B, "bLQTY balance of B doesn't match");
     }
+
+    function testFirstChickenInAfterRedemptionDepletionAndBancorHarvestTransfersToRewardsContract() external {
+        uint256 bondAmount1 = 1000e18;
+        uint256 bondAmount2 = 100e18;
+        deal(address(lqtyToken), A, bondAmount1 + bondAmount2);
+
+        // create bond
+        uint256 A_bondID = createBondForUser(A, bondAmount1);
+
+        // wait 100 days
+        vm.warp(block.timestamp + 100 days);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // A redeems full
+        uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
+        uint256 bLQTYBalance = bLQTYToken.balanceOf(A);
+        uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
+        vm.startPrank(A);
+        chickenBondManager.redeem(bLQTYToken.balanceOf(A));
+        vm.stopPrank();
+
+        // harvest bancor and fast forward time to unlock profits
+        uint256 bancorYield = _generateBancorRevenue(1e22, 10);
+        assertGt(bancorYield, 0, "Yield generated in Bancor vault should be greater than zero");
+
+        // create bond
+        A_bondID = createBondForUser(A, bondAmount2);
+
+        // wait 100 days more
+        vm.warp(block.timestamp + 100 days);
+
+        // A chickens in
+        uint256 accruedBLQTY = chickenBondManager.calcAccruedBLQTY(A_bondID);
+
+        uint256 previousPermanentLQTY = chickenBondManager.getPermanentLQTY();
+
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // checks
+        assertRelativeError(
+            chickenBondManager.calcSystemBackingRatio(),
+            1e18,
+            8e14, // 0.08%
+            "Backing ratio should be 1"
+        );
+
+        // Acquired
+        assertApproximatelyEqual(
+            chickenBondManager.getAcquiredLQTY(),
+            accruedBLQTY, // backing ratio is 1, so this will match
+            10,
+            "Acquired LQTY mismatch"
+        );
+
+        // Balance in rewards contract
+        // uint256 yieldFromFirstChickenInRedemptionFee = bLQTYBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
+        assertRelativeError(
+            lqtyToken.balanceOf(address(curveLiquidityGauge)),
+            // chickenInFeeAmount1 + chickenInFeeAmount2 + yieldFromFirstChickenInRedemptionFee,
+            _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2) + bLQTYBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18,
+            4e10, // 0.000004 %
+            "Rewards contract balance mismatch"
+        );
+
+        // Bancor yield becomes permanent (to avoid the hassle of the cooldown period)
+        assertApproximatelyEqual(
+            previousPermanentLQTY + bancorYield + (_getAmountMinusChickenInFee(bondAmount2) - accruedBLQTY), // backing ratio is 1
+            chickenBondManager.getPermanentLQTY() ,
+            10,
+            "Permanent LQTY mismatch"
+        );
+
+        // Acquired in Bancor is therefore zero
+        assertEq(chickenBondManager.getAcquiredLQTYInBancorPool(), 0, "Acquired in Bancor should be zero");
+    }
 }

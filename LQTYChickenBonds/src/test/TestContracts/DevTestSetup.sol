@@ -37,6 +37,8 @@ contract DevTestSetup is BaseTest {
         pickleJar = new MockPickleJar(MockERC20(address(lqtyToken)));
         bancorNetwork = new MockBancorNetwork();
         bancorNetworkInfo = new MockBancorNetworkInfo(bancorNetwork, lqtyToken);
+        bntToken = new ERC20PresetMinterPauser("Bancor Network Token", "BNT");
+        deal(address(bntToken), address(bancorNetwork), 1e27, true);
 
         // Deploy core ChickenBonds system
         bLQTYToken = new BLQTYToken("bLQTYToken", "BLQTY");

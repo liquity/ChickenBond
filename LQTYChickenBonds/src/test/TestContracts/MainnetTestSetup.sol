@@ -14,6 +14,7 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_PICKLE_JAR = 0x65B2532474f717D5A8ba38078B78106D56118bbb;
     //address constant MAINNET_BANCOR_NETWORK_ADDRESS = 0xeEF417e1D5CC832e619ae18D2F140De2999dD4fB;
     address constant MAINNET_BANCOR_NETWORK_INFO_ADDRESS = 0x8E303D296851B320e6a697bAcB979d13c9D6E760;
+    address constant MAINNET_BNT_TOKEN_ADDRESS = 0x1F573D6Fb3F13d689FF844B4cE37794d79a7FF1C;
     address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
 
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
@@ -49,6 +50,7 @@ contract MainnetTestSetup is BaseTest {
         //bancorNetwork = IBancorNetwork(MAINNET_BANCOR_NETWORK_ADDRESS);
         bancorNetwork = IBancorNetwork(bancorNetworkInfo.network());
         bntLQTYToken = IERC20(bancorNetworkInfo.poolToken(MAINNET_LQTY_TOKEN_ADDRESS));
+        bntToken = IERC20(MAINNET_BNT_TOKEN_ADDRESS);
 
         // Deploy core ChickenBonds system
         bLQTYToken = new BLQTYToken("bLQTYToken", "BLQTY");

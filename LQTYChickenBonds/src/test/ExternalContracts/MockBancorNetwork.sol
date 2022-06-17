@@ -5,6 +5,8 @@ import { IBancorNetwork } from "../../Interfaces/IBancorNetwork.sol";
 
 
 contract MockBancorNetwork is IBancorNetwork {
+    uint256 public constant FEE = 1e16; // 1%
+
     ERC20PresetMinterPauser immutable public bntLQTYToken;
 
     constructor() {
@@ -172,13 +174,20 @@ contract MockBancorNetwork is IBancorNetwork {
      *   native token case)
      */
     function tradeBySourceAmount(
-        address sourceaddress,
-        address targetaddress,
+        address sourceAddress,
+        address targetAddress,
         uint256 sourceAmount,
-        uint256 minReturnAmount,
-        uint256 deadline,
-        address beneficiary
-    ) external payable returns (uint256) {}
+        uint256, // minReturnAmount,
+        uint256, // deadline,
+        address // beneficiary
+    ) external payable returns (uint256) {
+        uint256 fee = sourceAmount * FEE / 1e18;
+        uint256 net = sourceAmount - fee;
+        IERC20(sourceAddress).transferFrom(msg.sender, address(this), sourceAmount);
+        IERC20(targetAddress).transfer(msg.sender, net);
+
+        return net;
+    }
 
     /**
      * @dev performs a trade by providing the input source amount and providing an EIP712 typed signature for an

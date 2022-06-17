@@ -25,6 +25,7 @@ contract BaseTest is Test {
     IBancorNetworkInfo bancorNetworkInfo;
     IBancorNetwork bancorNetwork;
     IERC20 bntLQTYToken;
+    IERC20 bntToken;
     ICurveLiquidityGaugeV4 curveLiquidityGauge;
 
     uint256 CHICKEN_IN_AMM_FEE = 1e16; // 1%
@@ -158,5 +159,29 @@ contract BaseTest is Test {
         console.log(bLQTYToken.totalSupply(), "bLQTY total supply");
         console.log(lqtyToken.balanceOf(address(curveLiquidityGauge)), "balance of AMM rewards contract");
         console.log("");
+    }
+
+    function _generateBancorRevenue(uint256 _initialLQTYAmount, uint256 _iterations) internal returns (uint256) {
+        vm.startPrank(A);
+        // Approve tokens
+        lqtyToken.approve(address(bancorNetwork), type(uint256).max);
+        bntToken.approve(address(bancorNetwork), type(uint256).max);
+
+        uint256 prevValue = chickenBondManager.calcTotalBancorPoolShareValue();
+
+        uint256 lqtyAmount = _initialLQTYAmount;
+        uint256 bntAmount;
+        // fund account
+        deal(address(lqtyToken), A, lqtyAmount, false);
+
+        // swap back and forth several times
+        for (uint256 i = 0; i < _iterations; i++){
+            bntAmount = bancorNetwork.tradeBySourceAmount(address(lqtyToken), address(bntToken), lqtyAmount, 1, 9999999999, A);
+            lqtyAmount = bancorNetwork.tradeBySourceAmount(address(bntToken), address(lqtyToken), bntAmount, 1, 9999999999, A);
+        }
+        vm.stopPrank();
+
+        uint256 valueIncrease = chickenBondManager.calcTotalBancorPoolShareValue() - prevValue;
+        return valueIncrease;
     }
 }
