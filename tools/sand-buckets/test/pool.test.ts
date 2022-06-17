@@ -95,6 +95,8 @@ const approxEq10D = approxEq(1e-10);
 const approxEq5D = approxEq(1e-5);
 
 test("StableSwapPool calculates the same virtual price and dy as on-chain", async t => {
+  t.timeout(20000);
+
   const assert = <T extends unknown[]>(name: string, f: (...args: T) => boolean, ...args: T) => {
     t.log({ [name]: [...args] });
     t.true(f(...args));

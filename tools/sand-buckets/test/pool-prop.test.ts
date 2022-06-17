@@ -1,4 +1,5 @@
-import { testProp, fc } from "ava-fast-check";
+import * as ava from "ava-fast-check";
+import * as fc from "fast-check";
 
 import { mapMul, nonZero, zipDiv, zipSub } from "../src/utils";
 
@@ -14,6 +15,12 @@ import {
   StableSwapPoolParams,
   xyFromDydx
 } from "../src/pool";
+
+// Run all tests serially, since they're CPU bound anyway.
+const testProp = ava.testProp.serial;
+
+const stressEnabled = process.env.STRESS === "1";
+const testParams = stressEnabled ? { numRuns: 500000 } : {};
 
 const EPSILON = 1e-6;
 const ROUGH_EPSILON = 1e-4;
@@ -85,8 +92,8 @@ testProp(
 
     t.true(approxEq(dy1 * s, dy2));
     t.true(zipSub(mapMul(p1.balances, s), p2.balances).every(approxZero));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 const wontThrow = (msgPattern: string | RegExp) => (f: () => void) => {
@@ -135,8 +142,8 @@ testProp(
 
     t.true(approxEq(lp1 * p1.virtualPrice * s, lp2 * p2.virtualPrice));
     t.true(zipSub(mapMul(p1.balances, s), p2.balances).every(approxZero));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -156,8 +163,8 @@ testProp(
     const [, fees] = p.calcTokenAmountWithFees(newBalances);
 
     t.true(zipDiv(fees, depositAmounts).every(approxZero));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -177,8 +184,8 @@ testProp(
     const withdrawnAmounts = p.removeLiquidity(lp);
 
     t.true(zipSub(depositedAmounts, withdrawnAmounts).every(approxZero));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -191,8 +198,8 @@ testProp(
     const [x2] = p.balances;
 
     t.true(approxEq(x2, x + dx));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -205,8 +212,8 @@ testProp(
 
     t.true(approxEq(p.balances[0], y));
     t.true(approxEq(p.balances[1], x + (y - x) * p.fee * (1 - p.adminFee)));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -230,8 +237,8 @@ testProp(
     const [x2, y2] = p.balances;
 
     t.true(approxEq(x2 * targetYOverX, y2));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -244,8 +251,8 @@ testProp(
     const [x2, y2] = p.balances;
 
     t.true(approxEq(x2, y2));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -258,8 +265,8 @@ testProp(
     const [x2, y2] = p.balances;
 
     t.true(approxEq(x2, y2));
-  }
-  // { numRuns: 500000 }
+  },
+  testParams
 );
 
 testProp(
@@ -272,8 +279,8 @@ testProp(
     const [x2, y2] = p.balances;
 
     t.true(approxEq(x2, y2));
-  }
-  // { numRuns: 500000 }
+  },
+  testParams
 );
 
 testProp(
@@ -289,8 +296,8 @@ testProp(
     t.true(approxGt(dySplit, dyWhole));
     t.true(approxEq(pWhole.balances[0], pSplit.balances[0]));
     t.true(approxGt(pWhole.balances[1], pSplit.balances[1]));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -309,8 +316,8 @@ testProp(
 
     t.true(approxEq(dydx, dydxReapplied));
     t.true(roughApproxEq(dydx, dy / dx));
-  }
-  // { numRuns: 1000000 }
+  },
+  testParams
 );
 
 testProp(
@@ -332,8 +339,8 @@ testProp(
     const lp = p.addLiquidity([x, 0]);
 
     t.true(approxGt(lp * p.virtualPrice, x * (1 - p.fee)));
-  }
-  // { numRuns: 500000 }
+  },
+  testParams
 );
 
 testProp(
@@ -357,8 +364,8 @@ testProp(
     const dy = p.removeLiquidityOneCoin(lp, 1);
 
     t.true(approxGt(dy, initialValue * (1 - p.fee)));
-  }
-  // { numRuns: 500000 }
+  },
+  testParams
 );
 
 const yOverX = ([x, y]: number[]) => y / x;
@@ -407,8 +414,8 @@ testProp(
     const dx2 = p.removeLiquidityOneCoin(lp, 0);
 
     t.true(roughApproxEq((dx2 - dx) / dx, dydx - 1));
-  }
-  // { numRuns: 500000 }
+  },
+  testParams
 );
 
 const notEqualPair = ([a, b]: [number, number]) => !approxEq(a, b);
@@ -456,6 +463,6 @@ testProp(
     const dx2 = p.removeLiquidityOneCoin(burn, 0);
 
     t.true(approxGt(dx2 / burn, dx / mint));
-  }
-  // { numRuns: 500000 }
+  },
+  testParams
 );

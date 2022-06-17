@@ -7,16 +7,17 @@
     "ava": "^4.2.0",
     "ava-fast-check": "^5.0.0",
     "chai": "^4.3.6",
+    "cross-env": "^7.0.3",
     "ethers": "^5.6.8",
     "fast-check": "^2.25.0",
     "ts-node": "^10.8.0",
     "typescript": "^4.6.4"
   },
   "scripts": {
-    "test": "ava"
+    "test": "ava",
+    "stress": "cross-env STRESS=1 ava --timeout 120s"
   },
   "ava": {
-    "timeout": "60s",
     "extensions": [
       "ts"
     ],
