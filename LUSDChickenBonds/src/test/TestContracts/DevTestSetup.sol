@@ -42,6 +42,9 @@ contract DevTestSetup is BaseTest {
         mockCurvePool.setAddresses(address(lusdToken));
         curvePool = ICurvePool(address(mockCurvePool));
 
+        MockCurvePool mockCurveBasePool = new MockCurvePool("3CRV Pool", "3CRV");
+        curveBasePool = ICurvePool(address(mockCurveBasePool));
+
         MockYearnVault mockYearnLUSDVault = new MockYearnVault("LUSD yVault", "yvLUSD");
         mockYearnLUSDVault.setAddresses(address(lusdToken));
         yearnSPVault = IYearnVault(address(mockYearnLUSDVault));
@@ -74,6 +77,7 @@ contract DevTestSetup is BaseTest {
             lusdTokenAddress: address(lusdToken),
             bLUSDTokenAddress: address(bLUSDToken),
             curvePoolAddress: address(curvePool),
+            curveBasePoolAddress: address(curveBasePool),
             yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
@@ -89,7 +93,9 @@ contract DevTestSetup is BaseTest {
             MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
             ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
             ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
-            CHICKEN_IN_AMM_FEE                 // _CHICKEN_IN_AMM_FEE
+            CHICKEN_IN_AMM_FEE,                // _CHICKEN_IN_AMM_FEE
+            1e18,                              // _curveDepositDydxThreshold
+            1e18                               // _curveWithdrawalDxdyThreshold
         );
 
         bondNFT.setAddresses(address(chickenBondManager));

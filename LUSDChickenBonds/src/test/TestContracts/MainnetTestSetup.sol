@@ -17,6 +17,7 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_YEARN_LUSD_VAULT_ADDRESS = 0x378cb52b00F9D0921cb46dFc099CFf73b42419dC;
     address constant MAINNET_YEARN_CURVE_VAULT_ADDRESS = 0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6;
     address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
+    address constant MAINNET_CURVE_BASE_POOL_ADDRESS = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
     address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
@@ -52,6 +53,7 @@ contract MainnetTestSetup is BaseTest {
 
         // Connect to deployed LUSD-3CRV Curve pool, and Yearn LUSD-3CRV vault
         curvePool = ICurvePool(MAINNET_CURVE_POOL_ADDRESS);
+        curveBasePool = ICurvePool(MAINNET_CURVE_BASE_POOL_ADDRESS);
         yearnCurveVault = IYearnVault(MAINNET_YEARN_CURVE_VAULT_ADDRESS);
 
         yearnRegistry = IYearnRegistry(MAINNET_YEARN_REGISTRY_ADDRESS);
@@ -87,6 +89,7 @@ contract MainnetTestSetup is BaseTest {
             lusdTokenAddress: address(lusdToken),
             bLUSDTokenAddress: address(bLUSDToken),
             curvePoolAddress: address(curvePool),
+            curveBasePoolAddress: address(curveBasePool),
             yearnSPVaultAddress: address(yearnSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
@@ -102,7 +105,9 @@ contract MainnetTestSetup is BaseTest {
             MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
             ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
             ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
-            CHICKEN_IN_AMM_FEE                 // _CHICKEN_IN_AMM_FEE
+            CHICKEN_IN_AMM_FEE,                // _CHICKEN_IN_AMM_FEE
+            10004e14, /* 1.0004 */             // _curveDepositDydxThreshold
+            10004e14  /* 1.0004 */             // _curveWithdrawalDxdyThreshold
         );
 
         // Add LUSD as reward token for Curve Liquidity Gauge, and set ChickenBondManager as distributor

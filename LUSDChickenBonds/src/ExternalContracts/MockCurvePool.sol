@@ -67,6 +67,10 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
         return dx * nextPrankPrice / 1e18;
     }
 
+    function get_dy(int128, int128, uint256 dx) external view returns (uint256) {
+        return dx * nextPrankPrice / 1e18;
+    }
+
     function setNextPrankPrice(uint256 _nextPrankPrice) external {
         nextPrankPrice = _nextPrankPrice;
     }
@@ -77,5 +81,13 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
 
         // Maintain 1:1 ratio between LP shares and LUSD in the pool
         lusdToken.unprotectedMint(address(this), _amount);
+    }
+
+    function get_virtual_price() external pure returns (uint256) {
+        return 1e18;
+    }
+
+    function fee() external pure returns (uint256) {
+        return 0;
     }
 }

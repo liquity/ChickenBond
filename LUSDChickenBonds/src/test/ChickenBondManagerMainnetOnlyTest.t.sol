@@ -398,7 +398,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(lusdToShift, 0);
 
         // Try to shift the LUSD
-        vm.expectRevert("CBM: Curve spot must be > 1.0 before SP->Curve shift");
+        vm.expectRevert("CBM: Curve spot must be over the deposit threshold before SP->Curve shift");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
     }
 
@@ -444,7 +444,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(curveSpotPrice, 1e18);
 
         // --- Now, attempt the shift that would drop the price below 1.0 ---
-        vm.expectRevert("CBM: SP->Curve shift must decrease spot price to >= 1.0");
+        vm.expectRevert("CBM: SP->Curve shift must decrease spot price to a value above the deposit threshold");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdAmount);
     }
 
@@ -906,7 +906,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(lusdToShift, 0);
 
         // Try to shift the LUSD
-        vm.expectRevert("CBM: Curve spot must be < 1.0 before Curve->SP shift");
+        vm.expectRevert("CBM: Curve spot must be below the withdrawal threshold before Curve->SP shift");
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
     }
 
