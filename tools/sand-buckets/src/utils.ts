@@ -126,3 +126,8 @@ export const check = (requirement: boolean, message: string) => {
     throw new Error(message);
   }
 };
+
+export const wrap =
+  <A extends unknown[], R>(f: (...args: A) => R) =>
+  (...args: A) =>
+    f(...args);

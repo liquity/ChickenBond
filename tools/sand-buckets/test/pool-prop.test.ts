@@ -1,7 +1,7 @@
 import * as ava from "ava-fast-check";
 import * as fc from "fast-check";
 
-import { mapMul, nonZero, zipDiv, zipSub } from "../src/utils";
+import { flow2, mapMul, nonZero, wrap, zipDiv, zipSub } from "../src/utils";
 
 import {
   balancingDx,
@@ -17,7 +17,7 @@ import {
 } from "../src/pool";
 
 // Run all tests serially, since they're CPU bound anyway.
-const testProp = ava.testProp.serial;
+const testProp = Object.assign(wrap(ava.testProp.serial), { only: ava.testProp.only });
 
 const stressEnabled = process.env.STRESS === "1";
 const testParams = stressEnabled ? { numRuns: 500000 } : {};
