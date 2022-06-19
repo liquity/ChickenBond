@@ -31,6 +31,9 @@ export interface StableSwapConstantsWithFee extends StableSwapConstants {
   baseFee: number;
 }
 
+const approxPositive = (x: number) => x > -1e-9;
+const clamped = (x: number) => Math.max(x, 0);
+
 const assertNonNegative = (x: number): number => {
   assert(x >= 0);
   return x;
@@ -226,9 +229,6 @@ export const oneCoinWithdrawalThatSetsYOverX =
 
 export const balancingOneCoinWithdrawal = oneCoinWithdrawalThatSetsYOverX(1);
 
-const approxPositive = (x: number) => x > -1e-9;
-const clamped = (x: number) => Math.max(x, 0);
-
 export interface StableSwapPoolParams {
   n: number;
   A: number;
@@ -339,8 +339,7 @@ export class StableSwapPool {
 
   private _storeBalances(newBalances: number[]) {
     newBalances.forEach((balance, i) => {
-      assert(approxPositive(balance));
-      this.balances[i] = clamped(balance);
+      this.balances[i] = balance;
     });
   }
 
@@ -365,9 +364,9 @@ export class StableSwapPool {
     });
 
     const balancesAfterFees = zipSub(newBalances, fees);
-    check(balancesAfterFees.every(approxPositive), "impossible liquidity change");
+    check(balancesAfterFees.every(positive), "impossible liquidity change");
 
-    const D2 = this.D(balancesAfterFees.map(clamped));
+    const D2 = this.D(balancesAfterFees);
     const mintBurn = this.totalSupply * (D2 / D0 - 1);
 
     return [mintBurn, fees];
@@ -394,7 +393,23 @@ export class StableSwapPool {
     return clampedMint;
   }
 
-  removeLiquidity(burn: number) {
+  removeLiquidityImbalance(amounts: number[]): number {
+    assert(amounts.every(nonNegative));
+    const newBalances = zipSub(this.balances, amounts);
+
+    const [burn, fees] = this.calcTokenAmountWithFees(newBalances);
+
+    check(approxPositive(-burn), "impossible withdrawal");
+    const clampedBurn = clamped(-burn);
+    assert(clampedBurn <= this.totalSupply);
+
+    this._storeBalances(zipSub(newBalances, mapMul(fees, this.adminFee)));
+    this.totalSupply -= clampedBurn;
+
+    return clampedBurn;
+  }
+
+  removeLiquidity(burn: number): number[] {
     assert(burn <= this.totalSupply);
 
     const amounts = this.balances.map(balance => balance * (burn / this.totalSupply));

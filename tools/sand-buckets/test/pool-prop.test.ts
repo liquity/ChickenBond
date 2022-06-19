@@ -1,7 +1,7 @@
 import * as ava from "ava-fast-check";
 import * as fc from "fast-check";
 
-import { flow2, mapMul, nonZero, wrap, zipDiv, zipSub } from "../src/utils";
+import { flow2, mapMul, nonZero, sum, wrap, zipDiv, zipSub } from "../src/utils";
 
 import {
   balancingDx,
@@ -463,6 +463,35 @@ testProp(
     const dx2 = p.removeLiquidityOneCoin(burn, 0);
 
     t.true(approxGt(dx2 / burn, dx / mint));
+  },
+  testParams
+);
+
+const rethrow = (error: unknown) => () => {
+  throw error;
+};
+
+testProp(
+  "It's impossible to withdraw a non-trivial amount of coins without burning LP",
+  [
+    fc.array(fc.float().filter(nonZero), { minLength: 2, maxLength: 4 }).chain(balances =>
+      fc.tuple(
+        poolParams()(balances),
+        fc
+          .tuple(...balances.map(balance => fc.float({ max: balance })))
+          .filter(amounts => sum(amounts) > sum(balances) / 1e18)
+      )
+    )
+  ],
+  (t, [params, amounts]) => {
+    const p = new StableSwapPool(params);
+
+    try {
+      const burn = p.removeLiquidityImbalance(amounts);
+      t.true(burn > 0);
+    } catch (error) {
+      t.throws(rethrow(error), { message: /impossible (withdrawal|liquidity change)/ });
+    }
   },
   testParams
 );
