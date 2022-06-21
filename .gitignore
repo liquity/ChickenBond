@@ -13,5 +13,12 @@
 # Python virtual environments
 .venv
 
+# Build outputs
+dist
+cache
+
 # Node.JS dependencies
 node_modules
+
+# Symlinks
+lusd
