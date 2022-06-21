@@ -19,7 +19,7 @@ contract ChickenBondOperationsScript {
     int128 immutable INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL;// = 0;
 
     constructor(IChickenBondManager _chickenBondManager) {
-        Address.isContract(address(_chickenBondManager));
+        require(Address.isContract(address(_chickenBondManager)), "ChickenBondManager is not a contract");
 
         chickenBondManager = _chickenBondManager;
         lusdToken = _chickenBondManager.lusdToken();
