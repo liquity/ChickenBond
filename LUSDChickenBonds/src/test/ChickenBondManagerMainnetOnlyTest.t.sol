@@ -1093,6 +1093,83 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore);
     }
 
+    function testPendingIsNotAffectedByShiftFromSPToCurve() public {
+        // A, B, C create bond
+        uint256 bondAmount = 100e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+        uint256 B_bondID = createBondForUser(B, bondAmount);
+        uint256 C_bondID = createBondForUser(C, bondAmount);
+
+        console.log(chickenBondManager.totalPendingLUSD(), "0 - chickenBondManager.totalPendingLUSD()");
+
+        _spHarvestAndFastForward();
+        console.log(chickenBondManager.totalPendingLUSD(), "1 - chickenBondManager.totalPendingLUSD()");
+
+        uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnSPVaultShareValue();
+
+        // 1 month passes
+        vm.warp(block.timestamp + 30 days);
+
+        // C chickens in
+        vm.startPrank(C);
+        chickenBondManager.chickenIn(C_bondID);
+        vm.stopPrank();
+        console.log(chickenBondManager.totalPendingLUSD(), "4 - chickenBondManager.totalPendingLUSD()");
+        console.log(chickenBondManager.getOwnedLUSDInSP(), "getOwnedLUSDInSP");
+
+        // Shift all LUSD in SP
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        console.log(chickenBondManager.totalPendingLUSD(), "2 - chickenBondManager.totalPendingLUSD()");
+        uint256 lusdToShift = lusdInSPAfter - 1;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        console.log(chickenBondManager.totalPendingLUSD(), "3 - chickenBondManager.totalPendingLUSD()");
+
+        // A chickens out
+        vm.startPrank(A);
+        uint256 userABalanceBefore = lusdToken.balanceOf(A);
+        chickenBondManager.chickenOut(A_bondID);
+        uint256 userABalanceAfter = lusdToken.balanceOf(A);
+        vm.stopPrank();
+
+        uint256 totalPendingLUSDAfterA = chickenBondManager.totalPendingLUSD();
+        console.log(chickenBondManager.totalPendingLUSD(), "5 - chickenBondManager.totalPendingLUSD()");
+
+        // B chickens out
+        vm.startPrank(B);
+        uint256 userBBalanceBefore = lusdToken.balanceOf(B);
+        chickenBondManager.chickenOut(B_bondID);
+        uint256 userBBalanceAfter = lusdToken.balanceOf(B);
+        vm.stopPrank();
+
+        uint256 totalPendingLUSDAfterB = chickenBondManager.totalPendingLUSD();
+        console.log(chickenBondManager.totalPendingLUSD(), "6 - chickenBondManager.totalPendingLUSD()");
+
+        // checks
+        assertApproximatelyEqual(userABalanceAfter - userABalanceBefore, bondAmount, 100, "User A balance mismatch");
+        assertApproximatelyEqual(userBBalanceAfter - userBBalanceBefore, bondAmount, 100, "User B balance mismatch");
+        assertEq(totalPendingLUSDAfterA, bondAmount, "Pending after A chiken-out mismatch");
+        assertEq(totalPendingLUSDAfterB, 0, "Pending after B chiken-out mismatch");
+    }
+
+    function testShiftFromSPToCurveIsImpossibleWithOnlyPending() public {
+        // A, B create bond
+        uint256 bondAmount = 100e18;
+
+        createBondForUser(A, bondAmount);
+        createBondForUser(B, bondAmount);
+
+        _spHarvestAndFastForward();
+
+        uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnSPVaultShareValue();
+
+        // Shift all LUSD in SP
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        uint256 lusdToShift = lusdInSPAfter - 1;
+        vm.expectRevert("CBM: Amount must be > 0");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+    }
+
     // CBM Yearn and Curve trackers
 
     function testShiftLUSDFromCurveToSPIncreasesCBMAcquiredLUSDInSPTracker() public {
