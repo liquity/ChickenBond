@@ -15,6 +15,8 @@ import "../../Interfaces/ICurvePool.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
+import "forge-std/console.sol";
+
 
 contract BaseTest is DSTest, stdCheats {
     Accounts accounts;
