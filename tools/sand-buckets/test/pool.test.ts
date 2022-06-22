@@ -5,7 +5,6 @@ import { AlchemyProvider } from "@ethersproject/providers";
 import { Decimal } from "@liquity/lib-base";
 
 import { StableSwapMetaPool, StableSwapPool } from "../src/pool";
-import { approxEq } from "../src/utils";
 
 const totalSupplyAbi = ["function totalSupply() view returns (uint256)"];
 
@@ -91,8 +90,9 @@ const metaPoolParams = (p: StableSwapMetaPool) => ({
   }
 });
 
-const approxEq10D = approxEq(1e-10);
-const approxEq5D = approxEq(1e-5);
+const approxEq = (epsilon: number) => (a: number, b: number) => a - b < epsilon;
+const approxEq12D = approxEq(1e-12);
+const approxEq6D = approxEq(1e-6);
 
 test("StableSwapPool calculates the same virtual price and dy as on-chain", async t => {
   t.timeout(20000);
@@ -135,23 +135,23 @@ test("StableSwapPool calculates the same virtual price and dy as on-chain", asyn
   t.log({ blockTag });
   t.log(metaPoolParams(lusdMeta));
 
-  assert("baseVirtualPrice", approxEq10D, baseVirtualPrice, baseClone.virtualPrice);
-  assert("lusdVirtualPrice", approxEq10D, lusdVirtualPrice, lusdMeta.virtualPrice);
+  assert("baseVirtualPrice", approxEq12D, baseVirtualPrice, baseClone.virtualPrice);
+  assert("lusdVirtualPrice", approxEq12D, lusdVirtualPrice, lusdMeta.virtualPrice);
 
   const dx = 1e6;
 
   const baseDY = await basePool.get_dy(0, 1, Decimal.from(dx).hex, { blockTag }).then(numberify(6));
-  assert("baseDY", approxEq5D, baseDY, baseClone.dy(0, 1, dx)[0]);
+  assert("baseDY", approxEq6D, baseDY, baseClone.dy(0, 1, dx)[0]);
 
   const lusdDY01 = await lusdPool
     .get_dy_underlying(0, 1, Decimal.from(dx).hex, { blockTag })
     .then(numberify());
-  assert("lusdDY01", approxEq5D, lusdDY01, lusdMeta.dyUnderlying(0, 1, dx));
+  assert("lusdDY01", approxEq6D, lusdDY01, lusdMeta.dyUnderlying(0, 1, dx));
 
   const lusdDY10 = await lusdPool
     .get_dy_underlying(1, 0, Decimal.from(dx).hex, { blockTag })
     .then(numberify());
-  assert("lusdDY10", approxEq5D, lusdDY10, lusdMeta.dyUnderlying(1, 0, dx));
+  assert("lusdDY10", approxEq6D, lusdDY10, lusdMeta.dyUnderlying(1, 0, dx));
 });
 
 // // LUSD pool at block 14956624

@@ -1,7 +1,7 @@
 import * as ava from "ava-fast-check";
 import * as fc from "fast-check";
 
-import { flow2, mapMul, nonZero, sum, wrap, zipDiv, zipSub } from "../src/utils";
+import { mapMul, nonZero, sum, wrap, zipDiv, zipSub } from "../src/utils";
 
 import {
   balancingDx,
@@ -23,7 +23,7 @@ const stressEnabled = process.env.STRESS === "1";
 const testParams = stressEnabled ? { numRuns: 500000 } : {};
 
 const EPSILON = 1e-6;
-const ROUGH_EPSILON = 1e-4;
+const ROUGH_EPSILON = 1e-5;
 
 const approxEq = (a: number, b: number) => Math.abs(a - b) < EPSILON;
 const roughApproxEq = (a: number, b: number) => Math.abs(a - b) < ROUGH_EPSILON;
@@ -311,11 +311,11 @@ testProp(
     const [x, y] = xyFromDydx(A, D)(dydx);
     const [dydxReapplied] = dydxYFromX(A, D)(x);
     const p = new StableSwapPool({ n: 2, A, fee: 0, adminFee: 0, balances: [x, y] });
-    const dx = p.balances[0] * 1e-6;
+    const dx = p.D() / 1e9;
     const [dy] = p.dy(0, 1, dx);
 
     t.true(approxEq(dydx, dydxReapplied));
-    t.true(roughApproxEq(dydx, dy / dx));
+    t.true(approxEq(dydx, dy / dx));
   },
   testParams
 );
@@ -479,7 +479,7 @@ testProp(
         poolParams()(balances),
         fc
           .tuple(...balances.map(balance => fc.float({ max: balance })))
-          .filter(amounts => sum(amounts) > sum(balances) / 1e18)
+          .filter(amounts => sum(amounts) > sum(balances) / 1e9)
       )
     )
   ],

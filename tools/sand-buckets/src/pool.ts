@@ -118,7 +118,7 @@ export const dydxYFromX = (constantsOrA: number | Readonly<StableSwapConstants>,
 export const xyFromDydx: (A: number, D: number) => (dydx: number) => [x: number, y: number] = (
   A,
   D
-) => binSearchDesc(0, D / 2, 1e-9)(dydxYFromX(A, D));
+) => binSearchDesc(0, D / 2)(dydxYFromX(A, D));
 
 // export const xyFromDydx = (A: number, D: number) => {
 //   const c = constants2(A);
@@ -193,8 +193,7 @@ export const oneCoinDepositThatSetsYOverX =
     flow2(
       binSearchDesc(
         0,
-        2 * (y / targetYOverX - x), // XXX
-        1e-9
+        2 * (y / targetYOverX - x) // XXX
       )(flow3(dx0, xyAfterDeposit(constants)([x, y]), ([x, y]) => [y / x])),
       ([dx]) => dx
     )(targetYOverX);
@@ -223,7 +222,7 @@ export const oneCoinWithdrawalThatSetsYOverX =
   (constants: Readonly<StableSwapConstantsWithFee>) =>
   (x: number, y: number) =>
     flow2(
-      binSearchDesc(0, 1, 1e-9)(flow2(xAfterOneCoinWithdrawal(constants)([x, y]), x2 => [x2 / y])),
+      binSearchDesc(0, 1)(flow2(xAfterOneCoinWithdrawal(constants)([x, y]), x2 => [x2 / y])),
       ([burnFraction]) => burnFraction
     )(1 / targetYOverX);
 

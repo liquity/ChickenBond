@@ -1,9 +1,34 @@
 import assert from "assert";
 
 const MAX_ITERATIONS = 256;
-const EPSILON = 1e-6;
 
 export const id = <T>(x: T) => x;
+
+// export const compose2 =
+//   <T extends unknown[], U, V>(g: (_: U) => V, f: (..._: T) => U) =>
+//   (...t: T): V =>
+//     g(f(...t));
+
+// export const compose3 =
+//   <T extends unknown[], U, V, W>(h: (_: V) => W, g: (_: U) => V, f: (..._: T) => U) =>
+//   (...t: T): W =>
+//     h(g(f(...t)));
+
+export const flow2 =
+  <T extends unknown[], U, V>(f: (..._: T) => U, g: (_: U) => V) =>
+  (...t: T): V =>
+    g(f(...t));
+
+export const flow3 =
+  <T extends unknown[], U, V, W>(f: (..._: T) => U, g: (_: U) => V, h: (_: V) => W) =>
+  (...t: T): W =>
+    h(g(f(...t)));
+
+// export const flip =
+//   <T extends unknown[], U extends unknown[], V>(f: (..._: T) => (..._: U) => V) =>
+//   (...u: U) =>
+//   (...t: T): V =>
+//     f(...t)(...u);
 
 export const nonNegative = (x: number) => x >= 0;
 export const positive = (x: number) => x > 0;
@@ -39,16 +64,6 @@ export const zipSub = zipWith(sub);
 export const zipMul = zipWith(mul);
 export const zipDiv = zipWith(div);
 
-export const approxZero =
-  (epsilon = EPSILON) =>
-  (x: number) =>
-    Math.abs(x) < epsilon;
-
-export const approxEq =
-  (epsilon = EPSILON) =>
-  (a: number, b: number) =>
-    approxZero(epsilon)(a - b);
-
 export const iterate =
   <T>(found: (curr: T, prev: T) => boolean, maxIterations = MAX_ITERATIONS) =>
   (first: T, getNext: (prev: T) => T): T => {
@@ -67,9 +82,17 @@ export const iterate =
     throw new Error(`not found within ${maxIterations} iterations`);
   };
 
-export const converge = iterate(approxEq());
+const approxZero = (epsilon: number) => (x: number) => Math.abs(x) < epsilon;
+const relDiff = (a: number, b: number) => a / b - 1;
 
-export const binSearchDesc = (min: number, max: number, epsilon = EPSILON) => {
+export const converge = iterate(flow2(relDiff, approxZero(1e-13)));
+
+export const binSearchDesc = (
+  min: number,
+  max: number,
+  epsilon = 1e-9,
+  maxIterations = MAX_ITERATIONS
+) => {
   assert(min <= max);
 
   return <T extends unknown[]>(f: (x: number) => [y: number, ...rest: T]) =>
@@ -77,10 +100,10 @@ export const binSearchDesc = (min: number, max: number, epsilon = EPSILON) => {
       let left = min;
       let right = max;
 
-      for (;;) {
+      for (let i = 0; i < maxIterations; ++i) {
         const x = (left + right) / 2;
         const [y, ...rest] = f(x);
-        const diff = yToFind - y;
+        const diff = relDiff(yToFind, y);
 
         if (approxZero(epsilon)(diff)) {
           return [x, ...rest];
@@ -92,34 +115,10 @@ export const binSearchDesc = (min: number, max: number, epsilon = EPSILON) => {
           right = x;
         }
       }
+
+      throw new Error(`not found within ${maxIterations} iterations`);
     };
 };
-
-// export const compose2 =
-//   <T extends unknown[], U, V>(g: (_: U) => V, f: (..._: T) => U) =>
-//   (...t: T): V =>
-//     g(f(...t));
-
-// export const compose3 =
-//   <T extends unknown[], U, V, W>(h: (_: V) => W, g: (_: U) => V, f: (..._: T) => U) =>
-//   (...t: T): W =>
-//     h(g(f(...t)));
-
-export const flow2 =
-  <T extends unknown[], U, V>(f: (..._: T) => U, g: (_: U) => V) =>
-  (...t: T): V =>
-    g(f(...t));
-
-export const flow3 =
-  <T extends unknown[], U, V, W>(f: (..._: T) => U, g: (_: U) => V, h: (_: V) => W) =>
-  (...t: T): W =>
-    h(g(f(...t)));
-
-// export const flip =
-//   <T extends unknown[], U extends unknown[], V>(f: (..._: T) => (..._: U) => V) =>
-//   (...u: U) =>
-//   (...t: T): V =>
-//     f(...t)(...u);
 
 export const check = (requirement: boolean, message: string) => {
   if (!requirement) {
