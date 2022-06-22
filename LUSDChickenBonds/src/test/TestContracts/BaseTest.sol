@@ -167,7 +167,7 @@ contract BaseTest is DSTest, stdCheats {
 
     function makeCurveSpotPriceAbove1(uint256 _3crvDeposit) public {
         uint256 curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
-        console.log(curveLUSDSpotPrice, "curveLUSDSpotPrice test helper before");
+        //console.log(curveLUSDSpotPrice, "curveLUSDSpotPrice test helper before");
         if (curveLUSDSpotPrice > 1e18) {return;}
 
         // C makes large 3CRV deposit to Curve, moving Curve spot price above 1.0
