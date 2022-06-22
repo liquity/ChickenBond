@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "./utils/ChickenMath.sol";
@@ -18,7 +17,7 @@ import "./Interfaces/ICurveLiquidityGaugeV4.sol";
 //import "forge-std/console.sol";
 
 
-contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
+contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // ChickenBonds contracts and addresses
     IBondNFT immutable public bondNFT;
@@ -179,8 +178,6 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         assert(address(yearnSPVault) == yearnRegistry.latestVault(address(lusdToken)));
         // TODO: Check mainnet registry for the deployed Yearn Curve vault
         // assert(address(yearnCurveVault) == yearnRegistry.latestVault(address(curvePool)));
-
-        renounceOwnership();
     }
 
     // --- User-facing functions ---
