@@ -2,8 +2,9 @@
 
 pragma solidity ^0.8.10;
 
-import "../utils/console.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+
+import "forge-std/console.sol";
 
 
 // MockLUSDToken is a "light" version of the mainnet deployed LUSDToken, with only basic functionality for testing.
