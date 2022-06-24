@@ -1,7 +1,7 @@
 import * as ava from "ava-fast-check";
 import * as fc from "fast-check";
 
-import { mapMul, nonZero, sum, wrap, zipDiv, zipSub } from "../src/utils";
+import { mapMul, nonZero, sum, wrap, zipDiv, zipMul, zipSub } from "../src/utils";
 
 import {
   balancingDx,
@@ -131,16 +131,44 @@ testProp(
             .filter(canDepositInto(params))
         )
       ),
+    fc.float().filter(nonZero),
+    fc.float().filter(nonZero),
     fc.float({ min: 1, max: 10 })
   ],
-  (t, [{ balances, ...params }, amounts], s) => {
-    const p1 = new StableSwapPool({ balances, ...params });
-    const p2 = new StableSwapPool({ balances: mapMul(balances, s), ...params });
+  (t, [{ balances, ...params }, amounts], ts1, ts2, s) => {
+    const p1 = new StableSwapPool({ balances, totalSupply: ts1, ...params });
+    const p2 = new StableSwapPool({ balances: mapMul(balances, s), totalSupply: ts2, ...params });
 
     const lp1 = p1.addLiquidity(amounts);
     const lp2 = p2.addLiquidity(mapMul(amounts, s));
 
     t.true(approxEq(lp1 * p1.virtualPrice * s, lp2 * p2.virtualPrice));
+    t.true(zipSub(mapMul(p1.balances, s), p2.balances).every(approxZero));
+  },
+  testParams
+);
+
+testProp(
+  "One-coin withdrawal homogeneity",
+  [
+    balances().chain(poolParams()),
+    fc.float().filter(x => x !== 0 && x !== 1),
+    fc.float().filter(nonZero),
+    fc.float().filter(nonZero),
+    fc.float({ min: 1, max: 10 })
+  ],
+  (t, { balances, ...params }, burnFraction, ts1, ts2, s) => {
+    const p1 = new StableSwapPool({ balances, totalSupply: ts1, ...params });
+    const p2 = new StableSwapPool({ balances: mapMul(balances, s), totalSupply: ts2, ...params });
+
+    const [lp1, lp2] = mapMul([ts1, ts2], burnFraction);
+    const [v1, v2] = zipMul([lp1, lp2], [p1.virtualPrice, p2.virtualPrice]);
+
+    const dx1 = p1.removeLiquidityOneCoin(lp1, 0);
+    const dx2 = p2.removeLiquidityOneCoin(lp2, 0);
+
+    t.true(approxEq(v1 * s, v2));
+    t.true(approxEq(dx1 * s, dx2));
     t.true(zipSub(mapMul(p1.balances, s), p2.balances).every(approxZero));
   },
   testParams
