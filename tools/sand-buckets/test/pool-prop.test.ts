@@ -11,10 +11,10 @@ import {
   dydxYFromX,
   oneCoinDepositThatSetsYOverX,
   oneCoinWithdrawalThatSetsYOverX,
-  StableSwapPool,
-  StableSwapPoolParams,
   xyFromDydx
-} from "../src/pool";
+} from "../src/stable-swap/math";
+
+import { StableSwapPool, StableSwapPoolParams } from "../src/stable-swap/pool";
 
 // Run all tests serially, since they're CPU bound anyway.
 const testProp = Object.assign(wrap(ava.testProp.serial), { only: ava.testProp.only });

@@ -35,6 +35,9 @@ export const positive = (x: number) => x > 0;
 export const nonZero = (x: number) => x !== 0;
 export const inRange = (a: number, b: number) => (x: number) => a <= x && x <= b;
 
+export const approxPositive = (x: number) => x > -1e-9;
+export const clamped = (x: number) => Math.max(x, 0);
+
 export const add = (a: number, b: number) => a + b;
 export const sub = (a: number, b: number) => a - b;
 export const mul = (a: number, b: number) => a * b;

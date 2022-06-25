@@ -4,7 +4,7 @@ import { Contract } from "@ethersproject/contracts";
 import { AlchemyProvider } from "@ethersproject/providers";
 import { Decimal } from "@liquity/lib-base";
 
-import { StableSwapMetaPool, StableSwapPool } from "../src/pool";
+import { StableSwapMetaPool, StableSwapPool } from "../src/stable-swap/pool";
 
 const totalSupplyAbi = ["function totalSupply() view returns (uint256)"];
 

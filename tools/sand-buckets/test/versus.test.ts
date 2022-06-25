@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import { testProp, fc } from "ava-fast-check";
 
-import { ChickenBondsModelState } from "../src/types";
-import { versus } from "../src/versus";
-import { simpleModel } from "../src/simple";
-import { ChickenBondsVaultBasedImplementation } from "../src/vaults";
+import { ChickenBondsModelState } from "../src/bonds/types";
+import { versus } from "../src/bonds/versus";
+import { simpleModel } from "../src/bonds/simple";
+import { ChickenBondsVaultBasedImplementation } from "../src/bonds/vaults";
 
 const assertRoughlyEq = (a: number, b: number) => {
   expect(a).to.be.approximately(b, 1e-9);
