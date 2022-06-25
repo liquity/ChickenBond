@@ -5,4 +5,6 @@ import "./TestContracts/BaseTest.sol";
 import "./TestContracts/MainnetTestSetup.sol";
 import "./TestContracts/ChickenBondManagerTest.sol"; 
 
-contract ChickenBondManagerMainnetTest is BaseTest, MainnetTestSetup, ChickenBondManagerTest { }
+// TODO: Mainnet tests disabled for now:
+//contract ChickenBondManagerMainnetTest is BaseTest, MainnetTestSetup, ChickenBondManagerTest { }
+contract ChickenBondManagerMainnetTest { }

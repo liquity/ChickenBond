@@ -8,9 +8,9 @@ import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
 import "../../BLUSDToken.sol";
 import "../../BondNFT.sol";
-import "../../LUSDSilo.sol";
 import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
+import "../../Interfaces/IBAMM.sol";
 import "../../Interfaces/ICurvePool.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -25,14 +25,13 @@ contract BaseTest is DSTest, stdCheats {
     ChickenBondManagerWrap chickenBondManager;
     BondNFT bondNFT;
     BLUSDToken bLUSDToken;
-    LUSDSilo lusdSilo;
 
     // Integrations
     IERC20 lusdToken;
     IERC20 _3crvToken;
     ICurvePool curvePool;
     ICurvePool curveBasePool;
-    IYearnVault yearnSPVault;
+    IBAMM bammSPVault;
     IYearnVault yearnCurveVault;
     IYearnRegistry yearnRegistry;
     ICurveLiquidityGaugeV4 curveLiquidityGauge;
@@ -211,7 +210,7 @@ contract BaseTest is DSTest, stdCheats {
 
     function logCBMBuckets(string memory _logHeadingText) public view {
         console.log(_logHeadingText);
-        console.log(chickenBondManager.totalPendingLUSD(), "totalPendingLUSD");
+        console.log(chickenBondManager.getPendingLUSD(), "totalPendingLUSD");
         console.log(chickenBondManager.getAcquiredLUSDInSP(), "Acquired LUSD in SP");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
         console.log(chickenBondManager.getPermanentLUSDInSP(), "Permanent LUSD in SP");
@@ -226,7 +225,10 @@ contract BaseTest is DSTest, stdCheats {
         console.log(chickenBondManager.calcSystemBackingRatio(), "Backing ratio");
         console.log(bLUSDToken.totalSupply(), "bLUSD total supply");
         console.log(lusdToken.balanceOf(address(curveLiquidityGauge)), "balance of AMM rewards contract");
-        console.log(yearnSPVault.balanceOf(address(chickenBondManager)),"SP Y tokens in CBM");
+        (uint256 bammSPVaultLUSDValue, uint256 lusdInBAMMSPVault, uint256 ethLUSDValueInBAMMSPVault) = bammSPVault.getLUSDValue();
+        console.log(bammSPVaultLUSDValue, "LUSD value in B.Protocol");
+        console.log(lusdInBAMMSPVault, "LUSD balance in B.Protocol");
+        console.log(ethLUSDValueInBAMMSPVault, "LUSD value in ETH in B.Protocol");
         console.log(yearnCurveVault.balanceOf(address(chickenBondManager)),"Curve Y tokens in CBM");
         console.log("");
     }

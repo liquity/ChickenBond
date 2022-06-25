@@ -17,7 +17,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = 1e18;
-        MockYearnVault(address(yearnSPVault)).harvest(initialYield);
+        vm.startPrank(C);
+        lusdToken.transfer(address(bammSPVault), initialYield);
+        vm.stopPrank();
 
         // A chickens in
         vm.startPrank(A);
@@ -66,9 +68,11 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         vm.warp(block.timestamp + 600);
 
-        // Yearn LUSD Vault gets some yield
+        // B.Protocol LUSD Vault gets some yield
         uint256 initialYield = 1e18;
-        MockYearnVault(address(yearnSPVault)).harvest(initialYield);
+        vm.startPrank(C);
+        lusdToken.transfer(address(bammSPVault), initialYield);
+        vm.stopPrank();
 
         // A chickens in
         vm.startPrank(A);
@@ -82,19 +86,16 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
         uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
-        chickenBondManager.redeem(bLUSDToken.balanceOf(A));
+        chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
         vm.stopPrank();
 
         vm.warp(block.timestamp + 600);
 
-        // make sure A withdraws Y tokens, otherwise would get part of the new harvest!
-        vm.startPrank(A);
-        yearnSPVault.withdraw(yearnSPVault.balanceOf(A));
-        vm.stopPrank();
-
-        // Yearn LUSD Vault gets some yield
+        // B.Protocol LUSD Vault gets some yield
         uint256 secondYield = 4e18;
-        MockYearnVault(address(yearnSPVault)).harvest(secondYield);
+        vm.startPrank(C);
+        lusdToken.transfer(address(bammSPVault), secondYield);
+        vm.stopPrank();
 
         // B chickens in
         vm.startPrank(B);
@@ -141,7 +142,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
         uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
-        chickenBondManager.redeem(bLUSDToken.balanceOf(A));
+        chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
         // A withdraws from Yearn to make math simpler, otherwise harvest would be shared
         yearnCurveVault.withdraw(yearnCurveVault.balanceOf(A));
         vm.stopPrank();

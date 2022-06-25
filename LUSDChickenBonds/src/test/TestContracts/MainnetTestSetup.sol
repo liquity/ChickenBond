@@ -13,7 +13,7 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_LUSD_TOKEN_ADDRESS = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address constant MAINNET_LIQUITY_SP_ADDRESS = 0x66017D22b0f8556afDd19FC67041899Eb65a21bb;
     address constant MAINNET_3CRV_TOKEN_ADDRESS = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
-    address constant MAINNET_YEARN_LUSD_VAULT_ADDRESS = 0x378cb52b00F9D0921cb46dFc099CFf73b42419dC;
+    address constant MAINNET_BAMM_LUSD_VAULT_ADDRESS = 0x0000000000000000000000000000000000000000; // TODO
     address constant MAINNET_YEARN_CURVE_VAULT_ADDRESS = 0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6;
     address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
     address constant MAINNET_CURVE_BASE_POOL_ADDRESS = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
@@ -48,7 +48,7 @@ contract MainnetTestSetup is BaseTest {
         assertTrue(lusdToken.balanceOf(C) == 1e24);
 
         // Connect to deployed Yearn LUSD Vault
-        yearnSPVault = IYearnVault(MAINNET_YEARN_LUSD_VAULT_ADDRESS);
+        bammSPVault = IBAMM(MAINNET_BAMM_LUSD_VAULT_ADDRESS);
 
         // Connect to deployed LUSD-3CRV Curve pool, and Yearn LUSD-3CRV vault
         curvePool = ICurvePool(MAINNET_CURVE_POOL_ADDRESS);
@@ -65,8 +65,6 @@ contract MainnetTestSetup is BaseTest {
 
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
-
-        lusdSilo = new LUSDSilo();
 
         // Deploy LUSD/bLUSD AMM Curve V2 pool and LiquidityGauge V4
         ICurveFactory curveFactory = ICurveFactory(MAINNET_CURVE_V2_FACTORY_ADDRESS);
@@ -89,12 +87,11 @@ contract MainnetTestSetup is BaseTest {
             bLUSDTokenAddress: address(bLUSDToken),
             curvePoolAddress: address(curvePool),
             curveBasePoolAddress: address(curveBasePool),
-            yearnSPVaultAddress: address(yearnSPVault),
+            bammSPVaultAddress: address(bammSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
             curveLiquidityGaugeAddress: curveLiquidityGaugeAddress,
-            yearnGovernanceAddress: yearnGovernanceAddress,
-            lusdSiloAddress: address(lusdSilo)
+            yearnGovernanceAddress: yearnGovernanceAddress
         });
 
         chickenBondManager = new ChickenBondManagerWrap(
@@ -116,14 +113,13 @@ contract MainnetTestSetup is BaseTest {
 
         bondNFT.setAddresses(address(chickenBondManager));
         bLUSDToken.setAddresses(address(chickenBondManager));
-        lusdSilo.initialize(address(chickenBondManager));
 
         // Log some current blockchain state
         console.log(block.timestamp, "block.timestamp");
         console.log(block.number, "block.number");
         console.log(lusdToken.totalSupply(), "Total LUSD supply");
         console.log(address(lusdToken), "LUSDToken address");
-        console.log(address(yearnSPVault), "Yearn LUSD vault address");
+        console.log(address(bammSPVault), "B.Protocol LUSD vault address");
         console.log(address(yearnCurveVault), "Yearn Curve vault address");
         console.log(address(curvePool), "Curve pool address");
         console.log(address(chickenBondManager), "ChickenBondManager address");
