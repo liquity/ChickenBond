@@ -81,6 +81,42 @@ const poolParamsInPriceRange = ({
     }));
 
 testProp(
+  "Spot price homogeneity",
+  [
+    balances().chain(balances =>
+      fc.record({
+        n: fc.constant(balances.length),
+        A: fc.float({ max: 5000 }).filter(nonZero),
+        fee: fc.constant(0), // Using zero fees to emulate a spot price that disregards fees
+        adminFee: fc.constant(0),
+        balances: fc.constant(balances)
+      })
+    ),
+    fc.float({ min: 1, max: 10 })
+  ],
+  (t, { balances, ...params }, s) => {
+    const p1 = new StableSwapPool({ balances, ...params });
+    const p2 = new StableSwapPool({ balances: mapMul(balances, s), ...params });
+
+    // Approximate the spot price by making dx small (avoiding slippage)
+    const dx1 = p1.D() / 1e6;
+    const dx2 = p2.D() / 1e6;
+
+    for (let i = 0; i < params.n; ++i) {
+      for (let j = 0; j < params.n; ++j) {
+        if (i !== j) {
+          const [dy1] = p1.dy(i, j, dx1);
+          const [dy2] = p2.dy(i, j, dx2);
+
+          t.true(approxEq(dy1 / dx1, dy2 / dx2));
+        }
+      }
+    }
+  },
+  testParams
+);
+
+testProp(
   "Exchange homogeneity",
   [balances().chain(poolParams()), fc.float().filter(nonZero), fc.float({ min: 1, max: 10 })],
   (t, { balances, ...params }, x, s) => {
