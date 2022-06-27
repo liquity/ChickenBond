@@ -232,7 +232,6 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _updateAccrualParameter();
 
         BondData memory bond = idToBondData[_bondID];
-        require(_minLUSD <= bond.lusdAmount, "Cannot ask for more than bonded");
 
         delete idToBondData[_bondID];
         pendingLUSD -= bond.lusdAmount;
@@ -245,13 +244,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         *
         * The user can decide how to handle chickenOuts if/when the recorded pendingLUSD is not fully backed by actual
         * LUSD in B.Protocol / the SP, by adjusting _minLUSD */
-
-        uint256 lusdToWithdraw;
+        uint256 lusdToWithdraw = _requireEnoughLUSDInBAMM(bond.lusdAmount, _minLUSD);
 
         // Withdraw from B.Protocol LUSD vault
-        (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
-        require(lusdInBAMMSPVault >= _minLUSD, "CBM: Not enough LUSD available in B.Protocol");
-        lusdToWithdraw = Math.min(bond.lusdAmount, lusdInBAMMSPVault);  // avoids revert due to rounding error if system contains only 1 bonder
         _withdrawFromBAMM(lusdToWithdraw, msg.sender);
 
         bondNFT.burn(_bondID);
@@ -386,14 +381,12 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 redemptionFeePercentage = migration ? 0 : _updateRedemptionFeePercentage(fractionOfBLUSDToRedeem);
         uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfBLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
 
-        // TODO: This is called inside getAcquiredLUSDInSP too, so it may be optmized
-        (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
+        // TODO: Both _requireEnoughLUSDInBAMM and getAcquiredLUSDInSP call B.Protocol getLUSDValue, so it may be optmized
         // Calculate the LUSD to withdraw from LUSD vault, withdraw and send to redeemer
-        uint256 lusdToWithdrawFromSP = Math.min(
+        uint256 lusdToWithdrawFromSP = _requireEnoughLUSDInBAMM(
             getAcquiredLUSDInSP() * fractionOfAcquiredLUSDToWithdraw / 1e18,
-            lusdInBAMMSPVault
+            _minLUSDFromBAMMSPVault
         );
-        require(lusdToWithdrawFromSP > _minLUSDFromBAMMSPVault, "CBM: Not enough LUSD available in B.Protocol");
         if (lusdToWithdrawFromSP > 0) { _withdrawFromBAMM(lusdToWithdrawFromSP, msg.sender); }
 
         // Calculate the LUSD to withdraw from Curve, and send the corresponding yTokens to redeemer
@@ -810,6 +803,17 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function _requireCallerIsYearnGovernance() internal view {
         require(msg.sender == yearnGovernanceAddress, "CBM: Only Yearn Governance can call");
+    }
+
+    function _requireEnoughLUSDInBAMM(uint256 _requestedLUSD, uint256 _minLUSD) internal view returns (uint256) {
+        require(_requestedLUSD >= _minLUSD, "CBM: Min value cannot be greater than nominal amount");
+
+        (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
+        require(lusdInBAMMSPVault >= _minLUSD, "CBM: Not enough LUSD available in B.Protocol");
+
+        uint256 lusdToWithdraw = Math.min(_requestedLUSD, lusdInBAMMSPVault);
+
+        return lusdToWithdraw;
     }
 
     // --- Getter convenience functions ---

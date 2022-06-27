@@ -285,17 +285,19 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.stopPrank();
 
         // simulate B.Protocol loss
-        uint256 acquiredLUSD = chickenBondManager.getAcquiredLUSDInSP();
+        uint256 leftInBAMMSPVault = 10;
+        //console.log(chickenBondManager.getAcquiredLUSDInSP(), "chickenBondManager.getAcquiredLUSDInSP()");
+        //console.log(chickenBondManager.getPermanentLUSDInSP(), "chickenBondManager.getPermanentLUSDInSP()");
         vm.startPrank(address(bammSPVault));
-        lusdToken.transfer(C, acquiredLUSD / 2);
+        lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - leftInBAMMSPVault);
         vm.stopPrank();
 
         // B redeems bLUSD
         vm.startPrank(B);
         vm.expectRevert("CBM: Not enough LUSD available in B.Protocol");
-        chickenBondManager.redeem(A_bLUSDBalance, acquiredLUSD / 2);
+        chickenBondManager.redeem(A_bLUSDBalance, leftInBAMMSPVault + 1);
         // with the remaining amount it works
-        chickenBondManager.redeem(A_bLUSDBalance, acquiredLUSD / 2 - 1);
+        chickenBondManager.redeem(A_bLUSDBalance, leftInBAMMSPVault);
         vm.stopPrank();
     }
 }
