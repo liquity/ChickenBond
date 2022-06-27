@@ -9,18 +9,21 @@ import "forge-std/console.sol";
 
 contract MockBAMMSPVault is IBAMM {
     LUSDTokenTester public lusdToken;
+    uint256 lusdValue;
 
     constructor(address _lusdTokenAddress) {
         lusdToken = LUSDTokenTester(_lusdTokenAddress);
     }
 
     function deposit(uint256 _lusdAmount) external {
+        lusdValue += _lusdAmount;
         lusdToken.transferFrom(msg.sender, address(this), _lusdAmount);
 
         return;
     }
 
     function withdraw (uint256 _lusdAmount, address _to) external {
+        lusdValue -= _lusdAmount;
         lusdToken.transfer(_to, _lusdAmount);
 
         return;
@@ -28,6 +31,6 @@ contract MockBAMMSPVault is IBAMM {
 
     function getLUSDValue() external view returns (uint256, uint256, uint256) {
         uint256 lusdBalance = lusdToken.balanceOf(address(this));
-        return (lusdBalance, lusdBalance, 0);
+        return (lusdValue, lusdBalance, 0);
     }
 }

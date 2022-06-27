@@ -89,7 +89,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
 
-    uint256 constant public FIRST_CHICKEN_IN_MIN_BALANCE = 90e16; // 90%
+    uint256 constant public FIRST_CHICKEN_IN_MIN_BALANCE_PERCENTAGE = 90e16; // 90%
 
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
@@ -306,7 +306,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         // TODO: Make sure that LUSD available in B.Protocol is at least X% of its LUSD value
         // TODO: Explain scenario we are covering here
         require(
-            lusdInBAMMSPVault >= FIRST_CHICKEN_IN_MIN_BALANCE * bammSPVaultLUSDValue / 1e18,
+            lusdInBAMMSPVault >= FIRST_CHICKEN_IN_MIN_BALANCE_PERCENTAGE * bammSPVaultLUSDValue / 1e18,
             "CBM: Not enough LUSD available in B.Protocol"
         );
 
@@ -353,6 +353,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             _firstChickenIn();
         }
 
+        // Update B.Protocol debt, so that backing ratio is up to date
+        _updateBAMMDebt();
         uint256 backingRatio = calcSystemBackingRatio();
         uint256 accruedBLUSD = _calcAccruedBLUSD(bond.startTime, bondAmountMinusChickenInFee, backingRatio, updatedAccrualParameter);
 
@@ -552,11 +554,13 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // --- B.Protocol debt functions ---
 
+    // TODO: Should we make this one publicly callable, so that external getters can be up to date (by previously calling this)?
     function _updateBAMMDebt() internal returns (uint256) {
         (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
         // If the actual balance of B.Protocol is higher than our internal accounting,
         // it means that B.Protocol has had gains (through sell of ETH or LQTY).
         // We account for those gains
+        // If the balance was lower (which would mean losses), we expect them to be eventually recovered
         if (lusdInBAMMSPVault > bammLUSDDebt) {
             bammLUSDDebt = lusdInBAMMSPVault;
         }
@@ -887,18 +891,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // Acquired getters
 
-    // TODO
-    /* Placeholder function that returns a simple total acquired LUSD metric equal to the sum of:
-     *
-     * B.Protocol LUSD vault balance
-     * plus
-     * the LUSD cash-in value of the Curve LP shares in the Yearn Curve vault
-     * minus
-     * the total pending LUSD.
-     *
-     *
-     * In practice, the total acquired LUSD calculation will depend on the specifics of how Yearn vaults calculate
-     their balances and incorporate the yield, and whether we implement a toll on chicken-ins (and therefore divert some permanent DEX liquidity) */
+    // Acquired in B.Protocol + Acquired in Curve
     function getTotalAcquiredLUSD() public view returns (uint256) {
         return getAcquiredLUSDInSP() + getAcquiredLUSDInCurve();
     }
@@ -908,9 +901,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 pendingLUSDInSPVaultCached = pendingLUSD; // All pending LUSD is in B.Protocol vault.
         uint256 permanentLUSDInSPCached = permanentLUSDInSP;
 
-        /* In principle, the acquired LUSD is always the delta between the LUSD deposited to Yearn and the total pending LUSD.
-        * When bLUSD supply == 0 (i.e. before the "first" chicken-in), this delta should be 0. However in practice, due to rounding
-        * error in Yearn's share calculation the delta can be negative. We assume that a negative delta always corresponds to 0 acquired LUSD.
+        /* In principle, the acquired LUSD is always the delta between the LUSD deposited to B.Protocol and the total pending LUSD.
+        * When bLUSD supply == 0 (i.e. before the "first" chicken-in), this delta should be 0.
+        * However in practice, due to potential liquidation losses, the delta can be negative. We assume that a negative delta always corresponds to 0 acquired LUSD.
         *
         * TODO: Determine if this is the only situation whereby the delta can be negative. Potentially enforce some minimum
         * chicken-in value so that acquired LUSD always more than covers any rounding error in the share value.
