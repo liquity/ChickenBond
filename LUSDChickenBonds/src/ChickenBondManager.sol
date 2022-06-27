@@ -262,16 +262,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function _withdrawFromSPVaultAndTransferToRewardsStakingContract(uint256 _lusdAmount) internal {
         // Pull the LUSD amount from B.Protocol LUSD vault
-        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
         _withdrawFromBAMM(_lusdAmount, address(this));
 
-        uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-        if (lusdBalanceDelta == 0) { return; }
-
-        // TODO
-        // Transfer the LUSD balance delta resulting from B.Protocol withdrawal, rather than the ideal lusdToRefund.
-        // Reasoning: the LUSD balance delta can be slightly lower than the lusdToRefund due to rounding on B.Protocol side
-        _transferToRewardsStakingContract(lusdBalanceDelta);
+        // Deposit in rewards contract
+        _transferToRewardsStakingContract(_lusdAmount);
     }
 
     function _withdrawFromCurveVaultAndTransferToRewardsStakingContract(uint256 _yTokensToSwap) internal {
@@ -348,15 +342,17 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
-        /* Get the LUSD amount to acquire from the bond, and the remaining surplus. Acquire LUSD in proportion to the system's
-        current backing ratio,* in order to maintain said ratio. */
+        /* Get the LUSD amount to acquire from the bond, and the remaining surplus.
+        *  Acquire LUSD in proportion to the system's current backing ratio, in order to maintain said ratio.
+        */
         uint256 lusdToAcquire = accruedBLUSD * backingRatio / 1e18;
         uint256 lusdSurplus = bondAmountMinusChickenInFee - lusdToAcquire;
 
         // Handle the surplus LUSD from the chicken-in:
-        if (!migration) { // In normal mode, add the surplus to the permanent bucket by increasing the permament yToken tracker. This implicitly decreases the acquired LUSD.
+        if (!migration) { // In normal mode, add the surplus to the permanent bucket by increasing the permament tracker. This implicitly decreases the acquired LUSD.
             permanentLUSDInSP += lusdSurplus;
         } else { // In migration mode, withdraw surplus from B.Protocol and refund to bonder
+            // TODO: should we allow to pass in a minimum value here too?
             (,uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
             uint256 lusdToRefund = Math.min(lusdSurplus, lusdInBAMMSPVault);
             if (lusdToRefund > 0) { _withdrawFromBAMM(lusdToRefund, msg.sender); }
@@ -426,27 +422,21 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             "CBM: LUSD:3CRV exchange rate must be over the deposit threshold before SP->Curve shift"
         );
 
-
         /* Calculate and record the portion of LUSD withdrawn from the permanent B.Protocol LUSD bucket,
-        assuming that burning bammShares decreases both the permanent and acquired B.Protocol LUSD buckets by the same factor. */
+        assuming that withdrawing decreases both the permanent and acquired B.Protocol LUSD buckets by the same factor. */
         uint256 ratioPermanentToOwned = permanentLUSDInSP * 1e18 / lusdOwnedInBAMMSPVault;
 
         uint256 permanentLUSDShifted = clampedLUSDToShift * ratioPermanentToOwned / 1e18;
         permanentLUSDInSP -= permanentLUSDShifted;
 
-        // Convert bammShares to LUSD
-        uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
+        // Withdram LUSD from B.Protocol
         _withdrawFromBAMM(clampedLUSDToShift, address(this));
-        uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-
-        // Assertion should hold in principle. In practice, there is usually minor rounding error
-        // assert(lusdBalanceDelta == clampedLUSDToShift);
 
         // Deposit the received LUSD to Curve in return for LUSD3CRV-f tokens
         uint256 lusd3CRVBalanceBefore = curvePool.balanceOf(address(this));
         /* TODO: Determine if we should pass a minimum amount of LP tokens to receive here. Seems infeasible to determinine the mininum on-chain from
         * Curve spot price / quantities, which are manipulable. */
-        curvePool.add_liquidity([lusdBalanceDelta, 0], 0);
+        curvePool.add_liquidity([clampedLUSDToShift, 0], 0);
         uint256 lusd3CRVBalanceDelta = curvePool.balanceOf(address(this)) - lusd3CRVBalanceBefore;
 
         uint256 lusdInCurveBefore = getTotalLUSDInCurve();
@@ -454,7 +444,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         yearnCurveVault.deposit(lusd3CRVBalanceDelta);
 
         /* Record the portion of LUSD added to the the permanent Yearn Curve bucket,
-        assuming that receipt of yTokens increases both the permanent and acquired Yearn Curve buckets by the same factor. */
+        assuming that receipt of yTokens increases both the permanent and acquired Yearn Curve buckets by the same factor as in B.Protocol. */
         uint256 lusdInCurve = getTotalLUSDInCurve();
         uint256 permanentLUSDCurveIncrease = (lusdInCurve - lusdInCurveBefore) * ratioPermanentToOwned / 1e18;
 
@@ -489,6 +479,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             "CBM: 3CRV:LUSD exchange rate must be above the withdrawal threshold before Curve->SP shift"
         );
 
+        uint256 lusdInCurve = getTotalLUSDInCurve();
+
         // Convert yTokens to LUSD3CRV-f
         uint256 lusd3CRVBalanceBefore = curvePool.balanceOf(address(this));
 
@@ -505,19 +497,18 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         /* Calculate and record the portion of LUSD withdrawn from the permanent Yearn Curve bucket,
            assuming that burning yTokens decreases both the permanent and acquired Yearn Curve buckets by the same factor. */
-        uint256 lusdInCurve = getTotalLUSDInCurve();
         uint256 ratioPermanentToOwned = permanentLUSDInCurve * 1e18 / lusdInCurve;  // All funds in Curve are owned
         uint256 permanentLUSDWithdrawn = lusdBalanceDelta * ratioPermanentToOwned / 1e18;
         permanentLUSDInCurve -= permanentLUSDWithdrawn;
 
         // Assertion should hold in principle. In practice, there is usually minor rounding error
-        // assert(lusdBalanceDelta == lusdToShift);
+        // assert(lusdBalanceDelta == _lusdToShift);
 
         // Deposit the received LUSD to B.Protocol LUSD vault
         _depositToBAMM(lusdBalanceDelta);
 
-        /* Calculate and record the portion of LUSD added to the the permanent Yearn Curve bucket,
-        assuming that receipt of yTokens increases both the permanent and acquired Yearn Curve buckets by the same factor. */
+        /* Calculate and record the portion of LUSD added to the the permanent B.Protocol bucket,
+        assuming that depositing increases both the permanent and acquired B.Protocol buckets by the same factor as in Curve. */
         uint256 permanentLUSDIncrease = lusdBalanceDelta * ratioPermanentToOwned / 1e18;
         permanentLUSDInSP += permanentLUSDIncrease;
 
