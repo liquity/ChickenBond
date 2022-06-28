@@ -18,7 +18,7 @@ for (let i = 1; i < ROWS; ++i) {
     const p = new StableSwapPool({ n: 2, A, fee, adminFee, balances: [x, y] });
     const lp = lpV / p.virtualPrice;
     const dx = p.removeLiquidityOneCoin(lp, 0);
-    return dx - lpV;
+    return (dx - lpV) / lpV;
   });
 
   console.log([dxdy, ...profits].join(","));

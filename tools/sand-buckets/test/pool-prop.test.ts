@@ -82,6 +82,18 @@ const poolParamsInPriceRange = ({
     }));
 
 testProp(
+  "D homogeneity",
+  [balances().chain(poolParams()), fc.float({ max: 1000 }).filter(nonZero)],
+  (t, { balances, ...params }, s) => {
+    const p1 = new StableSwapPool({ balances, ...params });
+    const p2 = new StableSwapPool({ balances: mapMul(balances, s), ...params });
+
+    t.true(approxEq(p1.D() * s, p2.D()));
+  },
+  testParams
+);
+
+testProp(
   "Spot price homogeneity",
   [
     balances().chain(balances =>
