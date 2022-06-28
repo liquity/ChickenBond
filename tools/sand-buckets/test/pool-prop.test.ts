@@ -31,6 +31,7 @@ const approxZero = (x: number) => approxEq(x, 0);
 const approxGt = (a: number, b: number) => a > b - EPSILON;
 
 const orderedPair = ([a, b]: [number, number]): [number, number] => (a <= b ? [a, b] : [b, a]);
+const notEqualPair = ([a, b]: [number, number]) => !approxEq(a, b);
 
 const balance = () => fc.float({ min: 0.001 }); // ratio between any 2 coins > 1:1000
 const balances = () => fc.array(balance(), { minLength: 2, maxLength: 4 }); // 2-4 coins
@@ -92,7 +93,7 @@ testProp(
         balances: fc.constant(balances)
       })
     ),
-    fc.float({ min: 1, max: 10 })
+    fc.float({ max: 1000 }).filter(nonZero)
   ],
   (t, { balances, ...params }, s) => {
     const p1 = new StableSwapPool({ balances, ...params });
@@ -117,8 +118,50 @@ testProp(
 );
 
 testProp(
+  "Spot price monotonicity",
+  // We've shown that spot price is positively homogeneous of degree 0, i.e. for any s > 0:
+  //   dydx(x, y) = dydx(s * x, s * y)
+  //
+  // Such a function only depends on y / x. Substituting s := 1 / x:
+  //   dydx(x, y) = dydx(x / x, y / x) = dydx(1, y / x) = g(y / x)
+  //
+  // We demonstrate that g() is strictly monotone.
+  [
+    fc.record({
+      n: fc.constant(2),
+      A: fc.float({ max: 5000 }).filter(nonZero),
+      fee: fc.constant(0), // Using zero fees to emulate a spot price that disregards fees
+      adminFee: fc.constant(0)
+    }),
+    fc
+      .tuple(fc.float().filter(nonZero), fc.float().filter(nonZero))
+      .filter(notEqualPair)
+      .map(orderedPair),
+    fc.float().filter(nonZero)
+  ],
+  (t, params, [x1, x2], y) => {
+    const p1 = new StableSwapPool({ balances: [1, y / x1], ...params });
+    const p2 = new StableSwapPool({ balances: [1, y / x2], ...params });
+
+    // Approximate the spot price by making dx small (avoiding slippage)
+    const dx1 = p1.D() / 1e6;
+    const dx2 = p2.D() / 1e6;
+
+    const [dy1] = p1.dy(0, 1, dx1);
+    const [dy2] = p2.dy(0, 1, dx2);
+
+    t.true(approxGt(dy1 / dx1, dy2 / dx2));
+  },
+  testParams
+);
+
+testProp(
   "Exchange homogeneity",
-  [balances().chain(poolParams()), fc.float().filter(nonZero), fc.float({ min: 1, max: 10 })],
+  [
+    balances().chain(poolParams()),
+    fc.float().filter(nonZero),
+    fc.float({ max: 1000 }).filter(nonZero)
+  ],
   (t, { balances, ...params }, x, s) => {
     const p1 = new StableSwapPool({ balances, ...params });
     const p2 = new StableSwapPool({ balances: mapMul(balances, s), ...params });
@@ -169,7 +212,7 @@ testProp(
       ),
     fc.float().filter(nonZero),
     fc.float().filter(nonZero),
-    fc.float({ min: 1, max: 10 })
+    fc.float({ max: 1000 }).filter(nonZero)
   ],
   (t, [{ balances, ...params }, amounts], ts1, ts2, s) => {
     const p1 = new StableSwapPool({ balances, totalSupply: ts1, ...params });
@@ -178,6 +221,7 @@ testProp(
     const lp1 = p1.addLiquidity(amounts);
     const lp2 = p2.addLiquidity(mapMul(amounts, s));
 
+    t.true(approxEq(lp1 / ts1, lp2 / ts2));
     t.true(approxEq(lp1 * p1.virtualPrice * s, lp2 * p2.virtualPrice));
     t.true(zipSub(mapMul(p1.balances, s), p2.balances).every(approxZero));
   },
@@ -191,7 +235,7 @@ testProp(
     fc.float().filter(x => x !== 0 && x !== 1),
     fc.float().filter(nonZero),
     fc.float().filter(nonZero),
-    fc.float({ min: 1, max: 10 })
+    fc.float({ max: 1000 }).filter(nonZero)
   ],
   (t, { balances, ...params }, burnFraction, ts1, ts2, s) => {
     const p1 = new StableSwapPool({ balances, totalSupply: ts1, ...params });
@@ -481,8 +525,6 @@ testProp(
   },
   testParams
 );
-
-const notEqualPair = ([a, b]: [number, number]) => !approxEq(a, b);
 
 testProp(
   // Only testing for 0.04% fee and 0.5% admin fee, which are immutable parameters of the
