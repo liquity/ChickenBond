@@ -180,7 +180,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
         uint256 fee = curvePool.fee(); // This is practically immutable (can only be set once, in `initialize()`)
 
-        // By exchange rate, we mean the rate at which Curve exchanges LUSD <=> $ value of CRV (at the virtual price),
+        // By exchange rate, we mean the rate at which Curve exchanges LUSD <=> $ value of 3CRV (at the virtual price),
         // which is reduced by the fee.
         // For convenience, we want to parameterize our thresholds in terms of the spot prices -dy/dx & -dx/dy,
         // which are not exposed by Curve directly. Instead, we turn our thresholds into thresholds on the exchange rate
@@ -626,7 +626,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
     function _get3CRVLUSDExchangeRate(uint256 _3crvVirtualPrice) internal view returns (uint256) {
         // Get the amount of LUSD that would be received by swapping 1 3CRV (after deduction of fees)
         // If p_{3CRV:LUSD} is the price of 3CRV quoted in LUSD, then this returns p_{3CRV:LUSD} * (1 - fee)
-        // as long as the pool is large enough so that 1 CRV doesn't introduce significant slippage.
+        // as long as the pool is large enough so that 1 3CRV doesn't introduce significant slippage.
         uint256 dy = curvePool.get_dy(INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 1e18);
 
         return dy * 1e18 / _3crvVirtualPrice;
