@@ -290,8 +290,12 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         (uint256 bammSPVaultLUSDValue, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
 
-        // TODO: Make sure that LUSD available in B.Protocol is at least X% of its LUSD value
-        // TODO: Explain scenario we are covering here
+        // Make sure that LUSD available in B.Protocol is at least 90% of its LUSD value
+        // If first chicken in happens after an scenario of heavy liquidations and before ETH has been sold by B.Protocol
+        // Transferring from B.Protocol to the rewards contract would have 2 downside effects:
+        // - The amount transferred, capped by the available balance at B.Protocol, may be much lower than it should
+        // - It would leave the protocol in a “weak” state, as there wouldn’t be any LUSD available in B.Protocol
+        // So it’s better to bootstrap the system after the ETH has been sold.
         require(
             lusdInBAMMSPVault >= FIRST_CHICKEN_IN_MIN_BALANCE_PERCENTAGE * bammSPVaultLUSDValue / 1e18,
             "CBM: Not enough LUSD available in B.Protocol"
@@ -301,9 +305,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         /* all acquired LUSD must necessarily be pure yield.
         */
         // From SP Vault
-        uint256 lusdFromInitialYieldInSP = getAcquiredLUSDInSP();
-        if (lusdFromInitialYieldInSP > 0) {
-            _withdrawFromSPVaultAndTransferToRewardsStakingContract(lusdFromInitialYieldInSP);
+        uint256 lusdFromInitialYieldInSPToTransfer = Math.min(getAcquiredLUSDInSP(), lusdInBAMMSPVault);
+        if (lusdFromInitialYieldInSPToTransfer > 0) {
+            _withdrawFromSPVaultAndTransferToRewardsStakingContract(lusdFromInitialYieldInSPToTransfer);
         }
 
         // From Curve Vault

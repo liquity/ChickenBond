@@ -241,6 +241,21 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.stopPrank();
     }
 
+    function testChickenOutMinTooBig() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // A chickens out
+        vm.startPrank(A);
+        vm.expectRevert("CBM: Min value cannot be greater than nominal amount");
+        chickenBondManager.chickenOut(A_bondID, bondAmount + 1);
+        vm.stopPrank();
+    }
+
     function testChickenOutBelowMin() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -260,6 +275,35 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenOut(A_bondID, bondAmount / 2 + 1);
         // with the remaining amount it works
         chickenBondManager.chickenOut(A_bondID, bondAmount / 2);
+        vm.stopPrank();
+    }
+
+    function testRedeemMinTooBig() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's bLUSD balance is non-zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        bLUSDToken.transfer(B, A_bLUSDBalance);
+        assertEq(A_bLUSDBalance, bLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        uint256 acquiredLUSD = chickenBondManager.getAcquiredLUSDInSP();
+        // B redeems bLUSD
+        vm.startPrank(B);
+        vm.expectRevert("CBM: Min value cannot be greater than nominal amount");
+        chickenBondManager.redeem(A_bLUSDBalance, acquiredLUSD + 1);
         vm.stopPrank();
     }
 
