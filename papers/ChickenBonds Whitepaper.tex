@@ -235,7 +235,7 @@ The actual rate of return from bonding depends on $\lambda$ and the shape (steep
 
 \subsection{Optimal rebonding strategy}
   \label{sec:rebonding_strategy}
-When people bond, they accrue a bTKN balance which they can claim by giving up the TKN amount they deposited at bond creation. Clearly then, the the system doesn't auto-compound the accrued profits from bonding. In order to benefit from a compounding effect, bond holders can chicken in, sell their received bTKN for TKN and reinvest the TKN to create a new, larger bond, and repeat that process over and over again.
+When people bond, they accrue a bTKN balance which they can claim by giving up the TKN amount they deposited at bond creation. Clearly then, the system doesn't auto-compound the accrued profits from bonding. In order to benefit from a compounding effect, bond holders can chicken in, sell their received bTKN for TKN and reinvest the TKN to create a new, larger bond, and repeat that process over and over again.
 
 In the following derivation, we analyze the optimal rebonding strategy for users with a long-term time horizon by deriving a time period which maximizes the profitability of (regular) rebonding for a given system configuration.
 
@@ -261,7 +261,7 @@ At time $t$, when the user chickens in and rebonds, the new bond amount $b'$ wil
 b'= p_f\frac{b}{p_r}\frac{t}{t+\alpha}
 \end{equation}
 
-From that point until time T, there is a period of length $T-t$, during which the the value of the bond will be:
+From that point until time T, there is a period of length $T-t$, during which the value of the bond will be:
 \begin{equation}
 f_r = p_f\frac{b'}{p_r}\frac{T-t}{T-t+\alpha}
 \end{equation}
@@ -590,7 +590,7 @@ We posit that in the long run the bTKN supply $S$ should grow at roughly the sam
 
 Here, $\Delta S$ and $\Delta R$ respectively represent the change in $S$ and $R$ per unit time.  We now seek separate expressions for $\Delta S$ and $\Delta R$ as functions of bucket quantities and time in order to prove the claim above.
 
-\paragraph
+\paragraph{}
 While the Treasury $R$ consists of the three buckets, its real value $R_v$ doesn't necessarily equal the sum of their content $q_a+q_d+q_p$ since not every bucket may achieve the same return as the market rate $r_m$. Supposing that $r_a=r_p=r_m \neq r_d$, we can try to estimate $R_v$ by applying correction factors $c_d$ and $c_p$ to $q_d$ and $q_p$ respectively. This allows us to value the current Treasury as
 
 \begin{equation}
