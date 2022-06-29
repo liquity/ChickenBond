@@ -65,3 +65,18 @@ jobs:
           -vvv
           --match-contract ChickenBondManagerMainnet
           --fork-url ${{ secrets.ETH_RPC_URL }}
+
+  console-logs:
+    name: Check we didn’t forget to remove console imports
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Check console imports
+        working-directory: LUSDChickenBonds
+        run: >-
+          ! grep -R console src | grep import | grep -v "://" | grep -v TestContracts | grep -v ExternalContracts

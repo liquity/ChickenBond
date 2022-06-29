@@ -7,7 +7,6 @@ import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "./utils/ChickenMath.sol";
 
 import "./Interfaces/IBondNFT.sol";
-//import "./utils/console.sol";
 import "./Interfaces/ILUSDToken.sol";
 import "./Interfaces/IBLUSDToken.sol";
 import "./Interfaces/IYearnVault.sol";
@@ -15,6 +14,8 @@ import "./Interfaces/ICurvePool.sol";
 import "./Interfaces/IYearnRegistry.sol";
 import "./Interfaces/IChickenBondManager.sol";
 import "./Interfaces/ICurveLiquidityGaugeV4.sol";
+
+//import "forge-std/console.sol";
 
 
 contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
