@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "./utils/ChickenMath.sol";
 
 import "./Interfaces/IBondNFT.sol";
-//import "./utils/console.sol";
 import "./Interfaces/ILUSDToken.sol";
 import "./Interfaces/IBLUSDToken.sol";
 import "./Interfaces/IYearnVault.sol";
@@ -16,8 +14,10 @@ import "./Interfaces/IYearnRegistry.sol";
 import "./Interfaces/IChickenBondManager.sol";
 import "./Interfaces/ICurveLiquidityGaugeV4.sol";
 
+//import "forge-std/console.sol";
 
-contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
+
+contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // ChickenBonds contracts and addresses
     IBondNFT immutable public bondNFT;
@@ -201,8 +201,6 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         assert(address(yearnSPVault) == yearnRegistry.latestVault(address(lusdToken)));
         // TODO: Check mainnet registry for the deployed Yearn Curve vault
         // assert(address(yearnCurveVault) == yearnRegistry.latestVault(address(curvePool)));
-
-        renounceOwnership();
     }
 
     // --- User-facing functions ---
@@ -446,9 +444,12 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         return (yTokensFromSPVault, yTokensFromCurveVault, lusdFromSilo);
     }
 
-    function shiftLUSDFromSPToCurve(uint256 _lusdToShift) external {
-        _requireNonZeroAmount(_lusdToShift);
+    function shiftLUSDFromSPToCurve(uint256 _maxLUSDToShift) external {
         _requireMigrationNotActive();
+
+        // Make sure pending bucket is not moved to Curve, so it can be withdrawn on chicken out
+        uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, getOwnedLUSDInSP());
+        _requireNonZeroAmount(clampedLUSDToShift);
 
         // Get the 3CRV virtual price only once, and use it for both initial and final check.
         // Adding LUSD liquidity to the meta-pool does not change 3CRV virtual price.
@@ -467,17 +468,17 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         uint256 lusdOwnedLUSDVault = lusdInSP - totalPendingLUSD;
         uint256 ratioPermanentToOwned = permanentLUSDInSP * 1e18 / lusdOwnedLUSDVault;
 
-        uint256 permanentLUSDShifted = _lusdToShift * ratioPermanentToOwned / 1e18;
+        uint256 permanentLUSDShifted = clampedLUSDToShift * ratioPermanentToOwned / 1e18;
         permanentLUSDInSP -= permanentLUSDShifted;
 
         // Convert yTokens to LUSD
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        uint256 yTokensToBurnFromLUSDVault = _calcCorrespondingYTokens(yearnSPVault, _lusdToShift, lusdInSP);
+        uint256 yTokensToBurnFromLUSDVault = _calcCorrespondingYTokens(yearnSPVault, clampedLUSDToShift, lusdInSP);
         yearnSPVault.withdraw(yTokensToBurnFromLUSDVault);
         uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
 
         // Assertion should hold in principle. In practice, there is usually minor rounding error
-        // assert(lusdBalanceDelta == lusdToShift);
+        // assert(lusdBalanceDelta == clampedLUSDToShift);
 
         // Deposit the received LUSD to Curve in return for LUSD3CRV-f tokens
         uint256 lusd3CRVBalanceBefore = curvePool.balanceOf(address(this));
@@ -507,9 +508,12 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         );
     }
 
-    function shiftLUSDFromCurveToSP(uint256 _lusdToShift) external {
-        _requireNonZeroAmount(_lusdToShift);
+    function shiftLUSDFromCurveToSP(uint256 _maxLUSDToShift) external {
         _requireMigrationNotActive();
+
+        // We can’t shift more than what’s in Curve
+        uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, getTotalLUSDInCurve());
+        _requireNonZeroAmount(clampedLUSDToShift);
 
         // Get the 3CRV virtual price only once, and use it for both initial and final check.
         // Removing LUSD liquidity from the meta-pool does not change 3CRV virtual price.
@@ -524,7 +528,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         );
 
         //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
-        uint256 lusd3CRVfToBurn = curvePool.calc_token_amount([_lusdToShift, 0], false);
+        uint256 lusd3CRVfToBurn = curvePool.calc_token_amount([clampedLUSDToShift, 0], false);
 
         //Calculate yTokens to swap for LUSD3CRV-f
         (uint256 lusd3CRVInCurveVault, uint256 lusdInCurve) = getTotalLPAndLUSDInCurve();
@@ -998,7 +1002,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
     // Owned getters
 
-    function getOwnedLUSDInSP() external view returns (uint256) {
+    function getOwnedLUSDInSP() public view returns (uint256) {
         return getAcquiredLUSDInSP() + permanentLUSDInSP;
     }
 

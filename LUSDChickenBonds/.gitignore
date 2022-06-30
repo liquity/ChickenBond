@@ -1,3 +1,14 @@
 /cache
 /out
 /deployment.json
+
+# Node.JS dependencies
+node_modules
+
+# Deployment artifacts
+out
+cache
+dist
+
+# TypeScript types (should be auto-generated on install/update)
+types

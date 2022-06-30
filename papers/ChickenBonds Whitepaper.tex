@@ -217,14 +217,14 @@ Bonding is only profitable for $\lambda>1$, i.e. if $p_f>p_r$. In that case, we 
 \frac{p_f}{p_r}\frac{t}{t+\alpha} > 1
 \end{equation}
 
-Solving for $t$ yields:
+Using $\lambda$:
 
 \begin{equation}
-  \label{eq:break_even_1}
-t > \frac{\alpha p_r}{p_f-p_r}
+  \label{eq:break_even_0}
+\lambda\frac{t}{t+\alpha} > 1
 \end{equation}
 
-We can then write the break even point in terms of $\lambda$
+We can then solve for $t$ and write the break even point in terms of $\lambda$:
 
 \begin{equation}
   \label{eq:break_even_2}
@@ -235,20 +235,20 @@ The actual rate of return from bonding depends on $\lambda$ and the shape (steep
 
 \subsection{Optimal rebonding strategy}
   \label{sec:rebonding_strategy}
-When people bond, they get an accruing balance of bTKN that they can trade in against the bonded amount of TKN fixed at the beginning. That is, the system doesn't auto-compound the accrued profits from bonding. In order to benefit from a compounding effect, bond holders can chicken in, sell their received bTKN for TKN and reinvest the TKN to create a new, larger bond, and repeat that process over and over again.
+When people bond, they accrue a bTKN balance which they can claim by giving up the TKN amount they deposited at bond creation. Clearly then, the system doesn't auto-compound the accrued profits from bonding. In order to benefit from a compounding effect, bond holders can chicken in, sell their received bTKN for TKN and reinvest the TKN to create a new, larger bond, and repeat that process over and over again.
 
-In the following, we analyze the optimal rebonding strategy for users with a sufficiently long time horizon by deriving a time period that maximizes the profitability of (regular) rebonding for a given system configuration.
+In the following derivation, we analyze the optimal rebonding strategy for users with a long-term time horizon by deriving a time period which maximizes the profitability of (regular) rebonding for a given system configuration.
 
 \subsubsection{Optimal rebonding time}
   \label{sec:T_OP}
-We assume $b$, $p_r$ and $p_f$ stay constant. Moreover, we suppose $p_f>p_r$ all the time, which is a prerequisite for bonding to be profitable. 
+We assume $b$, $p_r$ and $p_f$ stay constant. Moreover, we suppose $p_f>p_r$ always holds, which is a prerequisite for bonding to be profitable. 
 
 TODO: Do we need to prove that rebonding in \textit{regular} intervals is the optimal strategy? If we can show that rebonding at time $t<T$ of a bond created at time 0 yields a higher ROI than simple bonding at time $T$, we could apply the same reasoning to the new bond created at $t$. As long as all factors determining the profitability are constant (and since the ROI is independent of the absolute bond size), this implies that rebonding of the new bond becomes more attractive after the exact same time period, thus at $2t$. Repeating this process, we can thus state that the profit-maximising strategy involves rebonding at a regular pace all else being equal.
 
 Before deriving the optimal rebonding time, we start by comparing the final value of a user's bond (expressed in TKN) after a time period $T$ without rebonding (denoted by $f$) with the final value of a bond that is rebonded at time $t<T$ (denoted by $f_r$).
 
 \paragraph{No rebonding}
-We multiply the accrued bTKN tokens from equation \ref{eq:accrual} by the market price which is supposed to be equal to the fair price $p_f$:
+We multiply the accrued bTKN tokens from equation \ref{eq:accrual} by the market price which we assume is equal to the fair price $p_f$:
 
 \begin{equation}
   \label{eq:o-s}
@@ -261,7 +261,7 @@ At time $t$, when the user chickens in and rebonds, the new bond amount $b'$ wil
 b'= p_f\frac{b}{p_r}\frac{t}{t+\alpha}
 \end{equation}
 
-From that point until the end there will be a period of $T-t$, where the outcome of the bond will be:
+From that point until time T, there is a period of length $T-t$, during which the value of the bond will be:
 \begin{equation}
 f_r = p_f\frac{b'}{p_r}\frac{T-t}{T-t+\alpha}
 \end{equation}
@@ -272,7 +272,7 @@ So finally we have
 f_r = b\left(\frac{p_f}{p_r}\right)^2\frac{t}{t+\alpha}\frac{T-t}{T-t+\alpha}
 \end{equation}
 
-So now we can generalize the approach for $n$ regular rebonding events setting $t=\frac{T}{n}$, expressing the resulting value in TKN for a given rebonding period $t$ with $f_r(n)$ (note that the remaining ending period is also $\frac{T}{n}$).
+Now we can generalize this approach to $n$ regular rebonding events. We set $t=\frac{T}{n}$, and express the resulting bond value (measured in TKN) for a given rebonding period $t$ with $f_r(n)$ (note that the final period after the last rebonding event is also $\frac{T}{n}$).
 
 \[
 f_r(n) = b \left(\frac{p_f}{p_r}\right)^n \left(\frac{\frac{T}{n}}{\frac{T}{n}+\alpha}\right)^{n-1} \frac{\frac{T}{n}}{\frac{T}{n}+\alpha}
@@ -291,7 +291,7 @@ f_r(n) = b \left(\frac{p_f}{p_r}\right)^n \left(\frac{T}{T + n\alpha}\right)^{n}
 f_r(n) = b \left(\frac{p_f}{p_r} \frac{T}{T+n \alpha} \right)^{n}
 \end{equation}
 
-To find the maximum value of $f_r(n)$, we take its derivative with respect to $n$ (now we are extending from natural to real numbers):
+To find the maximum value of $f_r(n)$, we take its derivative with respect to $n$ (and we extend the domain from natural to real numbers):
 \[
 \begin{split}
   f_T'(n) &= b \left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right)^n \left(\ln\left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right) - n \frac{\frac{p_f}{p_r} \frac{\alpha T}{(T+n\alpha)^2}}{\frac{p_f}{p_r} \frac{T}{T+n\alpha}}\right) \\
@@ -309,7 +309,7 @@ f_T'(n) = 0 \iff \ln\left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right) = \frac{n\a
 \frac{p_f}{p_r} \frac{T}{T+n\alpha} = e^{\frac{n\alpha}{T+n\alpha}}
 \]
 
-Dividing by $e$ both sides:
+Dividing both sides by $e$:
 
 \[
 \frac{p_f}{e p_r} \frac{T}{T+n\alpha} = e^{\frac{n\alpha}{T+n\alpha} - 1}
@@ -323,7 +323,7 @@ Dividing by $e$ both sides:
 \frac{T}{T+n\alpha} e^{\frac{T}{T+n\alpha}} = \frac{p_f}{e p_r} 
 \]
 
-And then, it has the form $z e^z = w$ from Lambert W function: \url{https://en.wikipedia.org/wiki/Lambert_W_function}, so:
+This has the form $z e^z = w$, i.e. it is a Lambert W function: \url{https://en.wikipedia.org/wiki/Lambert_W_function}, so:
 
 \[
 \frac{T}{T+n\alpha} = W\left(\frac{p_f}{e p_r} \right)
@@ -467,7 +467,7 @@ t = \alpha \frac{1 + \sqrt{\lambda}}{\lambda - 1}
 
 Comparing \ref{eq:optimal_chicken_in_2} and \ref{eq:break_even_2}, we can immediately see that chicken in optimal time for APR is always strictly greater than break even time.
 
-Simulations show a very close result to result from previous section for optimal rebonding time.
+Simulations yield results very close to those obtained for the optimal rebonding time in the previous section.
 
 \paragraph{With a chicken-in fee}
  Let’s call $\tau$ the fee applied to the initial bond amount before chickening in, then we would have:
@@ -539,6 +539,8 @@ t = \alpha \frac{1 + \sqrt{(1-\tau)\lambda}}{(1-\tau)\lambda - 1}
 \end{equation}
 
 \subsection{Estimating the fair price $p_f$}
+We now attempt to estimate the fair price $p_f$. This can be defined as the price of bTKN that a rational and informed market should arrive at, under some set of idealized economic assumptions about market participants. We present several different approaches. Some (naive and conservative approaches) take a more formal approach with minimal economic assumptions. Others (yield comparison and recurive approaches), make significant assumptions about the behavior of Chicken Bonds users and the wider market. The latter approaches more closely resemble economic models than formal mathematical derivations.
+
 \subsubsection{Naive approach}
 We start by modeling a yield-bearing token TKN as an investment that pays out a future sum of money or stream of cash flows. Given a $\textit{natural rate}$ $r_m$ (aka market rate or discount rate) this allows to calculate its present value (PV). One can then consider a compounding wrapper contract around TKN that retains and compounds the generated yield, giving the investor the option to redeem their wrapper share against a pro rata share of value held inside the contract. We assume that similarly to a mutual accumulation fund, the value of the investor's share in the compounding contract would reflect the inner value of the share, i.e. the value the investor receives upon redemption. 
 
@@ -553,7 +555,7 @@ While this applies to the Acquired Bucket, the Permanent Bucket as such is not s
     p_f = \frac{PV(AcquiredBucket) + PV(PermanentBucket)}{S}
 \end{equation}
 
-and express the PV of the Permanent Bucket in terms of the Acquired Bucket:
+and express the PV of the Permanent Bucket in terms of the Acquired Bucket by converting bucket quantities, rates of return, and applying the discount factor:
 
 \begin{equation}
   \label{eq:naive-2}
@@ -577,7 +579,7 @@ Regarding the Pending Bucket, we know that its content will eventually transitio
 We call this the \textit{naive formula}. Although the formula looks oversimplified (glossing over the fact that rebonding may have a different impact on the price than assumed), it turns out to have interesting properties which seem to validate it to some extent.
 
 \paragraph{Growth rate of bTKN supply and Treasury value}
-This property posits that in the long run the bTKN supply $S$ should grow at roughly the same pace as the total value of the Treasury (denoted by $R_v$). Since the bTKN constitutes an economic share in the system, a faster growth rate of $S$ relative to $R_v$ would imply a future dilution of bTKN, while a slower growth rate would amount to a future appreciation. We can expect the market to factor such effects into the current price of bTKN, implying that the fair price $p_f$ should correspond to the price which results in the same growth rate for both:
+We posit that in the long run the bTKN supply $S$ should grow at roughly the same pace as the total value of the Treasury (denoted by $R_v$, and measured in TKN). The argument goes as follows: since the bTKN constitutes an economic share in the system, a faster growth rate of $S$ relative to $R_v$ would imply a future dilution of bTKN, while a slower growth rate would amount to a future appreciation. We can expect the market to factor such effects into the current price of bTKN, implying that the fair price $p_f$ should correspond to the price which results in the same relative growth rate for both:
 
 \begin{equation}
   \label{eq:same_growth_rate}
@@ -586,6 +588,9 @@ This property posits that in the long run the bTKN supply $S$ should grow at rou
 
 %Only the simple naive formula fulfills the property that it can also be used for R_v 
 
+Here, $\Delta S$ and $\Delta R$ respectively represent the change in $S$ and $R$ per unit time.  We now seek separate expressions for $\Delta S$ and $\Delta R$ as functions of bucket quantities and time in order to prove the claim above.
+
+\paragraph{}
 While the Treasury $R$ consists of the three buckets, its real value $R_v$ doesn't necessarily equal the sum of their content $q_a+q_d+q_p$ since not every bucket may achieve the same return as the market rate $r_m$. Supposing that $r_a=r_p=r_m \neq r_d$, we can try to estimate $R_v$ by applying correction factors $c_d$ and $c_p$ to $q_d$ and $q_p$ respectively. This allows us to value the current Treasury as
 
 \begin{equation}
@@ -965,20 +970,20 @@ This allows us to reformulate the equation, which could be solved for $\gamma$:
 \subsubsection{Conservative approach}
 This approach is probably not the most accurate or realistic, but at least it can serve as a lower bound for the fair price.
 
-Let’s imagine a user who wants to buy bTKN to sell it after some time $T$, and, being conservative, they don’t want to rely on other users making the same valuations, but to make sure that even redeeming their bTKN they would at least make the gains corresponding to the natural rate.
+Let’s imagine a user who wants to buy bTKN to sell it after some time $T$ for a profit, and, being conservative, they don’t want to rely on the bTKN valuations of other users - they simply want to make sure that redeeming their bTKN would at least result in net gains which correspond to the natural rate of TKN.
 
-In the following chart, red line would correspond to the natural rate, green one to the redemption price and purple one to the (conservative) fair price.
+In the following chart, the red line corresponds to the natural rate, the green line to the redemption price and the purple line to the (conservative) fair price.
 
 \includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_conservative_price.png}
 
-The formula therefore for the conservative fair price would be:
+The formula therefore for the conservative fair price is:
 
 \begin{equation}
   \label{eq:conservative-1}
 p_f(t) = p_r(t + T) - (n(t+T) - n(t))
 \end{equation}
 
-Where $n(t)$ would represent the natural rate.
+Where $n(t)$ represents the natural rate.
 
 Assuming time $t$ to be denominated in days, the daily natural rate $r_m$ is expected to be low, so for values of $t$ in the order of magnitude of a year we can use the following approximation:
 
@@ -987,12 +992,12 @@ Assuming time $t$ to be denominated in days, the daily natural rate $r_m$ is exp
 n(t) = (1 + r_m)^t = 1 + r_m \cdot t
 \end{equation}
 
-We need to find then a formula for $p_r$ and we are all set.
+We now seek a formula for $p_r$ which can in turn be used in $p_f$. 
 
 \paragraph{With rebonding}
-With rebonding this is quite hard, as we need optimal rebonding time $T_{opt}$, which in turn uses fair price (see \ref{sec:T_OP}).
+With rebonding this is quite hard, as we need the optimal rebonding time $T_{opt}$, which in itself uses the fair price (see \ref{sec:T_OP}).
 
-If we assume that redemption price has an exponential behavior, due to the compounding effect of rebonding, of the form $p_r = a^t$ \footnote{This is probably wrong, as we will see in the no rebonding case!}, then fair price would be (using approximation in \ref{eq:conservative_natural_approximation}):
+If we assume that redemption price has an exponential behavior (due to the compounding effect of rebonding) of the form $p_r = a^t$ \footnote{This is probably wrong, as we will see in the no rebonding case!}, then fair price would be (using approximation in \ref{eq:conservative_natural_approximation}):
 
 \begin{equation}
   \label{eq:conservative-2}
@@ -1010,7 +1015,7 @@ Optimal rebonding time (using \ref{eq:optimal_chicken_in_1} and assuming $\alpha
 T_{opt} = \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1}
 \end{equation}
 
-The corresponding issuance proportion:
+The corresponding bTKN issuance expression for t = 0 is:
 
 \begin{equation}
   \label{eq:conservative_issuance_proportion}
@@ -1062,9 +1067,7 @@ which seems quite hard to solve for $a$.
 
 \paragraph{Without rebonding}
 
-Although this approach without rebonding quite misses the point, as redemption price would be too close to natural rate, we can still try:
-
-Now we only account for the yield generated, which doesn’t increase the bTKN total supply:
+Although an approach without rebonding is unlikely to be fruitful since the redemption price will too close to the natural rate, we can still try. Now we only account for the yield generated, which doesn’t increase the bTKN total supply:
 
 \[
 S_t = S_1 = S_0 = {q_a}_0

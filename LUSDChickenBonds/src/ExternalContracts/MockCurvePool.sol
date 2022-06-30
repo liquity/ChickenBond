@@ -5,7 +5,8 @@ import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "../Interfaces/ICurvePool.sol";
 import "../test/TestContracts/LUSDTokenTester.sol";
-import "../utils/console.sol";
+
+import "forge-std/console.sol";
 
 
 contract MockCurvePool is ERC20, Ownable, ICurvePool {

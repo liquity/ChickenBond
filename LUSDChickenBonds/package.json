@@ -1,0 +1,26 @@
+{
+  "name": "@liquity/lusd-chicken-bonds",
+  "version": "0.0.1",
+  "license": "MIT",
+  "scripts": {
+    "deploy-fork": "./scripts/deploy-fork.sh",
+    "generate-types": "./scripts/generate-types.sh",
+    "compile": "./scripts/compile.sh",
+    "watch:abi": "./scripts/watch-abi.sh",
+    "watch:ts": "./scripts/watch-ts.sh",
+    "watch": "run-p watch:*"
+  },
+  "devDependencies": {
+    "hardhat": "^2.9.3",
+    "nodemon": "^2.0.16",
+    "typechain": "8.0.0",
+    "typescript": "4.7.2",
+    "yalc": "^1.0.0-pre.53"
+  },
+  "dependencies": {
+    "@ethersproject/abi": "5.4.0",
+    "@ethersproject/providers": "5.4.3",
+    "@typechain/ethers-v5": "10.0.0",
+    "ethers": "5.4.3"
+  }
+}
