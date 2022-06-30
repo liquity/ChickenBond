@@ -1215,7 +1215,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Check acquired LUSD in Yearn Increases
         uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInSP();
 
-        assertGt(acquiredLUSDInSPAfter, acquiredLUSDInSPBefore, "ac. LUSD before and after shift doesn't change");
+        assertGt(acquiredLUSDInSPAfter, acquiredLUSDInSPBefore, "ac. LUSD after shift should have increased");
     }
 
     function testShiftLUSDFromCurveToSPIncreasesCBMLUSDInSPTracker() public {
@@ -1255,7 +1255,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnSPVaultShareValue();
         assertTrue(lusdInSPAfter > lusdInSPBefore);
     }
-
 
     function testShiftLUSDFromCurveToSPDecreasesCBMLUSDInCurveTracker() public {
         uint256 bondAmount = 10e18;
