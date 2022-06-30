@@ -457,7 +457,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
 
         require(
             initialExchangeRate > curveDepositLUSD3CRVExchangeRateThreshold,
-            "CBM: Curve spot must be over the deposit threshold before SP->Curve shift"
+            "CBM: LUSD:3CRV exchange rate must be over the deposit threshold before SP->Curve shift"
         );
 
         uint256 lusdInSP = calcTotalYearnSPVaultShareValue();
@@ -503,7 +503,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         require(
             finalExchangeRate < initialExchangeRate &&
             finalExchangeRate >= curveDepositLUSD3CRVExchangeRateThreshold,
-            "CBM: SP->Curve shift must decrease spot price to a value above the deposit threshold"
+            "CBM: SP->Curve shift must decrease LUSD:3CRV exchange rate to a value above the deposit threshold"
         );
     }
 
@@ -516,9 +516,11 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         uint256 _3crvVirtualPrice = curveBasePool.get_virtual_price();
         uint256 initialExchangeRate = _get3CRVLUSDExchangeRate(_3crvVirtualPrice);
 
+        // Here we're using the 3CRV:LUSD exchange rate (with 3CRV being valued at its virtual price),
+        // which increases as LUSD price decreases, hence the direction of the inequality.
         require(
             initialExchangeRate > curveWithdrawal3CRVLUSDExchangeRateThreshold,
-            "CBM: Curve spot must be below the withdrawal threshold before Curve->SP shift"
+            "CBM: 3CRV:LUSD exchange rate must be above the withdrawal threshold before Curve->SP shift"
         );
 
         //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
@@ -567,7 +569,7 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         require(
             finalExchangeRate < initialExchangeRate &&
             finalExchangeRate >= curveWithdrawal3CRVLUSDExchangeRateThreshold,
-            "CBM: Curve->SP shift must increase spot price to a value below the withdrawal threshold"
+            "CBM: Curve->SP shift must increase 3CRV:LUSD exchange rate to a value above the withdrawal threshold"
         );
     }
 
