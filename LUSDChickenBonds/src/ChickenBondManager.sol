@@ -475,15 +475,18 @@ contract ChickenBondManager is Ownable, ChickenMath, IChickenBondManager {
         require(finalCurveSpotPrice < initialCurveSpotPrice && finalCurveSpotPrice >=  1e18, "CBM: SP->Curve shift must decrease spot price to >= 1.0");
     }
 
-    function shiftLUSDFromCurveToSP(uint256 _lusdToShift) external {
-        _requireNonZeroAmount(_lusdToShift);
+    function shiftLUSDFromCurveToSP(uint256 _maxLUSDToShift) external {
         _requireMigrationNotActive();
+
+        // We can’t shift more than what’s in Curve
+        uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, getTotalLUSDInCurve());
+        _requireNonZeroAmount(clampedLUSDToShift);
 
         uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(initialCurveSpotPrice < 1e18, "CBM: Curve spot must be < 1.0 before Curve->SP shift");
 
         //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
-        uint256 lusd3CRVfToBurn = curvePool.calc_token_amount([_lusdToShift, 0], false);
+        uint256 lusd3CRVfToBurn = curvePool.calc_token_amount([clampedLUSDToShift, 0], false);
 
         //Calculate yTokens to swap for LUSD3CRV-f
         (uint256 lusd3CRVInCurveVault, uint256 lusdInCurve) = getTotalLPAndLUSDInCurve();

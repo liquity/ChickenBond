@@ -1469,6 +1469,51 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertLt(relativeAcquiredLoss, 1e12);
     }
 
+    function testShiftLUSDFromCurveToSPGetsClamped() public {
+        uint256 bondAmount = 10e18;
+
+        // B and A create bonds
+        createBondForUser(B, bondAmount);
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // 10 minutes passes
+        vm.warp(block.timestamp + 600);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // check total acquired LUSD > 0
+        uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        assertGt(totalAcquiredLUSD, 0, "total ac. lusd not < 0 after chicken in");
+
+        // Get acquired LUSD in Yearn Before
+        uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInSP();
+        assertGt(acquiredLUSDInSPBefore, 0);
+
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
+        shiftFractionFromSPToCurve(10);
+        makeCurveSpotPriceBelow1(200_000_000e18);
+
+        assertGt(chickenBondManager.getAcquiredLUSDInCurve(), 0);
+        assertGt(chickenBondManager.getAcquiredLUSDInSP(), 0);
+
+        // Shift LUSD from Curve to SP, try shift more than available
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInCurve() + 1;
+
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
+
+        // Check acquired LUSD in Yearn Increases
+        uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInSP();
+
+        assertGe(acquiredLUSDInSPAfter, acquiredLUSDInSPBefore, "ac. LUSD should be at least the same as the initial");
+        assertLt(chickenBondManager.getOwnedLUSDInCurve(), 1e14, "All LUSD should have been moved from Curve");
+    }
+
     // --- Curve withdrawal loss tests ---
 
     function testCurveImmediateLUSDDepositAndWithdrawalLossIsBounded(uint256 _depositAmount) public {
