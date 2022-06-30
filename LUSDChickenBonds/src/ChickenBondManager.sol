@@ -421,9 +421,12 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return (yTokensFromSPVault, yTokensFromCurveVault, lusdFromSilo);
     }
 
-    function shiftLUSDFromSPToCurve(uint256 _lusdToShift) external {
-        _requireNonZeroAmount(_lusdToShift);
+    function shiftLUSDFromSPToCurve(uint256 _maxLUSDToShift) external {
         _requireMigrationNotActive();
+
+        // Make sure pending bucket is not moved to Curve, so it can be withdrawn on chicken out
+        uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, getOwnedLUSDInSP());
+        _requireNonZeroAmount(clampedLUSDToShift);
 
         uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(initialCurveSpotPrice > 1e18, "CBM: Curve spot must be > 1.0 before SP->Curve shift");
@@ -435,17 +438,17 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 lusdOwnedLUSDVault = lusdInSP - totalPendingLUSD;
         uint256 ratioPermanentToOwned = permanentLUSDInSP * 1e18 / lusdOwnedLUSDVault;
 
-        uint256 permanentLUSDShifted = _lusdToShift * ratioPermanentToOwned / 1e18;
+        uint256 permanentLUSDShifted = clampedLUSDToShift * ratioPermanentToOwned / 1e18;
         permanentLUSDInSP -= permanentLUSDShifted;
 
         // Convert yTokens to LUSD
         uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-        uint256 yTokensToBurnFromLUSDVault = _calcCorrespondingYTokens(yearnSPVault, _lusdToShift, lusdInSP);
+        uint256 yTokensToBurnFromLUSDVault = _calcCorrespondingYTokens(yearnSPVault, clampedLUSDToShift, lusdInSP);
         yearnSPVault.withdraw(yTokensToBurnFromLUSDVault);
         uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
 
         // Assertion should hold in principle. In practice, there is usually minor rounding error
-        // assert(lusdBalanceDelta == lusdToShift);
+        // assert(lusdBalanceDelta == clampedLUSDToShift);
 
         // Deposit the received LUSD to Curve in return for LUSD3CRV-f tokens
         uint256 lusd3CRVBalanceBefore = curvePool.balanceOf(address(this));
@@ -470,15 +473,18 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         require(finalCurveSpotPrice < initialCurveSpotPrice && finalCurveSpotPrice >=  1e18, "CBM: SP->Curve shift must decrease spot price to >= 1.0");
     }
 
-    function shiftLUSDFromCurveToSP(uint256 _lusdToShift) external {
-        _requireNonZeroAmount(_lusdToShift);
+    function shiftLUSDFromCurveToSP(uint256 _maxLUSDToShift) external {
         _requireMigrationNotActive();
+
+        // We can’t shift more than what’s in Curve
+        uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, getTotalLUSDInCurve());
+        _requireNonZeroAmount(clampedLUSDToShift);
 
         uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
         require(initialCurveSpotPrice < 1e18, "CBM: Curve spot must be < 1.0 before Curve->SP shift");
 
         //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
-        uint256 lusd3CRVfToBurn = curvePool.calc_token_amount([_lusdToShift, 0], false);
+        uint256 lusd3CRVfToBurn = curvePool.calc_token_amount([clampedLUSDToShift, 0], false);
 
         //Calculate yTokens to swap for LUSD3CRV-f
         (uint256 lusd3CRVInCurveVault, uint256 lusdInCurve) = getTotalLPAndLUSDInCurve();
@@ -934,7 +940,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // Owned getters
 
-    function getOwnedLUSDInSP() external view returns (uint256) {
+    function getOwnedLUSDInSP() public view returns (uint256) {
         return getAcquiredLUSDInSP() + permanentLUSDInSP;
     }
 
