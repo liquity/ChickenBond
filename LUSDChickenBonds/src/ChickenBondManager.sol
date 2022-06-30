@@ -498,7 +498,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         permanentLUSDInCurve += permanentLUSDCurveIncrease;
 
-        // Do price check: ensure the SP->Curve shift has decreased the Curve spot price to not less than the deposit threshold
+        // Do price check: ensure the SP->Curve shift has decreased the LUSD:3CRV exchange rate, but not into unprofitable territory
         uint256 finalExchangeRate = _getLUSD3CRVExchangeRate(_3crvVirtualPrice);
 
         require(
@@ -567,7 +567,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 permanentLUSDIncrease = lusdBalanceDelta * ratioPermanentToOwned / 1e18;
         permanentLUSDInSP += permanentLUSDIncrease;
 
-        // Ensure the Curve->SP shift has increased the Curve spot price to not more than 1.0
+        // Ensure the Curve->SP shift has decreased the 3CRV:LUSD exchange rate, but not into unprofitable territory
         uint256 finalExchangeRate = _get3CRVLUSDExchangeRate(_3crvVirtualPrice);
 
         require(
