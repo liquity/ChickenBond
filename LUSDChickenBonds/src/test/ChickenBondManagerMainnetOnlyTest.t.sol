@@ -89,7 +89,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
 
         // Checks
-        assertApproximatelyEqual(lusdToken.balanceOf(address(curveLiquidityGauge)), initialYield + chickenInFeeAmount, 7, "Balance of rewards contract doesn't match");
+        assertApproximatelyEqual(
+            lusdToken.balanceOf(address(curveLiquidityGauge)),
+            initialYield + chickenInFeeAmount,
+            100,
+            "Balance of rewards contract doesn't match"
+        );
 
         // check bLUSD A balance
         assertEq(bLUSDToken.balanceOf(A), accruedBLUSD_A, "bLUSD balance of A doesn't match");
@@ -141,7 +146,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
             initialYield + chickenInFeeAmount,
-            12,
+            100,
             "Balance of rewards contract after A's chicken-in doesn't match"
         );
 
