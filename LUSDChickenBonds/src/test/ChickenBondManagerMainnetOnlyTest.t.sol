@@ -398,7 +398,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(lusdToShift, 0);
 
         // Try to shift the LUSD
-        vm.expectRevert("CBM: Curve spot must be over the deposit threshold before SP->Curve shift");
+        vm.expectRevert("CBM: LUSD:3CRV exchange rate must be over the deposit threshold before SP->Curve shift");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
     }
 
@@ -444,7 +444,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(curveSpotPrice, 1e18);
 
         // --- Now, attempt the shift that would drop the price below 1.0 ---
-        vm.expectRevert("CBM: SP->Curve shift must decrease spot price to a value above the deposit threshold");
+        vm.expectRevert("CBM: SP->Curve shift must decrease LUSD:3CRV exchange rate to a value above the deposit threshold");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdAmount);
     }
 
@@ -906,7 +906,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(lusdToShift, 0);
 
         // Try to shift the LUSD
-        vm.expectRevert("CBM: Curve spot must be below the withdrawal threshold before Curve->SP shift");
+        vm.expectRevert("CBM: 3CRV:LUSD exchange rate must be above the withdrawal threshold before Curve->SP shift");
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
     }
 
@@ -1158,8 +1158,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         createBondForUser(A, bondAmount);
         createBondForUser(B, bondAmount);
-
-        _spHarvestAndFastForward();
 
         uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnSPVaultShareValue();
 
