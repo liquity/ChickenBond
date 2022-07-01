@@ -31,6 +31,7 @@ contract BaseTest is DSTest, stdCheats {
     IERC20 lusdToken;
     IERC20 _3crvToken;
     ICurvePool curvePool;
+    ICurvePool curveBasePool;
     IYearnVault yearnSPVault;
     IYearnVault yearnCurveVault;
     IYearnRegistry yearnRegistry;

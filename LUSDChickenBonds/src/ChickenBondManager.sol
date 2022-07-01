@@ -28,7 +28,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     address immutable public lusdSiloAddress;
 
     // External contracts and addresses
-    ICurvePool immutable public curvePool;
+    ICurvePool immutable public curvePool; // LUSD meta-pool (i.e. coin 0 is LUSD, coin 1 is LP token from a base pool)
+    ICurvePool immutable public curveBasePool; // base pool of curvePool
     IYearnVault immutable public yearnSPVault;
     IYearnVault immutable public yearnCurveVault;
     IYearnRegistry immutable public yearnRegistry;
@@ -47,6 +48,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         address bondNFTAddress;
         address lusdTokenAddress;
         address curvePoolAddress;
+        address curveBasePoolAddress;
         address yearnSPVaultAddress;
         address yearnCurveVaultAddress;
         address yearnRegistryAddress;
@@ -103,6 +105,12 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
      */
     uint256 constant public MINUTE_DECAY_FACTOR = 999037758833783000;
 
+    uint256 constant CURVE_FEE_DENOMINATOR = 1e10;
+
+    // Thresholds of SP <=> Curve shifting
+    uint256 public immutable curveDepositLUSD3CRVExchangeRateThreshold;
+    uint256 public immutable curveWithdrawal3CRVLUSDExchangeRateThreshold;
+
     // --- Accrual control variables ---
 
     // `block.timestamp` of the block in which this contract was deployed.
@@ -144,13 +152,16 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 _minimumAccrualParameter,
         uint256 _accrualAdjustmentRate,
         uint256 _accrualAdjustmentPeriodSeconds,
-        uint256 _CHICKEN_IN_AMM_FEE
+        uint256 _CHICKEN_IN_AMM_FEE,
+        uint256 _curveDepositDydxThreshold,
+        uint256 _curveWithdrawalDxdyThreshold
     )
     {
         bondNFT = IBondNFT(_externalContractAddresses.bondNFTAddress);
         lusdToken = ILUSDToken(_externalContractAddresses.lusdTokenAddress);
         bLUSDToken = IBLUSDToken(_externalContractAddresses.bLUSDTokenAddress);
         curvePool = ICurvePool(_externalContractAddresses.curvePoolAddress);
+        curveBasePool = ICurvePool(_externalContractAddresses.curveBasePoolAddress);
         yearnSPVault = IYearnVault(_externalContractAddresses.yearnSPVaultAddress);
         yearnCurveVault = IYearnVault(_externalContractAddresses.yearnCurveVaultAddress);
         yearnRegistry = IYearnRegistry(_externalContractAddresses.yearnRegistryAddress);
@@ -166,6 +177,18 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         curveLiquidityGauge = ICurveLiquidityGaugeV4(_externalContractAddresses.curveLiquidityGaugeAddress);
         CHICKEN_IN_AMM_FEE = _CHICKEN_IN_AMM_FEE;
+
+        uint256 fee = curvePool.fee(); // This is practically immutable (can only be set once, in `initialize()`)
+
+        // By exchange rate, we mean the rate at which Curve exchanges LUSD <=> $ value of 3CRV (at the virtual price),
+        // which is reduced by the fee.
+        // For convenience, we want to parameterize our thresholds in terms of the spot prices -dy/dx & -dx/dy,
+        // which are not exposed by Curve directly. Instead, we turn our thresholds into thresholds on the exchange rate
+        // by taking into account the fee.
+        curveDepositLUSD3CRVExchangeRateThreshold =
+            _curveDepositDydxThreshold * (CURVE_FEE_DENOMINATOR - fee) / CURVE_FEE_DENOMINATOR;
+        curveWithdrawal3CRVLUSDExchangeRateThreshold =
+            _curveWithdrawalDxdyThreshold * (CURVE_FEE_DENOMINATOR - fee) / CURVE_FEE_DENOMINATOR;
 
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
@@ -428,8 +451,15 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, getOwnedLUSDInSP());
         _requireNonZeroAmount(clampedLUSDToShift);
 
-        uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
-        require(initialCurveSpotPrice > 1e18, "CBM: Curve spot must be > 1.0 before SP->Curve shift");
+        // Get the 3CRV virtual price only once, and use it for both initial and final check.
+        // Adding LUSD liquidity to the meta-pool does not change 3CRV virtual price.
+        uint256 _3crvVirtualPrice = curveBasePool.get_virtual_price();
+        uint256 initialExchangeRate = _getLUSD3CRVExchangeRate(_3crvVirtualPrice);
+
+        require(
+            initialExchangeRate > curveDepositLUSD3CRVExchangeRateThreshold,
+            "CBM: LUSD:3CRV exchange rate must be over the deposit threshold before SP->Curve shift"
+        );
 
         uint256 lusdInSP = calcTotalYearnSPVaultShareValue();
 
@@ -468,9 +498,14 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         permanentLUSDInCurve += permanentLUSDCurveIncrease;
 
-        // Do price check: ensure the SP->Curve shift has decreased the Curve spot price to not less than 1.0
-        uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
-        require(finalCurveSpotPrice < initialCurveSpotPrice && finalCurveSpotPrice >=  1e18, "CBM: SP->Curve shift must decrease spot price to >= 1.0");
+        // Do price check: ensure the SP->Curve shift has decreased the LUSD:3CRV exchange rate, but not into unprofitable territory
+        uint256 finalExchangeRate = _getLUSD3CRVExchangeRate(_3crvVirtualPrice);
+
+        require(
+            finalExchangeRate < initialExchangeRate &&
+            finalExchangeRate >= curveDepositLUSD3CRVExchangeRateThreshold,
+            "CBM: SP->Curve shift must decrease LUSD:3CRV exchange rate to a value above the deposit threshold"
+        );
     }
 
     function shiftLUSDFromCurveToSP(uint256 _maxLUSDToShift) external {
@@ -480,8 +515,17 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, getTotalLUSDInCurve());
         _requireNonZeroAmount(clampedLUSDToShift);
 
-        uint256 initialCurveSpotPrice = _getCurveLUSDSpotPrice();
-        require(initialCurveSpotPrice < 1e18, "CBM: Curve spot must be < 1.0 before Curve->SP shift");
+        // Get the 3CRV virtual price only once, and use it for both initial and final check.
+        // Removing LUSD liquidity from the meta-pool does not change 3CRV virtual price.
+        uint256 _3crvVirtualPrice = curveBasePool.get_virtual_price();
+        uint256 initialExchangeRate = _get3CRVLUSDExchangeRate(_3crvVirtualPrice);
+
+        // Here we're using the 3CRV:LUSD exchange rate (with 3CRV being valued at its virtual price),
+        // which increases as LUSD price decreases, hence the direction of the inequality.
+        require(
+            initialExchangeRate > curveWithdrawal3CRVLUSDExchangeRateThreshold,
+            "CBM: 3CRV:LUSD exchange rate must be above the withdrawal threshold before Curve->SP shift"
+        );
 
         //Calculate LUSD3CRV-f needed to withdraw LUSD from Curve
         uint256 lusd3CRVfToBurn = curvePool.calc_token_amount([clampedLUSDToShift, 0], false);
@@ -523,9 +567,14 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 permanentLUSDIncrease = lusdBalanceDelta * ratioPermanentToOwned / 1e18;
         permanentLUSDInSP += permanentLUSDIncrease;
 
-        // Ensure the Curve->SP shift has increased the Curve spot price to not more than 1.0
-        uint256 finalCurveSpotPrice = _getCurveLUSDSpotPrice();
-        require(finalCurveSpotPrice > initialCurveSpotPrice && finalCurveSpotPrice <=  1e18, "CBM: Curve->SP shift must increase spot price to <= 1.0");
+        // Ensure the Curve->SP shift has decreased the 3CRV:LUSD exchange rate, but not into unprofitable territory
+        uint256 finalExchangeRate = _get3CRVLUSDExchangeRate(_3crvVirtualPrice);
+
+        require(
+            finalExchangeRate < initialExchangeRate &&
+            finalExchangeRate >= curveWithdrawal3CRVLUSDExchangeRateThreshold,
+            "CBM: Curve->SP shift must increase 3CRV:LUSD exchange rate to a value above the withdrawal threshold"
+        );
     }
 
     // --- Migration functionality ---
@@ -571,9 +620,22 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // --- Helper functions ---
 
-    function _getCurveLUSDSpotPrice() internal view returns (uint256) {
-        // Get the Curve spot price of LUSD: the amount of 3CRV that would be received by swapping 1 LUSD
-        return curvePool.get_dy_underlying(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
+    function _getLUSD3CRVExchangeRate(uint256 _3crvVirtualPrice) internal view returns (uint256) {
+        // Get the amount of 3CRV that would be received by swapping 1 LUSD (after deduction of fees)
+        // If p_{LUSD:3CRV} is the price of LUSD quoted in 3CRV, then this returns p_{LUSD:3CRV} * (1 - fee)
+        // as long as the pool is large enough so that 1 LUSD doesn't introduce significant slippage.
+        uint256 dy = curvePool.get_dy(INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, 1e18);
+
+        return dy * _3crvVirtualPrice / 1e18;
+    }
+
+    function _get3CRVLUSDExchangeRate(uint256 _3crvVirtualPrice) internal view returns (uint256) {
+        // Get the amount of LUSD that would be received by swapping 1 3CRV (after deduction of fees)
+        // If p_{3CRV:LUSD} is the price of 3CRV quoted in LUSD, then this returns p_{3CRV:LUSD} * (1 - fee)
+        // as long as the pool is large enough so that 1 3CRV doesn't introduce significant slippage.
+        uint256 dy = curvePool.get_dy(INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 1e18);
+
+        return dy * 1e18 / _3crvVirtualPrice;
     }
 
     // Calc decayed redemption rate

@@ -8,6 +8,8 @@ export interface LUSDChickenBondConfig {
   accrualAdjustmentRate: BigNumber;
   accrualAdjustmentPeriodSeconds: BigNumber;
   chickenInAMMTax: BigNumber;
+  curveDepositDydxThreshold: BigNumber;
+  curveWithdrawalDxdyThreshold: BigNumber;
   yearnGovernanceAddress: string;
 }
 
@@ -18,6 +20,8 @@ export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   accrualAdjustmentRate: BigNumber.from("10000000000000000"),
   accrualAdjustmentPeriodSeconds: BigNumber.from("86400"),
   chickenInAMMTax: BigNumber.from("10000000000000000"),
+  curveDepositDydxThreshold: BigNumber.from("1000000000000000000"),
+  curveWithdrawalDxdyThreshold: BigNumber.from("10000000000000000"),
   yearnGovernanceAddress: AddressZero
 };
 

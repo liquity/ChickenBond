@@ -403,7 +403,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(lusdToShift, 0);
 
         // Try to shift the LUSD
-        vm.expectRevert("CBM: Curve spot must be > 1.0 before SP->Curve shift");
+        vm.expectRevert("CBM: LUSD:3CRV exchange rate must be over the deposit threshold before SP->Curve shift");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
     }
 
@@ -449,7 +449,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(curveSpotPrice, 1e18);
 
         // --- Now, attempt the shift that would drop the price below 1.0 ---
-        vm.expectRevert("CBM: SP->Curve shift must decrease spot price to >= 1.0");
+        vm.expectRevert("CBM: SP->Curve shift must decrease LUSD:3CRV exchange rate to a value above the deposit threshold");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdAmount);
     }
 
@@ -911,7 +911,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertGt(lusdToShift, 0);
 
         // Try to shift the LUSD
-        vm.expectRevert("CBM: Curve spot must be < 1.0 before Curve->SP shift");
+        vm.expectRevert("CBM: 3CRV:LUSD exchange rate must be above the withdrawal threshold before Curve->SP shift");
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
     }
 
@@ -1163,8 +1163,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         createBondForUser(A, bondAmount);
         createBondForUser(B, bondAmount);
-
-        _spHarvestAndFastForward();
 
         uint256 lusdInSPAfter = chickenBondManager.calcTotalYearnSPVaultShareValue();
 
@@ -1579,21 +1577,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertLt(curveRelativeDepositLoss, 1e15);
     }
 
-    function testCurveImmediateProportionalDepositAndWithdrawalLossIsBounded(uint256 _depositMagnitude) public {
-        // Set Curve spot price to >1.0
-        makeCurveSpotPriceAbove1(100_000_000e18);
+    function testCurveImmediateProportionalDepositAndWithdrawalIsLossless(uint256 _depositMagnitude) public {
+        // _depositMagnitude is the fraction of the pool's current coin balances we'll deposit.
+        // Make it a number between 1% and 1000%
+        _depositMagnitude = coerce(_depositMagnitude, 1e16, 1e19);
 
-        vm.assume(_depositMagnitude < 1e27 && _depositMagnitude >= 1e18); // deposit magnitude in range [1, 1bil]
-
-        uint256 curve3CRVSpot = curvePool.get_dy_underlying(1, 0, 1e18);
-
-        // Choose deposit amounts in proportion to current spot price, in order to keep it constant
-        //uint256 _depositMagnitude = 10e18;
-        // multiply by the lusd-per-3crv
-        uint256 _lusdDepositAmount =  curve3CRVSpot * _depositMagnitude / 1e18;
-        uint256 _3crvDepositAmount = _depositMagnitude;
-
-        uint256 total3CRVValueBefore = _depositMagnitude * 2;
+        // Choose deposit amounts in proportion to the current coin balances, in order to keep the ratio constant
+        uint256 _lusdDepositAmount = curvePool.balances(0) * _depositMagnitude / 1e18;
+        uint256 _3crvDepositAmount = curvePool.balances(1) * _depositMagnitude / 1e18;
 
         // Tip CBM some LUSD and 3CRV
         tip(address(lusdToken), address(chickenBondManager), _lusdDepositAmount);
@@ -1604,7 +1595,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         lusdToken.approve(address(curvePool), _lusdDepositAmount);
         _3crvToken.approve(address(curvePool), _3crvDepositAmount);
-        curvePool.add_liquidity([_lusdDepositAmount, _3crvDepositAmount], 0); // deposit both tokens
+        uint256 cbmShares = curvePool.add_liquidity([_lusdDepositAmount, _3crvDepositAmount], 0); // deposit both tokens
 
         uint256 cbmLUSDBalBefore = lusdToken.balanceOf(address(chickenBondManager));
         uint256 cbm3CRVBalBefore = _3crvToken.balanceOf(address(chickenBondManager));
@@ -1612,22 +1603,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertEq(cbm3CRVBalBefore, 0);
 
         // Artificially withdraw all the share value as CBM
-        uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
         curvePool.remove_liquidity(cbmShares, [uint256(0), uint256(0)]); // receive both LUSD and 3CRV, no minimums
 
         uint256 cbmLUSDBalAfter = lusdToken.balanceOf(address(chickenBondManager));
         uint256 cbm3CRVBalAfter = _3crvToken.balanceOf(address(chickenBondManager));
 
-        uint256 curve3CRVSpotAfter = curvePool.get_dy_underlying(1, 0, 1e18);
-
-        // divide the LUSD by the LUSD-per-3CRV, to get the value of the LUSD in 3CRV
-        uint256 total3CRVValueAfter = cbm3CRVBalAfter + (cbmLUSDBalAfter * 1e18 /  curve3CRVSpotAfter);
-
-        uint256 total3CRVRelativeDepositLoss = diffOrZero(total3CRVValueBefore, total3CRVValueAfter) * 1e18 / total3CRVValueBefore;
-
-        // Check that a proportional Curve 3CRV and LUSD deposit->withdraw loses between [0.01%, 1%] of initial deposit.
-        assertLt(total3CRVRelativeDepositLoss, 1e16);
-        assertGt(total3CRVRelativeDepositLoss, 1e14);
+        // Check that we get back what we deposited
+        assertApproximatelyEqual(cbmLUSDBalAfter, _lusdDepositAmount, 10);
+        assertApproximatelyEqual(cbm3CRVBalAfter, _3crvDepositAmount, 10);
     }
 
     function loopOverCurveLUSDDepositSizes(int steps) public {

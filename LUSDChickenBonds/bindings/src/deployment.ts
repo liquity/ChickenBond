@@ -111,6 +111,13 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const curveBasePool = await this.deployContract(
+      factories.curvePool,
+      "3CRV Pool",
+      "3CRV",
+      overrides
+    );
+
     const yearnSPVault = await this.deployContract(
       factories.yearnSPVault,
       "LUSD yVault",
@@ -162,6 +169,7 @@ class LUSDChickenBondDeployment {
       {
         bondNFTAddress: bondNFT.contract.address,
         curvePoolAddress: curvePool.contract.address,
+        curveBasePoolAddress: curveBasePool.contract.address,
         lusdSiloAddress: lusdSilo.contract.address,
         lusdTokenAddress: lusdToken.contract.address,
         curveLiquidityGaugeAddress: curveLiquidityGauge.contract.address,
@@ -177,6 +185,8 @@ class LUSDChickenBondDeployment {
       config.accrualAdjustmentRate,
       config.accrualAdjustmentPeriodSeconds,
       config.chickenInAMMTax,
+      config.curveDepositDydxThreshold,
+      config.curveWithdrawalDxdyThreshold,
       overrides
     );
 
