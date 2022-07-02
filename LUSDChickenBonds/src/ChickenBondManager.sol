@@ -286,7 +286,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
      * Assumption: When there have been no chicken ins since the bLUSD supply was set to 0 (either due to system deployment, or full bLUSD redemption),
      * all acquired LUSD must necessarily be pure yield.
      */
-    function _firstChickenIn(uint256 _bammLUSDValue, uint256 _lusdInBAMMSPVault) internal {
+    function _firstChickenIn(uint256 _bammLUSDValue, uint256 _lusdInBAMMSPVault) internal returns (uint256) {
         assert(!migration);
 
         uint256 acquiredLUSDInSP = _getAcquiredLUSDInSPFromBAMMValue(_bammLUSDValue);
@@ -310,6 +310,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         if (yTokensFromCurveVault > 0) {
             _withdrawFromCurveVaultAndTransferToRewardsStakingContract(yTokensFromCurveVault);
         }
+
+        return _lusdInBAMMSPVault - acquiredLUSDInSP;
     }
 
     function chickenIn(uint256 _bondID) external {
@@ -327,7 +329,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         * This is not done in migration mode since there is no need to send rewards to the staking contract.
         */
         if (bLUSDToken.totalSupply() == 0 && !migration) {
-            _firstChickenIn(bammLUSDValue, lusdInBAMMSPVault);
+            lusdInBAMMSPVault = _firstChickenIn(bammLUSDValue, lusdInBAMMSPVault);
         }
 
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
@@ -359,7 +361,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         bondNFT.burn(_bondID);
 
         // Transfer the chicken in fee to the LUSD/bLUSD AMM LP Rewards staking contract during normal mode.
-        if (!migration) {
+        if (!migration && lusdInBAMMSPVault >= chickenInFeeAmount) {
             _withdrawFromSPVaultAndTransferToRewardsStakingContract(chickenInFeeAmount);
         }
     }

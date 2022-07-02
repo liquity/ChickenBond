@@ -223,9 +223,10 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         _generateBAMMYield(initialYield);
 
         uint256 acquiredLUSDInSP = chickenBondManager.getAcquiredLUSDInSP();
-        // simulate more than 10% B.Protocol loss
+        // simulate B.Protocol loss
+        uint256 bammLoss = lusdToken.balanceOf(address(bammSPVault)) - acquiredLUSDInSP + 1;
         vm.startPrank(address(bammSPVault));
-        lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - acquiredLUSDInSP + 1);
+        lusdToken.transfer(C, bammLoss);
         vm.stopPrank();
 
         // A chickens in
@@ -234,15 +235,42 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        // simulate B.Protocol recover loss up acquired bucket
+        // simulate B.Protocol recover loss
         vm.startPrank(C);
-        lusdToken.transfer(address(bammSPVault), 1);
+        lusdToken.transfer(address(bammSPVault), bammLoss);
         vm.stopPrank();
 
         // now it works
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
+    }
+
+    function testFirstChickenInWithoutEnoughLUSDInBAMMForChickenInFee() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // Yearn LUSD Vault gets some yield
+        uint256 initialYield = 1e18;
+        _generateBAMMYield(initialYield);
+
+        uint256 acquiredLUSDInSP = chickenBondManager.getAcquiredLUSDInSP();
+        // simulate B.Protocol loss
+        vm.startPrank(address(bammSPVault));
+        lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - acquiredLUSDInSP);
+        vm.stopPrank();
+
+        // now it works
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // rewards contract has only initial acquired, but no fee
+        assertEq(lusdToken.balanceOf(address(curveLiquidityGauge)), acquiredLUSDInSP, "Rewards contract balance mismatch");
     }
 
     function testChickenOutMinTooBig() public {
