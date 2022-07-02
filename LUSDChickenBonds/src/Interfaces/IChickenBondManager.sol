@@ -27,7 +27,7 @@ interface IChickenBondManager {
     //function calcAccruedLUSD(uint256 _bondID) external view returns (uint256);
     function calcAccruedBLUSD(uint256 _bondID) external view returns (uint256);
     function calcBondBLUSDCap(uint256 _bondID) external view returns (uint256);
-    function getLUSDInBAMMSPVault() external returns (uint256);
+    function getLUSDInBAMMSPVault() external view returns (uint256);
     function calcTotalYearnCurveVaultShareValue() external view returns (uint256);
     function calcTotalLUSDValue() external view returns (uint256);
     function getPendingLUSD() external view returns (uint256);

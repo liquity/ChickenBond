@@ -830,7 +830,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return _calcAccruedBLUSD(bond.startTime, _getBondAmountMinusChickenInFee(bond.lusdAmount), calcSystemBackingRatio(), updatedAccrualParameter);
     }
 
-    function calcBondBLUSDCap() external view returns (uint256) {
+    function calcBondBLUSDCap(uint256 _bondID) external view returns (uint256) {
         uint256 backingRatio = calcSystemBackingRatio();
 
         BondData memory bond = idToBondData[_bondID];
@@ -838,7 +838,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return _calcBondBLUSDCap(_getBondAmountMinusChickenInFee(bond.lusdAmount), backingRatio);
     }
 
-    function getLUSDInBAMMSPVault(uint256 _bondID) external returns (uint256) {
+    function getLUSDInBAMMSPVault() external view returns (uint256) {
         (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
 
         return lusdInBAMMSPVault;
