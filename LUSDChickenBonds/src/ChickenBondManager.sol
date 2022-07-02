@@ -89,8 +89,6 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
 
-    uint256 constant public FIRST_CHICKEN_IN_MIN_BALANCE_PERCENTAGE = 90e16; // 90%
-
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
      * Corresponds to (1 / ALPHA) in the Liquity white paper.
@@ -283,31 +281,26 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         }
     }
 
-    // Divert acquired yield to LUSD/bLUSD AMM LP rewards staking contract
-    // It happens on the very first chicken in event of the system, or any time that redemptions deplete bLUSD total supply to zero
+    /* Divert acquired yield to LUSD/bLUSD AMM LP rewards staking contract
+     * It happens on the very first chicken in event of the system, or any time that redemptions deplete bLUSD total supply to zero
+     * Assumption: When there have been no chicken ins since the bLUSD supply was set to 0 (either due to system deployment, or full bLUSD redemption),
+     * all acquired LUSD must necessarily be pure yield.
+     */
     function _firstChickenIn() internal {
         assert(!migration);
 
-        (uint256 bammSPVaultLUSDValue, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
+        (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
+        uint256 acquiredLUSDInSP = getAcquiredLUSDInSP();
 
-        // Make sure that LUSD available in B.Protocol is at least 90% of its LUSD value
+        // Make sure that LUSD available in B.Protocol is at least as much as acquired
         // If first chicken in happens after an scenario of heavy liquidations and before ETH has been sold by B.Protocol
-        // Transferring from B.Protocol to the rewards contract would have 2 downside effects:
-        // - The amount transferred, capped by the available balance at B.Protocol, may be much lower than it should
-        // - It would leave the protocol in a “weak” state, as there wouldn’t be any LUSD available in B.Protocol
-        // So it’s better to bootstrap the system after the ETH has been sold.
-        require(
-            lusdInBAMMSPVault >= FIRST_CHICKEN_IN_MIN_BALANCE_PERCENTAGE * bammSPVaultLUSDValue / 1e18,
-            "CBM: Not enough LUSD available in B.Protocol"
-        );
+        // so that there’s not enough LUSD available in B.Protocol to transfer all the acquired bucket to the staking contract,
+        // the system would start with a backing ratio greater than 1
+        require(lusdInBAMMSPVault >= acquiredLUSDInSP, "CBM: Not enough LUSD available in B.Protocol");
 
-        /* Assumption: When there have been no chicken ins since the bLUSD supply was set to 0 (either due to system deployment, or full bLUSD redemption),
-        /* all acquired LUSD must necessarily be pure yield.
-        */
         // From SP Vault
-        uint256 lusdFromInitialYieldInSPToTransfer = Math.min(getAcquiredLUSDInSP(), lusdInBAMMSPVault);
-        if (lusdFromInitialYieldInSPToTransfer > 0) {
-            _withdrawFromSPVaultAndTransferToRewardsStakingContract(lusdFromInitialYieldInSPToTransfer);
+        if (acquiredLUSDInSP > 0) {
+            _withdrawFromSPVaultAndTransferToRewardsStakingContract(acquiredLUSDInSP);
         }
 
         // From Curve Vault

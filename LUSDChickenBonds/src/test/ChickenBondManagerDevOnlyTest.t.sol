@@ -6,6 +6,10 @@ import "./TestContracts/DevTestSetup.sol";
 
 
 contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
+    function _generateBAMMYield(uint256 _yieldAmount) internal {
+        tip(address(lusdToken), address(bammSPVault), lusdToken.balanceOf(address(bammSPVault)) + _yieldAmount);
+    }
+
     function testFirstChickenInTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -17,9 +21,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = 1e18;
-        vm.startPrank(C);
-        lusdToken.transfer(address(bammSPVault), initialYield);
-        vm.stopPrank();
+        _generateBAMMYield(initialYield);
 
         // A chickens in
         vm.startPrank(A);
@@ -70,9 +72,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         // B.Protocol LUSD Vault gets some yield
         uint256 initialYield = 1e18;
-        vm.startPrank(C);
-        lusdToken.transfer(address(bammSPVault), initialYield);
-        vm.stopPrank();
+        _generateBAMMYield(initialYield);
 
         // A chickens in
         vm.startPrank(A);
@@ -93,9 +93,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         // B.Protocol LUSD Vault gets some yield
         uint256 secondYield = 4e18;
-        vm.startPrank(C);
-        lusdToken.transfer(address(bammSPVault), secondYield);
-        vm.stopPrank();
+        _generateBAMMYield(secondYield);
 
         // B chickens in
         vm.startPrank(B);
@@ -219,9 +217,14 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         vm.warp(block.timestamp + 600);
 
+        // Yearn LUSD Vault gets some yield
+        uint256 initialYield = 1e18;
+        _generateBAMMYield(initialYield);
+
+        uint256 acquiredLUSDInSP = chickenBondManager.getAcquiredLUSDInSP();
         // simulate more than 10% B.Protocol loss
         vm.startPrank(address(bammSPVault));
-        lusdToken.transfer(C, bondAmount / 10 + 1);
+        lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - acquiredLUSDInSP + 1);
         vm.stopPrank();
 
         // A chickens in
@@ -230,7 +233,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        // simulate B.Protocol recover loss up to 10%
+        // simulate B.Protocol recover loss up acquired bucket
         vm.startPrank(C);
         lusdToken.transfer(address(bammSPVault), 1);
         vm.stopPrank();
