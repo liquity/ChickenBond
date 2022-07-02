@@ -86,6 +86,9 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
 
         assertEq(yearnCurveVault.balanceOf(A), 0, "Previous Curve yTokens balance doesn't match");
 
+        // wait for bootstrap period
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
+
         uint256 previousLUSDBalance = lusdToken.balanceOf(A);
         // redeem
         vm.startPrank(A);
@@ -116,6 +119,9 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         vm.startPrank(A);
         chickenBondOperationsScript.chickenIn(bondId);
         vm.stopPrank();
+
+        // wait for bootstrap period
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         uint256 previousBalance = lusdToken.balanceOf(A);
 
