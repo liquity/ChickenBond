@@ -94,8 +94,6 @@ class LUSDChickenBondDeployment {
   private async deployContracts(): Promise<LUSDChickenBondDeployedContracts> {
     const { factories, overrides, config } = this;
 
-    const lusdSilo = await this.deployContract(factories.lusdSilo, overrides);
-
     const lusdToken = await this.deployContract(
       factories.lusdToken,
       AddressZero,
@@ -118,10 +116,9 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const yearnSPVault = await this.deployContract(
-      factories.yearnSPVault,
-      "LUSD yVault",
-      "yvLUSD",
+    const bammSPVault = await this.deployContract(
+      factories.bammSPVault,
+      lusdToken.contract.address,
       overrides
     );
 
@@ -134,9 +131,7 @@ class LUSDChickenBondDeployment {
 
     const yearnRegistry = await this.deployContract(
       factories.yearnRegistry,
-      yearnSPVault.contract.address,
       yearnCurveVault.contract.address,
-      lusdToken.contract.address,
       curvePool.contract.address,
       overrides
     );
@@ -170,13 +165,12 @@ class LUSDChickenBondDeployment {
         bondNFTAddress: bondNFT.contract.address,
         curvePoolAddress: curvePool.contract.address,
         curveBasePoolAddress: curveBasePool.contract.address,
-        lusdSiloAddress: lusdSilo.contract.address,
         lusdTokenAddress: lusdToken.contract.address,
         curveLiquidityGaugeAddress: curveLiquidityGauge.contract.address,
         bLUSDTokenAddress: bLUSDToken.contract.address,
         yearnCurveVaultAddress: yearnCurveVault.contract.address,
         yearnGovernanceAddress: config.yearnGovernanceAddress,
-        yearnSPVaultAddress: yearnSPVault.contract.address,
+        bammSPVaultAddress: bammSPVault.contract.address,
         yearnRegistryAddress: yearnRegistry.contract.address
       },
       config.targetAverageAgeSeconds,
@@ -194,13 +188,12 @@ class LUSDChickenBondDeployment {
       bondNFT,
       chickenBondManager,
       curvePool,
-      lusdSilo,
       lusdToken,
       curveLiquidityGauge,
       bLUSDToken,
       uniToken,
       yearnCurveVault,
-      yearnSPVault,
+      bammSPVault,
       yearnRegistry
     };
   }
@@ -210,9 +203,6 @@ class LUSDChickenBondDeployment {
 
     const connections: (() => Promise<ContractTransaction>)[] = [
       () => deployed.curvePool.contract.setAddresses(deployed.lusdToken.contract.address, overrides),
-
-      () =>
-        deployed.yearnSPVault.contract.setAddresses(deployed.lusdToken.contract.address, overrides),
 
       () =>
         deployed.yearnCurveVault.contract.setAddresses(
