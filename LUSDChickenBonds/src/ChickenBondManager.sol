@@ -41,7 +41,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     uint256 private pendingLUSD;          // Total pending LUSD. It will always be in SP (B.Protocol)
     uint256 private permanentLUSDInSP;    // B.Protocol Liquity Stability Pool vault
     uint256 private permanentLUSDInCurve; // Yearn Curve LUSD-3CRV vault
-    uint256 private bammLUSDDebt;         // Amount “owed” by B.Protocol to ChickenBonds, equals deposits - withdrawals
+    uint256 private bammLUSDDebt;         // Amount “owed” by B.Protocol to ChickenBonds, equals deposits - withdrawals + rewards
 
     // --- Data structures ---
 
@@ -286,17 +286,16 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
      * Assumption: When there have been no chicken ins since the bLUSD supply was set to 0 (either due to system deployment, or full bLUSD redemption),
      * all acquired LUSD must necessarily be pure yield.
      */
-    function _firstChickenIn() internal {
+    function _firstChickenIn(uint256 _bammLUSDValue, uint256 _lusdInBAMMSPVault) internal {
         assert(!migration);
 
-        (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
-        uint256 acquiredLUSDInSP = getAcquiredLUSDInSP();
+        uint256 acquiredLUSDInSP = _getAcquiredLUSDInSPFromBAMMValue(_bammLUSDValue);
 
         // Make sure that LUSD available in B.Protocol is at least as much as acquired
         // If first chicken in happens after an scenario of heavy liquidations and before ETH has been sold by B.Protocol
         // so that there’s not enough LUSD available in B.Protocol to transfer all the acquired bucket to the staking contract,
         // the system would start with a backing ratio greater than 1
-        require(lusdInBAMMSPVault >= acquiredLUSDInSP, "CBM: Not enough LUSD available in B.Protocol");
+        require(_lusdInBAMMSPVault >= acquiredLUSDInSP, "CBM: Not enough LUSD available in B.Protocol");
 
         // From SP Vault
         if (acquiredLUSDInSP > 0) {
@@ -317,6 +316,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _requireCallerOwnsBond(_bondID);
 
         uint256 updatedAccrualParameter = _updateAccrualParameter();
+        (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
 
         BondData memory bond = idToBondData[_bondID];
         (uint256 chickenInFeeAmount, uint256 bondAmountMinusChickenInFee) = _getBondWithChickenInFeeApplied(bond.lusdAmount);
@@ -327,10 +327,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         * This is not done in migration mode since there is no need to send rewards to the staking contract.
         */
         if (bLUSDToken.totalSupply() == 0 && !migration) {
-            _firstChickenIn();
+            _firstChickenIn(bammLUSDValue, lusdInBAMMSPVault);
         }
 
-        uint256 backingRatio = calcSystemBackingRatio();
+        uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
         uint256 accruedBLUSD = _calcAccruedBLUSD(bond.startTime, bondAmountMinusChickenInFee, backingRatio, updatedAccrualParameter);
 
         delete idToBondData[_bondID];
@@ -350,7 +350,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             permanentLUSDInSP += lusdSurplus;
         } else { // In migration mode, withdraw surplus from B.Protocol and refund to bonder
             // TODO: should we allow to pass in a minimum value here too?
-            (,uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
+            (,lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
             uint256 lusdToRefund = Math.min(lusdSurplus, lusdInBAMMSPVault);
             if (lusdToRefund > 0) { _withdrawFromBAMM(lusdToRefund, msg.sender); }
         }
@@ -367,6 +367,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256) {
         _requireNonZeroAmount(_bLUSDToRedeem);
 
+        (uint256 bammLUSDValue,) = _updateBAMMDebt();
+
         // Leaves redemption fees in the acquired bucket. */
         uint256 fractionOfBLUSDToRedeem = _bLUSDToRedeem * 1e18 / bLUSDToken.totalSupply();
         /* Calculate redemption fraction to withdraw, given that we leave the fee inside the acquired bucket.
@@ -374,10 +376,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 redemptionFeePercentage = migration ? 0 : _updateRedemptionFeePercentage(fractionOfBLUSDToRedeem);
         uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfBLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
 
-        // TODO: Both _requireEnoughLUSDInBAMM and getAcquiredLUSDInSP call B.Protocol getLUSDValue, so it may be optmized
+        // TODO: Both _requireEnoughLUSDInBAMM and _udateBAMMDebt call B.Protocol getLUSDValue, so it may be optmized
         // Calculate the LUSD to withdraw from LUSD vault, withdraw and send to redeemer
         uint256 lusdToWithdrawFromSP = _requireEnoughLUSDInBAMM(
-            getAcquiredLUSDInSP() * fractionOfAcquiredLUSDToWithdraw / 1e18,
+            _getAcquiredLUSDInSPFromBAMMValue(bammLUSDValue) * fractionOfAcquiredLUSDToWithdraw / 1e18,
             _minLUSDFromBAMMSPVault
         );
         if (lusdToWithdrawFromSP > 0) { _withdrawFromBAMM(lusdToWithdrawFromSP, msg.sender); }
@@ -398,7 +400,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     function shiftLUSDFromSPToCurve(uint256 _maxLUSDToShift) external {
         _requireMigrationNotActive();
 
-        (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _getInternalBAMMLUSDValueAndActualBalance();
+        (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
         uint256 lusdOwnedInBAMMSPVault = bammLUSDValue - pendingLUSD;
 
         // Make sure pending bucket is not moved to Curve, so it can be withdrawn on chicken out
@@ -525,10 +527,28 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     // it means that B.Protocol has had gains (through sell of ETH or LQTY).
     // We account for those gains
     // If the balance was lower (which would mean losses), we expect them to be eventually recovered
-    function _getInternalBAMMLUSDValueAndActualBalance() internal view returns (uint256, uint256) {
+    function _getInternalBAMMLUSDValue() internal view returns (uint256) {
         (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
 
-        return (Math.max(bammLUSDDebt, lusdInBAMMSPVault), lusdInBAMMSPVault);
+        return Math.max(bammLUSDDebt, lusdInBAMMSPVault);
+    }
+
+    // TODO: Should we make this one publicly callable, so that external getters can be up to date (by previously calling this)?
+    // Returns the value updated
+    function _updateBAMMDebt() internal returns (uint256, uint256) {
+        (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
+        uint256 bammLUSDDebtCached = bammLUSDDebt;
+
+        // If the actual balance of B.Protocol is higher than our internal accounting,
+        // it means that B.Protocol has had gains (through sell of ETH or LQTY).
+        // We account for those gains
+        // If the balance was lower (which would mean losses), we expect them to be eventually recovered
+        if (lusdInBAMMSPVault > bammLUSDDebtCached) {
+            bammLUSDDebt = lusdInBAMMSPVault;
+            return (lusdInBAMMSPVault, lusdInBAMMSPVault);
+        }
+
+        return (bammLUSDDebtCached, lusdInBAMMSPVault);
     }
 
     function _depositToBAMM(uint256 _lusdAmount) internal {
@@ -848,7 +868,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     // Calculates the LUSD value of this contract, including B.Protocol LUSD Vault and Curve Vault
     function calcTotalLUSDValue() external view returns (uint256) {
         uint256 totalLUSDInCurve = getTotalLUSDInCurve();
-        (uint256 bammLUSDValue,) = _getInternalBAMMLUSDValueAndActualBalance();
+        uint256 bammLUSDValue = _getInternalBAMMLUSDValue();
 
         return bammLUSDValue + totalLUSDInCurve;
     }
@@ -872,12 +892,20 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     // Acquired getters
 
     // Acquired in B.Protocol + Acquired in Curve
-    function getTotalAcquiredLUSD() public view returns (uint256) {
+    function getTotalAcquiredLUSD() external view returns (uint256) {
         return getAcquiredLUSDInSP() + getAcquiredLUSDInCurve();
     }
 
+    function _getTotalAcquiredLUSDFromBAMMValue(uint256 _bammLUSDValue) internal view returns (uint256) {
+        return _getAcquiredLUSDInSPFromBAMMValue(_bammLUSDValue) + getAcquiredLUSDInCurve();
+    }
+
     function getAcquiredLUSDInSP() public view returns (uint256) {
-        (uint256 bammLUSDValue,) = _getInternalBAMMLUSDValueAndActualBalance();
+        uint256 bammLUSDValue = _getInternalBAMMLUSDValue();
+        return _getAcquiredLUSDInSPFromBAMMValue(bammLUSDValue);
+    }
+
+    function _getAcquiredLUSDInSPFromBAMMValue(uint256 _bammLUSDValue) public view returns (uint256) {
         uint256 pendingLUSDInSPVaultCached = pendingLUSD; // All pending LUSD is in B.Protocol vault.
         uint256 permanentLUSDInSPCached = permanentLUSDInSP;
 
@@ -891,8 +919,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 acquiredLUSDInSP;
 
         // Acquired LUSD is what's left after subtracting pending and permament portions
-        if (bammLUSDValue > pendingLUSDInSPVaultCached + permanentLUSDInSPCached) {
-            acquiredLUSDInSP = bammLUSDValue - pendingLUSDInSPVaultCached - permanentLUSDInSPCached;
+        if (_bammLUSDValue > pendingLUSDInSPVaultCached + permanentLUSDInSPCached) {
+            acquiredLUSDInSP = _bammLUSDValue - pendingLUSDInSPVaultCached - permanentLUSDInSPCached;
         }
 
         return acquiredLUSDInSP;
@@ -933,8 +961,13 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     // Other getters
 
     function calcSystemBackingRatio() public view returns (uint256) {
+        uint256 bammLUSDValue = _getInternalBAMMLUSDValue();
+        return _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
+    }
+
+    function _calcSystemBackingRatioFromBAMMValue(uint256 _bammLUSDValue) public view returns (uint256) {
         uint256 totalBLUSDSupply = bLUSDToken.totalSupply();
-        uint256 totalAcquiredLUSD = getTotalAcquiredLUSD();
+        uint256 totalAcquiredLUSD = _getTotalAcquiredLUSDFromBAMMValue(_bammLUSDValue);
 
         /* TODO: Determine how to define the backing ratio when there is 0 bLUSD and 0 totalAcquiredLUSD,
          * i.e. before the first chickenIn. For now, return a backing ratio of 1. Note: Both quantities would be 0
