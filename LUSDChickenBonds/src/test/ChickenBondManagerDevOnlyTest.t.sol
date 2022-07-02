@@ -84,9 +84,6 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         // A redeems full
-        uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
-        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
-        uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
         chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
         vm.stopPrank();
@@ -104,10 +101,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.stopPrank();
 
         // Checks
-        uint256 yieldFromFirstChickenInRedemptionFee = bLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            initialYield + secondYield + 2 * chickenInFeeAmount + yieldFromFirstChickenInRedemptionFee,
+            initialYield + secondYield + 2 * chickenInFeeAmount,
             5,
             "Balance of rewards contract doesn't match"
         );
@@ -137,13 +133,13 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // bootstrap period passes
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
+        uint256 initialAcquiredLUSDInSP = chickenBondManager.getAcquiredLUSDInSP();
+        uint256 initialAcquiredLUSDInCurve = chickenBondManager.getAcquiredLUSDInCurve();
         uint256 initialPermanentLUSDInSP = chickenBondManager.getPermanentLUSDInSP();
         uint256 initialPermanentLUSDInCurve = chickenBondManager.getPermanentLUSDInCurve();
 
         // A redeems full
         uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
-        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
-        uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
         chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
         // A withdraws from Yearn to make math simpler, otherwise harvest would be shared
@@ -183,7 +179,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // Permanent in SP vault
         assertApproximatelyEqual(
             chickenBondManager.getPermanentLUSDInSP(),
-            initialPermanentLUSDInSP + _getAmountMinusChickenInFee(bondAmount2) - accruedBLUSD,
+            initialPermanentLUSDInSP + _getAmountMinusChickenInFee(bondAmount2) - accruedBLUSD + initialAcquiredLUSDInSP * (1e18 - redemptionFeePercentage) / 1e18,
             1,
             "Permanent LUSD in SP mismatch"
         );
@@ -195,20 +191,19 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
             20,
             "Acquired LUSD in Curve mismatch"
         );
+
         // Permanent in Curve vault
         assertApproximatelyEqual(
             chickenBondManager.getPermanentLUSDInCurve(),
-            initialPermanentLUSDInCurve,
+            initialPermanentLUSDInCurve + initialAcquiredLUSDInCurve * (1e18 - redemptionFeePercentage) / 1e18,
             1,
             "Permanent LUSD in Curve mismatch"
         );
 
         // Balance in rewards contract
-        //uint256 yieldFromFirstChickenInRedemptionFee = bLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18;
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            //curveYield + _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2) + yieldFromFirstChickenInRedemptionFee,
-            curveYield + _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2) + bLUSDBalance * backingRatio / 1e18 * (1e18 - redemptionFeePercentage) / 1e18,
+            curveYield + _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2),
             250,
             "Rewards contract balance mismatch"
         );

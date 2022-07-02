@@ -385,20 +385,31 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         /* Calculate redemption fraction to withdraw, given that we leave the fee inside the acquired bucket.
         * No fee in migration mode. */
         uint256 redemptionFeePercentage = migration ? 0 : _updateRedemptionFeePercentage(fractionOfBLUSDToRedeem);
-        uint256 fractionOfAcquiredLUSDToWithdraw = fractionOfBLUSDToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
 
         // TODO: Both _requireEnoughLUSDInBAMM and _udateBAMMDebt call B.Protocol getLUSDValue, so it may be optmized
         // Calculate the LUSD to withdraw from LUSD vault, withdraw and send to redeemer
-        uint256 lusdToWithdrawFromSP = _requireEnoughLUSDInBAMM(
-            _getAcquiredLUSDInSPFromBAMMValue(bammLUSDValue) * fractionOfAcquiredLUSDToWithdraw / 1e18,
-            _minLUSDFromBAMMSPVault
-        );
-        if (lusdToWithdrawFromSP > 0) { _withdrawFromBAMM(lusdToWithdrawFromSP, msg.sender); }
+        uint256 lusdToWithdrawFromSP;
+        { // To avoid stack too deep issues
+            uint256 acquiredLUSDInSPToRedeem = _getAcquiredLUSDInSPFromBAMMValue(bammLUSDValue) * fractionOfBLUSDToRedeem / 1e18;
+            uint256 acquiredLUSDInSPToWithdraw = acquiredLUSDInSPToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
+            uint256 acquiredLUSDInSPFee = acquiredLUSDInSPToRedeem - acquiredLUSDInSPToWithdraw;
+            lusdToWithdrawFromSP = _requireEnoughLUSDInBAMM(acquiredLUSDInSPToWithdraw, _minLUSDFromBAMMSPVault);
+            if (lusdToWithdrawFromSP > 0) { _withdrawFromBAMM(lusdToWithdrawFromSP, msg.sender); }
+            // Move the fee to permanent
+            permanentLUSDInSP += acquiredLUSDInSPFee;
+        }
 
         // Calculate the LUSD to withdraw from Curve, and send the corresponding yTokens to redeemer
-        uint256 lusdToWithdrawFromCurve = getAcquiredLUSDInCurve() * fractionOfAcquiredLUSDToWithdraw / 1e18;
-        uint256 yTokensFromCurveVault = _calcCorrespondingYTokensInCurveVault(lusdToWithdrawFromCurve);
-        if (yTokensFromCurveVault > 0) { yearnCurveVault.transfer(msg.sender, yTokensFromCurveVault); }
+        uint256 yTokensFromCurveVault;
+        { // To avoid stack too deep issues
+            uint256 acquiredLUSDInCurveToRedeem = getAcquiredLUSDInCurve() * fractionOfBLUSDToRedeem / 1e18;
+            uint256 lusdToWithdrawFromCurve = acquiredLUSDInCurveToRedeem * (1e18 - redemptionFeePercentage) / 1e18;
+            uint256 acquiredLUSDInCurveFee = acquiredLUSDInCurveToRedeem - lusdToWithdrawFromCurve;
+            yTokensFromCurveVault = _calcCorrespondingYTokensInCurveVault(lusdToWithdrawFromCurve);
+            if (yTokensFromCurveVault > 0) { yearnCurveVault.transfer(msg.sender, yTokensFromCurveVault); }
+            // Move the fee to permanent
+            permanentLUSDInCurve += acquiredLUSDInCurveFee;
+        }
 
         _requireNonZeroAmount(lusdToWithdrawFromSP + yTokensFromCurveVault);
 
