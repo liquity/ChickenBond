@@ -63,7 +63,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
 
         // chicken-out
         vm.startPrank(A);
-        chickenBondOperationsScript.chickenOut(bondId);
+        chickenBondOperationsScript.chickenOut(bondId, 0);
         vm.stopPrank();
 
         // checks
@@ -84,14 +84,14 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         chickenBondOperationsScript.chickenIn(bondId);
         vm.stopPrank();
 
-        assertEq(yearnSPVault.balanceOf(A), 0, "Previous SP yTokens balance doesn't match");
         assertEq(yearnCurveVault.balanceOf(A), 0, "Previous Curve yTokens balance doesn't match");
 
+        uint256 previousLUSDBalance = lusdToken.balanceOf(A);
         // redeem
         vm.startPrank(A);
         uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
         bLUSDToken.approve(address(chickenBondOperationsScript), bLUSDBalance);
-        chickenBondOperationsScript.redeem(bLUSDBalance / 2);
+        chickenBondOperationsScript.redeem(bLUSDBalance / 2, 0);
         vm.stopPrank();
 
         // checks
@@ -99,7 +99,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         // redemption fee: 1/4: decayed base is zero (as it’s the first one), so fee is fraction redeemed / BETA = 1/2 / 2 = 1/4.
         // Therefore, fraction with fee applied: 1/2*(1 - 1/4) = 3/8
         uint256 expectedLUSDBalance = accruedBLUSD * backingRatio / 1e18 * 3/8;
-        assertEq(yearnSPVault.balanceOf(A), expectedLUSDBalance, "SP yTokens balance doesn't match");
+        assertEq(lusdToken.balanceOf(A), previousLUSDBalance + expectedLUSDBalance, "LUSD balance doesn't match");
         assertEq(yearnCurveVault.balanceOf(A), 0, "Curve yTokens balance doesn't match");
     }
 
@@ -123,7 +123,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         vm.startPrank(A);
         uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
         bLUSDToken.approve(address(chickenBondOperationsScript), bLUSDBalance);
-        chickenBondOperationsScript.redeemAndWithdraw(bLUSDBalance / 2);
+        chickenBondOperationsScript.redeemAndWithdraw(bLUSDBalance / 2, 0);
         vm.stopPrank();
 
         // checks

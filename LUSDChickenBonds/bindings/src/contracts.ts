@@ -5,8 +5,8 @@ import { Signer } from "@ethersproject/abstract-signer";
 import bondNFT from "../artifacts/BondNFT.json";
 import chickenBondManager from "../artifacts/ChickenBondManager.json";
 import erc20 from "../artifacts/ERC20.json";
-import lusdSilo from "../artifacts/LUSDSilo.json";
 import lusdTokenTester from "../artifacts/LUSDTokenTester.json";
+import mockBAMMSPVault from "../artifacts/MockBAMMSPVault.json";
 import mockCurvePool from "../artifacts/MockCurvePool.json";
 import mockYearnRegistry from "../artifacts/MockYearnRegistry.json";
 import mockYearnVault from "../artifacts/MockYearnVault.json";
@@ -17,8 +17,8 @@ import {
   BondNFTFactory,
   ChickenBondManagerFactory,
   ERC20Factory,
-  LUSDSiloFactory,
   LUSDTokenTesterFactory,
+  MockBAMMSPVaultFactory,
   MockCurvePoolFactory,
   MockYearnRegistryFactory,
   MockYearnVaultFactory,
@@ -49,11 +49,6 @@ export interface LUSDChickenBondContractFactories {
     factory: MockCurvePoolFactory;
   };
 
-  lusdSilo: {
-    contractName: "LUSDSilo";
-    factory: LUSDSiloFactory;
-  };
-
   lusdToken: {
     contractName: "LUSDTokenTester";
     factory: LUSDTokenTesterFactory;
@@ -79,9 +74,9 @@ export interface LUSDChickenBondContractFactories {
     factory: MockYearnRegistryFactory;
   };
 
-  yearnSPVault: {
-    contractName: "MockYearnVault";
-    factory: MockYearnVaultFactory;
+  bammSPVault: {
+    contractName: "MockBAMMSPVault";
+    factory: MockBAMMSPVaultFactory;
   };
 
   yearnCurveVault: {
@@ -134,13 +129,12 @@ const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   bondNFT: checkArtifact("BondNFT", bondNFT),
   chickenBondManager: checkArtifact("ChickenBondManager", chickenBondManager),
   curvePool: checkArtifact("MockCurvePool", mockCurvePool),
-  lusdSilo: checkArtifact("LUSDSilo", lusdSilo),
   lusdToken: checkArtifact("LUSDTokenTester", lusdTokenTester),
   curveLiquidityGauge: checkArtifact("MockCurveLiquidityGaugeV4", mockCurveLiquidityGaugeV4),
   bLUSDToken: checkArtifact("BLUSDToken", bLUSDToken),
   uniToken: checkArtifact("ERC20", erc20),
   yearnCurveVault: checkArtifact("MockYearnVault", mockYearnVault),
-  yearnSPVault: checkArtifact("MockYearnVault", mockYearnVault),
+  bammSPVault: checkArtifact("MockBAMMSPVault", mockBAMMSPVault),
   yearnRegistry: checkArtifact("MockYearnRegistry", mockYearnRegistry)
 });
 

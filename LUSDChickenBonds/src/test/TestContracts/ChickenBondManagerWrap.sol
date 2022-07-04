@@ -36,6 +36,10 @@ contract ChickenBondManagerWrap is ChickenBondManager {
         return _updateRedemptionFeePercentage(_fractionOfBLUSDToRedeem);
     }
 
+    function updateBAMMDebt() external returns (uint256, uint256) {
+        return _updateBAMMDebt();
+    }
+
     function minutesPassedSinceLastRedemption() external view returns (uint256) {
         return _minutesPassedSinceLastRedemption();
     }

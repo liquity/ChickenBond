@@ -6,6 +6,11 @@ import "./TestContracts/DevTestSetup.sol";
 
 
 contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
+    function _generateBAMMYield(uint256 _yieldAmount) internal {
+        tip(address(lusdToken), address(bammSPVault), lusdToken.balanceOf(address(bammSPVault)) + _yieldAmount);
+        chickenBondManager.updateBAMMDebt();
+    }
+
     function testFirstChickenInTransfersToRewardsContract() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -17,7 +22,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = 1e18;
-        MockYearnVault(address(yearnSPVault)).harvest(initialYield);
+        _generateBAMMYield(initialYield);
 
         // A chickens in
         vm.startPrank(A);
@@ -66,9 +71,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         vm.warp(block.timestamp + 600);
 
-        // Yearn LUSD Vault gets some yield
+        // B.Protocol LUSD Vault gets some yield
         uint256 initialYield = 1e18;
-        MockYearnVault(address(yearnSPVault)).harvest(initialYield);
+        _generateBAMMYield(initialYield);
 
         // A chickens in
         vm.startPrank(A);
@@ -82,19 +87,14 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
         uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
-        chickenBondManager.redeem(bLUSDToken.balanceOf(A));
+        chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
         vm.stopPrank();
 
         vm.warp(block.timestamp + 600);
 
-        // make sure A withdraws Y tokens, otherwise would get part of the new harvest!
-        vm.startPrank(A);
-        yearnSPVault.withdraw(yearnSPVault.balanceOf(A));
-        vm.stopPrank();
-
-        // Yearn LUSD Vault gets some yield
+        // B.Protocol LUSD Vault gets some yield
         uint256 secondYield = 4e18;
-        MockYearnVault(address(yearnSPVault)).harvest(secondYield);
+        _generateBAMMYield(secondYield);
 
         // B chickens in
         vm.startPrank(B);
@@ -141,7 +141,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
         uint256 backingRatio = chickenBondManager.calcSystemBackingRatio();
         vm.startPrank(A);
-        chickenBondManager.redeem(bLUSDToken.balanceOf(A));
+        chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
         // A withdraws from Yearn to make math simpler, otherwise harvest would be shared
         yearnCurveVault.withdraw(yearnCurveVault.balanceOf(A));
         vm.stopPrank();
@@ -208,5 +208,172 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
             250,
             "Rewards contract balance mismatch"
         );
+    }
+
+    function testFirstChickenInWithoutEnoughLUSDInBAMM() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // Yearn LUSD Vault gets some yield
+        uint256 initialYield = 1e18;
+        _generateBAMMYield(initialYield);
+
+        uint256 acquiredLUSDInSP = chickenBondManager.getAcquiredLUSDInSP();
+        // simulate B.Protocol loss
+        uint256 bammLoss = lusdToken.balanceOf(address(bammSPVault)) - acquiredLUSDInSP + 1;
+        vm.startPrank(address(bammSPVault));
+        lusdToken.transfer(C, bammLoss);
+        vm.stopPrank();
+
+        // A chickens in
+        vm.startPrank(A);
+        vm.expectRevert("CBM: Not enough LUSD available in B.Protocol");
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // simulate B.Protocol recover loss
+        vm.startPrank(C);
+        lusdToken.transfer(address(bammSPVault), bammLoss);
+        vm.stopPrank();
+
+        // now it works
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+    }
+
+    function testFirstChickenInWithoutEnoughLUSDInBAMMForChickenInFee() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // Yearn LUSD Vault gets some yield
+        uint256 initialYield = 1e18;
+        _generateBAMMYield(initialYield);
+
+        uint256 acquiredLUSDInSP = chickenBondManager.getAcquiredLUSDInSP();
+        // simulate B.Protocol loss
+        vm.startPrank(address(bammSPVault));
+        lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - acquiredLUSDInSP);
+        vm.stopPrank();
+
+        // now it works
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
+
+        // rewards contract has only initial acquired, but no fee
+        assertEq(lusdToken.balanceOf(address(curveLiquidityGauge)), acquiredLUSDInSP, "Rewards contract balance mismatch");
+    }
+
+    function testChickenOutMinTooBig() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // A chickens out
+        vm.startPrank(A);
+        vm.expectRevert("CBM: Min value cannot be greater than nominal amount");
+        chickenBondManager.chickenOut(A_bondID, bondAmount + 1);
+        vm.stopPrank();
+    }
+
+    function testChickenOutBelowMin() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // simulate B.Protocol loss
+        vm.startPrank(address(bammSPVault));
+        lusdToken.transfer(C, bondAmount / 2);
+        vm.stopPrank();
+
+        // A chickens out
+        vm.startPrank(A);
+        vm.expectRevert("CBM: Not enough LUSD available in B.Protocol");
+        chickenBondManager.chickenOut(A_bondID, bondAmount / 2 + 1);
+        // with the remaining amount it works
+        chickenBondManager.chickenOut(A_bondID, bondAmount / 2);
+        vm.stopPrank();
+    }
+
+    function testRedeemMinTooBig() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's bLUSD balance is non-zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        bLUSDToken.transfer(B, A_bLUSDBalance);
+        assertEq(A_bLUSDBalance, bLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        uint256 acquiredLUSD = chickenBondManager.getAcquiredLUSDInSP();
+        // B redeems bLUSD
+        vm.startPrank(B);
+        vm.expectRevert("CBM: Min value cannot be greater than nominal amount");
+        chickenBondManager.redeem(A_bLUSDBalance, acquiredLUSD + 1);
+        vm.stopPrank();
+    }
+
+    function testRedeemBelowMin() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + 600);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's bLUSD balance is non-zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        bLUSDToken.transfer(B, A_bLUSDBalance);
+        assertEq(A_bLUSDBalance, bLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        // simulate B.Protocol loss
+        uint256 leftInBAMMSPVault = 10;
+        //console.log(chickenBondManager.getAcquiredLUSDInSP(), "chickenBondManager.getAcquiredLUSDInSP()");
+        //console.log(chickenBondManager.getPermanentLUSDInSP(), "chickenBondManager.getPermanentLUSDInSP()");
+        vm.startPrank(address(bammSPVault));
+        lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - leftInBAMMSPVault);
+        vm.stopPrank();
+
+        // B redeems bLUSD
+        vm.startPrank(B);
+        vm.expectRevert("CBM: Not enough LUSD available in B.Protocol");
+        chickenBondManager.redeem(A_bLUSDBalance, leftInBAMMSPVault + 1);
+        // with the remaining amount it works
+        chickenBondManager.redeem(A_bLUSDBalance, leftInBAMMSPVault);
+        vm.stopPrank();
     }
 }

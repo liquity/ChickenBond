@@ -4,6 +4,7 @@
 pragma solidity ^0.8.10;
 
 import "./BaseTest.sol";
+import "../../ExternalContracts/MockBAMMSPVault.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
 import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
@@ -44,18 +45,15 @@ contract DevTestSetup is BaseTest {
         MockCurvePool mockCurveBasePool = new MockCurvePool("3CRV Pool", "3CRV");
         curveBasePool = ICurvePool(address(mockCurveBasePool));
 
-        MockYearnVault mockYearnLUSDVault = new MockYearnVault("LUSD yVault", "yvLUSD");
-        mockYearnLUSDVault.setAddresses(address(lusdToken));
-        yearnSPVault = IYearnVault(address(mockYearnLUSDVault));
+        MockBAMMSPVault mockBAMMSPVault = new MockBAMMSPVault(address(lusdToken));
+        bammSPVault = IBAMM(address(mockBAMMSPVault));
 
         MockYearnVault mockYearnCurveVault = new MockYearnVault("Curve LUSD Pool yVault", "yvCurve-LUSD");
         mockYearnCurveVault.setAddresses(address(curvePool));
         yearnCurveVault = IYearnVault(address(mockYearnCurveVault));
 
         MockYearnRegistry mockYearnRegistry = new MockYearnRegistry(
-            address(yearnSPVault),
             address(yearnCurveVault),
-            address(lusdToken),
             address(curvePool)
         );
         yearnRegistry = IYearnRegistry(address(mockYearnRegistry));
@@ -66,8 +64,6 @@ contract DevTestSetup is BaseTest {
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
 
-        lusdSilo = new LUSDSilo();
-
         // Deploy LUSD/bLUSD AMM LP Rewards contract
         curveLiquidityGauge = ICurveLiquidityGaugeV4(address(new MockCurveLiquidityGaugeV4()));
 
@@ -77,12 +73,11 @@ contract DevTestSetup is BaseTest {
             bLUSDTokenAddress: address(bLUSDToken),
             curvePoolAddress: address(curvePool),
             curveBasePoolAddress: address(curveBasePool),
-            yearnSPVaultAddress: address(yearnSPVault),
+            bammSPVaultAddress: address(bammSPVault),
             yearnCurveVaultAddress: address(yearnCurveVault),
             yearnRegistryAddress: address(yearnRegistry),
             curveLiquidityGaugeAddress: address(curveLiquidityGauge),
-            yearnGovernanceAddress: yearnGovernanceAddress,
-            lusdSiloAddress: address(lusdSilo)
+            yearnGovernanceAddress: yearnGovernanceAddress
         });
 
         chickenBondManager = new ChickenBondManagerWrap(
