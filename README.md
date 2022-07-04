@@ -48,7 +48,9 @@ https://github.com/gakonst/foundry
 
 ### Running tests
 
-The bulk of significant testing has been done using a mainnet fork, since ChickenBonds will heavily depend on the deployed B.Protocal and Yearn vaults, and Curve pool.
+The bulk of significant testing has been done using a mainnet fork, since ChickenBonds will heavily depend on the deployed B.Protocol and Yearn vaults, and Curve pool.
+
+As of 04/07/2022, mainnet tests are commented out as the B.AMM instance is not yet deployed. We intend to uncomment and update these mainnet fork tests  as soon as the B.AMM is deployed to mainnet and active.
 
 For mainnet fork testing in Foundry, please set the env variable `ETH_RPC_URL` equal to your API key for a Ethereum RPC node service such as Alchemy or Infura. Run all mainnet tests with:
 forge test --fork-url $ETH_RPC_URL
@@ -98,7 +100,7 @@ In migration mode, no funds are permanent. The buckets are split in this manner:
 
 ![Chicken bond buckets drawio](https://user-images.githubusercontent.com/701095/170958185-fb2242aa-07f9-41ac-9384-294c5ecfa4db.png)
 
-_This diagram shows an example state of the individual buckets in normal mode.  Exact quantities in each individual **acquired** and **permament** bucket will vary over time - their sizes depend on the history of shift events and the magnitude and and timing of early chicken-ins._
+_This diagram shows an example state of the individual buckets in normal mode.  Exact quantities in each individual **acquired** and **permanent** bucket will vary over time - their sizes depend on the history of shift events and the magnitude and and timing of early chicken-ins._
 
 
 
@@ -135,14 +137,14 @@ For the global permanent and acquired buckets, the split is updated by shifter f
 
 The **pending** bucket and individual **permanent** buckets are tracked by state variables in `ChickenBondManager`, and updated when funds are added/removed.  Specifically, these state variables are:
 
-- `totalPendingLUSD`
+- `pendingLUSD`
 - `permanentLUSDInBAMMSPVault`
 - `permanentLUSDInYearnCurveVault`
 
 Individual **acquired** buckets are not explicitly tracked via state variables. Rather, the acquired LUSD in a given pool (B.AMM SP vault or Curve) is calculated based on the total funds held in the pool, minus any pending and permanent funds in that pool.  
 
 The following getter functions in the smart contract perform these calculations for individual acquired buckets:
-- `getAcquiredLUSDInSPVault()`
+- `getAcquiredLUSDInSP()`
 - `getAcquiredLUSDInCurve()`
 
 
@@ -170,13 +172,13 @@ Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot
 
 LUSD Chicken bonds is connected to three external contracts which are already live on mainnet:
 
-- B.AMM SP vault.  Chicken Bonds deposits funds here upon bond creation, to earn yield. This vault primarily utilizes the Liquity Stability Pool (SP) and secondarily the Tokemak LUSD reactor, which each generate a return on deposited LUSD, in LUSD.
+- **B.AMM SP vault**.  Chicken Bonds deposits funds here upon bond creation, to earn yield. This vault utilizes the Liquity Stability Pool (SP), which  generates a return on deposited LUSD, in LUSD.
 
-- Curve LUSD3CRV MetaPool. Chicken Bonds deposits LUSD here and receives the LUSD3CRV LP token. This is in turn deposited to the Yearn Curve vault.
+- **Curve LUSD3CRV MetaPool**. Chicken Bonds deposits LUSD here and receives the LUSD3CRV LP token. This is in turn deposited to the Yearn Curve vault.
 
-- Yearn Curve Vault. LUSD3CRV is deposited here, and the vault generates a return on the deposit, paid in LUSD3CRV.
+- **Yearn Curve vault**. LUSD3CRV is deposited here, and the vault generates a return on the deposit, paid in LUSD3CRV.
 
-ETH and LQTY in the B.AMM SP vault is put on sale to have them converted to LUSD and realize the gains.
+ETH and LQTY yield earned in the B.AMM SP vault is converted to LUSD via public AMM swaps, in order to realize the gains in terms of LUSD.
 
 Yearn Curve vault is periodically manually harvested by the Yearn team in order to realize the yield in terms of the deposited token.
 
@@ -185,16 +187,16 @@ Yearn Curve vault is periodically manually harvested by the Yearn team in order 
 
 - `createBond(_lusdAmount):` creates a bond for the user and mints a bond NFT to their address. A user may create multiple bonds.
 
-- `chickenOut(bondID):` removes the given bond from the system and burns the bond NFT. Refunds the bonded LUSD to the caller.
+- `chickenOut(bondID, _minLUSD):` removes the given bond from the system and burns the bond NFT. Refunds the bonded LUSD to the caller. Takes a `_minLUSD` parameter which allows the user to specify the minimum LUSD they should receive (useful in case the system temporarily can't send them their full bonded LUSD amount, due to pending yield conversion).
 
 - `chickenIn(bondID):` removes the given bond from the system and burns the bond NFT. Makes a portion of the bonded LUSD “acquired” and redeemable, and the remainder of the bonded LUSD permanently protocol-owned.  The split between these two quantities is determined such that the global system backing ratio remains constant.
 
-- `redeem(_bLUSDAmount):` Burns the provided bLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the B.AMM SP and Curve vaults and sent to the redeemer.
+- `redeem(_bLUSDAmount, _minLUSDFromBAMMSPVault):` Burns the provided bLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the B.AMM SP and Curve vaults and sent to the redeemer. Takes a `_minLUSDFromBAMMSPVault` parameter which allows the user to specify the minimum LUSD that should be redeemed from the B.AMM (useful in case there is temporarily not enough LUSD in the B.AMM SP vault to fulfil a proportional redemption request, and the user simply wants to redeem as much LUSD as possible).
 
 
-- `shiftLUSDFromSPToCurve(_lusdAmount):` Shifts the given LUSD amount from the B.AMM SP vault to Curve, and deposits the received LP tokens to the Curve vault. Pulls funds from the acquired and permanent buckes in the SP vault, and moves them to the acquired and permanent buckets in the Curve vault, respectively. Only succeeds if the shift improves the LUSD peg.
+- `shiftLUSDFromSPToCurve(_maxLUSDToShift):` Shifts up to the given LUSD amount from the B.AMM SP vault to Curve, and deposits the received LP tokens to the Curve vault. Pulls funds from the acquired and permanent buckes in the SP vault, and moves them to the acquired and permanent buckets in the Curve vault, respectively. Only succeeds if the shift improves the LUSD peg.
 
-- `shiftLUSDFromCurveToSP(_lusdAmount):` Shifts the given LUSD amount from the Curve to the B.AMM SP vault. Pulls funds from the Curve acquired and permanent buckets, and moves them to the acquired and permanent buckets in the SP vault, respectively. Only succeeds if the shift improves the LUSD peg.
+- `shiftLUSDFromCurveToSP(_maxLUSDToShift):` Shifts up to the given LUSD amount from the Curve to the B.AMM SP vault. Pulls funds from the Curve acquired and permanent buckets, and moves them to the acquired and permanent buckets in the SP vault, respectively. Only succeeds if the shift improves the LUSD peg.
 
 - `sendFeeShare(_lusdAmount):` Callable only by Yearn Governance. Transfers the provided LUSD to the ChickenBondManager contract, and deposits it to the B.AMM SP vault.
 
