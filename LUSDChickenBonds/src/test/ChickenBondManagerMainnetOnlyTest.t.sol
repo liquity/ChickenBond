@@ -900,39 +900,43 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
     }
 
-    // TODO: refactor this test to be more robust to specific Curve mainnet state. Currently sometimes fails.
-    // function testShiftLUSDFromCurveToSPRevertsWhenShiftWouldRaiseCurvePriceAbove1() public {
+    function testShiftLUSDFromCurveToSPRevertsWhenShiftWouldRaiseCurvePriceAbove1() public {
+        vm.startPrank(yearnGovernanceAddress);
+        yearnSPVault.setDepositLimit(1e27);
+        vm.stopPrank();
 
-    //     // A creates bond
-    //     uint256 bondAmount = 500_000_000e18; // 500m
+        // A creates bond
+        uint256 bondAmount = 100_000_000e18; // 500m
 
-    //     tip(address(lusdToken), A, bondAmount);
-    //     createBondForUser(A, bondAmount);
-    //     uint256 A_bondID = bondNFT.totalMinted();
+        tip(address(lusdToken), A, bondAmount);
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
 
-    //     // 1 year passes
-    //     vm.warp(block.timestamp + 365 days);
+        // 1 year passes
+        vm.warp(block.timestamp + 365 days);
 
-    //     // A chickens in
-    //     vm.startPrank(A);
-    //     chickenBondManager.chickenIn(A_bondID);
-    //     vm.stopPrank();
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+        vm.stopPrank();
 
-    //     makeCurveSpotPriceAbove1(300_000_000e18);
-    //     // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
-    //     console.log("A");
-    //     console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price A");
-    //     shiftFractionFromSPToCurve(30);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price start");
+        makeCurveSpotPriceAbove1(50_000_000e18);
+        // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
+        console.log("A");
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price A");
+        shiftFractionFromSPToCurve(10);
 
-    //     console.log("B");
-    //     makeCurveSpotPriceBelow1(50_000_000e18);
-    //     console.log("C");
-    //     console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price before shift Curve->SP test");
-    //     // Now, attempt to shift an amount which would raise the price back above 1.0, and expect it to fail
-    //     vm.expectRevert("CBM: Curve->SP shift must increase spot price to <= 1.0");
-    //     chickenBondManager.shiftLUSDFromCurveToSP(5_000_000e18);
-    //     console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price after final shift Curve->SP");
-    // }
+        console.log("B");
+        makeCurveSpotPriceBelow1(50_000_000e18);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price B");
+        console.log("C");
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price before shift Curve->SP test");
+        // Now, attempt to shift an amount which would raise the price back above 1.0, and expect it to fail
+        vm.expectRevert("CBM: Curve->SP shift must increase 3CRV:LUSD exchange rate to a value above the withdrawal threshold");
+        chickenBondManager.shiftLUSDFromCurveToSP(50_000_000e18);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price after final shift Curve->SP");
+    }
 
     function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInCBM() public {
         // A creates bond
