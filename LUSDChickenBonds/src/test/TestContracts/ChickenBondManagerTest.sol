@@ -1558,9 +1558,8 @@ contract ChickenBondManagerTest is BaseTest {
     function testRedeemDecreasesAcquiredLUSDInSPByCorrectFraction(uint256 redemptionFraction) public {
         vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9);
         // uint256 redemptionFraction = 5e17; // 50%
-        uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage(redemptionFraction);
-        // 1-r(1-f).  Fee is left inside system
-        uint256 expectedFractionRemainingAfterRedemption = 1e18 - (redemptionFraction * (1e18 - percentageFee)) / 1e18;
+        // 1-r.  Fee goes to permanent
+        uint256 expectedFractionRemainingAfterRedemption = 1e18 - redemptionFraction;
         // Ensure the expected remaining is between 0 and 100%
         assertTrue(expectedFractionRemainingAfterRedemption > 0 && expectedFractionRemainingAfterRedemption < 1e18);
 
@@ -1614,7 +1613,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 acquiredLUSDInSPAfter = chickenBondManager.getAcquiredLUSDInSP();
         uint256 expectedAcquiredLUSDInSPAfter = acquiredLUSDInSPBefore * expectedFractionRemainingAfterRedemption / 1e18;
 
-        assertApproximatelyEqual(acquiredLUSDInSPAfter, expectedAcquiredLUSDInSPAfter, 1e9);
+        assertApproximatelyEqual(acquiredLUSDInSPAfter, expectedAcquiredLUSDInSPAfter, 1e9, "Acquired LUSD mismatch");
     }
 
     // ---
@@ -1677,17 +1676,12 @@ contract ChickenBondManagerTest is BaseTest {
             ROUNDING_ERROR,
             "Wrong B Y tokens balance increase after 1st redemption"
         );
-        uint256 backingRatioExpected = backingRatio0 * (1e18 - redemptionFraction * (1e18 - redemptionFeePercentageExpected)/1e18)
-            / (1e18 - redemptionFraction);
-        assertApproximatelyEqual(backingRatio1, backingRatioExpected, ROUNDING_ERROR, "Wrong backing ratio after 1st redemption");
+        assertApproximatelyEqual(backingRatio1, backingRatio0, ROUNDING_ERROR, "Wrong backing ratio after 1st redemption");
 
         // B redeems again
         redemptionFraction = 3e18/4;
         chickenBondManager.redeem(bLUSDToken.balanceOf(B) * redemptionFraction / 1e18, 0);
         uint256 B_lusdBalanceAfter2 = lusdToken.balanceOf(B);
-        redemptionFeePercentageExpected = redemptionFeePercentageExpected + redemptionFraction / chickenBondManager.BETA();
-        backingRatioExpected = backingRatio1 * (1e18 - redemptionFraction * (1e18 - redemptionFeePercentageExpected)/1e18)
-            / (1e18 - redemptionFraction);
         // Check B's Y tokens Balance converted to LUSD has increased by less than redemption amount
         // backing ratio was 1, but redemption fee was non zero
         assertGt(
@@ -1696,7 +1690,7 @@ contract ChickenBondManagerTest is BaseTest {
             "Wrong B Y tokens balance increase after 2nd redemption"
         );
         // Now backing ratio should have increased
-        assertApproximatelyEqual(chickenBondManager.calcSystemBackingRatio(), backingRatioExpected, ROUNDING_ERROR, "Wrong backing ratio after 2nd redemption");
+        assertApproximatelyEqual(chickenBondManager.calcSystemBackingRatio(), backingRatio1, ROUNDING_ERROR, "Wrong backing ratio after 2nd redemption");
     }
 
     function testRedeemRevertsWhenCallerHasInsufficientBLUSD() public {
