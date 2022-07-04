@@ -395,7 +395,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             uint256 acquiredLUSDInSPFee = acquiredLUSDInSPToRedeem - acquiredLUSDInSPToWithdraw;
             lusdToWithdrawFromSP = _requireEnoughLUSDInBAMM(acquiredLUSDInSPToWithdraw, _minLUSDFromBAMMSPVault);
             if (lusdToWithdrawFromSP > 0) { _withdrawFromBAMM(lusdToWithdrawFromSP, msg.sender); }
-            // Move the fee to permanent
+            // Move the fee to permanent. This implicitly removes it from the acquired bucket
             permanentLUSDInSP += acquiredLUSDInSPFee;
         }
 
@@ -407,7 +407,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             uint256 acquiredLUSDInCurveFee = acquiredLUSDInCurveToRedeem - lusdToWithdrawFromCurve;
             yTokensFromCurveVault = _calcCorrespondingYTokensInCurveVault(lusdToWithdrawFromCurve);
             if (yTokensFromCurveVault > 0) { yearnCurveVault.transfer(msg.sender, yTokensFromCurveVault); }
-            // Move the fee to permanent
+            // Move the fee to permanent. This implicitly removes it from the acquired bucket
             permanentLUSDInCurve += acquiredLUSDInCurveFee;
         }
 
