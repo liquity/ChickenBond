@@ -154,7 +154,7 @@ The two system shifter functions are public and permissionless.  They are: `shif
 
 In principle, when the LUSD spot price in the Curve is > 1, anyone may shift LUSD from the Liquity Stability Pool to the Curve pool (routed via the corresponding B.AMM and Yearn vaults), thus moving the spot price back toward 1 - improving the dollar peg. Conversely, when the spot price is < 1, anyone may shift LUSD from the Curve pool and into the Stability Pool, which increases the price toward 1.
 
-Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot price by bringing it closer to 1 - yet, must not cause it to cross the boundary of 1. Shifter functions are enabled in normal mode and disabled in migration mode.
+Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot price by bringing it closer to 1. Shifter functions are enabled in normal mode and disabled in migration mode.
 
 ### Spot Price Thresholds
 
