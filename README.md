@@ -163,7 +163,7 @@ In practice, Curve charges fees when single-sided LUSD is deposited or withdrawn
 - Shifting from the SP to Curve is possible when the spot price is < x, and must not move the spot price above x.  
 - Shifting from Curve to the SP is possible when the spot price is > y, and must not move the spot price below y.
 
-<img width="655" alt="image" src="https://user-images.githubusercontent.com/32799176/177152242-debb7a65-9ad0-4fe3-945d-c35a9fc3f7f3.png">
+<img width="636" alt="image" src="https://user-images.githubusercontent.com/32799176/177153259-e7d4f61c-b26f-4f04-a79c-3d4859fe7014.png">
 
 The exact threshold values have been determined by thorough analysis and simulations, found here:
 https://docs.google.com/document/d/1fagBvVWRy9hQjrJvK4daK_F8iT9lfUeUrmlxC56Qzfw/edit#heading=h.19g2nvu3uvq8
