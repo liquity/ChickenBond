@@ -152,9 +152,23 @@ The following getter functions in the smart contract perform these calculations 
 
 The two system shifter functions are public and permissionless.  They are: `shiftLUSDFromSPToCurve` and `shiftLUSDFromCurveToSP`.
 
-When the LUSD spot price in the Curve is > 1, anyone may shift LUSD from the Liquity Stability Pool to the Curve pool (routed via the corresponding B.AMM and Yearn vaults), thus moving the spot price back toward 1 - improving the dollar peg. Conversely, when the spot price is < 1, anyone may shift LUSD from the Curve pool and into the Stability Pool, which increases the price toward 1.
+In principle, when the LUSD spot price in the Curve is > 1, anyone may shift LUSD from the Liquity Stability Pool to the Curve pool (routed via the corresponding B.AMM and Yearn vaults), thus moving the spot price back toward 1 - improving the dollar peg. Conversely, when the spot price is < 1, anyone may shift LUSD from the Curve pool and into the Stability Pool, which increases the price toward 1.
 
 Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot price by bringing it closer to 1 - yet, must not cause it to cross the boundary of 1. Shifter functions are enabled in normal mode and disabled in migration mode.
+
+### Spot Price Thresholds
+
+In practice, Curve charges fees when single-sided LUSD is deposited or withdrawn.  In order to avoid net losses for the Chicken Bonds system, shifting is restricted by two thresholds on the LUSD-3CRV spot price. Let these price thesholds be `x` and `y` where `x < 1` and `y > 1`.  
+
+- Shifting from the SP to Curve is possible when the spot price is < x, and must not move the spot price above x.  
+- Shifting from Curve to the SP is possible when the spot price is > y, and must not move the spot price below y.
+
+<img width="655" alt="image" src="https://user-images.githubusercontent.com/32799176/177152242-debb7a65-9ad0-4fe3-945d-c35a9fc3f7f3.png">
+
+The exact threshold values have been determined by thorough analysis and simulations, found here:
+https://docs.google.com/document/d/1fagBvVWRy9hQjrJvK4daK_F8iT9lfUeUrmlxC56Qzfw/edit#heading=h.19g2nvu3uvq8
+
+The choice of thresholds ensures that shifting LUSD is profitable for the Chicken Bonds system.
 
 
 ## Core smart contract architecture
