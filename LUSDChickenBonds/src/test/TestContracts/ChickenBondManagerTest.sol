@@ -103,9 +103,10 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondID_A = bondNFT.totalMinted();
 
         // B approves the system for LUSD transfer and creates the bond
-       createBondForUser(B,  20e18);
+        createBondForUser(B,  20e18);
 
-        vm.warp(block.timestamp + 1 days);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // A chickens in
         vm.startPrank(A);
@@ -843,15 +844,36 @@ contract ChickenBondManagerTest is BaseTest {
 
     // --- chickenIn tests ---
 
+    function testChickenInFailsAfterShortBondingInterval() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN() - 1);
+
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // A chickens in
+        vm.startPrank(A);
+        vm.expectRevert("CBM: First chicken in must wait until bootstrap period is over");
+        chickenBondManager.chickenIn(A_bondID);
+    }
+
     function testChickenInSucceedsAfterShortBondingInterval(uint256 _interval) public {
-        vm.assume(_interval > 1  && _interval < 1 weeks); // Interval in range [1 second, 1 week]
+        // Interval in range ]bootstrap period, bootstrap period + 1 week[
+        uint256 interval = coerce(
+            _interval,
+            chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN(), // wait at least bootstrap period before chicken-in
+            chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN() + 1 weeks // wait at least bootstrap period before chicken-in
+        );
 
         // A creates bond
         uint256 bondAmount = 10e18;
 
        createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + _interval);
+        vm.warp(block.timestamp + interval);
 
         uint256 A_bondID = bondNFT.totalMinted();
 
@@ -880,8 +902,8 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_bondedLUSD, bondAmount);
         assertEq(B_bondStartTime, currentTime);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // B chickens in
         vm.startPrank(B);
@@ -908,8 +930,8 @@ contract ChickenBondManagerTest is BaseTest {
         // Get B bLUSD balance before
         uint256 B_bLUSDBalanceBefore = bLUSDToken.balanceOf(B);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Get B's accrued bLUSD and confirm it is non-zero
         uint256 B_accruedBLUSD = chickenBondManager.calcAccruedBLUSD(B_bondID);
@@ -934,8 +956,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Get B LUSD balance before
         uint256 B_LUSDBalanceBefore = lusdToken.balanceOf(B);
@@ -961,8 +983,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Get total pending LUSD before
         uint256 totalPendingLUSDBefore = chickenBondManager.getPendingLUSD();
@@ -987,8 +1009,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Get total pending LUSD before
         uint256 totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
@@ -1013,8 +1035,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         uint256 nftTokenSupplyBefore = bondNFT.tokenSupply();
 
@@ -1037,8 +1059,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         uint256 nftTotalMintedBefore = bondNFT.totalMinted();
 
@@ -1061,8 +1083,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Get B's NFT balance before
         uint256 B_bondNFTBalanceBefore = bondNFT.balanceOf(B);
@@ -1087,8 +1109,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm bond owner is B
         address bondOwnerBefore = bondNFT.ownerOf(B_bondID);
@@ -1110,15 +1132,15 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 A_startTime = block.timestamp;
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // B creates bond
         uint256 B_startTime = block.timestamp;
         uint256 B_bondID = createBondForUser(B, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // B chickens in
         vm.startPrank(B);
@@ -1136,8 +1158,8 @@ contract ChickenBondManagerTest is BaseTest {
             "Wrong Chicken In fee applied to B"
         );
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // A chickens in
         vm.startPrank(A);
@@ -1164,8 +1186,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm B has no bonds
         uint256 B_bondCount = bondNFT.balanceOf(B);
@@ -1192,8 +1214,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm bond owner is B
         address bondOwnerBefore = bondNFT.ownerOf(B_bondID);
@@ -1320,14 +1342,51 @@ contract ChickenBondManagerTest is BaseTest {
 
     // --- redemption tests ---
 
+    function testRedeemFailsAfterShortPeriod() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+
+        // Confirm A's bLUSD balance is zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance == 0);
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        bLUSDToken.transfer(B, bLUSDBalance);
+        assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        // less than bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM() - 1);
+
+        // B redeems some bLUSD
+        uint256 bLUSDToRedeem = bLUSDBalance / 2;
+        vm.startPrank(B);
+        vm.expectRevert("CBM: Redemption after first chicken in must wait until bootstrap period is over");
+        chickenBondManager.redeem(bLUSDToRedeem, 0);
+    }
+
     function testRedeemDecreasesCallersBLUSDBalance() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm A's bLUSD balance is zero
         uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
@@ -1347,6 +1406,9 @@ contract ChickenBondManagerTest is BaseTest {
         bLUSDToken.transfer(B, bLUSDBalance);
         assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         // B redeems some bLUSD
         uint256 bLUSDToRedeem = bLUSDBalance / 2;
@@ -1365,8 +1427,8 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm A's bLUSD balance is zero
         uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
@@ -1386,6 +1448,9 @@ contract ChickenBondManagerTest is BaseTest {
         bLUSDToken.transfer(B, bLUSDBalance);
         assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         uint256 totalAcquiredLUSDBefore = chickenBondManager.getTotalAcquiredLUSD();
 
@@ -1407,8 +1472,8 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm A's bLUSD balance is zero
         uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
@@ -1428,6 +1493,9 @@ contract ChickenBondManagerTest is BaseTest {
         bLUSDToken.transfer(B, bLUSDBalance);
         assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         uint256 totalBLUSDBefore = bLUSDToken.totalSupply();
 
@@ -1449,8 +1517,8 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm A's bLUSD balance is zero
         uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
@@ -1470,6 +1538,9 @@ contract ChickenBondManagerTest is BaseTest {
         bLUSDToken.transfer(B, bLUSDBalance);
         assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         uint256 B_lusdBalanceBefore = lusdToken.balanceOf(B);
 
@@ -1498,8 +1569,8 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm A's bLUSD balance is zero
         uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
@@ -1521,6 +1592,9 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         assertEq(bLUSDToken.totalSupply(), bLUSDToken.balanceOf(B));
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         // Get acquired LUSD in Yearn before
         uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInSP();
@@ -1555,8 +1629,8 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Confirm A's bLUSD balance is zero
         uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
@@ -1576,6 +1650,9 @@ contract ChickenBondManagerTest is BaseTest {
         bLUSDToken.transfer(B, bLUSDBalance);
         assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         uint256 B_lusdBalanceBefore = lusdToken.balanceOf(B);
         uint256 backingRatio0 = chickenBondManager.calcSystemBackingRatio();
@@ -1628,8 +1705,8 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         uint256 A_bondID = bondNFT.totalMinted();
 
@@ -1642,6 +1719,9 @@ contract ChickenBondManagerTest is BaseTest {
         bLUSDToken.transfer(B, bLUSDBalance);
         assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         uint256 B_bLUSDBalance = bLUSDToken.balanceOf(B);
         assertGt(B_bLUSDBalance, 0);
@@ -1664,8 +1744,8 @@ contract ChickenBondManagerTest is BaseTest {
 
        createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         uint256 A_bondID = bondNFT.totalMinted();
 
@@ -1673,6 +1753,9 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         // Check B's bLUSD balance is zero
         uint256 B_bLUSDBalance = bLUSDToken.balanceOf(B);
@@ -1690,8 +1773,10 @@ contract ChickenBondManagerTest is BaseTest {
 
         createBondForUser(A, bondAmount);
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
+
 
         // confirm acquired LUSD is 0
         assertEq(chickenBondManager.getTotalAcquiredLUSD(), 0);
@@ -1815,7 +1900,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testControllerDoesNotAdjustWhenAgeOfSingleBondIsBelowTarget(uint256 _interval) public {
         uint256 interval = coerce(
             _interval,
-            1, // wait at least 1s before chicken-in, otherwise `bammSPVault.withdraw()` reverts
+            chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN(), // wait at least bootstrap period before chicken-in
             _calcTimeDeltaWhenControllerWillSampleAverageAgeExceedingTarget(0) - 1
         );
 

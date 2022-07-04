@@ -18,7 +18,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = 1e18;
@@ -43,7 +43,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // A chickens in
         vm.startPrank(A);
@@ -64,12 +64,12 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // B creates bond
         uint256 B_bondID = createBondForUser(B, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // B.Protocol LUSD Vault gets some yield
         uint256 initialYield = 1e18;
@@ -80,7 +80,8 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         // A redeems full
         uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
@@ -132,6 +133,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // shift 50% to Curve
         MockCurvePool(address(curvePool)).setNextPrankPrice(105e16);
         shiftFractionFromSPToCurve(2);
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         uint256 initialPermanentLUSDInSP = chickenBondManager.getPermanentLUSDInSP();
         uint256 initialPermanentLUSDInCurve = chickenBondManager.getPermanentLUSDInCurve();
@@ -216,7 +220,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = 1e18;
@@ -252,7 +256,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = 1e18;
@@ -316,7 +320,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // A chickens in
         vm.startPrank(A);
@@ -330,6 +334,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         bLUSDToken.transfer(B, A_bLUSDBalance);
         assertEq(A_bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         uint256 acquiredLUSD = chickenBondManager.getAcquiredLUSDInSP();
         // B redeems bLUSD
@@ -345,7 +352,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // A chickens in
         vm.startPrank(A);
@@ -367,6 +374,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.startPrank(address(bammSPVault));
         lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - leftInBAMMSPVault);
         vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
         // B redeems bLUSD
         vm.startPrank(B);

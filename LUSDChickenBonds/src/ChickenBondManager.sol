@@ -63,6 +63,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 startTime;
     }
 
+    uint256 public firstChickenInTime; // Timestamp of the first chicken in after bLUSD supply is zero
     uint256 public totalWeightedStartTimes; // Sum of `lusdAmount * startTime` for all outstanding bonds (used to tell weighted average bond age)
     uint256 public lastRedemptionTime; // The timestamp of the latest redemption
     uint256 public baseRedemptionRate; // The latest base redemption rate
@@ -88,6 +89,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     int128 constant INDEX_OF_3CRV_TOKEN_IN_CURVE_POOL = 1;
 
     uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
+
+    uint256 constant public BOOTSTRAP_PERIOD_CHICKEN_IN = 7 days; // Min duration of first chicken-in
+    uint256 constant public BOOTSTRAP_PERIOD_REDEEM = 7 days; // Redemption lock period after first chicken in
 
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
@@ -286,8 +290,11 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
      * Assumption: When there have been no chicken ins since the bLUSD supply was set to 0 (either due to system deployment, or full bLUSD redemption),
      * all acquired LUSD must necessarily be pure yield.
      */
-    function _firstChickenIn(uint256 _bammLUSDValue, uint256 _lusdInBAMMSPVault) internal returns (uint256) {
+    function _firstChickenIn(uint256 _bondStartTime, uint256 _bammLUSDValue, uint256 _lusdInBAMMSPVault) internal returns (uint256) {
         assert(!migration);
+
+        require(block.timestamp >= _bondStartTime + BOOTSTRAP_PERIOD_CHICKEN_IN, "CBM: First chicken in must wait until bootstrap period is over");
+        firstChickenInTime = block.timestamp;
 
         uint256 acquiredLUSDInSP = _getAcquiredLUSDInSPFromBAMMValue(_bammLUSDValue);
 
@@ -329,7 +336,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         * This is not done in migration mode since there is no need to send rewards to the staking contract.
         */
         if (bLUSDToken.totalSupply() == 0 && !migration) {
-            lusdInBAMMSPVault = _firstChickenIn(bammLUSDValue, lusdInBAMMSPVault);
+            lusdInBAMMSPVault = _firstChickenIn(bond.startTime, bammLUSDValue, lusdInBAMMSPVault);
         }
 
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
@@ -368,6 +375,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256) {
         _requireNonZeroAmount(_bLUSDToRedeem);
+
+        require(block.timestamp >= firstChickenInTime + BOOTSTRAP_PERIOD_REDEEM, "CBM: Redemption after first chicken in must wait until bootstrap period is over");
 
         (uint256 bammLUSDValue,) = _updateBAMMDebt();
 
