@@ -15,7 +15,7 @@ At any time they may **chicken out** and reclaim their entire principal, or **ch
 
 bLUSD may always be redeemed for a proportional share of the system’s acquired LUSD.
 
-However, LUSD Chicken Bonds contains additional functionality for the purposes of peg stabilization and migration. The funds held by the protocol are split across two yield-bearing vaults, referred to as the **B.AMM SP Vault** (from B.Protocol) and the **Yearn Curve Vault**. The former deposits funds to the Liquity Stability Pool, and the latter deposits funds into the Curve LUSD3CRV MetaPool.
+However, LUSD Chicken Bonds contains additional functionality for the purposes of peg stabilization and migration. The funds held by the protocol are split across two yield-bearing vaults, referred to as the **B.AMM SP Vault** (from B.Protocol) and the **Yearn Curve Vault**. The former deposits funds to the Liquity Stability Pool, and the latter deposits funds into the Curve LUSD3CRV MetaPool and then [deposit LP tokens into Convex](https://yearn.finance/#/vault/0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6).
 
 The LUSD Chicken Bonds system has public shifter functions which are callable by anyone and move LUSD between the vaults, subject to Curve spot price constraints. The purpose of these is to allow anyone to tighten the Curve pool’s LUSD spot price dollar peg, by moving system funds between the yield-bearing vaults (and thus to or from the Curve pool).
 
@@ -48,7 +48,7 @@ https://github.com/gakonst/foundry
 
 ### Running tests
 
-The bulk of significant testing has been done using a mainnet fork, since ChickenBonds will heavily depend on the deployed B.Protocol and Yearn vaults, and Curve pool.
+The bulk of significant testing has been done using a mainnet fork, since ChickenBonds will heavily depend on the deployed B.Protocol, Yearn vault, Curve pool and Convex.
 
 As of 04/07/2022, mainnet tests are commented out as the B.AMM instance is not yet deployed. We intend to uncomment and update these mainnet fork tests  as soon as the B.AMM is deployed to mainnet and active.
 
@@ -118,7 +118,7 @@ For the global permanent and acquired buckets, the split is updated by shifter f
 - Moves some portion of bond’s LUSD from B.AMM SP vault pending bucket to B.AMM SP vault acquired bucket
 - Refund the remainder of bond’s LUSD from B.AMM SP vault pending bucket to the caller
 
-`chickenOut (normal mode):` Withdraws all of the bond’s LUSD from the B.AMM SP vault pending bucket
+`chickenOut:` Withdraws all of the bond’s LUSD from the B.AMM SP vault pending bucket
 
 `redeem(normal mode):` Pulls funds proportionally from the B.AMM SP vault acquired bucket and the Curve acquired bucket (sends yTokens, and does not unwrap to LUSD)
 
@@ -205,8 +205,7 @@ Yearn Curve vault is periodically manually harvested by the Yearn team in order 
 
 - `chickenIn(bondID):` removes the given bond from the system and burns the bond NFT. Makes a portion of the bonded LUSD “acquired” and redeemable, and the remainder of the bonded LUSD permanently protocol-owned.  The split between these two quantities is determined such that the global system backing ratio remains constant.
 
-- `redeem(_bLUSDAmount, _minLUSDFromBAMMSPVault):` Burns the provided bLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the B.AMM SP and Curve vaults and sent to the redeemer. Takes a `_minLUSDFromBAMMSPVault` parameter which allows the user to specify the minimum LUSD that should be redeemed from the B.AMM (useful in case there is temporarily not enough LUSD in the B.AMM SP vault to fulfil a proportional redemption request, and the user simply wants to redeem as much LUSD as possible).
-
+- `redeem(_bLUSDAmount, _minLUSDFromBAMMSPVault):` Burns the provided bLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the B.AMM SP and Curve vaults and sent to the redeemer. Takes a `_minLUSDFromBAMMSPVault` parameter which allows the user to specify the minimum LUSD that should be redeemed from the B.AMM (useful in case there is temporarily not enough LUSD in the B.AMM SP vault to fulfil a proportional redemption request, and the user simply wants to redeem as much LUSD as possible). Funds coming from the Yearn Curve vault are not unwrapped, so the user would receive yTokens instead of LUSD.
 
 - `shiftLUSDFromSPToCurve(_maxLUSDToShift):` Shifts up to the given LUSD amount from the B.AMM SP vault to Curve, and deposits the received LP tokens to the Curve vault. Pulls funds from the acquired and permanent buckes in the SP vault, and moves them to the acquired and permanent buckets in the Curve vault, respectively. Only succeeds if the shift improves the LUSD peg.
 
