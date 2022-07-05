@@ -213,7 +213,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         // bootstrap period passes
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_REDEEM);
 
-        // B transfers 10% of his bLUSD to C, and redeems
+        // B transfers 50% of his bLUSD to C, and redeems
         vm.startPrank(B);
         bLUSDToken.transfer(C, bLUSDToken.balanceOf(B) / 2);
         chickenBondManager.redeem(bLUSDToken.balanceOf(B), 0);
@@ -254,7 +254,9 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         pendingLUSDInSP = chickenBondManager.getPendingLUSD();
         assertGt(pendingLUSDInSP, 0, "pending !> 0 after full redeem");
         rawBalSP = lusdToken.balanceOf(address(bammSPVault));
-        assertApproximatelyEqual(pendingLUSDInSP, rawBalSP, rawBalSP / 1e9, "SP bal != pending after full redemption");  // Within 1e-9 relative error
+        assertEq(rawBalSP, 0, "B.AMM LUSD balance should be zero");
+        uint256 lusdInBAMMSPVault = chickenBondManager.getLUSDInBAMMSPVault();
+        assertApproximatelyEqual(pendingLUSDInSP, lusdInBAMMSPVault, lusdInBAMMSPVault / 1e9, "SP bal != pending after full redemption");  // Within 1e-9 relative error
     }
 
 
@@ -399,23 +401,24 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
         shiftFractionFromSPToCurve(10);
 
-        // Check yearn SP vault is > 0
-        assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
+        // Check B.Protocol SP vault is > 0
+        uint256 previousOwnedLUSDInSP = chickenBondManager.getOwnedLUSDInSP();
+        assertGt(previousOwnedLUSDInSP, 0);
 
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
-        // Check yearn SP vault now has 0 protocol-owned LUSD
-        assertEq(chickenBondManager.getOwnedLUSDInSP(), 0);
+        // Check B.Protocol SP vault has the same protocol-owned LUSD
+        assertEq(chickenBondManager.getOwnedLUSDInSP(), previousOwnedLUSDInSP, "Owned LUSD in SP should be the same after migration");
 
         vm.warp(block.timestamp + 10 days);
         // C chickens in
         chickenInForUser(C, C_bondID);
 
-       // Check yearn SP vault still has 0 protocol-owned LUSD
-        assertEq(chickenBondManager.getOwnedLUSDInSP(), 0);
+        // Check B.Protocol SP vault has the same protocol-owned LUSD
+        assertGt(chickenBondManager.getOwnedLUSDInSP(), previousOwnedLUSDInSP, "Owned LUSD in SP should increase after migration and chicken in");
     }
 
     function testPostMigrationCIIncreasesAcquiredLUSDInSP() public {
@@ -510,7 +513,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
         shiftFractionFromSPToCurve(10);
 
-        // Check yearn SP vault is > 0
+        // Check B.Protocol SP vault is > 0
         assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
 
         // Yearn activates migration
@@ -520,8 +523,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
         // Get SP LUSD balance and buckets
         uint pendingLUSDInSP1 = chickenBondManager.getPendingLUSD();
-        uint rawPending1 = chickenBondManager.getPendingLUSD();
         uint SPBal1 = lusdToken.balanceOf(address(bammSPVault));
+        uint256 lusdInBAMMSPVault1 = chickenBondManager.getLUSDInBAMMSPVault();
 
         vm.warp(block.timestamp + 10 days);
         // C chickens in
@@ -529,13 +532,16 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
         // Get SP LUSD balance and buckets
         uint pendingLUSDInSP2 = chickenBondManager.getPendingLUSD();
-        uint rawPending2 = chickenBondManager.getPendingLUSD();
         uint SPBal2 = lusdToken.balanceOf(address(bammSPVault));
+        uint256 lusdInBAMMSPVault2 = chickenBondManager.getLUSDInBAMMSPVault();
 
         // Check pending bucket and balance decreased
-        assertLt(pendingLUSDInSP2, pendingLUSDInSP1);
-        assertLt(rawPending2, rawPending1);
-        assertLt(SPBal2, SPBal1);
+        assertGt(pendingLUSDInSP1, 0, "Pending bucket before last chicken in should be greater than zero");
+        assertEq(pendingLUSDInSP2, 0, "Pending bucket should be zero");
+        assertEq(SPBal1, 0, "Previous B.Protocol balance should be zero");
+        assertEq(SPBal2, 0, "B.Protocol balance should be zero");
+        // Due to refund on chicken in after migration, LUSD in B.AMM should decrease
+        assertLt(lusdInBAMMSPVault2, lusdInBAMMSPVault1, "LUSD in B.AMM should decrease");
     }
 
     function testPostMigrationCIDoesntSendChickenInFeeToStakingRewards() public {
@@ -593,7 +599,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         makeCurveSpotPriceAbove1(200_000_000e18);
         shiftFractionFromSPToCurve(10);
 
-        // Check yearn SP vault is > 0
+        // Check B.Protocol SP vault is > 0
         assertGt(chickenBondManager.getOwnedLUSDInSP(), 0);
 
         // Yearn activates migration
@@ -604,24 +610,29 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         // Get pending and total LUSD in SP before
         uint256 pendingLUSDBeforeCO = chickenBondManager.getPendingLUSD();
         uint256 spBalanceBeforeCO = lusdToken.balanceOf(address(bammSPVault));
+        uint256 lusdInBAMMSPVaultBeforeCO = chickenBondManager.getLUSDInBAMMSPVault();
 
         assertGt(pendingLUSDBeforeCO, 0);
-        assertGt(spBalanceBeforeCO, 0);
+        assertEq(spBalanceBeforeCO, 0, "B.Protocol balance should be zero before chicken out");
 
         vm.warp(block.timestamp + 10 days);
 
-        // C chickens in
+        // C chickens out
         vm.startPrank(C);
         chickenBondManager.chickenOut(C_bondID, 0);
         vm.stopPrank();
 
         uint256 pendingLUSDAfterCO = chickenBondManager.getPendingLUSD();
         uint256 spBalanceAfterCO = lusdToken.balanceOf(address(bammSPVault));
+        uint256 lusdInBAMMSPVaultAfterCO = chickenBondManager.getLUSDInBAMMSPVault();
 
         // Check pending LUSD deceased
         assertEq(pendingLUSDAfterCO, 0, "pending didn't decrease");
 
+        // Check B.AMM balance is still zero (everything is deposited into SP)
+        assertEq(spBalanceAfterCO, 0, "B.Protocol balance should be zero after chicken out");
+
         //Check SP balance decreased
-        assertLt(spBalanceAfterCO, spBalanceBeforeCO);
+        assertLt(lusdInBAMMSPVaultAfterCO, lusdInBAMMSPVaultBeforeCO, "LUSD in B.AMM should decrease");
     }
 }

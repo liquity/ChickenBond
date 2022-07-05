@@ -20,7 +20,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
-        // Yearn LUSD Vault gets some yield
+        // B.Protocol LUSD Vault gets some yield
         uint256 initialYield = 1e18;
         _generateBAMMYield(initialYield);
 
