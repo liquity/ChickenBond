@@ -241,7 +241,7 @@ The actual rate of return from bonding depends on $\lambda$ and the shape (steep
   \label{sec:rebonding_strategy}
 When people bond, they accrue a bTKN balance which they can claim by giving up the TKN amount they deposited at bond creation. Clearly then, the system doesn't auto-compound the accrued profits from bonding. In order to benefit from a compounding effect, bond holders can chicken in, sell their received bTKN for TKN and reinvest the TKN to create a new, larger bond, and repeat that process over and over again.
 
-In the following derivation, we analyze the optimal rebonding strategy for users with a long-term time horizon by deriving a time period which maximizes the profitability of (regular) rebonding for a given system configuration.
+In the following derivation, we analyze the optimal rebonding strategy for users with a long-term time horizon by deriving a time period $T_{opt}$ which maximizes the profitability of (regular) rebonding for a given system configuration.
 
 \subsubsection{Optimal rebonding time}
   \label{sec:T_OP}
@@ -544,6 +544,7 @@ t = \alpha \frac{1 + \sqrt{(1-\tau)\lambda}}{(1-\tau)\lambda - 1}
 We now attempt to estimate the fair price $p_f$. This can be defined as the price of bTKN that a rational and informed market should arrive at, under some set of idealized economic assumptions about market participants. We present several different approaches. Some (naive and conservative approaches) take a more formal approach with minimal economic assumptions. Others (yield comparison and recurive approaches), make significant assumptions about the behavior of Chicken Bonds users and the wider market. The latter approaches more closely resemble economic models than formal mathematical derivations.
 
 \subsubsection{Naive approach}
+\label{sec:naive_approach}
 We start by modeling a yield-bearing token TKN as an investment that pays out a future sum of money or stream of cash flows. Given a $\textit{natural rate}$ $r_m$ (aka market rate or discount rate) this allows to calculate its present value (PV). One can then consider a compounding wrapper contract around TKN that retains and compounds the generated yield, giving the investor the option to redeem their wrapper share against a pro rata share of value held inside the contract. We assume that similarly to a mutual accumulation fund, the value of the investor's share in the compounding contract would reflect the inner value of the share, i.e. the value the investor receives upon redemption. 
 
 In Chicken Bonds, the Reserve Bucket corresponds to a compounding wrapper with the extra benefit of receiving the return from the Pending and the Permanent Bucket in addition to its own yield. If those two other buckets were empty, the Reserve Bucket's PV expressed in TKN would be equal to its inner value, i.e. $q_a$, and the fair price of bTKN would correspond to its redemption price $p_r$. However, with non-empty Permanent and Pending Buckets acting as extra yield sources, the value of the bTKN should exceed $p_r$ since holding bTKN is a better investment than being an investor in a simple compounding contract holding TKN. The question is by how much.
@@ -609,21 +610,22 @@ If we take the yield on $R$ into account and suppose that all bond holders who c
 
 with the last term expressing the value change due to the influx of new TKN from rebonding based on an exchange at the current fair price. Note that the rebonded capital needs to be corrected by $c_p$, whereas no correction factor is required for the yield as it becomes part of the Reserve Bucket (and given $r_a=r_m$).
 
-$\Delta S$ stands for the change in bTKN supply $S$ per $\Delta t$, which will be rebonded in entirety according to our assumption. To express $\Delta S$, we consider $q_p$ as the representation of all bond holders in aggregate and assume that the same fraction of $q_p$ is chickened in each time unit $\Delta t$. 
+$\Delta S$ stands for the change in bTKN supply $S$ per $\Delta t$, which will be rebonded in entirety according to our assumption. To express $\Delta S$, we consider $q_p$ as the representation of all bond holders in aggregate and assume for simplicity that bonding activity is distributed evenly over time with regard to volumes and bond creation times. We further suppose that the system configuration doesn't change substantially within one $T_{opt}$ period. Therefore, the fraction of the user base that chickens in (and rebonds) per time step is constant, corresponding to the total pending bonds divided by the length of the period, i.e. $\frac{q_p}{T_{opt}}$. 
 
-Given the optimal rebonding time $T_{opt}$ (measured in days), we can thus treat the chickened-in fraction  $\frac{q_p}{T_{opt} \Delta t}$ for a given time unit $\Delta t$ as if it was one aggregate bond which has accrued $s(T_{opt})$ bTKN upon chicken in. Thus, we have
+Given the optimal rebonding time $T_{opt}$, we can thus treat the chickened-in fraction $\frac{q_p}{T_{opt}}$ for a given time unit $\Delta t$ as if it was one aggregate bond which has accrued $s(T_{opt})$ bTKN upon chicken in. Thus, we have
 
 \begin{equation}
   \label{}
-  \Delta S = s(T_{opt}) = \frac{q_p}{T_{opt} \Delta t} \frac{1}{p_r} \frac{T_{opt}}{T_{opt}+\alpha} = \frac{q_p}{\Delta t} \frac{S}{q_a} \frac{1}{T_{opt}+\alpha}
+  \frac{S}{\Delta t} = \frac{s(T_{opt})}{\Delta t} = \frac{q_p}{T_{opt}} \frac{1}{p_r} \frac{T_{opt}}{T_{opt}+\alpha} = \frac{S}{q_a} \frac{q_p}{T_{opt}+\alpha}
 \end{equation}
 
 Similarly, for the version with a controller targeting an average chicken in time $T_t$ (see section \ref{sec:adjustment}), using equation $\ref{eq:alpha-solved}$ for $\alpha$, we can derive
 
 \begin{equation}
   \label{}
-  \Delta S = \frac{q_p}{\Delta t} \frac{S}{q_a} \frac{1}{T_t+\alpha}
-  = \frac{q_p}{\Delta t} \frac{S}{q_a} \frac{1}{T_t+ T_t\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}}}  
+  \frac{S}{\Delta t} = q_p \frac{S}{q_a} \frac{1}{T_t+\alpha}
+  =  \frac{S}{q_a} \frac{q_p}{T_t+ T_t\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}}}  
+  =  \frac{S}{q_a} \frac{q_p}{T_t+ T_t\frac{\lambda - 1}{1 + \sqrt{\lambda}}}  
 \end{equation}
 
 
@@ -690,18 +692,20 @@ On the other hand, the parameter $\alpha$ has no influence on the resulting pric
 One explanation for this seemingly contradictory result could be that while rebonding as such negatively impacts the naive fair price, the (higher) yield on the Pending Bucket compensates for this, ensuring that the Treasury and the bTKN supply grow at the same rate as a whole.
 
 \subsubsection{Recursive approach}
-Instead of assuming that the effects of chicken ins and rebonding cancel out, we can try to estimate the future changes to the buckets based on historic user behavior or expected optimal behavior.
+Instead of assuming that the effects of chicken ins and rebonding cancel out as in the naive approach ($\ref{sec:naive_approach}$), we can try to estimate the future changes to the buckets based on historic user behavior or expected optimal behavior.
 
 For changes to the TKN quantities inside the buckets, we use the notation $\Delta q_{a}$, $\Delta q_{p}$ and $\Delta q_{d}$ and let $P_{In}$ denote the probability that a bond holder chickens in, and $P_{Out}$ that the holder chickens out.
 
-This allows us to express the fair price $p_f$ as follows:
+Assuming an infinitely fine-grained user base, we can apply these probabilities to all users in aggregate (i.e. the buckets as such), allowing us to model the overall flows between the buckets.
+
+With that we can express the fair price $p_f$ in a recursion step as
 
 \begin{equation}
   \label{}
     p_{f} = \frac{q_{b}+q_{p}(1-P_{In}-P_{Out})+(q_{a}+ P_{In}\Delta q_{a})+(q_{d} + P_{In}\Delta q_{d})\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} + \frac{P_{In}\Delta q_a}{p_r}}
 \end{equation}
 
-As $p_r = \frac{q_a}{S_{sLQTY}}$, we can express it as:
+where $q_{b}$ stands for the amount bonded at the end of recursion step. As $p_r = \frac{q_a}{S_{sLQTY}}$, we can express the above equation as:
 
 \begin{equation}
   \label{eq:recursive_hist}
@@ -714,9 +718,10 @@ Assumptions:
 	\item $P_{In} + P_{Out} \leq 1$
 	\item $P_{Out} = 0$, as long as bonding is profitable
 	\item $P_{Out} = 1$ if bonding is not profitable
+	\item There is no user churn. Current users keep rebonding.
 \end{enumerate}
 
-We further assume for simplicity that bonding activity is more or less equally distributed over time and that bonders who got past their optimal rebonding time chicken in with $P_{In}=1$, while nobody chickens in before reaching that point.
+We further assume for simplicity that bonding activity is more or less evenly distributed over time and that bonders who got past their optimal rebonding time chicken in with $P_{In}=1$, while nobody chickens in before reaching that point.
 This way, we can split the group of bonders into two segments, the ones before and the ones after the rebonding
 
 We model $P_{In}$ by setting it to the inverse of the optimal rebonding time.
@@ -912,14 +917,14 @@ By assuming that the controller will keep the actual rebonding time constant (se
 
 \begin{equation}
   \label{eq:alpha-solved}
-  \alpha = T_{opt}\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}}
+  \alpha = T_{opt}\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}} = T_{opt}\frac{\lambda - 1}{1 + \sqrt{\lambda}}
 \end{equation} 
 
 In the formula for $B_{ROI}$ as defined above (equation \ref{eq:ROI-bonding}), we can substitute $\alpha$ by equation $\ref{eq:alpha-solved}$ and, after rearranging and simplifying, we get
 
 \begin{equation}
   \label{eq:BROI-controller}
-    B_{ROI} = \sqrt{\frac{p_f}{p_r}} - 1
+    B_{ROI} = \sqrt{\frac{p_f}{p_r}} - 1 = \sqrt{\lambda} - 1
 \end{equation} 
 
 Supposing that users will chicken in at the optimal rebonding time and given a target chicken in time $T_t$ aimed for by the controller (see section \ref{sec:adjustment}), we can replace $T_{opt}$ by $T_t$ in formula \ref{eq:ROI-eq2}:
@@ -944,7 +949,7 @@ As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown 
 Note that the impact of $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_a$, which influence $p_f$ in the same fashion.
 
 \paragraph{Equating ROI of staking TKN and holding bTKN}
-Assuming rational markets and no additional risks for holding bTKN compared to holding (and staking) TKN, we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start. (Or is economically possible under perfectly rational conditions that a portfolio A has a higher yield than a portfolio B with the same risk profile?)
+Assuming rational markets and no additional risks for holding bTKN compared to holding (and staking) TKN, we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start.
 
 If we know what yield to expect, we could formulate a differential equation to derive a formula for $p_f$ or at least a parameter $\gamma$ for the impact of the pending bucket in the naive formula:
 
