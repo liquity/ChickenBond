@@ -1801,8 +1801,7 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     function testYearnLUSDVaultImmediateDepositAndWithdrawalReturnsAlmostExactDeposit(uint256 _depositAmount) public {
-        // Assume  10 wei < deposit
-        vm.assume(_depositAmount > 10);
+        _depositAmount = coerce(_depositAmount, 10, 1e27);
 
         // Tip CBM some LUSD
         tip(address(lusdToken), address(chickenBondManager), _depositAmount);
