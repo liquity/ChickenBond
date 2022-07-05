@@ -241,6 +241,9 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
         assertGt(bLUSDToken.totalSupply(), 0);
 
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_REDEEM);
+
         // B transfers 10% of his bLUSD to C, and redeems
         vm.startPrank(B);
         bLUSDToken.transfer(C, bLUSDToken.balanceOf(B) / 2);

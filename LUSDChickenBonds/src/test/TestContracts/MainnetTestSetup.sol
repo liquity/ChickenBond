@@ -25,6 +25,8 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_BPROTOCOL_FEE_POOL_ADDRESS = 0x7095F0B91A1010c11820B4E263927835A4CF52c9;
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
     uint256 constant MAINNET_PINNED_BLOCK =  1648476300;
+    uint256 BOOTSTRAP_PERIOD_CHICKEN_IN;
+    uint256 BOOTSTRAP_PERIOD_REDEEM;
 
     function setUp() public {
         // pinBlock(MAINNET_PINNED_BLOCK);
@@ -122,6 +124,9 @@ contract MainnetTestSetup is BaseTest {
             10004e14, /* 1.0004 */             // _curveDepositDydxThreshold
             10004e14  /* 1.0004 */             // _curveWithdrawalDxdyThreshold
         );
+
+        BOOTSTRAP_PERIOD_CHICKEN_IN = chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN();
+        BOOTSTRAP_PERIOD_REDEEM = chickenBondManager.BOOTSTRAP_PERIOD_REDEEM();
 
         // Add LUSD as reward token for Curve Liquidity Gauge, and set ChickenBondManager as distributor
         vm.startPrank(curveFactory.admin());

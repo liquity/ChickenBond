@@ -67,7 +67,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = _spHarvestAndFastForward();
@@ -96,7 +96,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -117,12 +117,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // B creates bond
         uint256 B_bondID = createBondForUser(B, bondAmount);
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // Yearn LUSD Vault gets some yield
         uint256 initialYield = _spHarvestAndFastForward();
@@ -139,7 +139,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             "Balance of rewards contract after A's chicken-in doesn't match"
         );
 
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_REDEEM);
 
         // A redeems full
         uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
@@ -195,6 +196,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // shift 50% to Curve
         shiftFractionFromSPToCurve(2);
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_REDEEM);
 
         uint256 initialPermanentLUSDInSP = chickenBondManager.getPermanentLUSDInSP();
         uint256 initialPermanentLUSDInCurve = chickenBondManager.getPermanentLUSDInCurve();
@@ -322,6 +326,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
         makeCurveSpotPriceBelow1(200_000_000e18);
 
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_REDEEM);
+
         // Get acquired LUSD in Curve before
         uint256 acquiredLUSDInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
         uint256 permanentLUSDInCurveBefore = chickenBondManager.getPermanentLUSDInCurve();
@@ -355,8 +362,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -379,8 +386,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -445,8 +452,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -477,8 +484,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -524,8 +531,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -574,8 +581,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -603,8 +610,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -630,8 +637,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -657,8 +664,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         chickenInForUser(A, A_bondID);
@@ -849,8 +856,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -874,8 +881,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -940,8 +947,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -977,8 +984,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -1014,8 +1021,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -1053,8 +1060,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -1167,8 +1174,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -1213,8 +1220,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -1251,8 +1258,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
@@ -1462,8 +1469,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
-        // 10 minutes passes
-        vm.warp(block.timestamp + 600);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
