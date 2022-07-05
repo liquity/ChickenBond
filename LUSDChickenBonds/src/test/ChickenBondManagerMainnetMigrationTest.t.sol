@@ -4,8 +4,6 @@ import "./TestContracts/BaseTest.sol";
 import "./TestContracts/MainnetTestSetup.sol";
 
 contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
-    /*
-
     // --- activateMigration ---
 
     function testMigrationOnlyYearnGovernanceCanCallActivateMigration() public {
@@ -654,5 +652,4 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         //Check SP balance decreased
         assertLt(spBalanceAfterCO, spBalanceBeforeCO);
     }
-    */
 }

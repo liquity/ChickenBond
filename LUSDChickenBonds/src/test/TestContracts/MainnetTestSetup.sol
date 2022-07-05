@@ -11,15 +11,18 @@ import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
 contract MainnetTestSetup is BaseTest {
     // Mainnet addresses
     address constant MAINNET_LUSD_TOKEN_ADDRESS = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
+    address constant MAINNET_LQTY_TOKEN_ADDRESS = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
     address constant MAINNET_LIQUITY_SP_ADDRESS = 0x66017D22b0f8556afDd19FC67041899Eb65a21bb;
     address constant MAINNET_3CRV_TOKEN_ADDRESS = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
-    address constant MAINNET_BAMM_LUSD_VAULT_ADDRESS = 0x0000000000000000000000000000000000000000; // TODO
     address constant MAINNET_YEARN_CURVE_VAULT_ADDRESS = 0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6;
     address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
     address constant MAINNET_CURVE_BASE_POOL_ADDRESS = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
     address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
+    address constant MAINNET_CHAINLINK_ETH_USD_ADDRESS = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+    address constant MAINNET_CHAINLINK_LUSD_USD_ADDRESS = 0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0;
+    address constant MAINNET_BPROTOCOL_FEE_POOL_ADDRESS = 0x7095F0B91A1010c11820B4E263927835A4CF52c9;
     // uint256 constant MAINNET_PINNED_BLOCK = 1647873904; // ~3pm UTC 21/03/2022
     uint256 constant MAINNET_PINNED_BLOCK =  1648476300;
 
@@ -47,8 +50,22 @@ contract MainnetTestSetup is BaseTest {
         assertTrue(lusdToken.balanceOf(B) == 1e24);
         assertTrue(lusdToken.balanceOf(C) == 1e24);
 
-        // Connect to deployed Yearn LUSD Vault
-        bammSPVault = IBAMM(MAINNET_BAMM_LUSD_VAULT_ADDRESS);
+        bammSPVault = IBAMM(
+            deployCode(
+                "BAMM.sol:BAMM",
+                abi.encode(
+                    MAINNET_CHAINLINK_ETH_USD_ADDRESS,  // _priceAggregator
+                    MAINNET_CHAINLINK_LUSD_USD_ADDRESS, // _lusd2UsdPriceAggregator
+                    MAINNET_LIQUITY_SP_ADDRESS,         // _SP
+                    MAINNET_LUSD_TOKEN_ADDRESS,         // _LUSD
+                    MAINNET_LQTY_TOKEN_ADDRESS,         // _LQTY
+                    uint256(400),                       // _maxDiscount
+                    MAINNET_BPROTOCOL_FEE_POOL_ADDRESS, // _feePool
+                    address(0),                         // _fronEndTag
+                    uint256(0)                          // _timelockDuration
+                )
+            )
+        );
 
         // Connect to deployed LUSD-3CRV Curve pool, and Yearn LUSD-3CRV vault
         curvePool = ICurvePool(MAINNET_CURVE_POOL_ADDRESS);
@@ -113,6 +130,7 @@ contract MainnetTestSetup is BaseTest {
 
         bondNFT.setAddresses(address(chickenBondManager));
         bLUSDToken.setAddresses(address(chickenBondManager));
+        bammSPVault.setChicken(address(chickenBondManager));
 
         // Log some current blockchain state
         console.log(block.timestamp, "block.timestamp");

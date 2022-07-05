@@ -33,4 +33,6 @@ contract MockBAMMSPVault is IBAMM {
         uint256 lusdBalance = lusdToken.balanceOf(address(this));
         return (lusdValue, lusdBalance, 0);
     }
+
+    function setChicken(address _chicken) external {}
 }

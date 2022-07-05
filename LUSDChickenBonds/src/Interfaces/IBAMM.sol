@@ -8,4 +8,6 @@ interface IBAMM {
     function withdraw(uint256 lusdAmount, address to) external;
 
     function getLUSDValue() external view returns (uint256, uint256, uint256);
+
+    function setChicken(address _chicken) external;
 }

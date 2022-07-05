@@ -6,7 +6,6 @@ import "../Interfaces/StrategyAPI.sol";
 
 
 contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
-    /*
     function _spHarvestAndFastForward() internal returns (uint256) {
         // TODO
         uint256 initialYield = 1e18;
@@ -901,10 +900,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromCurveToSPRevertsWhenShiftWouldRaiseCurvePriceAbove1() public {
-        vm.startPrank(yearnGovernanceAddress);
-        yearnSPVault.setDepositLimit(1e27);
-        vm.stopPrank();
-
         // A creates bond
         uint256 bondAmount = 100_000_000e18; // 500m
 
@@ -1891,5 +1886,4 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertEq(pendingLUSDInSPAfter, pendingLUSDInSPBefore);
         assertEq(ownedLUSDInCurveAfter, ownedLUSDInCurveBefore);
     }
-    */
 }
