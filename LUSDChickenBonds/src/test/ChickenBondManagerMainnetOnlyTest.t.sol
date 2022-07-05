@@ -9,7 +9,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function _spHarvestAndFastForward() internal returns (uint256) {
         // TODO
         uint256 initialYield = 1e18;
-        lusdToken.transfer(address(bammSPVault), initialYield);
+        tip(address(lusdToken), address(bammSPVault), initialYield);
         return initialYield;
     }
 

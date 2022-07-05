@@ -169,37 +169,6 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
     }
 
 
-    function testMigrationReducesYearnSPVaultToZero() public {
-         // Create some bonds
-        uint256 bondAmount = 10e18;
-        uint A_bondID = createBondForUser(A, bondAmount);
-        uint B_bondID = createBondForUser(B, bondAmount);
-        createBondForUser(C, bondAmount);
-
-        vm.warp(block.timestamp + 30 days);
-
-        // Chicken some bonds in
-        chickenInForUser(A, A_bondID);
-        chickenInForUser(B, B_bondID);
-
-        // shift some LUSD from SP->Curve
-        makeCurveSpotPriceAbove1(200_000_000e18);
-        shiftFractionFromSPToCurve(10);
-
-        // Check B.Protocol SP Vault is > 0
-        (, uint256 lusdInBAMMSPVault,) = bammSPVault.getLUSDValue();
-        assertGt(lusdInBAMMSPVault, 0);
-
-        // Yearn activates migration
-        vm.startPrank(yearnGovernanceAddress);
-        chickenBondManager.activateMigration();
-        vm.stopPrank();
-
-        // Check B.Protocol SP vault contains 0 LUSD
-        (, uint256 lusdInBAMMSPVaultAfter,) = bammSPVault.getLUSDValue();
-        assertEq(lusdInBAMMSPVaultAfter, 0);
-    }
-
     // --- Post-migration logic ---
 
     function testPostMigrationTotalPOLCanBeRedeemedExceptForFinalRedemptionFee() public {
