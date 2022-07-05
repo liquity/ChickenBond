@@ -58,7 +58,7 @@ The system offers strong benefits to DeFi protocols and bond holders, while mini
 \end{itemize}
 
 \section{Treasury}
-The protocol operates a \textit{Treasury R} consisting of three logical parts (“buckets”):  \textit{Pending Bucket}, \textit{Acquired Bucket} and \textit{Permanent Bucket}.
+The protocol operates a \textit{Treasury R} consisting of three logical parts (“buckets”):  \textit{Pending Bucket}, \textit{Reserve Bucket} and \textit{Permanent Bucket}.
 
 Each bucket contains a certain quantity of TKN or other assets whose value can be readily expressed in TKN. We suppose that the assets in the buckets can be invested in a third-party protocol (e.g. staked natively or deposited to a DEX) to generate yield while being withdrawable at any time. 
 
@@ -73,20 +73,20 @@ where $q_p$, $q_a$ and $q_d$ stand for the quantities held by the respective buc
 
 The buckets are used as follows:
 \begin{itemize}
-    \item \textit{Pending Bucket.} Contains the TKN bonded by users that are still active bond holders, i.e. whose deposits haven’t been acquired by the protocol yet. Since bond holders may withdraw their bonded TKN at will (see \ref{sec:chicken-out} “chicken out“), their deposits are considered as pending. The yield earned by the Pending Bucket is credited to the Acquired Bucket.
-    \item \textit{Acquired Bucket.} Contains a portion of the TKN relinquished by former bond holders after a "chicken in" event (see \ref{sec:chicken-in}) as well as the yield of the Pending and the Permanent Buckets. The Acquired Bucket directly backs the bTKN supply through the redemption mechanism (see \ref{sec:redemption}).
-    \item \textit{Permanent Bucket.} Contains the other portion of the TKN relinquished by former bond holders. The yield earned by the Permanent Bucket is credited to the Acquired Bucket.
+    \item \textit{Pending Bucket.} Contains the TKN bonded by users that are still active bond holders, i.e. whose deposits haven’t been acquired by the protocol yet. Since bond holders may withdraw their bonded TKN at will (see \ref{sec:chicken-out} “chicken out“), their deposits are considered as pending. The yield earned by the Pending Bucket is credited to the Reserve Bucket.
+    \item \textit{Reserve Bucket.} Contains a portion of the TKN relinquished by former bond holders after a "chicken in" event (see \ref{sec:chicken-in}) as well as the yield of the Pending and the Permanent Buckets. The Reserve Bucket directly backs the bTKN supply through the redemption mechanism (see \ref{sec:redemption}).
+    \item \textit{Permanent Bucket.} Contains the other portion of the TKN relinquished by former bond holders. The yield earned by the Permanent Bucket is credited to the Reserve Bucket.
 \end{itemize}
 
 Having a Permanent Bucket may turn out as unnecessary or even detrimental for some use cases. As an alternative, the protocol can thus be set up without a Permanent Bucket (see \ref{sec:two-bucket}).
 
 \subsection{Yield Amplification and Reinvestment}
-Given that the Acquired Bucket earns a return not only on its own assets, but additionally receives the returns from the Pending and the Permanent Buckets, it achieves an amplified return $r_a^\star > r_a$ on the amount $q_a$. We call this useful property \textit{yield amplification}.
+Given that the Reserve Bucket earns a return not only on its own assets, but additionally receives the returns from the Pending and the Permanent Buckets, it achieves an amplified return $r_a^\star > r_a$ on the amount $q_a$. We call this useful property \textit{yield amplification}.
 
-As the protocol doesn't distribute any yields, but reinvests them inside the Acquired Bucket, the value of the Acquired Bucket will grow over time even without the inflow of new capital. Due to the yield amplification, the Acquired Bucket grows faster than if the same funds were invested regularly with a (compounding) rate of return $r_a$.
+As the protocol doesn't distribute any yields, but reinvests them inside the Reserve Bucket, the value of the Reserve Bucket will grow over time even without the inflow of new capital. Due to the yield amplification, the Reserve Bucket grows faster than if the same funds were invested regularly with a (compounding) rate of return $r_a$.
 
-\subsection{Acquired Bucket backing the Boosted Token}
-The protocol maintains a supply $S$ of a \textit{Boosted Token} (bTKN) according to preset rules for minting and burning. The bTKN supply is directly backed by the Acquired Bucket, i.e. it can be redeemed against a pro rata share of the assets (usually TKN) held therein (see \ref{sec:chicken-out}).
+\subsection{Reserve Bucket backing the Boosted Token}
+The protocol maintains a supply $S$ of a \textit{Boosted Token} (bTKN) according to preset rules for minting and burning. The bTKN supply is directly backed by the Reserve Bucket, i.e. it can be redeemed against a pro rata share of the assets (usually TKN) held therein (see \ref{sec:chicken-out}).
 
 We call the amount of TKN for which each bTKN can be redeemed for the \textit{redemption price} $p_r$. The redemption price  corresponds to the \textit{backing ratio} and is defined as $\frac{q_a}{S}$. It is subject to the following invariant:
 
@@ -118,10 +118,14 @@ The accrual curve can be of the form
     s(t) := \frac{b}{p_r} \cdot \frac{t}{t+\alpha}
 \end{equation}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_accrualcurve.png}
+\end{figure}
 
 $\alpha$ parametrizes the slope of the curve and could be automatically adjusted by the protocol in order to control the speed of the value accrual which depends on the evolving price premium (see \ref{sec:adjustment}).
 
-We call the fraction $\frac{b}{p_r}$ the cap $c$ which corresponds to the amount of bTKN that could be minted by the protocol such that the redemption price would be kept constant if $b$ was entirely added to the Acquired Bucket. Therefore, the ratio between the cap and the bond corresponds to the ratio between the bTKN supply and the Acquired Bucket. Thus, we have
+We call the fraction $\frac{b}{p_r}$ the cap $c$ which corresponds to the amount of bTKN that could be minted by the protocol such that the redemption price would be kept constant if $b$ was entirely added to the Reserve Bucket. Therefore, the ratio between the cap and the bond corresponds to the ratio between the bTKN supply and the Reserve Bucket. Thus, we have
 
 \begin{equation}
   \label{eq:cap-bond-ratio}
@@ -135,7 +139,7 @@ The owner of a \textit{Chicken Bond} can exit their position any time by choosin
     \item \textit{Chicken in}. Obtain the accrued bTKN foregoing the bonded TKN.
 \end{itemize}
 
-In both cases, the Chicken Bond NFT is burned as the bond holder’s position is closed. Depending on the option chosen, the bonded TKN is either fully paid back to the user or it transitions from the Pending Bucket to the Acquired Bucket and the Permanent Bucket according to a split calculated by the system (\ref{sec:chicken-in}). 
+In both cases, the Chicken Bond NFT is burned as the bond holder’s position is closed. Depending on the option chosen, the bonded TKN is either fully paid back to the user or it transitions from the Pending Bucket to the Reserve Bucket and the Permanent Bucket according to a split calculated by the system (\ref{sec:chicken-in}). 
 
 \subsubsection{Chicken out}
 \label{sec:chicken-out}
@@ -156,7 +160,7 @@ A user that chickens in loses the bonded TKN in exchange for the accrued balance
 
 Instead of keeping the received bTKN, the user may sell it on the open market and opt to reinvest the proceeds by creating a new, typically larger bond (aka as “rebonding”, see below).
 
-Upon a chicken in, the protocol acquires the bonded TKN which is moved from the Pending Bucket to the Acquired Bucket and the Permanent Bucket. To that end, the bonded amount $b$ is first split into two amounts $b_a$ and $b_d$ in proportion to the ratio of the currently accrued bTKN $s$ to the cap $c$:
+Upon a chicken in, the protocol acquires the bonded TKN which is moved from the Pending Bucket to the Reserve Bucket and the Permanent Bucket. To that end, the bonded amount $b$ is first split into two amounts $b_a$ and $b_d$ in proportion to the ratio of the currently accrued bTKN $s$ to the cap $c$:
 
 \begin{equation}
   \label{eq:chicken-in-ba}
@@ -187,7 +191,7 @@ Note that a portion of the bonded amount may be diverted as an incentive for bTK
 \subsection{Redemption}
 \label{sec:redemption}
 At any time, a holder can redeem $n$ bTKN for $\frac{n}{S}\cdot q_a = n \cdot p_r$ TKN.
-The TKN are removed from the Acquired Bucket and paid out the user, while the redeemed bTKN are burned.
+The TKN are removed from the Reserve Bucket and paid out the user, while the redeemed bTKN are burned.
 
 The state of the Treasury changes as follows: 
 
@@ -204,11 +208,11 @@ To throttle the rate of redemption or counter extreme situations and black swan 
 
 \section{Economics of Chicken Bonds}
  \label{sec:economics}
-The Boosted Token bTKN derives its value from the Acquired Bucket, as its direct backing, and the yield generated by the entire Treasury.
+The Boosted Token bTKN derives its value from the Reserve Bucket, as its direct backing, and the yield generated by the entire Treasury.
 
-Since the bTKN supply is redeemable for a proportional share of the acquired TKN, the market cap of bTKN should normally be worth at least the amount of TKN kept in the Acquired Bucket. This means that the redemption price $p_r$ will act as a price floor, below which arbitrage becomes possible: people can buy bTKN for less than what they get upon redemption. Should bTKN ever drop below the redemption price, we can expect it to bounce back quickly due to the buying pressure stemming from redemptions.
+Since the bTKN supply is redeemable for a proportional share of the acquired TKN, the market cap of bTKN should normally be worth at least the amount of TKN kept in the Reserve Bucket. This means that the redemption price $p_r$ will act as a price floor, below which arbitrage becomes possible: people can buy bTKN for less than what they get upon redemption. Should bTKN ever drop below the redemption price, we can expect it to bounce back quickly due to the buying pressure stemming from redemptions.
 
-In practice, we expect bTKN to trade significantly above its price floor most of the time due to the yield amplification: if we suppose that $r_a$ corresponds to the market rate (or natural rate) $r_m$, the Acquired Bucket and thus $p_r$ will grow at a higher rate than $r_m$ given the extra yield generated by the Pending and the Permanent Bucket. This increased return warrants a price premium since the market should price in the amplified growth rate by paying a higher price for bTKN than the redemption price. We call this expected market price the \textit{fair price} $p_f$ and let $\lambda = \frac{p_f}{p_r}$ denote the \textit{relative price premium} or simply \textit{premium}, i.e. the fraction between the fair price and the redemption price.
+In practice, we expect bTKN to trade significantly above its price floor most of the time due to the yield amplification: if we suppose that $r_a$ corresponds to the market rate (or natural rate) $r_m$, the Reserve Bucket and thus $p_r$ will grow at a higher rate than $r_m$ given the extra yield generated by the Pending and the Permanent Bucket. This increased return warrants a price premium since the market should price in the amplified growth rate by paying a higher price for bTKN than the redemption price. We call this expected market price the \textit{fair price} $p_f$ and let $\lambda = \frac{p_f}{p_r}$ denote the \textit{relative price premium} or simply \textit{premium}, i.e. the fraction between the fair price and the redemption price.
 
 \subsection{Profitability of bonding}
 Bonding is only profitable for $\lambda>1$, i.e. if $p_f>p_r$. In that case, we can easily calculate the break even point which is reached when $p_f \cdot s(t)>b$, i.e.
@@ -241,9 +245,7 @@ In the following derivation, we analyze the optimal rebonding strategy for users
 
 \subsubsection{Optimal rebonding time}
   \label{sec:T_OP}
-We assume $b$, $p_r$ and $p_f$ stay constant. Moreover, we suppose $p_f>p_r$ always holds, which is a prerequisite for bonding to be profitable. 
-
-TODO: Do we need to prove that rebonding in \textit{regular} intervals is the optimal strategy? If we can show that rebonding at time $t<T$ of a bond created at time 0 yields a higher ROI than simple bonding at time $T$, we could apply the same reasoning to the new bond created at $t$. As long as all factors determining the profitability are constant (and since the ROI is independent of the absolute bond size), this implies that rebonding of the new bond becomes more attractive after the exact same time period, thus at $2t$. Repeating this process, we can thus state that the profit-maximising strategy involves rebonding at a regular pace all else being equal.
+We assume $b$ and $\lambda$ to be constant for simplicity. The impact of $\lambda$ on $T_{opt}$ and thus the accuracy of the simplification depends on the volatility of $\lambda$ and the length of the $T_{opt}$ period, which can be tuned by the controller to be relatively short, limiting the impact of the volatility. As the system matures, the yield amplification will tend to decline due to the perpetual growth of the Reserve Bucket relative to the two other buckets, which cannot sustainably grow at the same rate in the long run. With a decreasing relative size of the Permanent and Pending Buckets, their volatility should become less impactful for the fair price, making the simplification more accurate over time (at least based on the naive fair price formula). The assumption may be unrealistic for the early growth phase though.
 
 Before deriving the optimal rebonding time, we start by comparing the final value of a user's bond (expressed in TKN) after a time period $T$ without rebonding (denoted by $f$) with the final value of a bond that is rebonded at time $t<T$ (denoted by $f_r$).
 
@@ -544,18 +546,18 @@ We now attempt to estimate the fair price $p_f$. This can be defined as the pric
 \subsubsection{Naive approach}
 We start by modeling a yield-bearing token TKN as an investment that pays out a future sum of money or stream of cash flows. Given a $\textit{natural rate}$ $r_m$ (aka market rate or discount rate) this allows to calculate its present value (PV). One can then consider a compounding wrapper contract around TKN that retains and compounds the generated yield, giving the investor the option to redeem their wrapper share against a pro rata share of value held inside the contract. We assume that similarly to a mutual accumulation fund, the value of the investor's share in the compounding contract would reflect the inner value of the share, i.e. the value the investor receives upon redemption. 
 
-In Chicken Bonds, the Acquired Bucket corresponds to a compounding wrapper with the extra benefit of receiving the return from the Pending and the Permanent Bucket in addition to its own yield. If those two other buckets were empty, the Acquired Bucket's PV expressed in TKN would be equal to its inner value, i.e. $q_a$, and the fair price of bTKN would correspond to its redemption price $p_r$. However, with non-empty Permanent and Pending Buckets acting as extra yield sources, the value of the bTKN should exceed $p_r$ since holding bTKN is a better investment than being an investor in a simple compounding contract holding TKN. The question is by how much.
+In Chicken Bonds, the Reserve Bucket corresponds to a compounding wrapper with the extra benefit of receiving the return from the Pending and the Permanent Bucket in addition to its own yield. If those two other buckets were empty, the Reserve Bucket's PV expressed in TKN would be equal to its inner value, i.e. $q_a$, and the fair price of bTKN would correspond to its redemption price $p_r$. However, with non-empty Permanent and Pending Buckets acting as extra yield sources, the value of the bTKN should exceed $p_r$ since holding bTKN is a better investment than being an investor in a simple compounding contract holding TKN. The question is by how much.
 
 Generally, if a token $x$ receives cash flows $F_1, F_2..., F_n$ from multiple different sources, the PV of the token is given by the sum of the PVs of the cash flows, i.e. $PV(x) = PV(F_1) + PV(F_2) + ... + PV(F_n)$. We suppose that the same rationale holds in principle if the yields are compounded in a redeemable wrapper contract instead of being paid out. 
 
-While this applies to the Acquired Bucket, the Permanent Bucket as such is not subject to redemption, but only its yield becomes redeemable as part of the Acquired Bucket. Therefore, we posit that the same amount of TKN inside the Permanent Bucket has a lesser impact on the price of bTKN than it would have inside the Acquired Bucket, even when earning the same yield. We thus have to discount its price impact by some factor $d_f < 1$ to account for the permanent locking of the principal. Supposing that $r_a = r_m$ and $r_d < r_a$, and neglecting the Pending Bucket for now, we can state the present value of 1 unit of bTKN as
+While this applies to the Reserve Bucket, the Permanent Bucket as such is not subject to redemption, but only its yield becomes redeemable as part of the Reserve Bucket. Therefore, we posit that the same amount of TKN inside the Permanent Bucket has a lesser impact on the price of bTKN than it would have inside the Reserve Bucket, even when earning the same yield. We thus have to discount its price impact by some factor $d_f < 1$ to account for the permanent locking of the principal. Supposing that $r_a = r_m$ and $r_d < r_a$, and neglecting the Pending Bucket for now, we can state the present value of 1 unit of bTKN as
 
 \begin{equation}
   \label{eq:naive-1}
     p_f = \frac{PV(AcquiredBucket) + PV(PermanentBucket)}{S}
 \end{equation}
 
-and express the PV of the Permanent Bucket in terms of the Acquired Bucket by converting bucket quantities, rates of return, and applying the discount factor:
+and express the PV of the Permanent Bucket in terms of the Reserve Bucket by converting bucket quantities, rates of return, and applying the discount factor:
 
 \begin{equation}
   \label{eq:naive-2}
@@ -605,7 +607,7 @@ If we take the yield on $R$ into account and suppose that all bond holders who c
   \Delta R_v = \frac{\Delta t}{365} r_m (q_a + q_p) + \frac{\Delta t}{365} r_d  q_d + c_p \Delta S p_f 
 \end{equation}
 
-with the last term expressing the value change due to the influx of new TKN from rebonding based on an exchange at the current fair price. Note that the rebonded capital needs to be corrected by $c_p$, whereas no correction factor is required for the yield as it becomes part of the Acquired Bucket (and given $r_a=r_m$).
+with the last term expressing the value change due to the influx of new TKN from rebonding based on an exchange at the current fair price. Note that the rebonded capital needs to be corrected by $c_p$, whereas no correction factor is required for the yield as it becomes part of the Reserve Bucket (and given $r_a=r_m$).
 
 $\Delta S$ stands for the change in bTKN supply $S$ per $\Delta t$, which will be rebonded in entirety according to our assumption. To express $\Delta S$, we consider $q_p$ as the representation of all bond holders in aggregate and assume that the same fraction of $q_p$ is chickened in each time unit $\Delta t$. 
 
@@ -1073,7 +1075,7 @@ Although an approach without rebonding is unlikely to be fruitful since the rede
 S_t = S_1 = S_0 = {q_a}_0
 \]
 
-We try to compute acquired bucket for several time intervals, let’s say daily:
+We try to compute Reserve Bucket for several time intervals, let’s say daily:
 
 \[
 {q_a}_1 = {q_a}_0 + [({q_a}_0 + {q_p}_0) r_s + {q_d}_0 r_d] = {q_a}_0 + {q_a}_0 r_s + {q_p}_0 r_s + {q_d}_0 r_d
@@ -1113,20 +1115,20 @@ TODO: check and update once we have a formula for the fair price
 
 \subsection{Self-stabilizing effect of redemptions and its help to regain traction}
   \label{sec:self-stabilizing}
-As redemptions reduce the Acquired Bucket and the bTKN supply in the same proportion, they indirectly increase the impact of the Permanent and the Pending Bucket on bTKN through a higher yield amplification. While the redemption price doesn't change when somebody redeems bTKN for TKN, the fair price and thus the expected premium grow as a result. 
+As redemptions reduce the Reserve Bucket and the bTKN supply in the same proportion, they indirectly increase the impact of the Permanent and the Pending Bucket on bTKN through a higher yield amplification. While the redemption price doesn't change when somebody redeems bTKN for TKN, the fair price and thus the expected premium grow as a result. 
 
-We can therefore expect a self-stabilizing effect of redemptions: for any given $q_p \geq 0$ and $q_d > 0$ there should be an equilibrium state with $q_a > 0$ where $p_r = p_f$, making further redemptions and a complete drainage of the Acquired Bucket unlikely. Given this de facto lower bound on $q_a$, a portion of the Acquired Bucket will behave as if it was permanent.
+We can therefore expect a self-stabilizing effect of redemptions: for any given $q_p \geq 0$ and $q_d > 0$ there should be an equilibrium state with $q_a > 0$ where $p_r = p_f$, making further redemptions and a complete drainage of the Reserve Bucket unlikely. Given this de facto lower bound on $q_a$, a portion of the Reserve Bucket will behave as if it was permanent.
 
 Furthermore, natural fluctuations of the market price $p_m$ compared to $p_f$ could help the system regain traction should it ever reach a state where $p_f = p_r$: if the market temporarily prices the bTKN below its fair price ($p_m < p_f$), redemptions will kick in and raise $p_f$, increasing the odds that the market will return to $p_m > p_r$ and make bonding attractive again. This dynamic should apply even if $q_p = 0$, i.e. when bonding activity has come to a complete halt.
 
 \section{Protocol enhancements and variations}
 \subsection{Bootstrapping}
   \label{sec:bootstrapping}
-Right after launch, the initial bTKN supply is 0 as the token is only minted upon chicken in events. Similarly, the Acquired Bucket is empty until the first bond holder chickens in. As a result, the redemption price $p_r$ (backing ratio) is undefined and cannot be used for calculating the accrued amount $s(t)$ during this bootstrapping period.
+Right after launch, the initial bTKN supply is 0 as the token is only minted upon chicken in events. Similarly, the Reserve Bucket is empty until the first bond holder chickens in. As a result, the redemption price $p_r$ (backing ratio) is undefined and cannot be used for calculating the accrued amount $s(t)$ during this bootstrapping period.
 
 Meanwhile, the protocol is already earning yield on the Pending Bucket before anybody chickens in. Giving this yield to the bond holder who chickens ins first wouldn't seem fair. 
 
-To tackle these problems, we can define the initial redemption price at the time of the first chicken in to be $p_r = 1$. The protocol thus needs to mint the same amount of bTKN as the amount of TKN acquired by the protocol up to that time. The accumulated yield of the Pending Bucket, which would normally belong to the Acquired Bucket, can be used to reward the LPs bootstrapping bTKN/TKN DEX pair (see \ref{sec:chicken-in-fee}).
+To tackle these problems, we can define the initial redemption price at the time of the first chicken in to be $p_r = 1$. The protocol thus needs to mint the same amount of bTKN as the amount of TKN acquired by the protocol up to that time. The accumulated yield of the Pending Bucket, which would normally belong to the Reserve Bucket, can be used to reward the LPs bootstrapping bTKN/TKN DEX pair (see \ref{sec:chicken-in-fee}).
 
 \subsection{Two-bucket version}
 \label{sec:two-bucket}
@@ -1141,15 +1143,15 @@ The break even point (equation \ref{eq:break_even_2}) and the optimal rebonding 
 
 Simulations have shown that the premium $\lambda$ tends to decrease over time as the system matures. If  $\alpha$ was kept constant, this would mean that the break even and optimal rebonding times would increase throughout the lifetime of the system, making bonds less and less attractive due to a decreasing APR.
 
-To avoid this outcome, the system could automatically adjust $\alpha$ to keep the optimal bonding duration constant. To that end, a controller could track the average (size-weighted) outstanding bond age and decrease $\alpha$ by a certain factor whenever the average age exceeds a given target age $T_a$. Assuming a regular distribution of bond creation dates, we can deduct a target average chicken in time $T_t = 2T_a$.
+To avoid this outcome, the system could automatically adjust $\alpha$ to keep the optimal bonding duration constant. To that end, a controller could track the average (size-weighted) outstanding bond age and decrease $\alpha$ by a certain factor whenever the average age exceeds a given target age $T_a$. Assuming an even distribution of bond creation dates, we can deduce a target average chicken in time $T_t = 2T_a$.
 
 \subsection{Redemption fee}
   \label{sec:redemption-fee}
-To throttle the outflow of TKN from the Acquired Bucket, the system may charge a fee on redemptions, called the \textit{redemption fee}. The redeemer of $n$ bTKN would then get slightly less TKN than their pro rata share, i.e. $x < n \cdot p_r$. The difference $(n \cdot p_r - x)$ could be either kept in the Acquired Bucket or moved to the Permanent Bucket. 
+To throttle the outflow of TKN from the Reserve Bucket, the system may charge a fee on redemptions, called the \textit{redemption fee}. The redeemer of $n$ bTKN would then get slightly less TKN than their pro rata share, i.e. $x < n \cdot p_r$. The difference $(n \cdot p_r - x)$ could be either kept in the Reserve Bucket or moved to the Permanent Bucket. 
 
-In both cases, the captured fee increases the fair price by the same amount, in addition to the positive effect of the redemption as such on $p_f$ (see \ref{sec:self-stabilizing}). However, in the first case, the redemption price $p_r$ also increases, decreasing the premium compared to a baseline without any redemption fee, while in the second case the premium grows more than in the baseline. TODO: give some mathematical intuition on this.
+In both cases, the captured fee increases the fair price by the same amount, in addition to the positive effect of the redemption as such on $p_f$ (see \ref{sec:self-stabilizing}). However, by leaving the fee in the Reserve Bucket the redemption price $p_r$ also increases, implying that by chickening in a user could directly impact the backing ratio and the cap of the existing users. To avoid such interference and potential bank run situations, it seems preferable to capture the fee revenue in the Permanent Bucket instead, resulting in a larger and more sustainable premium growth on top.  
 
-Inspired by Liquity's redemption fee, an exponentially decaying fee schedule can be used to efficiently throttle redemptions: the fee is dynamically increased upon every redemption in function of the redeemed amount, decaying over time to a minimum when no redemptions take place.
+An exponentially decaying fee schedule could be used to efficiently throttle redemptions: the fee is dynamically increased upon every redemption in function of the redeemed amount, decaying over time to a minimum when no redemptions take place.
 
 \subsection{Chicken-in fee to incentivize bTKN/TKN LPs}
   \label{sec:chicken-in-fee}
