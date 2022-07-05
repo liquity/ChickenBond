@@ -27,7 +27,7 @@
 
 \title{\textbf{Chicken Bonds: Self-Bootstrapping Liquidity}}
 \author{Liquity Team}
-\date{June 15, 2021}
+\date{July 5, 2021}
 
 \maketitle
 
@@ -171,7 +171,7 @@ Upon a chicken in, the protocol acquires the bonded TKN which is moved from the 
     b_d = \frac{c-s}{c} \cdot b = b - s \cdot p_r
 \end{equation}
 
-The two amounts are then added to the Acquired and the Permanent Bucket, so that the Treasury transitions to the following state:
+The two amounts are then added to the Reserve and the Permanent Bucket, so that the Treasury transitions to the following state:
 
 \begin{equation}
   \label{eq:chicken-in-qa}
@@ -554,17 +554,17 @@ While this applies to the Reserve Bucket, the Permanent Bucket as such is not su
 
 \begin{equation}
   \label{eq:naive-1}
-    p_f = \frac{PV(AcquiredBucket) + PV(PermanentBucket)}{S}
+    p_f = \frac{PV(ReserveBucket) + PV(PermanentBucket)}{S}
 \end{equation}
 
 and express the PV of the Permanent Bucket in terms of the Reserve Bucket by converting bucket quantities, rates of return, and applying the discount factor:
 
 \begin{equation}
   \label{eq:naive-2}
-   p_f = \frac{PV(AcquiredBucket) + \frac{q_d}{q_a} \frac{r_d}{r_a} d_f PV(AcquiredBucket)}{S}
+   p_f = \frac{PV(ReserveBucket) + \frac{q_d}{q_a} \frac{r_d}{r_a} d_f PV(ReserveBucket)}{S}
 \end{equation}
 
-Recalling that $PV(AcquiredBucket) = q_a$, we can derive that
+Recalling that $PV(ReserveBucket) = q_a$, we can derive that
 
 \begin{equation}
   \label{eq:naive-3}
@@ -672,7 +672,7 @@ This seems to imply that only the naive fair price formula with $c_p=1$ satisfie
 
 %General conclusion: too many constraints influencing $p_f$
 
-%Regarding $q_d$, we can take the correction factor $c_d=q_d \frac{r_d}{r_a}$ from the naive formula above (equation \ref{eq:naive-3}). For $q_p$ we suppose that the Pending Bucket will eventually transition into the Acquired and the Permanent Buckets according to a split determined by the optimal rebonding time. In other words, we're discounting the fraction of the Pending Bucket with $c_p$ that we expect to become part of the Permanent Bucket, neglecting the possibility of chicken outs.
+%Regarding $q_d$, we can take the correction factor $c_d=q_d \frac{r_d}{r_a}$ from the naive formula above (equation \ref{eq:naive-3}). For $q_p$ we suppose that the Pending Bucket will eventually transition into the Reserve and the Permanent Buckets according to a split determined by the optimal rebonding time. In other words, we're discounting the fraction of the Pending Bucket with $c_p$ that we expect to become part of the Permanent Bucket, neglecting the possibility of chicken outs.
 
 \paragraph{Immediate effect of rebonding on the fair price}
 Can we thus deduct that (optimal) rebonding has no direct impact on the naive fair price at all?
