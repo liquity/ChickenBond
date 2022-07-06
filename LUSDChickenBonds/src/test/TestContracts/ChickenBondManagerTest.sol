@@ -303,16 +303,15 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(ownerOfID2After, B);
     }
 
-    function testCreateBondTransferbLUSDToYearnVault() public {
-        // Get Yearn vault balance before
-        uint256 yearnVaultBalanceBefore = lusdToken.balanceOf(address(bammSPVault));
+    function testCreateBondDepositsLUSDInBAMM() public {
+        (, uint256 lusdInBAMMBefore,) = bammSPVault.getLUSDValue();
 
         // A creates bond
         createBondForUser(A, 10e18);
 
-        uint256 yearnVaultBalanceAfter = lusdToken.balanceOf(address(bammSPVault));
+        (, uint256 lusdInBAMMAfter,) = bammSPVault.getLUSDValue();
 
-        assertEq(yearnVaultBalanceAfter, yearnVaultBalanceBefore + 10e18);
+        assertEq(lusdInBAMMAfter, lusdInBAMMBefore + 10e18);
     }
 
     function testCreateBondRevertsWithZeroInputAmount() public {
@@ -1801,8 +1800,7 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     function testYearnLUSDVaultImmediateDepositAndWithdrawalReturnsAlmostExactDeposit(uint256 _depositAmount) public {
-        // Assume  10 wei < deposit
-        vm.assume(_depositAmount > 10);
+        _depositAmount = coerce(_depositAmount, 10, 1e27);
 
         // Tip CBM some LUSD
         tip(address(lusdToken), address(chickenBondManager), _depositAmount);

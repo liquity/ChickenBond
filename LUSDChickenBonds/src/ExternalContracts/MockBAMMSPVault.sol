@@ -29,8 +29,14 @@ contract MockBAMMSPVault is IBAMM {
         return;
     }
 
+    function swap(uint lusdAmount, uint minEthReturn, address payable dest) public returns(uint) {}
+
+    function getSwapEthAmount(uint lusdQty) public view returns(uint ethAmount, uint feeLusdAmount) {}
+
     function getLUSDValue() external view returns (uint256, uint256, uint256) {
         uint256 lusdBalance = lusdToken.balanceOf(address(this));
         return (lusdValue, lusdBalance, 0);
     }
+
+    function setChicken(address _chicken) external {}
 }
