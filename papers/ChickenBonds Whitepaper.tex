@@ -66,10 +66,10 @@ The current state of the Treasury can thus be described by the following tuple:
 
 \begin{equation}
   \label{eq:treasury}
-    R:=(q_p, q_a, q_d, r_p, r_a, r_d)
+    R:=(q_p, q_r, q_d, r_p, r_r, r_d)
 \end{equation}
 
-where $q_p$, $q_a$ and $q_d$ stand for the quantities held by the respective buckets, and $r_p$, $r_a$, $r_d$ for their rates of return. Note that the buckets as logical quantities do not need to correspond to the physical investment vehicles. A bucket may invest its funds to multiple investment vehicles, and several buckets may use the same venue earning the same rate of return.
+where $q_p$, $q_r$ and $q_d$ stand for the quantities held by the respective buckets, and $r_p$, $r_r$, $r_d$ for their rates of return. Note that the buckets as logical quantities do not need to correspond to the physical investment vehicles. A bucket may invest its funds to multiple investment vehicles, and several buckets may use the same venue earning the same rate of return.
 
 The buckets are used as follows:
 \begin{itemize}
@@ -81,14 +81,14 @@ The buckets are used as follows:
 Having a Permanent Bucket may turn out as unnecessary or even detrimental for some use cases. As an alternative, the protocol can thus be set up without a Permanent Bucket (see \ref{sec:two-bucket}).
 
 \subsection{Yield Amplification and Reinvestment}
-Given that the Reserve Bucket earns a return not only on its own assets, but additionally receives the returns from the Pending and the Permanent Buckets, it achieves an amplified return $r_a^\star > r_a$ on the amount $q_a$. We call this useful property \textit{yield amplification}.
+Given that the Reserve Bucket earns a return not only on its own assets, but additionally receives the returns from the Pending and the Permanent Buckets, it achieves an amplified return $r_r^\star > r_r$ on the amount $q_r$. We call this useful property \textit{yield amplification}.
 
-As the protocol doesn't distribute any yields, but reinvests them inside the Reserve Bucket, the value of the Reserve Bucket will grow over time even without the inflow of new capital. Due to the yield amplification, the Reserve Bucket grows faster than if the same funds were invested regularly with a (compounding) rate of return $r_a$.
+As the protocol doesn't distribute any yields, but reinvests them inside the Reserve Bucket, the value of the Reserve Bucket will grow over time even without the inflow of new capital. Due to the yield amplification, the Reserve Bucket grows faster than if the same funds were invested regularly with a (compounding) rate of return $r_r$.
 
 \subsection{Reserve Bucket backing the Boosted Token}
 The protocol maintains a supply $S$ of a \textit{Boosted Token} (bTKN) according to preset rules for minting and burning. The bTKN supply is directly backed by the Reserve Bucket, i.e. it can be redeemed against a pro rata share of the assets (usually TKN) held therein (see \ref{sec:chicken-out}).
 
-We call the amount of TKN for which each bTKN can be redeemed for the \textit{redemption price} $p_r$. The redemption price  corresponds to the \textit{backing ratio} and is defined as $\frac{q_a}{S}$. It is subject to the following invariant:
+We call the amount of TKN for which each bTKN can be redeemed for the \textit{redemption price} $p_r$. The redemption price  corresponds to the \textit{backing ratio} and is defined as $\frac{q_r}{S}$. It is subject to the following invariant:
 
 \begin{invariant}[Redemption price never decreases]
 The protocol ensures that the redemption price $p_r$ (backing ratio) can only ever increase, but never decrease.
@@ -129,7 +129,7 @@ We call the fraction $\frac{b}{p_r}$ the cap $c$ which corresponds to the amount
 
 \begin{equation}
   \label{eq:cap-bond-ratio}
-    \frac{c}{b} = \frac{S}{q_a}
+    \frac{c}{b} = \frac{S}{q_r}
 \end{equation}   
 
 The owner of a \textit{Chicken Bond} can exit their position any time by choosing either of the following options:
@@ -165,11 +165,11 @@ A user that chickens in loses the bonded TKN in exchange for the accrued balance
 
 Instead of keeping the received bTKN, the user may sell it on the open market and opt to reinvest the proceeds by creating a new, typically larger bond (aka as “rebonding”, see below).
 
-Upon a chicken in, the protocol acquires the bonded TKN which is moved from the Pending Bucket to the Reserve Bucket and the Permanent Bucket. To that end, the bonded amount $b$ is first split into two amounts $b_a$ and $b_d$ in proportion to the ratio of the currently accrued bTKN $s$ to the cap $c$:
+Upon a chicken in, the protocol acquires the bonded TKN which is moved from the Pending Bucket to the Reserve Bucket and the Permanent Bucket. To that end, the bonded amount $b$ is first split into two amounts $b_r$ and $b_d$ in proportion to the ratio of the currently accrued bTKN $s$ to the cap $c$:
 
 \begin{equation}
   \label{eq:chicken-in-ba}
-    b_a = \frac{s}{c} \cdot b = s \cdot p_r
+    b_r = \frac{s}{c} \cdot b = s \cdot p_r
 \end{equation}
 \begin{equation}
   \label{eq:chicken-in-bd}
@@ -180,7 +180,7 @@ The two amounts are then added to the Reserve and the Permanent Bucket, so that 
 
 \begin{equation}
   \label{eq:chicken-in-qa}
-    q_a(t+1) := q_a(t) + b_a = q_a(t) + s \cdot p_r
+    q_r(t+1) := q_r(t) + b_r = q_r(t) + s \cdot p_r
 \end{equation}
 \begin{equation}
   \label{eq:chicken-in-qd}
@@ -204,14 +204,14 @@ Note that a portion of the bonded amount may be diverted as an incentive for bTK
 
 \subsection{Redemption}
 \label{sec:redemption}
-At any time, a holder can redeem $n$ bTKN for $\frac{n}{S}\cdot q_a = n \cdot p_r$ TKN.
+At any time, a holder can redeem $n$ bTKN for $\frac{n}{S}\cdot q_r = n \cdot p_r$ TKN.
 The TKN are removed from the Reserve Bucket and paid out the user, while the redeemed bTKN are burned.
 
 The state of the Treasury changes as follows: 
 
 \begin{equation}
   \label{eq:redemption-qa}
-    q_a(t+1) := q_a(t) \cdot (1 - \frac{n}{S})
+    q_r(t+1) := q_r(t) \cdot (1 - \frac{n}{S})
 \end{equation}
 \begin{equation}
   \label{eq:redemption-S}
@@ -226,7 +226,7 @@ The Boosted Token bTKN derives its value from the Reserve Bucket, as its direct 
 
 Since the bTKN supply is redeemable for a proportional share of the acquired TKN, the market cap of bTKN should normally be worth at least the amount of TKN kept in the Reserve Bucket. This means that the redemption price $p_r$ will act as a price floor, below which arbitrage becomes possible: people can buy bTKN for less than what they get upon redemption. Should bTKN ever drop below the redemption price, we can expect it to bounce back quickly due to the buying pressure stemming from redemptions.
 
-In practice, we expect bTKN to trade significantly above its price floor most of the time due to the yield amplification: if we suppose that $r_a$ corresponds to the market rate (or natural rate) $r_m$, the Reserve Bucket and thus $p_r$ will grow at a higher rate than $r_m$ given the extra yield generated by the Pending and the Permanent Bucket. This increased return warrants a price premium since the market should price in the amplified growth rate by paying a higher price for bTKN than the redemption price. We call this expected market price the \textit{fair price} $p_f$ and let $\lambda = \frac{p_f}{p_r}$ denote the \textit{relative price premium} or simply \textit{premium}, i.e. the fraction between the fair price and the redemption price.
+In practice, we expect bTKN to trade significantly above its price floor most of the time due to the yield amplification: if we suppose that $r_r$ corresponds to the market rate (or natural rate) $r_m$, the Reserve Bucket and thus $p_r$ will grow at a higher rate than $r_m$ given the extra yield generated by the Pending and the Permanent Bucket. This increased return warrants a price premium since the market should price in the amplified growth rate by paying a higher price for bTKN than the redemption price. We call this expected market price the \textit{fair price} $p_f$ and let $\lambda = \frac{p_f}{p_r}$ denote the \textit{relative price premium} or simply \textit{premium}, i.e. the fraction between the fair price and the redemption price.
 
 \subsection{Profitability of bonding}
 Bonding is only profitable for $\lambda>1$, i.e. if $p_f>p_r$. In that case, we can easily calculate the break even point which is reached when $p_f \cdot s(t)>b$, i.e.
@@ -566,11 +566,11 @@ We now attempt to estimate the fair price $p_f$. This can be defined as the pric
 \label{sec:naive_approach}
 We start by modeling a yield-bearing token TKN as an investment that pays out a future sum of money or stream of cash flows. Given a $\textit{natural rate}$ $r_m$ (aka market rate or discount rate) this allows to calculate its present value (PV). One can then consider a compounding wrapper contract around TKN that retains and compounds the generated yield, giving the investor the option to redeem their wrapper share against a pro rata share of value held inside the contract. We assume that similarly to a mutual accumulation fund, the value of the investor's share in the compounding contract would reflect the inner value of the share, i.e. the value the investor receives upon redemption. 
 
-In Chicken Bonds, the Reserve Bucket corresponds to a compounding wrapper with the extra benefit of receiving the return from the Pending and the Permanent Bucket in addition to its own yield. If those two other buckets were empty, the Reserve Bucket's PV expressed in TKN would be equal to its inner value, i.e. $q_a$, and the fair price of bTKN would correspond to its redemption price $p_r$. However, with non-empty Permanent and Pending Buckets acting as extra yield sources, the value of the bTKN should exceed $p_r$ since holding bTKN is a better investment than being an investor in a simple compounding contract holding TKN. The question is by how much.
+In Chicken Bonds, the Reserve Bucket corresponds to a compounding wrapper with the extra benefit of receiving the return from the Pending and the Permanent Bucket in addition to its own yield. If those two other buckets were empty, the Reserve Bucket's PV expressed in TKN would be equal to its inner value, i.e. $q_r$, and the fair price of bTKN would correspond to its redemption price $p_r$. However, with non-empty Permanent and Pending Buckets acting as extra yield sources, the value of the bTKN should exceed $p_r$ since holding bTKN is a better investment than being an investor in a simple compounding contract holding TKN. The question is by how much.
 
 Generally, if a token $x$ receives cash flows $F_1, F_2..., F_n$ from multiple different sources, the PV of the token is given by the sum of the PVs of the cash flows, i.e. $PV(x) = PV(F_1) + PV(F_2) + ... + PV(F_n)$. We suppose that the same rationale holds in principle if the yields are compounded in a redeemable wrapper contract instead of being paid out. 
 
-While this applies to the Reserve Bucket, the Permanent Bucket as such is not subject to redemption, but only its yield becomes redeemable as part of the Reserve Bucket. Therefore, we posit that the same amount of TKN inside the Permanent Bucket has a lesser impact on the price of bTKN than it would have inside the Reserve Bucket, even when earning the same yield. We thus have to discount its price impact by some factor $d_f < 1$ to account for the permanent locking of the principal. Supposing that $r_a = r_m$, we can state the present value of 1 unit of bTKN as
+While this applies to the Reserve Bucket, the Permanent Bucket as such is not subject to redemption, but only its yield becomes redeemable as part of the Reserve Bucket. Therefore, we posit that the same amount of TKN inside the Permanent Bucket has a lesser impact on the price of bTKN than it would have inside the Reserve Bucket, even when earning the same yield. We thus have to discount its price impact by some factor $d_f < 1$ to account for the permanent locking of the principal. Supposing that $r_r = r_m$, we can state the present value of 1 unit of bTKN as
 
 \begin{equation}
   \label{eq:naive-1}
@@ -581,21 +581,21 @@ We can express the PV of the Permanent Bucket in terms of the Reserve Bucket by 
 
 \begin{equation}
   \label{eq:naive-2}
-   PV(PermanentBucket) = \frac{q_d}{q_a} \frac{r_d}{r_a} d_f PV(ReserveBucket)
+   PV(PermanentBucket) = \frac{q_d}{q_r} \frac{r_d}{r_r} d_f PV(ReserveBucket)
 \end{equation}
 
-Recalling that $PV(ReserveBucket) = q_a$, we can derive that
+Recalling that $PV(ReserveBucket) = q_r$, we can derive that
 
 \begin{equation}
   \label{eq:naive-3}
-   PV(PermanentBucket) = q_d \frac{r_d}{r_a} d_f
+   PV(PermanentBucket) = q_d \frac{r_d}{r_r} d_f
 \end{equation}
 
-Regarding the Pending Bucket, we know that its content will eventually transition into the two other buckets (chicken in) or leave the system (chicken out), and that the protocol will mint more bTKN. On the other hand, bonders have an incentive to rebond after chickening in (see section \ref{sec:rebonding_strategy}), increasing the Pending Bucket shortly after. If we assume for simplicity that all effects cancel out in aggregate and suppose $r_p = r_a$, we can extend the fair price formula to:
+Regarding the Pending Bucket, we know that its content will eventually transition into the two other buckets (chicken in) or leave the system (chicken out), and that the protocol will mint more bTKN. On the other hand, bonders have an incentive to rebond after chickening in (see section \ref{sec:rebonding_strategy}), increasing the Pending Bucket shortly after. If we assume for simplicity that all effects cancel out in aggregate and suppose $r_p = r_r$, we can extend the fair price formula to:
 
 \begin{equation}
   \label{eq:naive-4}
-   p_f = \frac{q_a + q_p + q_d \frac{r_d}{r_a} d_f}{S}
+   p_f = \frac{q_r + q_p + q_d \frac{r_d}{r_r} d_f}{S}
 \end{equation}
 
 We call this the \textit{naive formula}. Although the formula looks oversimplified (glossing over the fact that rebonding may have a different impact on the price than assumed), it turns out to have interesting properties which seem to validate it to some extent.
@@ -613,21 +613,21 @@ We posit that in the long run the bTKN supply $S$ should grow at roughly the sam
 Here, $\Delta S$ and $\Delta R$ respectively represent the change in $S$ and $R$ per unit time.  We now seek separate expressions for $\Delta S$ and $\Delta R$ as functions of bucket quantities and time in order to prove the claim above.
 
 \paragraph{}
-While the Treasury $R$ consists of the three buckets, its real value $R_v$ doesn't necessarily equal the sum of their content $q_a+q_d+q_p$ since not every bucket may achieve the same return as the market rate $r_m$. Supposing that $r_a=r_p=r_m \neq r_d$, we can try to estimate $R_v$ by applying correction factors $c_d$ and $c_p$ to $q_d$ and $q_p$ respectively. This allows us to value the current Treasury as
+While the Treasury $R$ consists of the three buckets, its real value $R_v$ doesn't necessarily equal the sum of their content $q_r+q_d+q_p$ since not every bucket may achieve the same return as the market rate $r_m$. Supposing that $r_r=r_p=r_m \neq r_d$, we can try to estimate $R_v$ by applying correction factors $c_d$ and $c_p$ to $q_d$ and $q_p$ respectively. This allows us to value the current Treasury as
 
 \begin{equation}
   \label{eq:correction-factors}
-  R_v = q_a + c_d q_d + c_p q_p
+  R_v = q_r + c_d q_d + c_p q_p
 \end{equation}
 
 If we take the yield on $R$ into account and suppose that all bond holders who chicken in immediately sell the received bTKN for TKN and rebond them, we can express the absolute change of $R_v$ for a given time step $\Delta t$ (measured in days) as
 
 \begin{equation}
   \label{eq:treasury-growth}
-  \Delta R_v = \frac{\Delta t}{365} r_m (q_a + q_p) + \frac{\Delta t}{365} r_d  q_d + c_p \Delta S p_f 
+  \Delta R_v = \frac{\Delta t}{365} r_m (q_r + q_p) + \frac{\Delta t}{365} r_d  q_d + c_p \Delta S p_f 
 \end{equation}
 
-with the last term expressing the value change due to the influx of new TKN from rebonding based on an exchange at the current fair price. Note that the rebonded capital needs to be corrected by $c_p$, whereas no correction factor is required for the yield as it becomes part of the Reserve Bucket (and given $r_a=r_m$).
+with the last term expressing the value change due to the influx of new TKN from rebonding based on an exchange at the current fair price. Note that the rebonded capital needs to be corrected by $c_p$, whereas no correction factor is required for the yield as it becomes part of the Reserve Bucket (and given $r_r=r_m$).
 
 $\Delta S$ stands for the change in bTKN supply $S$ per $\Delta t$, which will be rebonded in entirety according to our assumption. To express $\Delta S$, we consider $q_p$ as the representation of all bond holders in aggregate and assume for simplicity that bonding activity is distributed evenly over time with regard to volumes and bond creation times. We further suppose that the system configuration doesn't change substantially within one $T_{opt}$ period. Therefore, the fraction of the user base that chickens in (and rebonds) per time step is constant, corresponding to the total pending bonds divided by the length of the period, i.e. $\frac{q_p}{T_{opt}}$. 
 
@@ -635,16 +635,16 @@ Given the optimal rebonding time $T_{opt}$, we can thus treat the chickened-in f
 
 \begin{equation}
   \label{}
-  \frac{S}{\Delta t} = \frac{s(T_{opt})}{\Delta t} = \frac{q_p}{T_{opt}} \frac{1}{p_r} \frac{T_{opt}}{T_{opt}+\alpha} = \frac{S}{q_a} \frac{q_p}{T_{opt}+\alpha}
+  \frac{S}{\Delta t} = \frac{s(T_{opt})}{\Delta t} = \frac{q_p}{T_{opt}} \frac{1}{p_r} \frac{T_{opt}}{T_{opt}+\alpha} = \frac{S}{q_r} \frac{q_p}{T_{opt}+\alpha}
 \end{equation}
 
 Similarly, for the version with a controller targeting an average chicken in time $T_t$ (see section \ref{sec:adjustment}), using equation $\ref{eq:alpha-solved}$ for $\alpha$, we can derive
 
 \begin{equation}
   \label{}
-  \frac{S}{\Delta t} = q_p \frac{S}{q_a} \frac{1}{T_t+\alpha}
-  =  \frac{S}{q_a} \frac{q_p}{T_t+ T_t\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}}}  
-  =  \frac{S}{q_a} \frac{q_p}{T_t+ T_t\frac{\lambda - 1}{1 + \sqrt{\lambda}}}  
+  \frac{S}{\Delta t} = q_p \frac{S}{q_r} \frac{1}{T_t+\alpha}
+  =  \frac{S}{q_r} \frac{q_p}{T_t+ T_t\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}}}  
+  =  \frac{S}{q_r} \frac{q_p}{T_t+ T_t\frac{\lambda - 1}{1 + \sqrt{\lambda}}}  
 \end{equation}
 
 
@@ -653,16 +653,16 @@ The question is how to determine the correction factors in equations \ref{eq:cor
 
 \begin{equation}
   \label{}
-   c_d=q_d \frac{r_d}{r_a}, c_p=1
+   c_d=q_d \frac{r_d}{r_r}, c_p=1
 \end{equation}
 
-In other words, we're not correcting the Pending Bucket but supposing that rebonding cancels out the effect of chicken ins on the fair price, consisting in a transition of funds from $q_p$ to $q_a$ and $q_d$ and the minting of more bTKN.
+In other words, we're not correcting the Pending Bucket but supposing that rebonding cancels out the effect of chicken ins on the fair price, consisting in a transition of funds from $q_p$ to $q_r$ and $q_d$ and the minting of more bTKN.
 
 We can now plot equation $\ref{eq:same_growth_rate}$ for the two versions with and without a dynamically controlled $\alpha$:
 
 \includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_growth_price.png}
 
-The purple line depicts the fair price (y-axis) as a solution of equation $\ref{eq:same_growth_rate}$ in function of the Pending Bucket $q_p$ (x-axis) for $q_a=1$, $q_d=2$, $S=1$, $r_a=r_p=0.1$, $r_d=0.05$ and a fixed $\alpha=30$. 
+The purple line depicts the fair price (y-axis) as a solution of equation $\ref{eq:same_growth_rate}$ in function of the Pending Bucket $q_p$ (x-axis) for $q_r=1$, $q_d=2$, $S=1$, $r_r=r_p=0.1$, $r_d=0.05$ and a fixed $\alpha=30$. 
 
 The red line shows the fair price for the controlled version for a $T_t=30$ and a variable $\alpha$.
 
@@ -680,7 +680,7 @@ Note that the two versions of the fair price resulting from $\ref{eq:same_growth
 
 \begin{equation}
   \label{eq:corrected-naive}
-   p_f = \frac{q_a + 0.7q_p + q_d \frac{r_d}{r_a} d_f}{S}
+   p_f = \frac{q_r + 0.7q_p + q_d \frac{r_d}{r_r} d_f}{S}
 \end{equation}
 
 This seems to imply that only the naive fair price formula with $c_p=1$ satisfies the property of an equal growth of $R_v$ and $S$. 
@@ -693,16 +693,16 @@ This seems to imply that only the naive fair price formula with $c_p=1$ satisfie
 
 %General conclusion: too many constraints influencing $p_f$
 
-%Regarding $q_d$, we can take the correction factor $c_d=q_d \frac{r_d}{r_a}$ from the naive formula above (equation \ref{eq:naive-3}). For $q_p$ we suppose that the Pending Bucket will eventually transition into the Reserve and the Permanent Buckets according to a split determined by the optimal rebonding time. In other words, we're discounting the fraction of the Pending Bucket with $c_p$ that we expect to become part of the Permanent Bucket, neglecting the possibility of chicken outs.
+%Regarding $q_d$, we can take the correction factor $c_d=q_d \frac{r_d}{r_r}$ from the naive formula above (equation \ref{eq:naive-3}). For $q_p$ we suppose that the Pending Bucket will eventually transition into the Reserve and the Permanent Buckets according to a split determined by the optimal rebonding time. In other words, we're discounting the fraction of the Pending Bucket with $c_p$ that we expect to become part of the Permanent Bucket, neglecting the possibility of chicken outs.
 
 \paragraph{Immediate effect of rebonding on the fair price}
 Can we thus deduct that (optimal) rebonding has no direct impact on the naive fair price at all?
 
-It turns out that this is only true for the special case where $r_d = r_a$. Otherwise, the result may look like this:
+It turns out that this is only true for the special case where $r_d = r_r$. Otherwise, the result may look like this:
 
 \includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_rebonding.png}
 
-For $r_d < r_a$, rebonding negatively impacts the fair price, as can be seen in the chart above which shows the fair price before (green) and after (blue) rebonding the entire Pending Bucket at $T_{opt}$ for $q_a=1$, $q_d=2$, $S=1$, $r_a=r_p=0.1$, $r_d=0.05$ and a fixed $\alpha=30$. 
+For $r_d < r_r$, rebonding negatively impacts the fair price, as can be seen in the chart above which shows the fair price before (green) and after (blue) rebonding the entire Pending Bucket at $T_{opt}$ for $q_r=1$, $q_d=2$, $S=1$, $r_r=r_p=0.1$, $r_d=0.05$ and a fixed $\alpha=30$. 
 
 This intuitively makes sense since it results in a larger portion of $R$ earning a lower yield (the later users chicken in and rebond, the larger the effect). 
 
@@ -713,7 +713,7 @@ One explanation for this seemingly contradictory result could be that while rebo
 \subsubsection{Recursive approach}
 Instead of assuming that the effects of chicken ins and rebonding cancel out as in the naive approach ($\ref{sec:naive_approach}$), we can try to estimate the future changes to the buckets based on historic user behavior or expected optimal behavior.
 
-For changes to the TKN quantities inside the buckets, we use the notation $\Delta q_{a}$, $\Delta q_{p}$ and $\Delta q_{d}$ and let $P_{In}$ denote the probability that a bond holder chickens in, and $P_{Out}$ that the holder chickens out.
+For changes to the TKN quantities inside the buckets, we use the notation $\Delta q_{r}$, $\Delta q_{p}$ and $\Delta q_{d}$ and let $P_{In}$ denote the probability that a bond holder chickens in, and $P_{Out}$ that the holder chickens out.
 
 Assuming an infinitely fine-grained user base, we can apply these probabilities to all users in aggregate (i.e. the buckets as such), allowing us to model the overall flows between the buckets.
 
@@ -721,14 +721,14 @@ With that we can express the fair price $p_f$ in a recursion step as
 
 \begin{equation}
   \label{}
-    p_{f} = \frac{q_{b}+q_{p}(1-P_{In}-P_{Out})+(q_{a}+ P_{In}\Delta q_{a})+(q_{d} + P_{In}\Delta q_{d})\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} + \frac{P_{In}\Delta q_a}{p_r}}
+    p_{f} = \frac{q_{b}+q_{p}(1-P_{In}-P_{Out})+(q_{r}+ P_{In}\Delta q_{r})+(q_{d} + P_{In}\Delta q_{d})\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} + \frac{P_{In}\Delta q_r}{p_r}}
 \end{equation}
 
-where $q_{b}$ stands for the amount bonded at the end of recursion step. As $p_r = \frac{q_a}{S_{sLQTY}}$, we can express the above equation as:
+where $q_{b}$ stands for the amount bonded at the end of recursion step. As $p_r = \frac{q_r}{S_{sLQTY}}$, we can express the above equation as:
 
 \begin{equation}
   \label{eq:recursive_hist}
-    p_{f} = \frac{q_{b}+q_{p}(1-P_{In}-P_{Out})+(q_{a}+ P_{In}\Delta q_{a})+(q_{d} + P_{In}\Delta q_{d})\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+P_{In} \Delta q_{a} \frac{1}{q_{a}} \right)}
+    p_{f} = \frac{q_{b}+q_{p}(1-P_{In}-P_{Out})+(q_{r}+ P_{In}\Delta q_{r})+(q_{d} + P_{In}\Delta q_{d})\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+P_{In} \Delta q_{r} \frac{1}{q_{r}} \right)}
 \end{equation}
 
 Assumptions:
@@ -750,63 +750,63 @@ We model $P_{In}$ by setting it to the inverse of the optimal rebonding time.
 \end{equation} 
 
 \paragraph{Bucket changes based on history}
-We can estimate $\Delta q_{a}$ and $\Delta q_{d}$ based on the historic average, assuming that users would rebond when reaching the same fraction of their cap as in the past:
+We can estimate $\Delta q_{r}$ and $\Delta q_{d}$ based on the historic average, assuming that users would rebond when reaching the same fraction of their cap as in the past:
 
 \begin{equation}
-\Delta q_{a} = q_{p} \frac{q_{a}}{q_{a}+q_{d}}
+\Delta q_{r} = q_{p} \frac{q_{r}}{q_{r}+q_{d}}
 \end{equation}
 
 \begin{equation}
-\Delta q_{d} = q_{p} \frac{q_{d}}{q_{a}+q_{d}}
+\Delta q_{d} = q_{p} \frac{q_{d}}{q_{r}+q_{d}}
 \end{equation}
 
-There should also exist an historical average rebonding period $\overline{T}$ corresponding to the current relation between $q_a$ and $q_d$:
+There should also exist an historical average rebonding period $\overline{T}$ corresponding to the current relation between $q_r$ and $q_d$:
 
 \begin{equation}
-    \frac{q_{a}}{q_{a}+q_{d}} = \frac{\overline{T}}{\overline{T}+1}
+    \frac{q_{r}}{q_{r}+q_{d}} = \frac{\overline{T}}{\overline{T}+1}
 \end{equation}
 
 \begin{equation}
-    \overline{T} = \frac{q_{a}}{q_{d}}
+    \overline{T} = \frac{q_{r}}{q_{d}}
 \end{equation}
 
 Even though $\overline{T}$ may not necessarily reflect the optimal rebonding strategy, we can use it to estimate $P_{In}$:
 
 \begin{equation}
-   P_{In} = \frac{1}{\overline{T}} = \frac{q_{d}}{q_{a}}
+   P_{In} = \frac{1}{\overline{T}} = \frac{q_{d}}{q_{r}}
 \end{equation}
 
 This leads to the following fair price (where $q_b$ stands for the rebonded amount):
 
 \[
-p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{a}}\right)+\left(q_{a}+\frac{q_{d}}{q_{a}}q_{p}\frac{q_{a}}{q_{a}+q_{d}}\right)+ \left(q_{d}+\frac{q_{d}}{q_{a}}q_{p}\frac{q_{d}}{q_{a}+q_{d}}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{a}} q_{p}\frac{q_{a}}{q_{a}+q_{d}}\frac{1}{q_{a}} \right)}
+p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{r}}\right)+\left(q_{r}+\frac{q_{d}}{q_{r}}q_{p}\frac{q_{r}}{q_{r}+q_{d}}\right)+ \left(q_{d}+\frac{q_{d}}{q_{r}}q_{p}\frac{q_{d}}{q_{r}+q_{d}}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{r}} q_{p}\frac{q_{r}}{q_{r}+q_{d}}\frac{1}{q_{r}} \right)}
 \]
 
 \[
-p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{a}}\right)+q_{a}\left(1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}}\right)+q_{d} \left(1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}} \right)}
+p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{r}}\right)+q_{r}\left(1+\frac{q_{d}}{q_{r}}\frac{q_{p}}{q_{r}+q_{d}}\right)+q_{d} \left(1+\frac{q_{d}}{q_{r}}\frac{q_{p}}{q_{r}+q_{d}}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{r}}\frac{q_{p}}{q_{r}+q_{d}} \right)}
 \]
 
 \begin{equation}
-p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{a}}\right)}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}} \right)} + \frac{q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}}
+p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{q_{d}}{q_{r}}\right)}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{r}}\frac{q_{p}}{q_{r}+q_{d}} \right)} + \frac{q_{r}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}}
 \end{equation}
 
 Assuming all rebonders can sell their bTKN at the fair price without incurring any slippage, we can express $q_b$ as follows:
 
 \begin{equation}
-q_{b} = p_f P_{In} \Delta q_{a} \frac{1}{p_r} = \frac{q_{d}}{q_{a}} q_p \frac{q_{a}}{q_{a}+q_{d}} \frac{p_{f}}{p_{r}}  = q_p \frac{q_{d}}{q_{a}+q_{d}} \frac{p_{f}}{p_{r}}
+q_{b} = p_f P_{In} \Delta q_{r} \frac{1}{p_r} = \frac{q_{d}}{q_{r}} q_p \frac{q_{r}}{q_{r}+q_{d}} \frac{p_{f}}{p_{r}}  = q_p \frac{q_{d}}{q_{r}+q_{d}} \frac{p_{f}}{p_{r}}
 \end{equation}
 
 Resulting in:
 
 \begin{equation}
-p_{f} = \frac{q_{p} \left(1+\frac{q_{d}}{q_{a}+q_{d}} \frac{p_{f}}{p_{r}}-\frac{q_{d}}{q_{a}}\right)}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{a}}\frac{q_{p}}{q_{a}+q_{d}} \right)} + \frac{q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}}
+p_{f} = \frac{q_{p} \left(1+\frac{q_{d}}{q_{r}+q_{d}} \frac{p_{f}}{p_{r}}-\frac{q_{d}}{q_{r}}\right)}{S_{sLQTY} \left( 1+\frac{q_{d}}{q_{r}}\frac{q_{p}}{q_{r}+q_{d}} \right)} + \frac{q_{r}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}}
 \end{equation}
 
 \paragraph{Bucket changes based on optimal rebonding strategy}
 One could use the optimal (future) rebonding time instead of deducting the historical average:
 
 \begin{equation}
-\Delta q_{a} = q_{p} \frac{T_{opt}}{T_{opt}+1}
+\Delta q_{r} = q_{p} \frac{T_{opt}}{T_{opt}+1}
 \end{equation}
 
 \begin{equation}
@@ -816,27 +816,27 @@ One could use the optimal (future) rebonding time instead of deducting the histo
 This leads to:
 
 \[
-p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{1}{T_{opt}}\right)+\left(q_{a}+\frac{1}{T_{opt}} q_{p} \frac{T_{opt}}{T_{opt}+1}\right)+ \left(q_{d}+\frac{1}{T_{opt}} q_{p} \left( 1- \frac{T_{opt}}{T_{opt}+1}\right)\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{1}{T_{opt}} q_{p} \frac{T_{opt}}{T_{opt}+1}\frac{1}{q_{a}} \right)}
+p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{1}{T_{opt}}\right)+\left(q_{r}+\frac{1}{T_{opt}} q_{p} \frac{T_{opt}}{T_{opt}+1}\right)+ \left(q_{d}+\frac{1}{T_{opt}} q_{p} \left( 1- \frac{T_{opt}}{T_{opt}+1}\right)\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+\frac{1}{T_{opt}} q_{p} \frac{T_{opt}}{T_{opt}+1}\frac{1}{q_{r}} \right)}
 \]
 
 \[
-p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{1}{T_{opt}}\right)+\left(q_{a}+ \frac{q_{p}}{T_{opt}+1}\right)+ \left(q_{d}+\frac{q_{p}}{T_{opt}} - \frac{q_{p}}{T_{opt}+1}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+ \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}} \right)}
+p_{f} = \frac{q_{b}+q_{p} \left(1-\frac{1}{T_{opt}}\right)+\left(q_{r}+ \frac{q_{p}}{T_{opt}+1}\right)+ \left(q_{d}+\frac{q_{p}}{T_{opt}} - \frac{q_{p}}{T_{opt}+1}\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY} \left( 1+ \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{r}} \right)}
 \]
 
 \[
-p_{f} = \frac{q_{b}+q_{p}\left(1-\frac{1}{T_{opt}}\right)+q_{a}+ \frac{q_{p}}{T_{opt}+1}+\left(q_{d}+q_{p} \left( \frac{1}{T_{opt}}- \frac{1}{T_{opt}+1} \right)\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
+p_{f} = \frac{q_{b}+q_{p}\left(1-\frac{1}{T_{opt}}\right)+q_{r}+ \frac{q_{p}}{T_{opt}+1}+\left(q_{d}+q_{p} \left( \frac{1}{T_{opt}}- \frac{1}{T_{opt}+1} \right)\right)\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{r}}\right)}
 \]
 
 \begin{equation}
   \label{eq:recursive_optimal_1}
-p_{f} = \frac{q_{b}+q_{p} \left(1+\frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left( 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
+p_{f} = \frac{q_{b}+q_{p} \left(1+\frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left( 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{r}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{r}}\right)}
 \end{equation}
 
 With $\frac{r_{d}}{r_{m}}d_{d}=1$
 
 \begin{equation}
   \label{eq:recursive_optimal_2}
-p_{f} = \frac{q_{b}+q_{p}+q_{a}+q_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
+p_{f} = \frac{q_{b}+q_{p}+q_{r}+q_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{r}}\right)}
 \end{equation}
 
 For constant rebonding:
@@ -848,17 +848,17 @@ q_{b} = q_{p} \frac{1}{T_{opt}} \frac{T_{opt}}{T_{opt}+1}\frac{p_{f}}{p_{r}} = \
 This leads to:
 
 \[
-p_{f} = \frac{ \frac{q_{p}}{T_{opt}+1}\frac{p_{f}}{p_{r}}+q_{p} \left(1+\frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left( 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
+p_{f} = \frac{ \frac{q_{p}}{T_{opt}+1}\frac{p_{f}}{p_{r}}+q_{p} \left(1+\frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left( 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{r}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{r}}\right)}
 \]
 
 \begin{equation}
-p_{f} = \frac{q_{p} \left(1 + \frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left(\frac{p_{f}}{p_{r}} + 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{a}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
+p_{f} = \frac{q_{p} \left(1 + \frac{1}{T_{opt}}\left(\frac{r_{d}}{r_{m}}d_{d}-1\right)+ \frac{1}{T_{opt}+1}\left(\frac{p_{f}}{p_{r}} + 1 - \frac{r_{d}}{r_{m}}d_{d} \right)\right)+q_{r}+q_{d}\frac{r_{d}}{r_{m}}d_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{r}}\right)}
 \end{equation}
 
 With $\frac{r_{d}}{r_{m}}d_{d}=1$
 
 \begin{equation}
-p_{f} = \frac{q_{p} \left( 1+   \frac{1}{T_{opt}+1}\frac{p_{f}}{p_{r}} \right)+q_{a}+q_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{a}}\right)}
+p_{f} = \frac{q_{p} \left( 1+   \frac{1}{T_{opt}+1}\frac{p_{f}}{p_{r}} \right)+q_{r}+q_{d}}{S_{sLQTY}\left(1+  \frac{1}{T_{opt}+1}\frac{q_{p}}{q_{r}}\right)}
 \end{equation}
 
 We have tried to validate results from this section without success. For instance below we have charts for the historic variant of the recursive approach. We can see non-convergence and really weird behaviour starting from iteration 10:
@@ -876,7 +876,7 @@ We suppose that users would bond TKN rather than hold bTKN if the expected ROI f
 As a consequence, there must be an equilibrium price at which holding bTKN and bonding TKN result in the same ROI for both activities. Due to the yield amplification, it's safe to assume that in the long run, holding bTKN is at least as profitable as staking TKN. We further assume that the price of TKN is already “arbitraged” and adapted to the natural rate $r_m$, which thus carries over to the price of bTKN. Therefore, the equilibrium price for bonding vs. holding should also be meaningful as a metric for the fair price.
 
 \subparagraph{With constant $\alpha$}
-We consider one optimal rebonding period $T_{opt}$ with a fixed parameter $\alpha$ and suppose that the system is "frozen" during that time frame, i.e. nobody chickens in or out and no new bonds are created. Since the protocol is still earning yield on its treasury $R$, the only quantity that would change during the respective period is $q_a$, but we can neglect the compounding effect for small $r_a$, $r_p$ and $r_d$ and short $T_{opt}$, treating $R$ as constant.
+We consider one optimal rebonding period $T_{opt}$ with a fixed parameter $\alpha$ and suppose that the system is "frozen" during that time frame, i.e. nobody chickens in or out and no new bonds are created. Since the protocol is still earning yield on its treasury $R$, the only quantity that would change during the respective period is $q_r$, but we can neglect the compounding effect for small $r_r$, $r_p$ and $r_d$ and short $T_{opt}$, treating $R$ as constant.
 
 Further, we make the simplifying assumption that the price premium $\lambda$ stays constant during that time frame. Thus, the fair price $p_f$ changes from $t$ to $T_{opt}$ at the same rate as the redemption price $p_r$, yielding the ROI of holding bTKN:
 
@@ -888,17 +888,17 @@ Further, we make the simplifying assumption that the price premium $\lambda$ sta
 The resulting redemption price at time $t + T_{opt}$ can be expressed by
 \begin{equation}
   \label{eq:redemption-price}
-    p_r(t + T_{opt}) = \frac{q_a + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d)}{S}
+    p_r(t + T_{opt}) = \frac{q_r + \frac{T_{opt}}{365} (r_p q_p + r_r q_r + r_d q_d)}{S}
 \end{equation}
 
 yielding:
 \begin{equation}
   \label{eq:ROI-eq2}
   \begin{split}
-    H_{ROI} & = \frac{\frac{q_a + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d)}{S} - p_r(t)}{p_r(t)} \\
-    & = \frac{q_a}{S \cdot p_r(t)} + \frac{\frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d)}{S\cdot p_r(t)} - \frac{p_r(t)}{p_r(t)} \\
-    & = 1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a} - 1 \\
-    & = \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}
+    H_{ROI} & = \frac{\frac{q_r + \frac{T_{opt}}{365} (r_p q_p + r_r q_r + r_d q_d)}{S} - p_r(t)}{p_r(t)} \\
+    & = \frac{q_r}{S \cdot p_r(t)} + \frac{\frac{T_{opt}}{365} (r_p q_p + r_r q_r + r_d q_d)}{S\cdot p_r(t)} - \frac{p_r(t)}{p_r(t)} \\
+    & = 1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_r q_r + r_d q_d}{q_r} - 1 \\
+    & = \frac{T_{opt}}{365} \frac{r_p q_p + r_r q_r + r_d q_d}{q_r}
   \end{split}
 \end{equation}
 
@@ -908,7 +908,7 @@ On the other hand, we can express the ROI of bonding TKN for the same period as:
   \label{eq:ROI-bonding}
   \begin{split}
     B_{ROI} & = \frac{p_f(t+T_{opt})}{p_r(t+T_{opt})}\frac{T_{opt}}{T_{opt}+\alpha} - 1 \\
-    & = \frac{p_f(t)(1 + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d))} {p_r(t)(1 + \frac{T_{opt}}{365} (r_p q_p + r_a q_a + r_d q_d))}    \frac{T_{opt}}{T_{opt}+\alpha} - 1 \\ 
+    & = \frac{p_f(t)(1 + \frac{T_{opt}}{365} (r_p q_p + r_r q_r + r_d q_d))} {p_r(t)(1 + \frac{T_{opt}}{365} (r_p q_p + r_r q_r + r_d q_d))}    \frac{T_{opt}}{T_{opt}+\alpha} - 1 \\ 
     & = \frac{p_f(t)}{p_r(t)}\frac{T_{opt}}{T_{opt}+\alpha} - 1
   \end{split}
 \end{equation}
@@ -922,10 +922,10 @@ Setting the two ROIs equal, and using equation \ref{eq:optimal_chicken_in_2} as 
 and get:
 \begin{equation}
   \label{eq:ROI-bonding-holding-2}
-  p_f = p_r\left(1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}\right) \frac{T_{opt}+\alpha}{T_{opt}}
+  p_f = p_r\left(1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_r q_r + r_d q_d}{q_r}\right) \frac{T_{opt}+\alpha}{T_{opt}}
 \end{equation}
 
-The following chart plots $p_f$ on the y-axis in function of the Pending Bucket $q_p$ (x-axis) for $\alpha$=(50, 100, 150, 200), with $q_a=1$, $q_d=2$, $S=$1 and $r_a=r_p=r_d=0.1$. As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
+The following chart plots $p_f$ on the y-axis in function of the Pending Bucket $q_p$ (x-axis) for $\alpha$=(50, 100, 150, 200), with $q_r=1$, $q_d=2$, $S=$1 and $r_r=r_p=r_d=0.1$. As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
 \includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_comparison_price.png}
 
@@ -950,22 +950,22 @@ Supposing that users will chicken in at the optimal rebonding time and given a t
 
 \begin{equation}
   \label{eq:HROI-controller}
-    H_{ROI} = \frac{T_t}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}
+    H_{ROI} = \frac{T_t}{365} \frac{r_p q_p + r_r q_r + r_d q_d}{q_r}
 \end{equation} 
 
 Using the new definitions of $H_{ROI}$ and $B_{ROI}$, we can solve equation \ref{eq:ROI-bonding-holding} for $p_f$, obtaining
 
 \begin{equation}
   \label{eq:ROI-bonding-holding-controller}
-  p_f = p_r\left(1 + \frac{T_t}{365} \frac{r_p q_p + r_a q_a + r_d q_d}{q_a}\right)^2 
+  p_f = p_r\left(1 + \frac{T_t}{365} \frac{r_p q_p + r_r q_r + r_d q_d}{q_r}\right)^2 
 \end{equation}
 
-The following chart depicts the fair price (y-axis) according to equation \ref{eq:ROI-bonding-holding-controller} in function of the Pending Bucket $q_p$ (x-axis) for $T_t=(60, 120, 240, 480, 960)$, with $q_a=1$, $q_d=2$, $S=1$ and $r_a=r_p=r_d=0.1$.
+The following chart depicts the fair price (y-axis) according to equation \ref{eq:ROI-bonding-holding-controller} in function of the Pending Bucket $q_p$ (x-axis) for $T_t=(60, 120, 240, 480, 960)$, with $q_r=1$, $q_d=2$, $S=1$ and $r_r=r_p=r_d=0.1$.
 As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
 \includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_controller_price.png}
 
-Note that the impact of $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_a$, which influence $p_f$ in the same fashion.
+Note that the impact of $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_r$, which influence $p_f$ in the same fashion.
 
 \paragraph{Equating ROI of staking TKN and holding bTKN}
 Assuming rational markets and no additional risks for holding bTKN compared to holding (and staking) TKN, we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start.
@@ -974,7 +974,7 @@ If we know what yield to expect, we could formulate a differential equation to d
 
 \begin{equation}
   \label{eq:naive-beta}
-   p_f = \frac{q_a + \gamma q_p + q_d \cdot \frac{r_d}{r_a} \cdot d_f}{S}
+   p_f = \frac{q_r + \gamma q_p + q_d \cdot \frac{r_d}{r_r} \cdot d_f}{S}
 \end{equation}
 
 We could then state the following equation:
@@ -1032,7 +1032,7 @@ p_f(t) = a^{t+T} - r_m T
 
 Let’s try to find $a$.
 
-For $t=0$, ${q_a}_0 = S_0$ and $p_r(0) = 1$. See \ref{sec:bootstrapping}.
+For $t=0$, ${q_r}_0 = S_0$ and $p_r(0) = 1$. See \ref{sec:bootstrapping}.
 
 Optimal rebonding time (using \ref{eq:optimal_chicken_in_1} and assuming $\alpha = 1$ to simplify):
 
@@ -1065,11 +1065,11 @@ Now moving forward to $t_1 = T_{opt}$:
 \]
 
 \[
-{q_a}_1 = {q_a}_0 + [({q_a}_0 + {q_p}_0)r_s + {q_d}_0 r_d] T_{opt} + {q_p}_0 \frac{1}{\sqrt{a^T - r_mT}}
+{q_r}_1 = {q_r}_0 + [({q_r}_0 + {q_p}_0)r_s + {q_d}_0 r_d] T_{opt} + {q_p}_0 \frac{1}{\sqrt{a^T - r_mT}}
 \]
 
 \[
-S_1 = S_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}} = {q_a}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}
+S_1 = S_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}} = {q_r}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}
 \]
 
 So finally:
@@ -1077,16 +1077,16 @@ So finally:
 \begin{equation}
   \label{eq:conservative_p_r_1}
   \begin{split}
-    {p_r}_1 & = \frac{{q_a}_1}{S_1} \\
-    & = \frac{{q_a}_0 + [({q_a}_0 + {q_p}_0)r_s + {q_d}_0 r_d] T_{opt} + {q_p}_0 \frac{1}{\sqrt{a^T - r_mT}}}{{q_a}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \\
-    & = 1 + \frac{({q_a}_0 + {q_p}_0)r_s + {q_d}_0 r_d + {q_p}_0}{{q_a}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1} \\
+    {p_r}_1 & = \frac{{q_r}_1}{S_1} \\
+    & = \frac{{q_r}_0 + [({q_r}_0 + {q_p}_0)r_s + {q_d}_0 r_d] T_{opt} + {q_p}_0 \frac{1}{\sqrt{a^T - r_mT}}}{{q_r}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \\
+    & = 1 + \frac{({q_r}_0 + {q_p}_0)r_s + {q_d}_0 r_d + {q_p}_0}{{q_r}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1} \\
   \end{split}
 \end{equation}
 
 If we now equate this to $p_r(T_{opt})$ we get:
 \begin{equation}
   \label{}
-1 + \frac{({q_a}_0 + {q_p}_0)r_s + {q_d}_0 r_d + {q_p}_0}{{q_a}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1} = a ^{\frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1}}
+1 + \frac{({q_r}_0 + {q_p}_0)r_s + {q_d}_0 r_d + {q_p}_0}{{q_r}_0 + \frac{{q_p}_0}{\sqrt{a^T - r_mT}}} \frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1} = a ^{\frac{1+ \sqrt{a^T - r_mT}}{a^T - r_mT - 1}}
 \end{equation}
 
 which seems quite hard to solve for $a$.
@@ -1096,35 +1096,35 @@ which seems quite hard to solve for $a$.
 Although an approach without rebonding is unlikely to be fruitful since the redemption price will too close to the natural rate, we can still try. Now we only account for the yield generated, which doesn’t increase the bTKN total supply:
 
 \[
-S_t = S_1 = S_0 = {q_a}_0
+S_t = S_1 = S_0 = {q_r}_0
 \]
 
 We try to compute Reserve Bucket for several time intervals, let’s say daily:
 
 \[
-{q_a}_1 = {q_a}_0 + [({q_a}_0 + {q_p}_0) r_s + {q_d}_0 r_d] = {q_a}_0 + {q_a}_0 r_s + {q_p}_0 r_s + {q_d}_0 r_d
+{q_r}_1 = {q_r}_0 + [({q_r}_0 + {q_p}_0) r_s + {q_d}_0 r_d] = {q_r}_0 + {q_r}_0 r_s + {q_p}_0 r_s + {q_d}_0 r_d
 \]
 
 \[
-{q_a}_t = {q_a}_0(1+r_s)^t + ({q_p}_0 r_s + {q_d}_0 r_d) \left(r_s^t + \sum_{j=1}^{t-1} \binom{t}{j} a^j \right)
+{q_r}_t = {q_r}_0(1+r_s)^t + ({q_p}_0 r_s + {q_d}_0 r_d) \left(r_s^t + \sum_{j=1}^{t-1} \binom{t}{j} a^j \right)
 \]
 
 So for time $t$ the redemption price would be:
 
 \[
-p_r(t) = \frac{{q_a}_t}{S_1} = \frac{{q_a}_0(1+r_s)^t + ({q_p}_0 r_s + {q_d}_0 r_d) \left(r_s^t + \sum_{j=1}^{t-1} \binom{t}{j} a^j \right)}{{q_a}_0}
+p_r(t) = \frac{{q_r}_t}{S_1} = \frac{{q_r}_0(1+r_s)^t + ({q_p}_0 r_s + {q_d}_0 r_d) \left(r_s^t + \sum_{j=1}^{t-1} \binom{t}{j} a^j \right)}{{q_r}_0}
 \]
 
 \begin{equation}
   \label{eq:conservative_p_r_base_2_a}
-p_r(t) = (1+r_s)^t + \frac{{q_p}_0 r_s + {q_d}_0 r_d}{{q_a}_0} \left(r_s^{t-1} + \sum_{j=1}^{t-1} \binom{t}{j} r_s^{t-1-j} \right)
+p_r(t) = (1+r_s)^t + \frac{{q_p}_0 r_s + {q_d}_0 r_d}{{q_r}_0} \left(r_s^{t-1} + \sum_{j=1}^{t-1} \binom{t}{j} r_s^{t-1-j} \right)
 \end{equation}
 
 We can approximate it to:
 
 \begin{equation}
   \label{eq:conservative_p_r_base_2_b}
-p_r(t) = (1+r_s)^t + \frac{{q_p}_0 r_s + {q_d}_0 r_d}{{q_a}_0} t
+p_r(t) = (1+r_s)^t + \frac{{q_p}_0 r_s + {q_d}_0 r_d}{{q_r}_0} t
 \end{equation}
 
 In particular this shows that the assumption that redemption price follows a pure exponential $a^t$ is not correct.
@@ -1141,7 +1141,7 @@ TODO: check and update once we have a formula for the fair price
   \label{sec:self-stabilizing}
 As redemptions reduce the Reserve Bucket and the bTKN supply in the same proportion, they indirectly increase the impact of the Permanent and the Pending Bucket on bTKN through a higher yield amplification. While the redemption price doesn't change when somebody redeems bTKN for TKN, the fair price and thus the expected premium grow as a result. 
 
-We can therefore expect a self-stabilizing effect of redemptions: for any given $q_p \geq 0$ and $q_d > 0$ there should be an equilibrium state with $q_a > 0$ where $p_r = p_f$, making further redemptions and a complete drainage of the Reserve Bucket unlikely. Given this de facto lower bound on $q_a$, a portion of the Reserve Bucket will behave as if it was permanent.
+We can therefore expect a self-stabilizing effect of redemptions: for any given $q_p \geq 0$ and $q_d > 0$ there should be an equilibrium state with $q_r > 0$ where $p_r = p_f$, making further redemptions and a complete drainage of the Reserve Bucket unlikely. Given this de facto lower bound on $q_r$, a portion of the Reserve Bucket will behave as if it was permanent.
 
 Furthermore, natural fluctuations of the market price $p_m$ compared to $p_f$ could help the system regain traction should it ever reach a state where $p_f = p_r$: if the market temporarily prices the bTKN below its fair price ($p_m < p_f$), redemptions will kick in and raise $p_f$, increasing the odds that the market will return to $p_m > p_r$ and make bonding attractive again. This dynamic should apply even if $q_p = 0$, i.e. when bonding activity has come to a complete halt.
 
