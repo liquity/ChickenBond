@@ -570,25 +570,25 @@ In Chicken Bonds, the Reserve Bucket corresponds to a compounding wrapper with t
 
 Generally, if a token $x$ receives cash flows $F_1, F_2..., F_n$ from multiple different sources, the PV of the token is given by the sum of the PVs of the cash flows, i.e. $PV(x) = PV(F_1) + PV(F_2) + ... + PV(F_n)$. We suppose that the same rationale holds in principle if the yields are compounded in a redeemable wrapper contract instead of being paid out. 
 
-While this applies to the Reserve Bucket, the Permanent Bucket as such is not subject to redemption, but only its yield becomes redeemable as part of the Reserve Bucket. Therefore, we posit that the same amount of TKN inside the Permanent Bucket has a lesser impact on the price of bTKN than it would have inside the Reserve Bucket, even when earning the same yield. We thus have to discount its price impact by some factor $d_f < 1$ to account for the permanent locking of the principal. Supposing that $r_a = r_m$ and $r_d < r_a$, and neglecting the Pending Bucket for now, we can state the present value of 1 unit of bTKN as
+While this applies to the Reserve Bucket, the Permanent Bucket as such is not subject to redemption, but only its yield becomes redeemable as part of the Reserve Bucket. Therefore, we posit that the same amount of TKN inside the Permanent Bucket has a lesser impact on the price of bTKN than it would have inside the Reserve Bucket, even when earning the same yield. We thus have to discount its price impact by some factor $d_f < 1$ to account for the permanent locking of the principal. Supposing that $r_a = r_m$, we can state the present value of 1 unit of bTKN as
 
 \begin{equation}
   \label{eq:naive-1}
-    p_f = \frac{PV(ReserveBucket) + PV(PermanentBucket)}{S}
+    p_f = \frac{PV(ReserveBucket) + PV(PendingBucket) + PV(PermanentBucket)}{S}
 \end{equation}
 
-and express the PV of the Permanent Bucket in terms of the Reserve Bucket by converting bucket quantities, rates of return, and applying the discount factor:
+We can express the PV of the Permanent Bucket in terms of the Reserve Bucket by converting bucket quantities, rates of return, and applying the discount factor:
 
 \begin{equation}
   \label{eq:naive-2}
-   p_f = \frac{PV(ReserveBucket) + \frac{q_d}{q_a} \frac{r_d}{r_a} d_f PV(ReserveBucket)}{S}
+   PV(PermanentBucket) = \frac{q_d}{q_a} \frac{r_d}{r_a} d_f PV(ReserveBucket)
 \end{equation}
 
 Recalling that $PV(ReserveBucket) = q_a$, we can derive that
 
 \begin{equation}
   \label{eq:naive-3}
-   p_f = \frac{q_a + q_d \frac{r_d}{r_a} d_f}{S}
+   PV(PermanentBucket) = q_d \frac{r_d}{r_a} d_f
 \end{equation}
 
 Regarding the Pending Bucket, we know that its content will eventually transition into the two other buckets (chicken in) or leave the system (chicken out), and that the protocol will mint more bTKN. On the other hand, bonders have an incentive to rebond after chickening in (see section \ref{sec:rebonding_strategy}), increasing the Pending Bucket shortly after. If we assume for simplicity that all effects cancel out in aggregate and suppose $r_p = r_a$, we can extend the fair price formula to:
