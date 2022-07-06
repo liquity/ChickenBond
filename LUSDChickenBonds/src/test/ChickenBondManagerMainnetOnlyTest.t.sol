@@ -293,17 +293,15 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testRedeemDecreasesAcquiredLUSDInCurveByCorrectFraction(uint256 redemptionFraction) public {
         // Fraction between 1 billion'th, and 100%.  If amount is too tiny, redemption can revert due to attempts to
         // withdraw 0 LUSDfrom Yearn (due to rounding in share calc).
-        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9);
+        redemptionFraction = coerce(redemptionFraction, 1e9, 1e18);
 
-        // uint256 redemptionFraction = 1e9; // 50%
-        uint256 percentageFee = chickenBondManager.calcRedemptionFeePercentage(redemptionFraction);
-        // 1-r(1-f).  Fee is left inside system
-        uint256 expectedFractionRemainingAfterRedemption = 1e18 - (redemptionFraction * (1e18 - percentageFee)) / 1e18;
+        // Fee goes into permanent, so the entire redeemed fraction leaves acquired
+        uint256 expectedFractionRemainingAfterRedemption = 1e18 - redemptionFraction;
 
         // A creates bond
         uint256 bondAmount = 10e18;
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
 
         // time passes
         vm.warp(block.timestamp + 365 days);
