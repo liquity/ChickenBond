@@ -150,11 +150,11 @@ In both cases, the Chicken Bond NFT is burned as the bond holder’s position is
 \label{sec:chicken-out}
 By chickening out, the bond holder gets the entire bonded TKN back, foregoing the accrued balance of bTKN (which doesn’t get minted). The option to withdraw the principal at any time makes bonding an essentially risk-free investment where the user only incurs the opportunity costs besides smart contract risks.
 
-Upon a chicken out event at time $t+1$, the Treasury changes as follows:
+Upon a chicken out event at time $t_{i+1}$ (where previous event in the system occurred at time $t_i$), the Treasury changes as follows:
 
 \begin{equation}
   \label{eq:chicken-out-transition}
-    q_p(t+1) := q_p(t) - b
+    q_p(t_{i+1}) := q_p(t_i) - b
 \end{equation}
 
 As an alternative, the bond holder may sell their NFT on the secondary market. The buyer of the NFT has the same rights against the protocol as the original bond holder.
@@ -180,19 +180,19 @@ The two amounts are then added to the Reserve and the Permanent Bucket, so that 
 
 \begin{equation}
   \label{eq:chicken-in-qa}
-    q_r(t+1) := q_r(t) + b_r = q_r(t) + s \cdot p_r
+    q_r(t_{i+1}) := q_r(t_i) + b_r = q_r(t_i) + s \cdot p_r
 \end{equation}
 \begin{equation}
   \label{eq:chicken-in-qd}
-    q_d(t+1) := q_d(t) + b_d = q_d(t) + b - s \cdot p_r
+    q_d(t_{i+1}) := q_d(t_i) + b_d = q_d(t_i) + b - s \cdot p_r
 \end{equation}
 \begin{equation}
   \label{eq:chicken-in-qp}
-    q_p(t+1) := q_p(t) - b
+    q_p(t_{i+1}) := q_p(t_i) - b
 \end{equation}
 \begin{equation}
   \label{eq:chicken-in-S}
-    S(t+1) := S(t) + s
+    S(t_{i+1}) := S(t_i) + s
 \end{equation}
 
 Note that a portion of the bonded amount may be diverted as an incentive for bTKN/TKN LPs (see \ref{sec:chicken-in-fee}) instead of being split between the mentioned buckets.
@@ -211,11 +211,11 @@ The state of the Treasury changes as follows:
 
 \begin{equation}
   \label{eq:redemption-qa}
-    q_r(t+1) := q_r(t) \cdot (1 - \frac{n}{S})
+    q_r(t_{i+1}) := q_r(t_i) \cdot (1 - \frac{n}{S})
 \end{equation}
 \begin{equation}
   \label{eq:redemption-S}
-    S(t+1) := S(t) - n
+    S(t_{i+1}) := S(t_i) - n
 \end{equation}
 
 To throttle the rate of redemption or counter extreme situations and black swan events, the system could charge a redemption fee (see \ref{sec:redemption-fee}).
