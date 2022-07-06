@@ -190,6 +190,10 @@ The two amounts are then added to the Reserve and the Permanent Bucket, so that 
   \label{eq:chicken-in-qp}
     q_p(t+1) := q_p(t) - b
 \end{equation}
+\begin{equation}
+  \label{eq:chicken-in-S}
+    S(t+1) := S(t) + s
+\end{equation}
 
 Note that a portion of the bonded amount may be diverted as an incentive for bTKN/TKN LPs (see \ref{sec:chicken-in-fee}) instead of being split between the mentioned buckets.
 
@@ -260,7 +264,7 @@ In the following derivation, we analyze the optimal rebonding strategy for users
 
 \subsubsection{Optimal rebonding time}
   \label{sec:T_OP}
-We assume $b$ and $\lambda$ to be constant for simplicity. The impact of $\lambda$ on $T_{opt}$ and thus the accuracy of the simplification depends on the volatility of $\lambda$ and the length of the $T_{opt}$ period, which can be tuned by the controller to be relatively short, limiting the impact of the volatility. As the system matures, the yield amplification will tend to decline due to the perpetual growth of the Reserve Bucket relative to the two other buckets, which cannot sustainably grow at the same rate in the long run. With a decreasing relative size of the Permanent and Pending Buckets, their volatility should become less impactful for the fair price, making the simplification more accurate over time (at least based on the naive fair price formula). The assumption may be unrealistic for the early growth phase though.
+We assume $b$ and $\lambda$ to be constant for simplicity. The impact of $\lambda$ on $T_{opt}$ and thus the accuracy of the simplification depends on the volatility of $\lambda$ and the length of the $T_{opt}$ period, which can be tuned by the controller to be relatively short, limiting the impact of the volatility. As the system matures, the yield amplification will tend to decline due to the perpetual growth of the Reserve Bucket relative to the two other buckets, which cannot sustainably grow at the same rate in the long run. With a decreasing relative size of the Permanent and Pending Buckets, their volatility should become less impactful for the fair price, making the simplification more accurate over time (at least based on the naive fair price formula, see \ref{sec:naive_approach}). The assumption may be unrealistic for the early growth phase though.
 
 Before deriving the optimal rebonding time, we start by comparing the final value of a user's bond (expressed in TKN) after a time period $T$ without rebonding (denoted by $f$) with the final value of a bond that is rebonded at time $t<T$ (denoted by $f_r$).
 
@@ -311,7 +315,7 @@ f_r(n) = b \left(\frac{p_f}{p_r} \frac{T}{T+n \alpha} \right)^{n}
 To find the maximum value of $f_r(n)$, we take its derivative with respect to $n$ (and we extend the domain from natural to real numbers):
 \[
 \begin{split}
-  f_T'(n) &= b \left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right)^n \left(\ln\left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right) - n \frac{\frac{p_f}{p_r} \frac{\alpha T}{(T+n\alpha)^2}}{\frac{p_f}{p_r} \frac{T}{T+n\alpha}}\right) \\
+  f_r'(n) &= b \left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right)^n \left(\ln\left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right) - n \frac{\frac{p_f}{p_r} \frac{\alpha T}{(T+n\alpha)^2}}{\frac{p_f}{p_r} \frac{T}{T+n\alpha}}\right) \\
   &= b \left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right)^n \left(\ln\left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right) - \frac{n\alpha}{T+n\alpha}\right)
 \end{split}
 \]
@@ -319,7 +323,7 @@ To find the maximum value of $f_r(n)$, we take its derivative with respect to $n
 Then equating it to zero:
 
 \[
-f_T'(n) = 0 \iff \ln\left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right) = \frac{n\alpha}{T+n\alpha}
+f_r'(n) = 0 \iff \ln\left(\frac{p_f}{p_r} \frac{T}{T+n\alpha}\right) = \frac{n\alpha}{T+n\alpha}
 \]
 
 \[
@@ -369,7 +373,7 @@ We can write it in terms of premium $\lambda = \frac{p_f}{p_r}$
 T_{opt} = \frac{\alpha W\left(\frac{e}{\lambda}\right)}{1 - W\left(\frac{e}{\lambda}\right)} = \frac{\alpha}{\frac{1}{W\left(\frac{e}{\lambda}\right)} - 1}
 \end{equation}
 
-Note that as $\lambda > 1$, $\frac{e}{\lambda} < e$, so $0 < W(\frac{e}{\lambda}) < 1$ and therefore $t_0 > 0$, and that $t_0(\lambda)$ is a monotonic decreasing function, with $\lim_{\lambda \rightarrow 1}t_0(\lambda) = +\infty$.
+Note that as $\lambda > 1$, $\frac{e}{\lambda} < e$, so $0 < W(\frac{e}{\lambda}) < 1$ and therefore $T_{opt} > 0$, and that $T_{opt}(\lambda)$ is a monotonic decreasing function, with $\lim_{\lambda \rightarrow 1}T_{opt}(\lambda) = +\infty$.
 
 
 TODO: Prove that it’s greater than break even time?
@@ -412,7 +416,7 @@ T_{opt} = \frac{\alpha W\left(\frac{e}{(1-\tau)\lambda}\right)}{1 - W\left(\frac
 \subsubsection{Approximating the optimal rebonding time}
 TODO: give some intuition why this is a good approximation. Is it because the APR is similar to the ARR for the considered time period? And apparently, maximizing the ARR yields the same result as the exact formula, as numerically verified by Dani.
 
-As it turns out that the optimal rebonding time has no algebraic solution, we can also try to approximate it by finding the point the time that maximizes the APR.
+As it turns out that the optimal rebonding time has no algebraic solution, we can also try to approximate it by finding the point in time that maximizes the APR.
 
 We first define the \textit{absolute premium} $\rho$ as the difference between the market (or fair) price and the redemption price, i.e.: $\rho = p_f - p_r$.
 
