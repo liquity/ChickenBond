@@ -1555,4 +1555,294 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertEq(pendingLUSDInSPAfter, pendingLUSDInSPBefore);
         assertEq(ownedLUSDInCurveAfter, ownedLUSDInCurveBefore);
     }
+
+    function testRedeemSandwichIncreaseLUSDPrice() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's bLUSD balance is non-zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        bLUSDToken.transfer(B, A_bLUSDBalance);
+        assertEq(A_bLUSDBalance, bLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
+
+        // shift some LUSD from SP->Curve
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        chickenBondManager.shiftLUSDFromSPToCurve(chickenBondManager.getOwnedLUSDInSP());
+        console.log("");
+        console.log("After shift 1st time");
+        // console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        // console.log(yearnCurveVault.balanceOf(address(chickenBondManager)), "yearnCurveVault.balanceOf(address(chickenBondMananger))");
+        // console.log(curvePool.totalSupply(), "curvePool.totalSupply()");
+
+        uint256 B_curveBalance0 = curvePool.balanceOf(B);
+
+        // B redeems bLUSD
+        vm.startPrank(B);
+        chickenBondManager.redeem(A_bLUSDBalance, 0);
+        // console.log(yearnCurveVault.balanceOf(B), "yearnCurveVault.balanceOf(B)");
+        yearnCurveVault.withdraw(yearnCurveVault.balanceOf(B));
+        vm.stopPrank();
+        uint256 B_curveBalance1 = curvePool.balanceOf(B);
+        // console.log("");
+        // console.log("After redeem 1");
+        // console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice");
+        // console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        // console.log(yearnCurveVault.balanceOf(address(chickenBondManager)), "yearnCurveVault.balanceOf(address(chickenBondMananger))");
+        // console.log(curvePool.totalSupply(), "curvePool.totalSupply()");
+
+        // reset redemption fee
+        chickenBondManager.resetRedemptionBaseFee();
+
+        A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+
+        // A chickens in
+        // console.log("A chicken in");
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        bLUSDToken.transfer(B, A_bLUSDBalance);
+        assertEq(A_bLUSDBalance, bLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
+
+        // shift some LUSD from SP->Curve
+        chickenBondManager.shiftLUSDFromSPToCurve(chickenBondManager.getOwnedLUSDInSP());
+        console.log("");
+        console.log("After shift 2nd time");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+
+        console.log("");
+        console.log("Manipulate pool");
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice before pool manipulation");
+        uint256 initialCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        uint256 _3crvAmount = 2e24; // 2M
+        tip(address(_3crvToken), C, _3crvAmount);
+        assertGe(_3crvToken.balanceOf(C), _3crvAmount);
+        uint256 C_lusdBalanceBefore = lusdToken.balanceOf(C);
+        vm.startPrank(C);
+        _3crvToken.approve(address(curvePool), _3crvAmount);
+        curvePool.exchange(1, 0, _3crvAmount, 0, C);
+        uint256 C_lusdBalanceAfter = lusdToken.balanceOf(C);
+        vm.stopPrank();
+        // console.log(C_lusdBalanceBefore, "C_lusdBalanceBefore");
+        // console.log(C_lusdBalanceAfter, "C_lusdBalanceAfter");
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+
+        // B redeems bLUSD
+        vm.startPrank(B);
+        chickenBondManager.redeem(A_bLUSDBalance, 0);
+        // console.log(yearnCurveVault.balanceOf(B), "yearnCurveVault.balanceOf(B)");
+        yearnCurveVault.withdraw(yearnCurveVault.balanceOf(B));
+        vm.stopPrank();
+        uint256 B_curveBalance2 = curvePool.balanceOf(B);
+        //uint256 B_yearnBalance2 = yearnCurveVault.balanceOf(B);
+        // console.log("");
+        // console.log("After redeem 2");
+        // console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice");
+        // console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        // console.log(yearnCurveVault.balanceOf(address(chickenBondManager)), "yearnCurveVault.balanceOf(address(chickenBondMananger))");
+        // console.log(curvePool.totalSupply(), "curvePool.totalSupply()");
+
+        // Undo pool manipulation (finish sandwich attack)
+        vm.startPrank(C);
+        uint256 lusdAmount = C_lusdBalanceAfter - C_lusdBalanceBefore;
+        lusdToken.approve(address(curvePool), lusdAmount);
+        curvePool.exchange(0, 1, lusdAmount, 0, C);
+        vm.stopPrank();
+        uint256 finalCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation undo");
+
+        // Checks
+        console.log("");
+        // console.log(B_curveBalance0, "Curve B_balance0");
+        // console.log(B_curveBalance1, "Curve B_balance1");
+        // console.log(B_curveBalance2, "Curve B_balance2");
+        console.log(B_curveBalance1 - B_curveBalance0, "Curve B_balance1 diff");
+        console.log(B_curveBalance2 - B_curveBalance1, "Curve B_balance2 diff");
+        assertRelativeError(
+            initialCurvePrice,
+            finalCurvePrice,
+            6e12, // 0.0006%
+            "Price after attack should be close"
+        );
+        assertRelativeError(
+            B_curveBalance1,
+            B_curveBalance2 - B_curveBalance1,
+            4e11, // 0.00004%
+            "Obtained Curve should be approximately equal"
+        );
+    }
+
+    function testRedeemSandwichDecreaseLUSDPrice() public {
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        uint256 A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+
+        // A chickens in
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // Check A's bLUSD balance is non-zero
+        uint256 A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        bLUSDToken.transfer(B, A_bLUSDBalance);
+        assertEq(A_bLUSDBalance, bLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
+
+        // shift some LUSD from SP->Curve
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        chickenBondManager.shiftLUSDFromSPToCurve(chickenBondManager.getOwnedLUSDInSP());
+        console.log("");
+        console.log("After shift 1st time");
+        // console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        // console.log(yearnCurveVault.balanceOf(address(chickenBondManager)), "yearnCurveVault.balanceOf(address(chickenBondMananger))");
+        // console.log(curvePool.totalSupply(), "curvePool.totalSupply()");
+
+        uint256 B_curveBalance0 = curvePool.balanceOf(B);
+
+        // B redeems bLUSD
+        vm.startPrank(B);
+        chickenBondManager.redeem(A_bLUSDBalance, 0);
+        // console.log(yearnCurveVault.balanceOf(B), "yearnCurveVault.balanceOf(B)");
+        yearnCurveVault.withdraw(yearnCurveVault.balanceOf(B));
+        vm.stopPrank();
+        uint256 B_curveBalance1 = curvePool.balanceOf(B);
+        // console.log("");
+        // console.log("After redeem 1");
+        // console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice");
+        // console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        // console.log(yearnCurveVault.balanceOf(address(chickenBondManager)), "yearnCurveVault.balanceOf(address(chickenBondMananger))");
+        // console.log(curvePool.totalSupply(), "curvePool.totalSupply()");
+
+        // reset redemption fee
+        chickenBondManager.resetRedemptionBaseFee();
+
+        A_bondID = createBondForUser(A, bondAmount);
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+
+        // A chickens in
+        // console.log("A chicken in");
+        vm.startPrank(A);
+        chickenBondManager.chickenIn(A_bondID);
+
+        // console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+
+        // Check A's bLUSD balance is non-zero
+        A_bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(A_bLUSDBalance > 0);
+
+        // A transfers his LUSD to B
+        bLUSDToken.transfer(B, A_bLUSDBalance);
+        assertEq(A_bLUSDBalance, bLUSDToken.balanceOf(B));
+        vm.stopPrank();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
+
+        // shift some LUSD from SP->Curve
+        chickenBondManager.shiftLUSDFromSPToCurve(chickenBondManager.getOwnedLUSDInSP());
+        console.log("");
+        console.log("After shift 2nd time");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+
+        console.log("");
+        console.log("Manipulate pool");
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice before pool manipulation");
+        uint256 initialCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        uint256 lusdAmount = 30e24; // 30M
+        tip(address(lusdToken), C, lusdAmount);
+        uint256 C_3crvBalanceBefore = _3crvToken.balanceOf(C);
+        vm.startPrank(C);
+        lusdToken.approve(address(curvePool), lusdAmount);
+        curvePool.exchange(0, 1, lusdAmount, 0, C);
+        vm.stopPrank();
+        uint256 C_3crvBalanceAfter = _3crvToken.balanceOf(C);
+        //console.log(C_3crvBalanceBefore, "C_3crvBalanceBefore");
+        //console.log(C_3crvBalanceAfter, "C_3crvBalanceAfter");
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation");
+        console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+
+        // B redeems bLUSD
+        vm.startPrank(B);
+        chickenBondManager.redeem(A_bLUSDBalance, 0);
+        // console.log(yearnCurveVault.balanceOf(B), "yearnCurveVault.balanceOf(B)");
+        yearnCurveVault.withdraw(yearnCurveVault.balanceOf(B));
+        vm.stopPrank();
+        uint256 B_curveBalance2 = curvePool.balanceOf(B);
+        //uint256 B_yearnBalance2 = yearnCurveVault.balanceOf(B);
+        // console.log("");
+        // console.log("After redeem 2");
+        // console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice");
+        // console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        // console.log(yearnCurveVault.balanceOf(address(chickenBondManager)), "yearnCurveVault.balanceOf(address(chickenBondMananger))");
+        // console.log(curvePool.totalSupply(), "curvePool.totalSupply()");
+
+        // Undo pool manipulation (finish sandwich attack)
+        uint256 _3crvAmount = C_3crvBalanceAfter - C_3crvBalanceBefore;
+        assertGe(_3crvToken.balanceOf(C), _3crvAmount);
+        vm.startPrank(C);
+        _3crvToken.approve(address(curvePool), _3crvAmount);
+        curvePool.exchange(1, 0, _3crvAmount, 0, C);
+        vm.stopPrank();
+        uint256 finalCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
+        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation undo");
+
+        // Checks
+        console.log("");
+        // console.log(B_curveBalance0, "Curve B_balance0");
+        // console.log(B_curveBalance1, "Curve B_balance1");
+        // console.log(B_curveBalance2, "Curve B_balance2");
+        console.log(B_curveBalance1 - B_curveBalance0, "Curve B_balance1 diff");
+        console.log(B_curveBalance2 - B_curveBalance1, "Curve B_balance2 diff");
+        assertRelativeError(
+            initialCurvePrice,
+            finalCurvePrice,
+            2e14, // 0.02%
+            "Price after attack should be close"
+        );
+        assertRelativeError(
+            B_curveBalance1,
+            B_curveBalance2 - B_curveBalance1,
+            4e11, // 0.00004%
+            "Obtained Curve should be approximately equal"
+        );
+    }
 }

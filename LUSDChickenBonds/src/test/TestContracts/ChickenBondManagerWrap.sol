@@ -57,4 +57,8 @@ contract ChickenBondManagerWrap is ChickenBondManager {
     function setBaseRedemptionRate(uint256 _baseRedemptionRate) external {
         baseRedemptionRate = _baseRedemptionRate;
     }
+
+    function resetRedemptionBaseFee() external {
+        baseRedemptionRate = 0;
+    }
 }
