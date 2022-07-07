@@ -160,8 +160,8 @@ Crucially, an LUSD shift transaction only succeeds if it improves the Curve spot
 
 In practice, Curve charges fees when single-sided LUSD is deposited or withdrawn.  In order to avoid net losses for the Chicken Bonds system, shifting is restricted by two thresholds on the LUSD-3CRV spot price. Let these price thesholds be `x` and `y` where `x < 1` and `y > 1`.  
 
-- Shifting from the SP to Curve is possible when the spot price is < x, and must not move the spot price above x.  
-- Shifting from Curve to the SP is possible when the spot price is > y, and must not move the spot price below y.
+- Shifting from Curve to the SP is possible when the spot price is < x, and must not move the spot price above x.  
+- Shifting from the SP to Curve is possible when the spot price is > y, and must not move the spot price below y.
 
 <img width="636" alt="image" src="https://user-images.githubusercontent.com/32799176/177153259-e7d4f61c-b26f-4f04-a79c-3d4859fe7014.png">
 
