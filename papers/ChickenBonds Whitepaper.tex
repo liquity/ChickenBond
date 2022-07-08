@@ -362,14 +362,14 @@ n = \frac{T}{\alpha} \left(\frac{1}{W\left(\frac{p_f}{e p_r} \right)} - 1\right)
 To find the optimal rebonding time period $T_{opt}$, we divide the total considered period $T$ by the optimal number of rebonding events $n$, and replace $n$ by the expression above (\ref{eq:opt-rebonding-n}):
 
 \begin{equation}
-  \label{}
+  \label{eq:opt-rebonding-prices}
 T_{opt} = \frac{T}{n} = \frac{\alpha W\left(\frac{e p_r}{p_f}\right)}{1 - W\left(\frac{e p_r}{p_f}\right)}
 \end{equation}
 
 We can write it in terms of premium $\lambda = \frac{p_f}{p_r}$
 
 \begin{equation}
-  \label{eq:opt-rebonding}
+  \label{eq:opt-rebonding-premium}
 T_{opt} = \frac{\alpha W\left(\frac{e}{\lambda}\right)}{1 - W\left(\frac{e}{\lambda}\right)} = \frac{\alpha}{\frac{1}{W\left(\frac{e}{\lambda}\right)} - 1}
 \end{equation}
 
@@ -409,7 +409,7 @@ T_{opt} = \frac{T}{n} = \frac{\alpha W\left(\frac{e p_r}{(1-\tau)p_f}\right)}{1 
 We can write it in terms of premium $\lambda = \frac{p_f}{p_r}$
 
 \begin{equation}
-  \label{eq:opt-rebonding}
+  \label{eq:opt-rebonding-fee-premium}
 T_{opt} = \frac{\alpha W\left(\frac{e}{(1-\tau)\lambda}\right)}{1 - W\left(\frac{e}{(1-\tau)\lambda}\right)} = \frac{\alpha}{\frac{1}{W\left(\frac{e}{(1-\tau)\lambda}\right)} - 1}
 \end{equation}
 
@@ -873,12 +873,12 @@ We can also consider the evolution of the fair price of bTKN over a given time p
 \paragraph{Equating ROI of bonding TKN and holding bTKN}
 We suppose that users would bond TKN rather than hold bTKN if the expected ROI from bonding is higher than of (buying and) holding bTKN, and vice versa. As long as holding bTKN is more attractive than bonding TKN, we can expect buying pressure on bTKN. Conversely, there should be selling pressure on bTKN if bonding is seen as more profitable since people would likely trade their bTKN for TKN. 
 
-As a consequence, there must be an equilibrium price at which holding bTKN and bonding TKN result in the same ROI for both activities. Due to the yield amplification, it's safe to assume that in the long run, holding bTKN is at least as profitable as staking TKN. We further assume that the price of TKN is already “arbitraged” and adapted to the natural rate $r_m$, which thus carries over to the price of bTKN. Therefore, the equilibrium price for bonding vs. holding should also be meaningful as a metric for the fair price.
+As a consequence, there must be an equilibrium price at which holding bTKN and bonding TKN result in the same ROI for both activities. Due to the yield amplification, it's safe to assume that in the long run, holding bTKN is at least as profitable as the underlying yield producing strategy for TKN. We further assume that the price of TKN is already “arbitraged” and adapted to the natural rate $r_m$, which thus carries over to the price of bTKN. Therefore, the equilibrium price for bonding vs. holding should also be meaningful as a metric for the fair price.
 
 \subparagraph{With constant $\alpha$}
 We consider one optimal rebonding period $T_{opt}$ with a fixed parameter $\alpha$ and suppose that the system is "frozen" during that time frame, i.e. nobody chickens in or out and no new bonds are created. Since the protocol is still earning yield on its treasury $R$, the only quantity that would change during the respective period is $q_r$, but we can neglect the compounding effect for small $r_r$, $r_p$ and $r_d$ and short $T_{opt}$, treating $R$ as constant.
 
-Further, we make the simplifying assumption that the price premium $\lambda$ stays constant during that time frame. Thus, the fair price $p_f$ changes from $t$ to $T_{opt}$ at the same rate as the redemption price $p_r$, yielding the ROI of holding bTKN:
+Further, we make the simplifying assumption that the price premium $\lambda$ stays constant during that time frame. Thus, the fair price $p_f$ changes from $t$ to $t+T_{opt}$ at the same rate as the redemption price $p_r$, yielding the ROI of holding bTKN:
 
 \begin{equation}
   \label{eq:ROI-eq}
@@ -913,7 +913,7 @@ On the other hand, we can express the ROI of bonding TKN for the same period as:
   \end{split}
 \end{equation}
 
-Setting the two ROIs equal, and using equation \ref{eq:optimal_chicken_in_2} as an approximation of $T_{opt}$, we can solve the following equation for $p_f$:
+Setting the two ROIs equal, we can solve the following equation for $p_f$:
 \begin{equation}
   \label{eq:ROI-bonding-holding}
   B_{ROI} = H_{ROI}
@@ -924,6 +924,8 @@ and get:
   \label{eq:ROI-bonding-holding-2}
   p_f = p_r\left(1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_r q_r + r_d q_d}{q_r}\right) \frac{T_{opt}+\alpha}{T_{opt}}
 \end{equation}
+
+Note that, from \ref{eq:opt-rebonding-prices}, $T_{opt}$ depends on $p_f$, so we would need some more steps to isolate fair price. We can use equation \ref{eq:optimal_chicken_in_2} as an approximation of $T_{opt}$ to make it easier and get rid of the Lambert W function.
 
 The following chart plots $p_f$ on the y-axis in function of the Pending Bucket $q_p$ (x-axis) for $\alpha$=(50, 100, 150, 200), with $q_r=1$, $q_d=2$, $S=$1 and $r_r=r_p=r_d=0.1$. As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
@@ -968,7 +970,7 @@ As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown 
 Note that the impact of $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_r$, which influence $p_f$ in the same fashion.
 
 \paragraph{Equating ROI of staking TKN and holding bTKN}
-Assuming rational markets and no additional risks for holding bTKN compared to holding (and staking) TKN, we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start.
+Assuming rational markets and no additional risks for holding bTKN compared to holding and staking TKN (or getting yield from the underlying strategy for TKN), we suppose that the market price of bTKN would grow at the same rate as the value of staked TKN. The rationale being that if the market expects bTKN to grow faster in the future, it should pay a higher price for bTKN now, meaning that the initial price premium should reflect the future growth potential and cancel out any oversized yield from the start.
 
 If we know what yield to expect, we could formulate a differential equation to derive a formula for $p_f$ or at least a parameter $\gamma$ for the impact of the pending bucket in the naive formula:
 
@@ -977,7 +979,7 @@ If we know what yield to expect, we could formulate a differential equation to d
    p_f = \frac{q_r + \gamma q_p + q_d \cdot \frac{r_d}{r_r} \cdot d_f}{S}
 \end{equation}
 
-We could then state the following equation:
+We could then state the following equation (where $r_s$ is the yield of staking TKN):
 
 \begin{equation}
   \label{eq:yield-eq}
@@ -1093,7 +1095,7 @@ which seems quite hard to solve for $a$.
 
 \paragraph{Without rebonding}
 
-Although an approach without rebonding is unlikely to be fruitful since the redemption price will too close to the natural rate, we can still try. Now we only account for the yield generated, which doesn’t increase the bTKN total supply:
+Although an approach without rebonding is unlikely to be fruitful since the redemption price will be too close to the natural rate, we can still try. Now we only account for the yield generated, which doesn’t increase the bTKN total supply:
 
 \[
 S_t = S_1 = S_0 = {q_r}_0
@@ -1130,7 +1132,7 @@ p_r(t) = (1+r_s)^t + \frac{{q_p}_0 r_s + {q_d}_0 r_d}{{q_r}_0} t
 In particular this shows that the assumption that redemption price follows a pure exponential $a^t$ is not correct.
 
 \subsection{Self-reinforcing price impact}
-It follows from equations \ref{eq:opt-rebonding} that a higher premium $\lambda$ leads to a shorter rebonding period $t$ (the same is true for \ref{eq:optimal_chicken_in_2}, and for the break even time in \ref{eq:break_even_2}). As a consequence, we can expect bonders to chicken in earlier, resulting in a higher fraction of the bond $b_p$ that transitions into the Permanent Bucket, which makes the premium more sustainable and may be favorable for the fair price of bTKN (TODO: depends on the formula).
+It follows from equations \ref{eq:opt-rebonding-premium} that a higher premium $\lambda$ leads to a shorter rebonding period $t$ (the same is true for \ref{eq:optimal_chicken_in_2}, and for the break even time in \ref{eq:break_even_2}). As a consequence, we can expect bonders to chicken in earlier, resulting in a higher fraction of the bond $b_p$ that transitions into the Permanent Bucket, which makes the premium more sustainable and may be favorable for the fair price of bTKN (TODO: depends on the formula).
 
 Thus, if the market price of bTKN increases while everything else stays equal, the chances are higher that the price will continue to rise in the future thanks to earlier chicken ins. While this effect may be not always be immediate, a large bTKN price hike could effectively push bonders beyond their optimal rebonding times.
 Assuming perfectly rational behavior, this would result in immediate chicken ins (and rebonding).
@@ -1152,7 +1154,7 @@ Right after launch, the initial bTKN supply is 0 as the token is only minted upo
 
 Meanwhile, the protocol is already earning yield on the Pending Bucket before anybody chickens in. Giving this yield to the bond holder who chickens ins first wouldn't seem fair. 
 
-To tackle these problems, we can define the initial redemption price at the time of the first chicken in to be $p_r = 1$. The protocol thus needs to mint the same amount of bTKN as the amount of TKN acquired by the protocol up to that time. The accumulated yield of the Pending Bucket, which would normally belong to the Reserve Bucket, can be used to reward the LPs bootstrapping bTKN/TKN DEX pair (see \ref{sec:chicken-in-fee}).
+To tackle these problems, we can define the initial redemption price at the time of the first chicken in to be $p_r = 1$. The protocol thus needs to mint the same amount of bTKN as the amount of TKN acquired by the protocol on that first chicken in event. The accumulated yield of the Pending Bucket, which would normally belong to the Reserve Bucket, can be used to reward the LPs bootstrapping bTKN/TKN DEX pair (see \ref{sec:chicken-in-fee}).
 
 \subsection{Two-bucket version}
 \label{sec:two-bucket}
@@ -1163,7 +1165,7 @@ This makes bonding more sustainable in the long run even without a Permanent Buc
 
 \subsection{Automatically adjusting the steepness $\alpha$ of the accrual curve}
   \label{sec:adjustment}
-The break even point (equation \ref{eq:break_even_2}) and the optimal rebonding time (equations \ref{eq:opt-rebonding}, \ref{eq:optimal_chicken_in_2} and \ref{eq:optimal_chicken_in_2_fee}) heavily depend on the premium $\lambda$ as well as on $\alpha$, i.e. the steepness of the bTKN accrual curve $s(t)$. 
+The break even point (equation \ref{eq:break_even_2}) and the optimal rebonding time (equations \ref{eq:opt-rebonding-premium}, \ref{eq:optimal_chicken_in_2} and \ref{eq:optimal_chicken_in_2_fee}) heavily depend on the premium $\lambda$ as well as on $\alpha$, i.e. the steepness of the bTKN accrual curve $s(t)$. 
 
 Simulations have shown that the premium $\lambda$ tends to decrease over time as the system matures. If  $\alpha$ was kept constant, this would mean that the break even and optimal rebonding times would increase throughout the lifetime of the system, making bonds less and less attractive due to a decreasing APR.
 
