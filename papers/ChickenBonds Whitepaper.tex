@@ -635,18 +635,17 @@ Given the optimal rebonding time $T_{opt}$, we can thus treat the chickened-in f
 
 \begin{equation}
   \label{}
-  \frac{S}{\Delta t} = \frac{s(T_{opt})}{\Delta t} = \frac{q_p}{T_{opt}} \frac{1}{p_r} \frac{T_{opt}}{T_{opt}+\alpha} = \frac{S}{q_r} \frac{q_p}{T_{opt}+\alpha}
+  \Delta S = s(T_{opt}) = \frac{q_p}{T_{opt}} \frac{1}{p_r} \frac{T_{opt}}{T_{opt}+\alpha} = \frac{S}{q_r} \frac{q_p}{T_{opt}+\alpha}
 \end{equation}
 
 Similarly, for the version with a controller targeting an average chicken in time $T_t$ (see section \ref{sec:adjustment}), using equation $\ref{eq:alpha-solved}$ for $\alpha$, we can derive
 
 \begin{equation}
   \label{}
-  \frac{S}{\Delta t} = q_p \frac{S}{q_r} \frac{1}{T_t+\alpha}
+  \Delta S = q_p \frac{S}{q_r} \frac{1}{T_t+\alpha}
   =  \frac{S}{q_r} \frac{q_p}{T_t+ T_t\frac{\frac{p_f}{p_r} - 1}{1 + \sqrt{\frac{p_f}{p_r}}}}  
   =  \frac{S}{q_r} \frac{q_p}{T_t+ T_t\frac{\lambda - 1}{1 + \sqrt{\lambda}}}  
 \end{equation}
-
 
 
 The question is how to determine the correction factors in equations \ref{eq:correction-factors} and \ref{eq:treasury-growth} and how it affects the resulting fair price estimation. Using the naive fair price (equation $\ref{eq:naive-4}$), we have:
