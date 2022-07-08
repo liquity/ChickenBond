@@ -54,7 +54,7 @@ The system offers strong benefits to DeFi protocols and bond holders, while mini
 \begin{itemize}
     \item \textit{Cost-free liquidity accumulation for projects}. Rather than purchasing or renting liquidity, the system freely acquires treasury assets over time in a self-bootstrapping manner. Liquidity acquisition is incentivized by the amplified yields that are attainable by bond holders, enabled by the novel bonding dynamics.
     \item \textit{Risk-free and flexible bonding for users}. Bond holders may “chicken out” and withdraw their deposited principal at any time, in lieu of converting it to “boosted” tokens (bTKN). Therefore bonding is fully reversible and bond holders are not locked into any commitment to the protocol. Furthermore, bonds are represented as NFTs and can thus be sold on the secondary market, which can be attractive for bonds that have accumulated a significant amount of bTKN.
-    \item \textit{System stability and resilience}. The Chicken Bonds derivative token bTKN has a hard price floor supported by a direct redemption mechanism. Most of the time, bTKN will in fact trade at a premium above this price floor due to amplified (“boosted”) yield earned by the underlying liquidity. Though the premium may vary, the bonding rules guarantee that the price floor can only increase over time. As such, the Chicken Bonds boosted token does not suffer from the high volatility and strong reflexivity inherent to secondary tokens issued by other bonding protocols
+    \item \textit{System stability and resilience}. The Chicken Bonds derivative token bTKN has a hard price floor supported by a direct redemption mechanism. Most of the time, bTKN will in fact trade at a premium above this price floor due to amplified (“boosted”) yield earned by the underlying liquidity. Though the premium may vary, the bonding rules guarantee that the price floor can only increase over time. As such, the Chicken Bonds boosted token does not suffer from the high volatility and strong reflexivity inherent to secondary tokens issued by other bonding protocols.
 \end{itemize}
 
 \section{Treasury}
@@ -157,13 +157,13 @@ Upon a chicken out event at time $t+1$, the Treasury changes as follows:
     q_p(t+1) := q_p(t) - b
 \end{equation}
 
-As an alternative, the bond holder may sell their NFT on the secondary market. The buyer of the NFT has the same rights against the protocol as the original bond holder.
+As an alternative, the bond holder may sell their NFT on the secondary market, likely receiving a better return. The buyer of the NFT has the same rights against the protocol as the original bond holder.
 
 \subsubsection{Chicken in}
 \label{sec:chicken-in}
 A user that chickens in loses the bonded TKN in exchange for the accrued balance of bTKN that is minted and paid out by the protocol. 
 
-Instead of keeping the received bTKN, the user may sell it on the open market and opt to reinvest the proceeds by creating a new, typically larger bond (aka as “rebonding”, see below).
+Instead of keeping the received bTKN, the user may sell it on the open market and opt to reinvest the proceeds by creating a new, typically larger bond (aka “rebonding”, see below).
 
 Upon a chicken in, the protocol acquires the bonded TKN which is moved from the Pending Bucket to the Reserve Bucket and the Permanent Bucket. To that end, the bonded amount $b$ is first split into two amounts $b_a$ and $b_d$ in proportion to the ratio of the currently accrued bTKN $s$ to the cap $c$:
 
@@ -1128,7 +1128,7 @@ In particular this shows that the assumption that redemption price follows a pur
 \subsection{Self-reinforcing price impact}
 It follows from equations \ref{eq:opt-rebonding} that a higher premium $\lambda$ leads to a shorter rebonding period $t$ (the same is true for \ref{eq:optimal_chicken_in_2}, and for the break even time in \ref{eq:break_even_2}). As a consequence, we can expect bonders to chicken in earlier, resulting in a higher fraction of the bond $b_p$ that transitions into the Permanent Bucket, which makes the premium more sustainable and may be favorable for the fair price of bTKN (TODO: depends on the formula).
 
-Thus, if the market price of bTKN increases while everything else stays equal, the chances are higher that the price will continue to rise in the future thanks to earlier chicken ins. While this effect may be not always be immediate, a large bTKN price hike could effectively push bonders beyond their optimal rebonding times.
+Thus, if the market price of bTKN increases while everything else stays equal, the chances are higher that the price will continue to rise in the future thanks to earlier chicken ins. While this effect may not always be immediate, a large bTKN price hike could effectively push bonders beyond their optimal rebonding times.
 Assuming perfectly rational behavior, this would result in immediate chicken ins (and rebonding).
 
 TODO: check and update once we have a formula for the fair price
