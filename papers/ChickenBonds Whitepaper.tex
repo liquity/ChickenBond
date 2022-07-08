@@ -658,9 +658,14 @@ The question is how to determine the correction factors in equations \ref{eq:cor
 
 In other words, we're not correcting the Pending Bucket but supposing that rebonding cancels out the effect of chicken ins on the fair price, consisting in a transition of funds from $q_p$ to $q_r$ and $q_d$ and the minting of more bTKN.
 
+\pagebreak
+
 We can now plot equation $\ref{eq:same_growth_rate}$ for the two versions with and without a dynamically controlled $\alpha$:
 
-\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_growth_price.png}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_growth_price.png}
+\end{figure}
 
 The purple line depicts the fair price (y-axis) as a solution of equation $\ref{eq:same_growth_rate}$ in function of the Pending Bucket $q_p$ (x-axis) for $q_r=1$, $q_d=2$, $S=1$, $r_r=r_p=0.1$, $r_d=0.05$ and a fixed $\alpha=30$. 
 
@@ -670,11 +675,12 @@ As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown 
 
 This basically means that the naive fair price formula satisfies the property that the Treasury value and the bTKN supply grow at the same rate under the assumption that current users keep recycling their bonds (and no new users are creating bonds).
 
-\pagebreak
-
 What happens if we discount the effect of $q_p$ on the fair price by setting $c_p=0.7$ for example?
 
-\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_growth_price_2.png}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_growth_price_2.png}
+\end{figure}
 
 Note that the two versions of the fair price resulting from $\ref{eq:same_growth_rate}$ are still very similar for large $q_p$. However, they now diverge from the corrected fair price formula shown in green given by:
 
@@ -695,12 +701,17 @@ This seems to imply that only the naive fair price formula with $c_p=1$ satisfie
 
 %Regarding $q_d$, we can take the correction factor $c_d=q_d \frac{r_d}{r_r}$ from the naive formula above (equation \ref{eq:naive-3}). For $q_p$ we suppose that the Pending Bucket will eventually transition into the Reserve and the Permanent Buckets according to a split determined by the optimal rebonding time. In other words, we're discounting the fraction of the Pending Bucket with $c_p$ that we expect to become part of the Permanent Bucket, neglecting the possibility of chicken outs.
 
+\pagebreak
+
 \paragraph{Immediate effect of rebonding on the fair price}
 Can we thus deduct that (optimal) rebonding has no direct impact on the naive fair price at all?
 
 It turns out that this is only true for the special case where $r_d = r_r$. Otherwise, the result may look like this:
 
-\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_rebonding.png}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_rebonding.png}
+\end{figure}
 
 For $r_d < r_r$, rebonding negatively impacts the fair price, as can be seen in the chart above which shows the fair price before (green) and after (blue) rebonding the entire Pending Bucket at $T_{opt}$ for $q_r=1$, $q_d=2$, $S=1$, $r_r=r_p=0.1$, $r_d=0.05$ and a fixed $\alpha=30$. 
 
@@ -863,9 +874,15 @@ p_{f} = \frac{q_{p} \left( 1+   \frac{1}{T_{opt}+1}\frac{p_{f}}{p_{r}} \right)+q
 
 We have tried to validate results from this section without success. For instance below we have charts for the historic variant of the recursive approach. We can see non-convergence and really weird behaviour starting from iteration 10:
 
-\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_recursive_price_1.png}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_recursive_price_1.png}
+\end{figure}
 
-\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_recursive_price_2.png}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_recursive_price_2.png}
+\end{figure}
 
 \subsubsection{Yield comparison approach}
 We can also consider the evolution of the fair price of bTKN over a given time period and compare it with an expected yield. In the following, we outline two different approaches.
@@ -929,7 +946,10 @@ Note that, from \ref{eq:opt-rebonding-prices}, $T_{opt}$ depends on $p_f$, so we
 
 The following chart plots $p_f$ on the y-axis in function of the Pending Bucket $q_p$ (x-axis) for $\alpha$=(50, 100, 150, 200), with $q_r=1$, $q_d=2$, $S=$1 and $r_r=r_p=r_d=0.1$. As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
-\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_comparison_price.png}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_comparison_price.png}
+\end{figure}
 
 Note that the curves are increasing for higher $\alpha$ and that all the equations have lower branches, only one of which is shown on the chart (in blue for $\alpha$=50). 
 
@@ -965,7 +985,10 @@ Using the new definitions of $H_{ROI}$ and $B_{ROI}$, we can solve equation \ref
 The following chart depicts the fair price (y-axis) according to equation \ref{eq:ROI-bonding-holding-controller} in function of the Pending Bucket $q_p$ (x-axis) for $T_t=(60, 120, 240, 480, 960)$, with $q_r=1$, $q_d=2$, $S=1$ and $r_r=r_p=r_d=0.1$.
 As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
-\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_controller_price.png}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_controller_price.png}
+\end{figure}
 
 Note that the impact of $q_p$ on the fair price gets bigger for larger $T_t$, and the same is true for $q_d$ and $q_r$, which influence $p_f$ in the same fashion.
 
@@ -1002,7 +1025,10 @@ Let’s imagine a user who wants to buy bTKN to sell it after some time $T$ for 
 
 In the following chart, the red line corresponds to the natural rate, the green line to the redemption price and the purple line to the (conservative) fair price.
 
-\includegraphics[width=\linewidth]{./ChickenBonds_Whitepaper_conservative_price.png}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_conservative_price.png}
+\end{figure}
 
 The formula therefore for the conservative fair price is:
 
