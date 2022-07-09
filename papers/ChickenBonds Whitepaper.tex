@@ -150,7 +150,7 @@ In both cases, the Chicken Bond NFT is burned as the bond holder’s position is
 \label{sec:chicken-out}
 By chickening out, the bond holder gets the entire bonded TKN back, foregoing the accrued balance of bTKN (which doesn’t get minted). The option to withdraw the principal at any time makes bonding an essentially risk-free investment where the user only incurs the opportunity costs besides smart contract risks.
 
-Upon a chicken out event at time $t_{i+1}$ (where previous event in the system occurred at time $t_i$), the Treasury changes as follows:
+Upon a chicken out event at time $t_{i+1}$ (where the previous event in the system occurred at time $t_i$), the Treasury changes as follows:
 
 \begin{equation}
   \label{eq:chicken-out-transition}
@@ -591,7 +591,7 @@ Recalling that $PV(ReserveBucket) = q_r$, we can derive that
    PV(PermanentBucket) = q_d \frac{r_d}{r_r} d_f
 \end{equation}
 
-Regarding the Pending Bucket, we know that its content will eventually transition into the two other buckets (chicken in) or leave the system (chicken out), and that the protocol will mint more bTKN. On the other hand, bonders have an incentive to rebond after chickening in (see section \ref{sec:rebonding_strategy}), increasing the Pending Bucket shortly after. If we assume for simplicity that all effects cancel out in aggregate and suppose $r_p = r_r$, we can extend the fair price formula to:
+Regarding the Pending Bucket, we know that its content will eventually transition into the two other buckets (chicken in) or leave the system (chicken out), and that the protocol will mint more bTKN. On the other hand, bonders have an incentive to rebond after chickening in (see section \ref{sec:rebonding_strategy}), increasing the Pending Bucket shortly after. If we assume for simplicity that all effects cancel out in aggregate and suppose $r_p = r_r$, we can state the fair price formula as:
 
 \begin{equation}
   \label{eq:naive-4}
@@ -770,7 +770,7 @@ We can estimate $\Delta q_{r}$ and $\Delta q_{d}$ based on the historic average,
 \Delta q_{d} = q_{p} \frac{q_{d}}{q_{r}+q_{d}}
 \end{equation}
 
-There should also exist an historical average rebonding period $\overline{T}$ corresponding to the current relation between $q_r$ and $q_d$:
+There should also exist a historical average rebonding period $\overline{T}$ corresponding to the current relation between $q_r$ and $q_d$:
 
 \begin{equation}
     \frac{q_{r}}{q_{r}+q_{d}} = \frac{\overline{T}}{\overline{T}+1}
@@ -941,11 +941,11 @@ and get:
   p_f = p_r\left(1 + \frac{T_{opt}}{365} \frac{r_p q_p + r_r q_r + r_d q_d}{q_r}\right) \frac{T_{opt}+\alpha}{T_{opt}}
 \end{equation}
 
-Note that, from \ref{eq:opt-rebonding-prices}, $T_{opt}$ depends on $p_f$, so we would need some more steps to isolate fair price. We can use equation \ref{eq:optimal_chicken_in_2} as an approximation of $T_{opt}$ to make it easier and get rid of the Lambert W function.
+Note that, from \ref{eq:opt-rebonding-prices}, $T_{opt}$ depends on $p_f$, so we would need some more steps to isolate the fair price. We can use equation \ref{eq:optimal_chicken_in_2} as an approximation of $T_{opt}$ to make it easier and get rid of the Lambert W function.
 
 The following chart plots $p_f$ on the y-axis in function of the Pending Bucket $q_p$ (x-axis) for $\alpha$=(50, 100, 150, 200), with $q_r=1$, $q_d=2$, $S=$1 and $r_r=r_p=r_d=0.1$. As a reference, the naive fair price given by formula \ref{eq:naive-3} is shown in black.
 
-\begin{figure}
+\begin{figure}[ht]
     \centering
     \includegraphics[width=0.5\linewidth]{./ChickenBonds_Whitepaper_comparison_price.png}
 \end{figure}
