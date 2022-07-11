@@ -232,7 +232,9 @@ Therefore, the marginal profit for single-sided withdrawal at a given spot price
 We choose some arbitrary (large) value $D_0$ for the pool invariant ``D", and for each combination of ($dydx_i$, $A_j$) we exploit property \#3 to find the unique pair $(x,y)$ for which $D(x,y)=D_0$ and $dydx_{A=A_j}(x,y)=dydx_i$ by binary search. We then evaluate $p_{md}()$ and $p_{mw}()$ using relatively small values for $\Delta{x}$ and $\tfrac{\Delta{t}}{t}$ ($10^{-9}D$ in the case of $\Delta{x}$ and $10^{-9}$ for $\tfrac{\Delta{t}}{t}$).
 
 Code:
+
 \url{https://github.com/liquity/ChickenBond/blob/b344f8d25ad6bade72092e53c505a8ea5f81b129/tools/sand-buckets/src/sheets/marginal-deposit.ts}
+
 \url{https://github.com/liquity/ChickenBond/blob/b344f8d25ad6bade72092e53c505a8ea5f81b129/tools/sand-buckets/src/sheets/marginal-withdrawal.ts}
 
 \subsubsection{Results}
@@ -262,7 +264,9 @@ We call a shift (either SP $\Rightarrow$ Curve or Curve $\Rightarrow$ SP) starti
 It is interesting to note that the ROI of a maximal shift is actually the lowest ROI that can be achieved by a shift, and submaximal shifts are actually more profitable in terms of ROI. This comes from the fact that marginal profit decreases the closer the spot price is to perfect balance.
 
 Code:
+
 \url{https://github.com/liquity/ChickenBond/blob/b344f8d25ad6bade72092e53c505a8ea5f81b129/tools/sand-buckets/src/sheets/walled-deposit.ts}
+
 \url{https://github.com/liquity/ChickenBond/blob/b344f8d25ad6bade72092e53c505a8ea5f81b129/tools/sand-buckets/src/sheets/walled-withdrawal.ts}
 
 \subsubsection{Deposit (to $dy/dx$ = 1.0005)}
