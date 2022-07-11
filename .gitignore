@@ -5,10 +5,6 @@
 .DS_Store
 
 .idea
-*.aux
-*.log
-*.out
-*.toc
 
 # Python virtual environments
 .venv
