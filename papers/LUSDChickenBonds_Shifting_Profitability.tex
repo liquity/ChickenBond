@@ -32,41 +32,41 @@
 \maketitle
 
 \section{Introduction}
-The idea behind the shifting functions of LUSDChickenBonds is to allow the “owned” LUSD to act as a moving mass: it can serve as liquidity (in the Curve LUSD-3CRV metapool) when liquidity is needed the most, or provide stability through the Stability Pool when less liquidity is needed. Because of the permissionless nature of the functions, it is crucial that we ensure they can’t be used in a way that would result in a loss to the protocol.
+The idea behind the shifting functions of LUSDChickenBonds is to allow the ``owned" LUSD to act as a moving mass: it can serve as liquidity (in the Curve LUSD-3CRV metapool) when liquidity is needed the most, or provide stability through the Stability Pool when less liquidity is needed. Because of the permissionless nature of the functions, it is crucial that we ensure they can't be used in a way that would result in a loss to the protocol.
 
 \subsection{Intuition}
-Let’s disregard fees for a second. Our intuition is that single-sidedly depositing LUSD while the pool is light on LUSD, and single-sidedly withdrawing LUSD while the pool is heavy on LUSD are profitable actions under the assumption that LUSD should eventually return to \$1.
+Let's disregard fees for a second. Our intuition is that single-sidedly depositing LUSD while the pool is light on LUSD, and single-sidedly withdrawing LUSD while the pool is heavy on LUSD are profitable actions under the assumption that LUSD should eventually return to \$1.
 
 \subsection{Informal reasoning}
 
-By adding liquidity to a pool (single-sided or not) we are given LP tokens in return, entitling us to a pro-rata share of the pool’s reserves of each coin. This means that depositing single-sidedly (into a pool of 2 coins) involves implicitly swapping a portion of our input coin into the other coin. Similarly, withdrawing single-sidedly involves swapping one side of our pro-rata share of the pool into the other coin.
+By adding liquidity to a pool (single-sided or not) we are given LP tokens in return, entitling us to a pro-rata share of the pool's reserves of each coin. This means that depositing single-sidedly (into a pool of 2 coins) involves implicitly swapping a portion of our input coin into the other coin. Similarly, withdrawing single-sidedly involves swapping one side of our pro-rata share of the pool into the other coin.
 
-In the case of the LUSD-3CRV metapool: when the pool is light on LUSD, the spot price of LUSD in the pool will be >\$1. Making a single-sided LUSD deposit that moves the pool closer to being balanced amounts to selling part of the LUSD at a favorable rate (when it’s “expensive”). On the other hand: when the pool is heavy on LUSD, its spot price will be < \$1. Withdrawing LUSD single-sidedly in this state amounts to buying LUSD at a favorable rate (when it’s “cheap”).
+In the case of the LUSD-3CRV metapool: when the pool is light on LUSD, the spot price of LUSD in the pool will be more than \$1. Making a single-sided LUSD deposit that moves the pool closer to being balanced amounts to selling part of the LUSD at a favorable rate (when it's ``expensive"). On the other hand: when the pool is heavy on LUSD, its spot price will be less than \$1. Withdrawing LUSD single-sidedly in this state amounts to buying LUSD at a favorable rate (when it's ``cheap").
 
 \subsection{With fees}
 
-The existence of fees somewhat complicates things by reducing the rate at which our coins are swapped during single-sided liquidity changes (or non-proportional in general). In practice, we expect this to make balance-improving single-sided liquidity changes a net loss if the pool is already close to being balanced, such that the price of LUSD is roughly in the range of 1+/-fee.
+The existence of fees somewhat complicates things by reducing the rate at which our coins are swapped during single-sided liquidity changes (or non-proportional in general). In practice, we expect this to make balance-improving single-sided liquidity changes a net loss if the pool is already close to being balanced, such that the price of LUSD is roughly in the range of $1 \pm fee$.
 
-Our approach is to run simulations across a sweep of “A” factors and spot prices to find out more precisely where the boundaries of profitability lie. Based on our findings we will choose spot price thresholds for depositing and withdrawing that ensure profitability under any A that might realistically be set by governance.
+Our approach is to run simulations across a sweep of ``A" factors and spot prices to find out more precisely where the boundaries of profitability lie. Based on our findings we will choose spot price thresholds for depositing and withdrawing that ensure profitability under any A that might realistically be set by governance.
 
 \section{StableSwap Properties}
 
-First we introduce a couple of useful properties of StableSwap, which we will later use to show that the results of our simulations can be scaled to any pool size. We’ve demonstrated that the properties hold through the use of randomized testing, but we expect they could be proven mathematically.
+First we introduce a couple of useful properties of StableSwap, which we will later use to show that the results of our simulations can be scaled to any pool size. We've demonstrated that the properties hold through the use of randomized testing, but we expect they could be proven mathematically.
 
-Let’s suppose we have the following functions (partially) implementing the StableSwap invariant for the 2-coin case, where $x$ and $y$ are the pool’s reserves of coin 1 and 2:
+Let's suppose we have the following functions (partially) implementing the StableSwap invariant for the 2-coin case, where $x$ and $y$ are the pool's reserves of coin 1 and 2:
 
 \begin{itemize}
-\item $D(x, y)$: pool’s invariant “D” as a function of the reserves
+\item $D(x, y)$: pool's invariant ``D" as a function of the reserves
 \item $dydx(x, y)$: the spot price $-dy/dx$ between coins 1 and 2
-\item $x_d(x, y, \Delta{x}, \Delta{y})$: pool’s reserve of coin 1 after a deposit of $\Delta{x}$, $\Delta{y}$
-\item $y_d(x, y, \Delta{x}, \Delta{y})$: pool’s reserve of coin 2 after a deposit of $\Delta{x}$, $\Delta{y}$
-\item $\Delta{t}_d/t(x, y, \Delta{x}, \Delta{y})$: LP shares minted in exchange for a deposit of $\Delta{x}$, $\Delta{y}$, as a fraction of the (old) total supply t, such that the new total supply is $t’ = t(1 + \Delta{t}_d/t)$
-\item $x_{w1}(x, y, \Delta{t}/t)$: pool’s reserve of coin 1 after a single-sided withdrawal of coin 1 that burns fraction $\Delta{t}/t$ of the (old) total supply of LP shares
-\item $y_{w1}(x, y, \Delta{t}/t)$: pool’s reserve of coin 2 after a single-sided withdrawal of coin 1 that burns fraction $\Delta{t}/t$ of the (old) total supply of LP shares
+\item $x_d(x, y, \Delta{x}, \Delta{y})$: pool's reserve of coin 1 after a deposit of $\Delta{x}$, $\Delta{y}$
+\item $y_d(x, y, \Delta{x}, \Delta{y})$: pool's reserve of coin 2 after a deposit of $\Delta{x}$, $\Delta{y}$
+\item $\Delta{t}_d/t(x, y, \Delta{x}, \Delta{y})$: LP shares minted in exchange for a deposit of $\Delta{x}$, $\Delta{y}$, as a fraction of the (old) total supply t, such that the new total supply is $t' = t(1 + \Delta{t}_d/t)$
+\item $x_{w1}(x, y, \Delta{t}/t)$: pool's reserve of coin 1 after a single-sided withdrawal of coin 1 that burns fraction $\Delta{t}/t$ of the (old) total supply of LP shares
+\item $y_{w1}(x, y, \Delta{t}/t)$: pool's reserve of coin 2 after a single-sided withdrawal of coin 1 that burns fraction $\Delta{t}/t$ of the (old) total supply of LP shares
 \item $\Delta{x}_{w1}(x, y, \Delta{t}/t)$: the amount of coin 1 received when burning fraction $\Delta{t}/t$ of the (old) total supply to withdraw single-sidedly
 \end{itemize}
 
-All functions implicitly depend on the A, fee and $admin\_fee$ parameters, except for $D()$ and $dydx()$, which don’t depend on fee or $admin\_fee$.
+All functions implicitly depend on the A, fee and $admin\_fee$ parameters, except for $D()$ and $dydx()$, which don't depend on fee or $admin\_fee$.
 
 \subsection{Property \#1: D homogeneity}
 
@@ -95,7 +95,7 @@ Given property \#2, we can express the spot price as a function of only the rati
 dydx(x, y) = dydx(x/x, y/x) = dydx(1, y/x) = g(y/x)
 \]
 
-We find that the function $g()$ is strictly monotone, which makes it injective. In other words, there is a unique ratio $y/x$ between the pool’s reserves for each spot price.
+We find that the function $g()$ is strictly monotone, which makes it injective. In other words, there is a unique ratio $y/x$ between the pool's reserves for each spot price.
 
 Test:
 \url{https://github.com/liquity/ChickenBond/blob/b344f8d25ad6bade72092e53c505a8ea5f81b129/tools/sand-buckets/test/pool-prop.test.ts#L132-L168}
@@ -105,6 +105,9 @@ Test:
 The functions $x_d()$, $y_d()$ are positively homogeneous of degree 1:
 \[
 x_d(sx, sy, s\Delta{x}, s\Delta{y}) = s x_d(x, y, \Delta{x}, \Delta{y})
+\]
+
+\[
 y_d(sx, sy, s\Delta{x}, s\Delta{y}) = s y_d(x, y, \Delta{x}, \Delta{y})
 \]
 
@@ -132,11 +135,11 @@ Test:
 
 \subsection{Marginal profit}
 
-Our approach is to simulate single-sided deposits/withdrawals of practically infinitesimal size over a wide range of spot prices and a selection of “A” factors between 10-5000.
+Our approach is to simulate single-sided deposits/withdrawals of practically infinitesimal size over a wide range of spot prices and a selection of ``A" factors between 10-5000.
 
 \subsubsection{Definition for deposits}
 
-Let’s define the following function for notational convenience, which is a shorthand for the pool’s new invariant “D” after single-sidedly depositing $\Delta{x}$ of coin 1 (in our case: LUSD) into $x$, $y$:
+Let's define the following function for notational convenience, which is a shorthand for the pool's new invariant ``D" after single-sidedly depositing $\Delta{x}$ of coin 1 (in our case: LUSD) into $x$, $y$:
 \[
 D_{d1}(x, y, \Delta{x}) = D(x_d(x, y, \Delta{x}, 0), y_d(x, y, \Delta{x}, 0))
 \]
@@ -188,7 +191,7 @@ Using property \#1 for $D()$ and simplifying:
 \end{split}
 \]
 
-Replacing subexpression with functions we get the expression we’re looking for:
+Replacing subexpression with functions we get the expression we're looking for:
 \[
 D_{d1}(x, y, \Delta{x}) * (1 - 1 / \Delta{t}_d/t(x, y, \Delta{x}, 0)) / \Delta{x} - 1 = v_{d1}(x, y, \Delta{x}) / \Delta{x} - 1 = pmd(x, y, \Delta{x})
 \]
@@ -223,7 +226,7 @@ Therefore, the marginal profit for single-sided withdrawal at a given spot price
 
 \subsubsection{Implementation}
 
-We choose some arbitrary (large) value $D_0$ for the pool invariant “D”, and for each combination of ($dydx_i$, $A_j$) we exploit property \#3 to find the unique pair $(x,y)$ for which $D(x,y)=D0$ and $dydxA=A_j(x,y)=dydx_i$ by binary search. We then evaluate $pmd()$ and $pmw()$ using relatively small values for $\Delta{x}$ and $\Delta{t}/t$ ($D/10^9$ in the case of $\Delta{x}$ and $1/10^9$ for $\Delta{t}/t$).
+We choose some arbitrary (large) value $D_0$ for the pool invariant ``D", and for each combination of ($dydx_i$, $A_j$) we exploit property \#3 to find the unique pair $(x,y)$ for which $D(x,y)=D0$ and $dydxA=A_j(x,y)=dydx_i$ by binary search. We then evaluate $pmd()$ and $pmw()$ using relatively small values for $\Delta{x}$ and $\Delta{t}/t$ ($D/10^9$ in the case of $\Delta{x}$ and $1/10^9$ for $\Delta{t}/t$).
 
 Code:
 \url{https://github.com/liquity/ChickenBond/blob/b344f8d25ad6bade72092e53c505a8ea5f81b129/tools/sand-buckets/src/sheets/marginal-deposit.ts}
@@ -231,7 +234,7 @@ Code:
 
 \subsubsection{Results}
 
-We see that depositing becomes profitable around the $dy/dx = 1+fee$ mark as expected, but that the exact point depends on the variable “A” factor of the pool (adjustable by governance) and is shifted slightly towards higher $dy/dx$ (more imbalance) at higher A’s:
+We see that depositing becomes profitable around the $dy/dx = 1+fee$ mark as expected, but that the exact point depends on the variable ``A" factor of the pool (adjustable by governance) and is shifted slightly towards higher $dy/dx$ (more imbalance) at higher A's:
 
 \includegraphics[width=\linewidth]{./LUSDChickenBonds_Shifting_Profitability_1.png}
 
