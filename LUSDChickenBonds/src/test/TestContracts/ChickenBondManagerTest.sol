@@ -322,21 +322,18 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.createBond(0);
     }
 
-    function testCreateBondDoesNotChangePermanentBuckets() public {
+    function testCreateBondDoesNotChangePermanentBucket() public {
         uint256 bondAmount = 10e18;
 
-        uint256 permanentYearnLUSD_1 = chickenBondManager.getPermanentLUSDInSP();
-        uint256 permanentCurveYTokens_1 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSD_1 = chickenBondManager.getPermanentLUSD();
 
         // A creates bond
         createBondForUser(A, bondAmount);
         uint256 bondNFT_A = bondNFT.totalMinted();
 
-        uint256 permanentYearnLUSD_2 = chickenBondManager.getPermanentLUSDInSP();
-        uint256 permanentCurveYTokens_2 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSD_2 = chickenBondManager.getPermanentLUSD();
 
-        assertEq(permanentYearnLUSD_2, permanentYearnLUSD_1);
-        assertEq(permanentCurveYTokens_2, permanentCurveYTokens_1);
+        assertEq(permanentLUSD_2, permanentLUSD_1);
 
         // B creates bond
         createBondForUser(B, bondAmount);
@@ -349,22 +346,17 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(bondNFT_A);
         vm.stopPrank();
 
-        uint256 permanentYearnLUSD_3 = chickenBondManager.getPermanentLUSDInSP();
-        uint256 permanentCurveYTokens_3 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSD_3 = chickenBondManager.getPermanentLUSD();
         // Check permanent LUSD Bucket is non-zero
-        assertGt(permanentYearnLUSD_3, 0);
-        // Check permanent Curve bucket has not changed
-        assertEq(permanentCurveYTokens_3, permanentCurveYTokens_2);
+        assertGt(permanentLUSD_3, 0);
 
         // C creates bond
         createBondForUser(C, bondAmount);
 
-        uint256 permanentYearnLUSD_4 = chickenBondManager.getPermanentLUSDInSP();
-        uint256 permanentCurveYTokens_4 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSD_4 = chickenBondManager.getPermanentLUSD();
 
         // Check permanent buckets have not changed from C's new bond
-        assertEq(permanentYearnLUSD_4, permanentYearnLUSD_3);
-        assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
+        assertEq(permanentLUSD_4, permanentLUSD_3);
     }
 
     // --- chickenOut tests ---
@@ -574,7 +566,7 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenOut(B_bondID, 0);
     }
 
-    function testChickenOutDoesNotChangePermanentBuckets() public {
+    function testChickenOutDoesNotChangePermanentBucket() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
@@ -585,8 +577,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 7 days);
 
         // Get permanent buckets
-        uint256 permanentYearnLUSD_1 = chickenBondManager.getPermanentLUSDInSP();
-        uint256 permanentCurveYTokens_1 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSD_1 = chickenBondManager.getPermanentLUSD();
 
         // A chickens out
         vm.startPrank(A);
@@ -594,10 +585,8 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent buckets haven't changed
-        uint256 permanentYearnLUSD_2 = chickenBondManager.getPermanentLUSDInSP();
-        uint256 permanentCurveYTokens_2 = chickenBondManager.getPermanentLUSDInCurve();
-        assertEq(permanentYearnLUSD_2, permanentYearnLUSD_1);
-        assertEq(permanentCurveYTokens_2, permanentCurveYTokens_1);
+        uint256 permanentLUSD_2 = chickenBondManager.getPermanentLUSD();
+        assertEq(permanentLUSD_2, permanentLUSD_1);
 
         // B, C create bond
         createBondForUser(B, bondAmount);
@@ -614,12 +603,9 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Get permanent buckets, check > 0
-        uint256 permanentYearnLUSD_3 = chickenBondManager.getPermanentLUSDInSP();
-        uint256 permanentCurveYTokens_3 = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 permanentLUSD_3 = chickenBondManager.getPermanentLUSD();
         // Check LUSD permanent bucket has increased
-        assertGt(permanentYearnLUSD_3, 0);
-        // Check Curve permanent bucket still be 0
-        assertEq(permanentCurveYTokens_3, 0);
+        assertGt(permanentLUSD_3, 0);
 
         // C chickens out
         vm.startPrank(C);
@@ -627,10 +613,8 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent bucekt haven't changed
-        uint256 permanentYearnLUSD_4 = chickenBondManager.getPermanentLUSDInSP();
-        uint256 permanentCurveYTokens_4 = chickenBondManager.getPermanentLUSDInCurve();
-        assertEq(permanentYearnLUSD_4, permanentYearnLUSD_3);
-        assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
+        uint256 permanentLUSD_4 = chickenBondManager.getPermanentLUSD();
+        assertEq(permanentLUSD_4, permanentLUSD_3);
     }
 
     // --- calcbLUSD Accrual tests ---
@@ -1239,15 +1223,15 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(B, bondAmount);
         uint256 B_bondID = bondNFT.totalMinted();
 
-        uint256 permanentYearnLUSD_1 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentLUSD_1 = chickenBondManager.getPermanentLUSD();
 
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        uint256 permanentYearnLUSD_2 = chickenBondManager.getPermanentLUSDInSP();
-        assertGt(permanentYearnLUSD_2, permanentYearnLUSD_1);
+        uint256 permanentLUSD_2 = chickenBondManager.getPermanentLUSD();
+        assertGt(permanentLUSD_2, permanentLUSD_1);
 
         // C creates bond
         createBondForUser(C, bondAmount);
@@ -1256,7 +1240,7 @@ contract ChickenBondManagerTest is BaseTest {
         // fast forward time
         vm.warp(block.timestamp + 7 days);
 
-        uint256 permanentYearnLUSD_3 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentLUSD_3 = chickenBondManager.getPermanentLUSD();
 
         // B chickens in
         vm.startPrank(B);
@@ -1264,13 +1248,13 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent LUSD bucket has increased
-        uint256 permanentYearnLUSD_4 = chickenBondManager.getPermanentLUSDInSP();
-        assertGt(permanentYearnLUSD_4, permanentYearnLUSD_3);
+        uint256 permanentLUSD_4 = chickenBondManager.getPermanentLUSD();
+        assertGt(permanentLUSD_4, permanentLUSD_3);
 
         // fast forward time
         vm.warp(block.timestamp + 7 days);
 
-        uint256 permanentYearnLUSD_5 = chickenBondManager.getPermanentLUSDInSP();
+        uint256 permanentLUSD_5 = chickenBondManager.getPermanentLUSD();
 
         // C chickens in
         vm.startPrank(C);
@@ -1278,65 +1262,8 @@ contract ChickenBondManagerTest is BaseTest {
         vm.stopPrank();
 
         // Check permanent LUSD bucket has increased
-        uint256 permanentYearnLUSD_6 = chickenBondManager.getPermanentLUSDInSP();
-        assertGt(permanentYearnLUSD_6, permanentYearnLUSD_5);
-    }
-
-    function testChickenInDoesNotChangePermanentCurveBucket() public {
-        // A, B create bond
-        uint256 bondAmount = 10e18;
-
-        createBondForUser(A, bondAmount);
-        uint256 A_bondID = bondNFT.totalMinted();
-
-        // fast forward time
-        vm.warp(block.timestamp + 7 days);
-
-        createBondForUser(B, bondAmount);
-        uint256 B_bondID = bondNFT.totalMinted();
-
-        uint256 permanentCurveYTokens_1 = chickenBondManager.getPermanentLUSDInCurve();
-
-        // A chickens in
-        vm.startPrank(A);
-        chickenBondManager.chickenIn(A_bondID);
-        vm.stopPrank();
-
-        // Check permanent Curve bucket has not changed
-        uint256 permanentCurveYTokens_2 = chickenBondManager.getPermanentLUSDInCurve();
-        assertEq(permanentCurveYTokens_2, permanentCurveYTokens_1);
-
-        // C creates bond
-        createBondForUser(C, bondAmount);
-        uint256 C_bondID = bondNFT.totalMinted();
-
-        // fast forward time
-        vm.warp(block.timestamp + 7 days);
-
-        uint256 permanentCurveYTokens_3 = chickenBondManager.getPermanentLUSDInCurve();
-
-        // B chickens in
-        vm.startPrank(B);
-        chickenBondManager.chickenIn(B_bondID);
-        vm.stopPrank();
-
-        // Check permanent Curve bucket has not changed
-        uint256 permanentCurveYTokens_4 = chickenBondManager.getPermanentLUSDInCurve();
-        assertEq(permanentCurveYTokens_4, permanentCurveYTokens_3);
-
-        // fast forward time
-        vm.warp(block.timestamp + 7 days);
-
-        uint256 permanentCurveYTokens_5 = chickenBondManager.getPermanentLUSDInCurve();
-
-        // C chickens in
-        vm.startPrank(C);
-        chickenBondManager.chickenIn(C_bondID);
-        vm.stopPrank();
-
-        // Check permanent Curve bucket has not changed
-        uint256 permanentCurveYTokens_6 = chickenBondManager.getPermanentLUSDInCurve();
-        assertEq(permanentCurveYTokens_6, permanentCurveYTokens_5);
+        uint256 permanentLUSD_6 = chickenBondManager.getPermanentLUSD();
+        assertGt(permanentLUSD_6, permanentLUSD_5);
     }
 
     // --- redemption tests ---
@@ -1555,17 +1482,15 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     function testRedeemDecreasesAcquiredLUSDInSPByCorrectFraction(uint256 redemptionFraction) public {
-        vm.assume(redemptionFraction <= 1e18 && redemptionFraction >= 1e9);
-        // uint256 redemptionFraction = 5e17; // 50%
+        redemptionFraction = coerce(redemptionFraction, 1e9, 1e18);
+
         // 1-r.  Fee goes to permanent
         uint256 expectedFractionRemainingAfterRedemption = 1e18 - redemptionFraction;
-        // Ensure the expected remaining is between 0 and 100%
-        assertTrue(expectedFractionRemainingAfterRedemption > 0 && expectedFractionRemainingAfterRedemption < 1e18);
 
         // A creates bond
         uint256 bondAmount = 10e18;
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
 
         // bootstrap period passes
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
@@ -1599,10 +1524,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B redeems some bLUSD
         uint256 bLUSDToRedeem = bLUSDBalance * redemptionFraction / 1e18;
-
         assertGt(bLUSDToRedeem, 0);
 
-        assertTrue(bLUSDToRedeem != 0);
         vm.startPrank(B);
 
         assertEq(bLUSDToRedeem, bLUSDToken.totalSupply() * redemptionFraction / 1e18);
@@ -1815,44 +1738,6 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Check that CBM was able to withdraw almost exactly its initial deposit
         assertApproximatelyEqual(_depositAmount, lusdToken.balanceOf(address(chickenBondManager)), 1e3);
-    }
-
-    // --- Curve getter tests ---
-
-    function testCurveCalcWithdrawOneCoinSucceeds(uint256 _LUSD3CRVAmount) public {
-        uint256 totalLPTokens = curvePool.totalSupply();
-        // Total Supply:  92600301889123371838218704
-        // Failing input: 926003018891233718382188
-
-        // Seems to revert at >=1% of totalLPTokens. TODO: Why? Does Curve somehow limit withdrawals?
-
-        assertGt(totalLPTokens, 0);
-
-        vm.assume(_LUSD3CRVAmount <= totalLPTokens / 100 && _LUSD3CRVAmount > 0);
-
-        uint256 withdrawableLUSD = curvePool.calc_withdraw_one_coin(_LUSD3CRVAmount * 100, 0);
-
-        assertGt(withdrawableLUSD, 0);
-
-    }
-
-    function testCurveCalcTokenAmountWithdrawalSucceeds(uint256 _lusdAmount) public {
-        uint256 totalLUSDinCurve = curvePool.balances(0);
-        vm.assume(_lusdAmount < totalLUSDinCurve && _lusdAmount > 1e18);
-
-        bool isDeposit = false;
-        uint256 lpTokensToBurn = curvePool.calc_token_amount([_lusdAmount, 0], isDeposit);
-
-        assertGt(lpTokensToBurn, 0);
-    }
-
-    function testCurveCalcTokenAmountDepositSucceeds(uint256 _lusdAmount) public {
-        vm.assume(_lusdAmount <= 1e27 && _lusdAmount > 1e18);
-
-        bool isDeposit = true;
-        uint256 lpTokensReceived = curvePool.calc_token_amount([_lusdAmount, 0], isDeposit);
-
-        assertGt(lpTokensReceived, 0);
     }
 
     // --- Controller tests ---
