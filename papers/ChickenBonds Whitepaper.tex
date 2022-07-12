@@ -375,8 +375,12 @@ T_{opt} = \frac{\alpha W\left(\frac{e}{\lambda}\right)}{1 - W\left(\frac{e}{\lam
 
 Note that as $\lambda > 1$, $\frac{e}{\lambda} < e$, so $0 < W(\frac{e}{\lambda}) < 1$ and therefore $T_{opt} > 0$, and that $T_{opt}(\lambda)$ is a monotonic decreasing function, with $\lim_{\lambda \rightarrow 1}T_{opt}(\lambda) = +\infty$.
 
+To prove that rebonding time is greater than break even time, we need to prove that:
+\[
+W\left(\frac{e}{\lambda}\right) > \frac{1}{\lambda}
+\]
 
-TODO: Prove that it’s greater than break even time?
+which can be done using the property $e^{W(x)} = \frac{x}{W(x)}$ and assuming $\lambda \ge 1$.
 
 \paragraph{With rebonding and chicken-in fee}
 Let’s call $\tau$ the fee to be used as rewards for bTKN/TKN DEX pair.
@@ -414,8 +418,6 @@ T_{opt} = \frac{\alpha W\left(\frac{e}{(1-\tau)\lambda}\right)}{1 - W\left(\frac
 \end{equation}
 
 \subsubsection{Approximating the optimal rebonding time}
-TODO: give some intuition why this is a good approximation. Is it because the APR is similar to the ARR for the considered time period? And apparently, maximizing the ARR yields the same result as the exact formula, as numerically verified by Dani.
-
 As it turns out that the optimal rebonding time has no algebraic solution, we can also try to approximate it by finding the point in time that maximizes the APR.
 
 We first define the \textit{absolute premium} $\rho$ as the difference between the market (or fair) price and the redemption price, i.e.: $\rho = p_f - p_r$.
@@ -502,9 +504,7 @@ a(t) = \frac{s(t) \cdot p_f - b}{b} \frac{365}{t} = \frac{\frac{b(1-\tau)}{p_r} 
 a(t) = \left((1-\tau)\frac{p_f}{p_r} \frac{t}{t+\alpha} - 1\right) \frac{365}{t}
 \end{equation}
 
-we derive and equal to zero:
-
-(TODO: maybe we can skip the steps here, as they are quite repetitive)
+like before, we derive and equal to zero:
 
 \[
 a'(t) = (1-\tau)\frac{p_f}{p_r} \frac{t + \alpha - t}{(t+\alpha)^2} \frac{365}{t} - \left((1-\tau)\frac{p_f}{p_r} \frac{t}{t+\alpha} - 1\right) \frac{365}{t^2}
@@ -1170,12 +1170,10 @@ p_f(t) = \frac{p_r(t + T)}{n(T)}
 Which in turn would impact the derivations above.
 
 \subsection{Self-reinforcing price impact}
-It follows from equations \ref{eq:opt-rebonding-premium} that a higher premium $\lambda$ leads to a shorter rebonding period $t$ (the same is true for \ref{eq:optimal_chicken_in_2}, and for the break even time in \ref{eq:break_even_2}). As a consequence, we can expect bonders to chicken in earlier, resulting in a higher fraction of the bond $b_p$ that transitions into the Permanent Bucket, which makes the premium more sustainable and may be favorable for the fair price of bTKN (TODO: depends on the formula).
+It follows from equations \ref{eq:opt-rebonding-premium} that a higher premium $\lambda$ leads to a shorter rebonding period $t$ (the same is true for \ref{eq:optimal_chicken_in_2}, and for the break even time in \ref{eq:break_even_2}). As a consequence, we can expect bonders to chicken in earlier, resulting in a higher fraction of the bond $b_p$ that transitions into the Permanent Bucket, which makes the premium more sustainable and may be favorable for the fair price of bTKN.
 
 Thus, if the market price of bTKN increases while everything else stays equal, the chances are higher that the price will continue to rise in the future thanks to earlier chicken ins. While this effect may not always be immediate, a large bTKN price hike could effectively push bonders beyond their optimal rebonding times.
 Assuming perfectly rational behavior, this would result in immediate chicken ins (and rebonding).
-
-TODO: check and update once we have a formula for the fair price
 
 \subsection{Self-stabilizing effect of redemptions and its help to regain traction}
   \label{sec:self-stabilizing}
