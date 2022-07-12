@@ -622,16 +622,16 @@ While the Treasury $R$ consists of the three buckets, its real value $R_v$ doesn
   R_v = q_r + c_d q_d + c_p q_p
 \end{equation}
 
-If we take the yield on $R$ into account and suppose that all bond holders who chicken in immediately sell the received bTKN for TKN and rebond them, we can express the absolute change of $R_v$ for a given time step $\Delta t$ (measured in days) as
+If we take the yield on $R$ into account and suppose that all bond holders who chicken in immediately sell the received bTKN for TKN and rebond them, we can express the absolute change of $R_v$ for a given time step $\Delta t$ as
 
 \begin{equation}
   \label{eq:treasury-growth}
   \Delta R_v = \frac{\Delta t}{365} r_m (q_r + q_p) + \frac{\Delta t}{365} r_d  q_d + c_p \Delta S p_f 
 \end{equation}
 
-with the last term expressing the value change due to the influx of new TKN from rebonding based on an exchange at the current fair price. Note that the rebonded capital needs to be corrected by $c_p$, whereas no correction factor is required for the yield as it becomes part of the Reserve Bucket (and given $r_r=r_m$).
+with the last term expressing the value change due to the influx of new TKN per timestep from rebonding based on an exchange at the current fair price. Note that the rebonded capital needs to be corrected by $c_p$, whereas no correction factor is required for the yield as it becomes part of the Reserve Bucket (and given $r_r=r_m$).
 
-$\Delta S$ stands for the change in bTKN supply $S$ per $\Delta t$, which will be rebonded in entirety according to our assumption. To express $\Delta S$, we consider $q_p$ as the representation of all bond holders in aggregate and assume for simplicity that bonding activity is distributed evenly over time with regard to volumes and bond creation times. We further suppose that the system configuration doesn't change substantially within one $T_{opt}$ period. Therefore, the fraction of the user base that chickens in (and rebonds) per time step is constant, corresponding to the total pending bonds divided by the length of the period, i.e. $\frac{q_p}{T_{opt}}$. 
+$\Delta S$ stands for the change in bTKN supply $S$ per $\Delta t$, which will be rebonded in entirety according to our assumption. To express $\Delta S$, we consider $q_p$ as the representation of all bond holders in aggregate and assume for simplicity that bonding activity is distributed evenly over time with regard to volumes and bond creation times, and that all initial bonding occurs within one $T_{opt}$ period.  We further suppose that the system configuration doesn't change substantially within one $T_{opt}$ period. Therefore, the fraction of the user base that chickens in (and rebonds) per time step is constant, corresponding to the total pending bonds divided by the length of the period, i.e. $\frac{q_p}{T_{opt}}$. 
 
 Given the optimal rebonding time $T_{opt}$, we can thus treat the chickened-in fraction $\frac{q_p}{T_{opt}}$ for a given time unit $\Delta t$ as if it was one aggregate bond which has accrued $s(T_{opt})$ bTKN upon chicken in. Thus, we have
 
@@ -725,7 +725,7 @@ One explanation for this seemingly contradictory result could be that while rebo
 \subsubsection{Recursive approach}
 Instead of assuming that the effects of chicken ins and rebonding cancel out as in the naive approach ($\ref{sec:naive_approach}$), we can try to estimate the future changes to the buckets based on historic user behavior or expected optimal behavior.
 
-For changes to the TKN quantities inside the buckets, we use the notation $\Delta q_{r}$, $\Delta q_{p}$ and $\Delta q_{d}$ and let $P_{In}$ denote the probability that a bond holder chickens in, and $P_{Out}$ that the holder chickens out.
+For changes to the TKN quantities inside the buckets, we use the notation $\Delta q_{r}$, $\Delta q_{p}$ and $\Delta q_{d}$ and let $P_{In}$ denote the probability that a given bond holder chickens in, and $P_{Out}$ that the holder chickens out.
 
 Assuming an infinitely fine-grained user base, we can apply these probabilities to all users in aggregate (i.e. the buckets as such), allowing us to model the overall flows between the buckets.
 
@@ -755,7 +755,7 @@ Assumptions:
 We further assume for simplicity that bonding activity is more or less evenly distributed over time and that bonders who got past their optimal rebonding time chicken in with $P_{In}=1$, while nobody chickens in before reaching that point.
 This way, we can split the group of bonders into two segments, the ones before and the ones after the rebonding
 
-We model $P_{In}$ by setting it to the inverse of the optimal rebonding time.
+We model $P_{In}$ for a randomly chosen bonder by setting it to the inverse of the optimal rebonding time.
 
 \begin{equation}
     P_{In} = \min \left(1,\frac{1}{T_{opt}}\right)
@@ -1157,6 +1157,17 @@ p_r(t) = (1+r_s)^t + \frac{{q_p}_0 r_s + {q_d}_0 r_d}{{q_r}_0} t
 \end{equation}
 
 In particular this shows that the assumption that redemption price follows a pure exponential $a^t$ is not correct.
+
+\paragraph{}
+
+Note: it may make more sense to correct the initial fair price expression such that it accounts for the natural rate by taking a "time value of money" discount approach, i.e:
+
+\begin{equation}
+  \label{eq:conservative-1}
+p_f(t) = \frac{p_r(t + T)}{n(T)}
+\end{equation}
+
+Which in turn would impact the derivations above.
 
 \subsection{Self-reinforcing price impact}
 It follows from equations \ref{eq:opt-rebonding-premium} that a higher premium $\lambda$ leads to a shorter rebonding period $t$ (the same is true for \ref{eq:optimal_chicken_in_2}, and for the break even time in \ref{eq:break_even_2}). As a consequence, we can expect bonders to chicken in earlier, resulting in a higher fraction of the bond $b_p$ that transitions into the Permanent Bucket, which makes the premium more sustainable and may be favorable for the fair price of bTKN (TODO: depends on the formula).
