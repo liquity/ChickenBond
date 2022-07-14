@@ -1644,15 +1644,14 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 initialCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
         uint256 _3crvAmount = 2e24; // 2M
         tip(address(_3crvToken), C, _3crvAmount);
-        assertGe(_3crvToken.balanceOf(C), _3crvAmount);
+        uint256 C_3crvBalanceBefore = _3crvToken.balanceOf(C);
         uint256 C_lusdBalanceBefore = lusdToken.balanceOf(C);
+        assertGe(C_3crvBalanceBefore, _3crvAmount);
         vm.startPrank(C);
         _3crvToken.approve(address(curvePool), _3crvAmount);
         curvePool.exchange(1, 0, _3crvAmount, 0, C);
         uint256 C_lusdBalanceAfter = lusdToken.balanceOf(C);
         vm.stopPrank();
-        // console.log(C_lusdBalanceBefore, "C_lusdBalanceBefore");
-        // console.log(C_lusdBalanceAfter, "C_lusdBalanceAfter");
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
 
@@ -1679,6 +1678,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
         uint256 finalCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation undo");
+        uint256 C_3crvBalanceFinal = _3crvToken.balanceOf(C);
 
         // Checks
         console.log("");
@@ -1687,6 +1687,10 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // console.log(B_curveBalance2, "Curve B_balance2");
         console.log(B_curveBalance1 - B_curveBalance0, "Curve B_balance1 diff");
         console.log(B_curveBalance2 - B_curveBalance1, "Curve B_balance2 diff");
+        console.log(C_lusdBalanceBefore, "Attacker LUSD Balance Before");
+        console.log(lusdToken.balanceOf(C), "Attacker LUSD Balance After");
+        console.log(C_3crvBalanceBefore, "Attacker 3crv Balance Before");
+        console.log(C_3crvBalanceFinal, "Attacker 3crv Balance After");
         assertRelativeError(
             initialCurvePrice,
             finalCurvePrice,
@@ -1698,6 +1702,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             B_curveBalance2 - B_curveBalance1,
             4e11, // 0.00004%
             "Obtained Curve should be approximately equal"
+        );
+        assertRelativeError(
+            C_3crvBalanceBefore,
+            C_3crvBalanceFinal,
+            1e15, // 0.1%
+            "Attacker should have the same amount of 3CRV"
         );
     }
 
@@ -1789,14 +1799,13 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 initialCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
         uint256 lusdAmount = 30e24; // 30M
         tip(address(lusdToken), C, lusdAmount);
+        uint256 C_lusdBalanceBefore = lusdToken.balanceOf(C);
         uint256 C_3crvBalanceBefore = _3crvToken.balanceOf(C);
         vm.startPrank(C);
         lusdToken.approve(address(curvePool), lusdAmount);
         curvePool.exchange(0, 1, lusdAmount, 0, C);
         vm.stopPrank();
         uint256 C_3crvBalanceAfter = _3crvToken.balanceOf(C);
-        //console.log(C_3crvBalanceBefore, "C_3crvBalanceBefore");
-        //console.log(C_3crvBalanceAfter, "C_3crvBalanceAfter");
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
 
@@ -1824,6 +1833,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
         uint256 finalCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation undo");
+        uint256 C_lusdBalanceFinal = lusdToken.balanceOf(C);
 
         // Checks
         console.log("");
@@ -1832,6 +1842,10 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // console.log(B_curveBalance2, "Curve B_balance2");
         console.log(B_curveBalance1 - B_curveBalance0, "Curve B_balance1 diff");
         console.log(B_curveBalance2 - B_curveBalance1, "Curve B_balance2 diff");
+        console.log(C_lusdBalanceBefore, "Attacker LUSD Balance Before");
+        console.log(C_lusdBalanceFinal, "Attacker LUSD Balance After");
+        console.log(C_3crvBalanceBefore, "Attacker 3crv Balance Before");
+        console.log(_3crvToken.balanceOf(C), "Attacker 3crv Balance After");
         assertRelativeError(
             initialCurvePrice,
             finalCurvePrice,
@@ -1843,6 +1857,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             B_curveBalance2 - B_curveBalance1,
             4e11, // 0.00004%
             "Obtained Curve should be approximately equal"
+        );
+        assertRelativeError(
+            C_lusdBalanceBefore,
+            C_lusdBalanceFinal,
+            1e15, // 0.1%
+            "Attacker should have the same amount of LUSD"
         );
     }
 }
