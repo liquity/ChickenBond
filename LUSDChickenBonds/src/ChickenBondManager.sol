@@ -849,7 +849,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // Bond getters
 
-    function getBondData(uint256 _bondID) external view returns (uint256, uint256) {
+    function getBondData(uint256 _bondID) external view returns (uint256 lusdAmount, uint256 startTime) {
         BondData memory bond = idToBondData[_bondID];
         return (bond.lusdAmount, bond.startTime);
     }
