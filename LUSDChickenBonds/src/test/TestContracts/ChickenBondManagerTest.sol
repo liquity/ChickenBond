@@ -10,7 +10,7 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     function testSetupSetsCMBAddressInBondNFT() public {
-        assertTrue(bondNFT.chickenBondManagerAddress() == address(chickenBondManager));
+        assertTrue(address(bondNFT.chickenBondManager()) == address(chickenBondManager));
     }
 
     function testYearnLUSDVaultHasInfiniteLUSDApproval() public {

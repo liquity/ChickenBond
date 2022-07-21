@@ -14,6 +14,7 @@ import "../../Interfaces/IBAMM.sol";
 import "../../Interfaces/ICurvePool.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "./TestUtils.sol";
 
 import "forge-std/console.sol";
 
@@ -50,6 +51,7 @@ contract BaseTest is DSTest, stdCheats {
     uint256 constant ACCRUAL_ADJUSTMENT_RATE = 1e16; // 1% (0.01)
     uint256 constant TARGET_AVERAGE_AGE_SECONDS = 30 days;
     uint256 constant ACCRUAL_ADJUSTMENT_PERIOD_SECONDS = 1 days;
+    uint256 constant BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS = 1 days;
 
     Vm vm = Vm(CHEATCODE_ADDRESS);
 
@@ -104,27 +106,6 @@ contract BaseTest is DSTest, stdCheats {
 
     function abs(uint256 x, uint256 y) public pure returns (uint256) {
         return x > y ? x - y : y - x;
-    }
-
-    // Coerce x into range [a, b] (inclusive) by modulo division.
-    // Preserves x if it's already within range.
-    function coerce(uint256 x, uint256 a, uint256 b) public pure returns (uint256) {
-        (uint256 min, uint256 max) = a < b ? (a, b) : (b, a);
-
-        if (min <= x && x <= max) {
-            return x;
-        }
-
-        // The only case in which this would overflow is min = 0, max = 2**256-1;
-        // however in that case we would have returned by now (see above).
-        uint256 modulus = max - min + 1;
-
-        if (x >= min) {
-            return min + (x - min) % modulus;
-        } else {
-            // x < min, therefore x < max, also
-            return max - (max - x) % modulus;
-        }
     }
 
     // --- Helpers ---

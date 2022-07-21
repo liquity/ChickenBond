@@ -3,27 +3,30 @@ pragma solidity ^0.8.10;
 
 import "openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./Interfaces/IChickenBondManager.sol";
 import "./Interfaces/IBondNFTArtwork.sol";
 
 contract BondNFT is ERC721Enumerable, Ownable {
+    IChickenBondManager public chickenBondManager;
     IBondNFTArtwork public artwork;
 
-    address public chickenBondManagerAddress;
+    uint256 immutable public transferLockoutPeriodSeconds;
 
-    constructor(string memory name_, string memory symbol_, address _initialArtworkAddress) ERC721(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_, address _initialArtworkAddress, uint256 _transferLockoutPeriodSeconds) ERC721(name_, symbol_) {
         artwork = IBondNFTArtwork(_initialArtworkAddress);
+        transferLockoutPeriodSeconds = _transferLockoutPeriodSeconds;
     }
 
     function setAddresses(address _chickenBondManagerAddress) external onlyOwner {
         require(_chickenBondManagerAddress != address(0), "BondNFT: _chickenBondManagerAddress must be non-zero");
-        require(chickenBondManagerAddress == address(0), "BondNFT: setAddresses() can only be called once");
+        require(address(chickenBondManager) == address(0), "BondNFT: setAddresses() can only be called once");
 
-        chickenBondManagerAddress = _chickenBondManagerAddress;
+        chickenBondManager = IChickenBondManager(_chickenBondManagerAddress);
     }
 
     function setArtworkAddress(address _artworkAddress) external onlyOwner {
         // Make sure addresses have been set, as we'll be renouncing ownership
-        require(chickenBondManagerAddress != address(0), "BondNFT: setAddresses() must be called first");
+        require(address(chickenBondManager) != address(0), "BondNFT: setAddresses() must be called first");
 
         artwork = IBondNFTArtwork(_artworkAddress);
         renounceOwnership();
@@ -39,7 +42,7 @@ contract BondNFT is ERC721Enumerable, Ownable {
     }
 
     function requireCallerIsChickenBondsManager() internal view {
-        require(msg.sender == chickenBondManagerAddress, "BondNFT: Caller must be ChickenBondManager");
+        require(msg.sender == address(chickenBondManager), "BondNFT: Caller must be ChickenBondManager");
     }
 
     function tokenURI(uint256 _tokenID) public view virtual override returns (string memory) {
@@ -51,5 +54,20 @@ contract BondNFT is ERC721Enumerable, Ownable {
     // Tokens are never burnt, therefore total minted equals the total supply.
     function totalMinted() external view returns (uint256) {
         return totalSupply();
+    }
+
+    // Prevent transfers for a period of time after chickening in or out
+    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenID) internal virtual override {
+        if (_from != address(0)) {
+            (,, uint256 endTime, uint8 status) = chickenBondManager.getBondData(_tokenID);
+
+            require(
+                status == uint8(IChickenBondManager.BondStatus.active) ||
+                block.timestamp >= endTime + transferLockoutPeriodSeconds,
+                "BondNFT: cannot transfer during lockout period"
+            );
+        }
+
+        super._beforeTokenTransfer(_from, _to, _tokenID);
     }
 }
