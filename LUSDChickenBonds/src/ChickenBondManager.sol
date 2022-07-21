@@ -67,7 +67,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     uint256 public totalWeightedStartTimes; // Sum of `lusdAmount * startTime` for all outstanding bonds (used to tell weighted average bond age)
     uint256 public lastRedemptionTime; // The timestamp of the latest redemption
     uint256 public baseRedemptionRate; // The latest base redemption rate
-    mapping (uint256 => BondData) public idToBondData;
+    mapping (uint256 => BondData) private idToBondData;
 
     /* migration: flag which determines whether the system is in migration mode.
 
@@ -849,11 +849,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // Bond getters
 
-    function getBondData(uint256 _bondID) external view returns (uint256, uint256) {
-        return (idToBondData[_bondID].lusdAmount, idToBondData[_bondID].startTime);
-    }
-
-    function getIdToBondData(uint256 _bondID) external view returns (uint256, uint256) {
+    function getBondData(uint256 _bondID) external view returns (uint256 lusdAmount, uint256 startTime) {
         BondData memory bond = idToBondData[_bondID];
         return (bond.lusdAmount, bond.startTime);
     }
