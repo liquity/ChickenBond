@@ -10,6 +10,7 @@ export interface LUSDChickenBondConfig {
   chickenInAMMTax: BigNumber;
   curveDepositDydxThreshold: BigNumber;
   curveWithdrawalDxdyThreshold: BigNumber;
+  bondNFTTransferLockoutPeriodSeconds: BigNumber;
   yearnGovernanceAddress: string;
 }
 
@@ -22,6 +23,7 @@ export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   chickenInAMMTax: BigNumber.from("10000000000000000"),
   curveDepositDydxThreshold: BigNumber.from("1000000000000000000"),
   curveWithdrawalDxdyThreshold: BigNumber.from("10000000000000000"),
+  bondNFTTransferLockoutPeriodSeconds: BigNumber.from("86400"),
   yearnGovernanceAddress: AddressZero
 };
 
