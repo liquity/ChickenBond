@@ -62,7 +62,7 @@ contract DevTestSetup is BaseTest {
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract
-        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
+        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0));
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract
         curveLiquidityGauge = ICurveLiquidityGaugeV4(address(new MockCurveLiquidityGaugeV4()));
