@@ -25,28 +25,27 @@ contract ChickenBondManagerTest is BaseTest {
     // --- createBond tests ---
 
     function testNFTEnumerationWorks() public {
-        uint256 A_bondId_1 = createBondForUser(A,  1e18);
-        createBondForUser(A,  1e18);
-        createBondForUser(B,  1e18);
-        createBondForUser(B,  1e18);
+        createBondForUser(A, 1e18);
+        createBondForUser(A, 1e18);
+        createBondForUser(B, 1e18);
+        createBondForUser(B, 1e18);
+
         assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 1);
         assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 2);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 0), 3);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 1), 4);
 
-        // A chickens out the first bond, so it’s removed
-        vm.startPrank(A);
-        chickenBondManager.chickenOut(A_bondId_1, 0);
-        vm.stopPrank();
+        createBondForUser(B, 1e18);
+        createBondForUser(A, 1e18);
 
-        createBondForUser(B,  1e18);
-        createBondForUser(A,  1e18);
-        assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 2);
-        assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 6);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 1);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 2);
+        assertEq(bondNFT.tokenOfOwnerByIndex(A, 2), 6);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 0), 3);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 1), 4);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 2), 5);
     }
+
     function testFirstCreateBondDoesNotChangeBackingRatio() public {
         // Get initial backing ratio
         uint256 backingRatioBefore = chickenBondManager.calcSystemBackingRatio();
@@ -120,7 +119,7 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(C,  25e18);
 
         uint256 bondID_C = bondNFT.totalMinted();
-        (, uint256 bondStartTime_C) = chickenBondManager.getBondData(bondID_C);
+        (, uint256 bondStartTime_C,,) = chickenBondManager.getBondData(bondID_C);
 
         // assertEq(bondedLUSD_C, 25e18);
         assertEq(bondStartTime_C, block.timestamp);
@@ -149,7 +148,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 600);
 
         uint256 bondID_C = bondNFT.totalMinted();
-        (uint256 bondedLUSD_C, uint256 bondStartTime_C) = chickenBondManager.getBondData(bondID_C);
+        (uint256 bondedLUSD_C, uint256 bondStartTime_C,,) = chickenBondManager.getBondData(bondID_C);
         assertEq(bondedLUSD_C, 25e18);
         assertEq(bondStartTime_C, block.timestamp - 600);
     }
@@ -200,9 +199,10 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(A, 10e18);
 
         // Confirm bond data for bond #2 is 0
-        (uint256 B_bondedLUSD, uint256 B_bondStartTime) = chickenBondManager.getBondData(2);
+        (uint256 B_bondedLUSD, uint256 B_bondStartTime,, uint8 B_bondStatus) = chickenBondManager.getBondData(2);
         assertEq(B_bondedLUSD, 0);
         assertEq(B_bondStartTime, 0);
+        assertEq(B_bondStatus, uint8(IChickenBondManager.BondStatus.nonExistent));
 
         uint256 currentTime = block.timestamp;
 
@@ -210,20 +210,21 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(B, 10e18);
 
         // Check bonded amount and bond start time are now recorded for B's bond
-        (B_bondedLUSD, B_bondStartTime) = chickenBondManager.getBondData(2);
+        (B_bondedLUSD, B_bondStartTime,, B_bondStatus) = chickenBondManager.getBondData(2);
         assertEq(B_bondedLUSD, 10e18);
         assertEq(B_bondStartTime, currentTime);
+        assertEq(B_bondStatus, uint8(IChickenBondManager.BondStatus.active));
     }
 
     function testFirstCreateBondIncreasesTheBondNFTSupplyByOne() public {
         // Get NFT token supply before
-        uint256 tokenSupplyBefore = bondNFT.tokenSupply();
+        uint256 tokenSupplyBefore = bondNFT.totalSupply();
 
         // A creates bond
         createBondForUser(A, 10e18);
 
         // Check NFT token supply after has increased by 1
-        uint256 tokenSupplyAfter = bondNFT.tokenSupply();
+        uint256 tokenSupplyAfter = bondNFT.totalSupply();
         assertEq(tokenSupplyBefore + 1, tokenSupplyAfter);
     }
 
@@ -244,13 +245,13 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(A, 10e18);
 
         // Get NFT token supply before
-        uint256 tokenSupplyBefore = bondNFT.tokenSupply();
+        uint256 tokenSupplyBefore = bondNFT.totalSupply();
 
         // B creates bond
         createBondForUser(B,  10e18);
 
         // Check NFT token supply after has increased by 1
-        uint256 tokenSupplyAfter = bondNFT.tokenSupply();
+        uint256 tokenSupplyAfter = bondNFT.totalSupply();
         assertEq(tokenSupplyBefore + 1, tokenSupplyAfter);
     }
 
@@ -393,35 +394,6 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(totalPendingLUSDAfter, totalPendingLUSDBefore - bondAmount);
     }
 
-    function testChickenOutDeletesBondData() public {
-        // A creates bond
-        uint256 bondAmount = 10e18;
-
-        createBondForUser(A, bondAmount);
-
-        uint256 currentTime = block.timestamp;
-
-        // B creates bond
-        createBondForUser(B, bondAmount);
-
-        uint256 B_bondID = bondNFT.totalMinted();
-
-        // Confirm B has correct bond data
-        (uint256 B_bondedLUSD, uint256 B_bondStartTime) = chickenBondManager.getBondData(B_bondID);
-        assertEq(B_bondedLUSD, bondAmount);
-        assertEq(B_bondStartTime, currentTime);
-
-        // B chickens out
-        vm.startPrank(B);
-        chickenBondManager.chickenOut(B_bondID, 0);
-        vm.stopPrank();
-
-        // Confirm B's bond data is now zero'd
-        (B_bondedLUSD, B_bondStartTime) = chickenBondManager.getBondData(B_bondID);
-        assertEq(B_bondedLUSD, 0);
-        assertEq(B_bondStartTime, 0);
-    }
-
     function testChickenOutTransferbLUSDToBonder() public {
         // A, B create bond
         uint256 bondAmount = 171e17;
@@ -442,29 +414,6 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 B_LUSDBalanceAfter = lusdToken.balanceOf(B);
         assertApproximatelyEqual(B_LUSDBalanceAfter, B_LUSDBalanceBefore + bondAmount, 1e3);
-    }
-
-    function testChickenOutReducesBondNFTSupplyByOne() public {
-        // A, B create bond
-        uint256 bondAmount = 10e18;
-
-        createBondForUser(A, bondAmount);
-
-        createBondForUser(B, bondAmount);
-
-        // Since B was the last bonder, his bond ID is the current total minted
-        uint256 B_bondID = bondNFT.totalMinted();
-        uint256 nftTokenSupplyBefore = bondNFT.tokenSupply();
-
-        // B chickens out
-        vm.startPrank(B);
-        chickenBondManager.chickenOut(B_bondID, 0);
-        vm.stopPrank();
-
-        uint256 nftTokenSupplyAfter = bondNFT.tokenSupply();
-
-        // Check NFT token supply has decreased by 1
-        assertEq(nftTokenSupplyAfter, nftTokenSupplyBefore - 1);
     }
 
     function testChickenOutDoesNotChangeBondNFTTotalMinted() public {
@@ -490,40 +439,17 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(nftTotalMintedAfter, nftTotalMintedBefore);
     }
 
-    function testChickenOutRemovesOwnerOfBondNFT() public {
+    function testChickenOutDoesNotBurnBondNFT() public {
         // A, B create bond
         uint256 bondAmount = 10e18;
 
         createBondForUser(A, bondAmount);
 
-        createBondForUser(B, bondAmount);
+        uint256 B_bondID = createBondForUser(B, bondAmount);
 
-        uint256 B_bondID = bondNFT.totalMinted();
-
-        // Confirm B owns bond #2
-        assertEq(B_bondID, 2);
-        address ownerOfBondID2 = bondNFT.ownerOf(B_bondID);
-        assertEq(ownerOfBondID2, B);
-
-        // B chickens out
-        vm.startPrank(B);
-        chickenBondManager.chickenOut(B_bondID, 0);
-        vm.stopPrank();
-
-        // Expect ownerOF bond ID #2 call to revert due to non-existent owner
-        vm.expectRevert("ERC721: owner query for nonexistent token");
-        ownerOfBondID2 = bondNFT.ownerOf(B_bondID);
-    }
-
-    function testChickenOutDecreasesBonderNFTBalanceByOne() public {
-        // A, B create bond
-        uint256 bondAmount = 37432e15;
-
-        createBondForUser(A, bondAmount);
-
-        createBondForUser(B, bondAmount);
-
-        uint256 B_bondID = bondNFT.totalMinted();
+        // Get NFT total supply before
+        uint256 totalSupplyBefore = bondNFT.totalSupply();
+        assertEq(totalSupplyBefore, 2);
 
         // Confirm B's NFT balance is 1
         uint256 B_NFTBalanceBefore = bondNFT.balanceOf(B);
@@ -534,10 +460,55 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenOut(B_bondID, 0);
         vm.stopPrank();
 
-        uint256 B_NFTBalanceAfter = bondNFT.balanceOf(B);
+        // Check total supply hasn't decreased
+        uint256 totalSupplyAfter = bondNFT.totalSupply();
+        assertEq(totalSupplyAfter, totalSupplyBefore);
 
-        // Check B's NFT balance has decreased by 1
-        assertEq(B_NFTBalanceAfter, B_NFTBalanceBefore - 1);
+        // Check B's NFT balance hasn't decreased
+        uint256 B_NFTBalanceAfter = bondNFT.balanceOf(B);
+        assertEq(B_NFTBalanceAfter, B_NFTBalanceBefore);
+
+        // Check B's still owner of the NFT
+        address owner = bondNFT.ownerOf(B_bondID);
+        assertEq(owner, B);
+    }
+
+    function testChickenOutUpdatesBondData() public {
+        uint256 bondAmount = 100e18;
+        uint256 expectedStartTime = block.timestamp;
+        uint256 bondID = createBondForUser(A, bondAmount);
+
+        (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
+        assertEq(bdLUSDAmount, bondAmount);
+        assertEq(bdStartTime, expectedStartTime);
+        assertEq(bdEndTime, 0);
+        assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.active));
+
+        vm.warp(block.timestamp + 600);
+        chickenOutForUser(A, bondID);
+
+        (bdLUSDAmount, bdStartTime, bdEndTime, bdStatus) = chickenBondManager.getBondData(bondID);
+        assertEq(bdLUSDAmount, bondAmount);
+        assertEq(bdStartTime, expectedStartTime);
+        assertEq(bdEndTime, block.timestamp);
+        assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedOut));
+    }
+
+    function testChickenInRevertsAfterChickenOut() public {
+        uint256 bondID = createBondForUser(A, 100e18);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        chickenOutForUser(A, bondID);
+
+        vm.expectRevert("CBM: Bond must be active");
+        chickenInForUser(A, bondID);
+    }
+
+    function testChickenOutRevertsAfterChickenOut() public {
+        uint256 bondID = createBondForUser(A, 100e18);
+        chickenOutForUser(A, bondID);
+
+        vm.expectRevert("CBM: Bond must be active");
+        chickenOutForUser(A, bondID);
     }
 
     function testChickenOutRevertsWhenCallerIsNotBonder() public {
@@ -881,40 +852,6 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(A_bondID);
     }
 
-    function testChickenInDeletesBondData() public {
-        // A creates bond
-        uint256 bondAmount = 10e18;
-
-        createBondForUser(A, bondAmount);
-
-        tip(address(bLUSDToken), B, 5e18);
-
-        uint256 currentTime = block.timestamp;
-
-       // B creates bond
-        createBondForUser(B, bondAmount);
-
-        uint256 B_bondID = bondNFT.totalMinted();
-
-        // Confirm B has correct bond data
-        (uint256 B_bondedLUSD, uint256 B_bondStartTime) = chickenBondManager.getBondData(B_bondID);
-        assertEq(B_bondedLUSD, bondAmount);
-        assertEq(B_bondStartTime, currentTime);
-
-        // bootstrap period passes
-        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
-
-        // B chickens in
-        vm.startPrank(B);
-        chickenBondManager.chickenIn(B_bondID);
-        vm.stopPrank();
-
-        // Confirm B's bond data is now zero'd
-        (B_bondedLUSD, B_bondStartTime) = chickenBondManager.getBondData(B_bondID);
-        assertEq(B_bondedLUSD, 0);
-        assertEq(B_bondStartTime, 0);
-    }
-
     function testChickenInTransfersAccruedBLUSDToBonder() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -1023,30 +960,6 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(totalAcquiredLUSDAfter, totalAcquiredLUSDBefore);
     }
 
-    function testChickenInReducesBondNFTSupplyByOne() public {
-        // A creates bond
-        uint256 bondAmount = 10e18;
-
-        createBondForUser(A, bondAmount);
-
-        // B creates bond
-       createBondForUser(B, bondAmount);
-
-        uint256 B_bondID = bondNFT.totalMinted();
-
-        // bootstrap period passes
-        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
-
-        uint256 nftTokenSupplyBefore = bondNFT.tokenSupply();
-
-        // B chickens in
-        vm.startPrank(B);
-        chickenBondManager.chickenIn(B_bondID);
-
-        uint256 nftTokenSupplyAfter = bondNFT.tokenSupply();
-        assertEq(nftTokenSupplyAfter, nftTokenSupplyBefore - 1);
-    }
-
     function testChickenInDoesNotChangeTotalMinted() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -1071,19 +984,20 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(nftTotalMintedAfter, nftTotalMintedBefore);
     }
 
-    function testChickenInDecreasesBonderNFTBalanceByOne() public {
+    function testChickenInDoesNotBurnBondNFT() public {
         // A creates bond
         uint256 bondAmount = 10e18;
 
         createBondForUser(A, bondAmount);
 
         // B creates bond
-       createBondForUser(B, bondAmount);
-
-        uint256 B_bondID = bondNFT.totalMinted();
+        uint256 B_bondID = createBondForUser(B, bondAmount);
 
         // bootstrap period passes
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+
+        // Get NFT total supply before
+        uint256 totalSupplyBefore = bondNFT.totalSupply();
 
         // Get B's NFT balance before
         uint256 B_bondNFTBalanceBefore = bondNFT.balanceOf(B);
@@ -1092,36 +1006,56 @@ contract ChickenBondManagerTest is BaseTest {
         vm.startPrank(B);
         chickenBondManager.chickenIn(B_bondID);
 
-        // Check B's NFT balance decreases by 1
+        // Check total supply doesn't change
+        uint256 totalSupplyAfter = bondNFT.totalSupply();
+        assertEq(totalSupplyAfter, totalSupplyBefore);
+
+        // Check B's NFT balance doesn't change
         uint256 B_bondNFTBalanceAfter = bondNFT.balanceOf(B);
-        assertEq(B_bondNFTBalanceAfter, B_bondNFTBalanceBefore - 1);
+        assertEq(B_bondNFTBalanceAfter, B_bondNFTBalanceBefore);
+
+        // Check B's still owner of the NFT
+        address owner = bondNFT.ownerOf(B_bondID);
+        assertEq(owner, B);
     }
 
-    function testChickenInRemovesOwnerOfBondNFT() public {
-        // A creates bond
-        uint256 bondAmount = 10e18;
+    function testChickenInUpdatesBondData() public {
+        uint256 bondAmount = 100e18;
+        uint256 expectedStartTime = block.timestamp;
+        uint256 bondID = createBondForUser(A, bondAmount);
 
-        createBondForUser(A, bondAmount);
+        (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
+        assertEq(bdLUSDAmount, bondAmount);
+        assertEq(bdStartTime, expectedStartTime);
+        assertEq(bdEndTime, 0);
+        assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.active));
 
-        // B creates bond
-        createBondForUser(B, bondAmount);
-
-        uint256 B_bondID = bondNFT.totalMinted();
-
-        // bootstrap period passes
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        chickenInForUser(A, bondID);
 
-        // Confirm bond owner is B
-        address bondOwnerBefore = bondNFT.ownerOf(B_bondID);
-        assertEq(bondOwnerBefore, B);
+        (bdLUSDAmount, bdStartTime, bdEndTime, bdStatus) = chickenBondManager.getBondData(bondID);
+        assertEq(bdLUSDAmount, bondAmount);
+        assertEq(bdStartTime, expectedStartTime);
+        assertEq(bdEndTime, block.timestamp);
+        assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedIn));
+    }
 
-        // B chickens in
-        vm.startPrank(B);
-        chickenBondManager.chickenIn(B_bondID);
+    function testChickenInRevertsAfterChickenIn() public {
+        uint256 bondID = createBondForUser(A, 100e18);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        chickenInForUser(A, bondID);
 
-        // Expert revert when we check for the owner of a non-existent token
-        vm.expectRevert("ERC721: owner query for nonexistent token");
-        bondNFT.ownerOf(B_bondID);
+        vm.expectRevert("CBM: Bond must be active");
+        chickenInForUser(A, bondID);
+    }
+
+    function testChickenOutRevertsAfterChickenIn() public {
+        uint256 bondID = createBondForUser(A, 100e18);
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        chickenInForUser(A, bondID);
+
+        vm.expectRevert("CBM: Bond must be active");
+        chickenOutForUser(A, bondID);
     }
 
     function testChickenInChargesChickenInFee() public {

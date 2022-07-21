@@ -9,8 +9,6 @@ contract BondNFT is ERC721Enumerable, Ownable {
     IBondNFTArtwork public artwork;
 
     address public chickenBondManagerAddress;
-    uint256 public tokenSupply; // Total outstanding supply - increases by 1 upon mint, decreases by 1 upon burn.
-    uint256 public totalMinted; // Tracks the total ever minted. Used for assigning a unique ID to each new mint.
 
     constructor(string memory name_, string memory symbol_, address _initialArtworkAddress) ERC721(name_, symbol_) {
         artwork = IBondNFTArtwork(_initialArtworkAddress);
@@ -33,21 +31,12 @@ contract BondNFT is ERC721Enumerable, Ownable {
 
     function mint(address _bonder) external returns (uint256) {
         requireCallerIsChickenBondsManager();
-        tokenSupply++;
-        totalMinted++;
 
-        uint256 tokenID = totalMinted;
+        uint256 tokenID = totalSupply() + 1;
         _mint(_bonder, tokenID);
-       
+
         return tokenID;
-    } 
-
-    function burn(uint256 _tokenID) external {
-        requireCallerIsChickenBondsManager();
-        tokenSupply--;
-
-        _burn(_tokenID);
-    } 
+    }
 
     function requireCallerIsChickenBondsManager() internal view {
         require(msg.sender == chickenBondManagerAddress, "BondNFT: Caller must be ChickenBondManager");
@@ -57,5 +46,10 @@ contract BondNFT is ERC721Enumerable, Ownable {
         require(_exists(_tokenID), "BondNFT: URI query for nonexistent token");
 
         return address(artwork) != address(0) ? artwork.tokenURI(_tokenID) : "";
+    }
+
+    // Tokens are never burnt, therefore total minted equals the total supply.
+    function totalMinted() external view returns (uint256) {
+        return totalSupply();
     }
 }

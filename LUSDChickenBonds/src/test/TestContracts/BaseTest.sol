@@ -146,6 +146,16 @@ contract BaseTest is DSTest, stdCheats {
         vm.stopPrank();
     }
 
+    function chickenOutForUser(address _user, uint256 _bondID, uint256 _minLUSD) public {
+        vm.startPrank(_user);
+        chickenBondManager.chickenOut(_bondID, _minLUSD);
+        vm.stopPrank();
+    }
+
+    function chickenOutForUser(address _user, uint256 _bondID) public {
+        chickenOutForUser(_user, _bondID, 0);
+    }
+
     function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
         tip(address(lusdToken), _user, _lusdDeposit);
         assertGe(lusdToken.balanceOf(_user), _lusdDeposit);
