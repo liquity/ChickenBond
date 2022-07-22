@@ -41,17 +41,8 @@ contract DummyChickenBondManager {
         return bondNFT.mint(_bonder);
     }
 
-    function setBondData(
-        uint256 _bondID,
-        uint256 _lusdAmount,
-        uint256 _startTime,
-        uint256 _endTime,
-        uint8 _status
-    ) external {
-        getBondData[_bondID].lusdAmount = _lusdAmount;
-        getBondData[_bondID].startTime = _startTime;
-        getBondData[_bondID].endTime = _endTime;
-        getBondData[_bondID].status = _status;
+    function setBondData(uint256 _bondID, BondData calldata _bondData) external {
+        getBondData[_bondID] = _bondData;
     }
 }
 
@@ -137,14 +128,16 @@ contract BondNFTTest is DSTest {
         uint256 bondID = chickenBondManager.mint(address(this));
         chickenBondManager.setBondData(
             bondID,
-            1e18,
-            endTime, // startTime doesn't matter, just use same as endTime
-            endTime,
-            uint8(
-                inOut
-                    ? IChickenBondManager.BondStatus.chickenedIn
-                    : IChickenBondManager.BondStatus.chickenedOut
-            )
+            DummyChickenBondManager.BondData({
+                lusdAmount: 1e18, // doesn't matter
+                startTime: endTime, // doesn't matter, just use same as endTime
+                endTime: endTime,
+                status: uint8(
+                    inOut
+                        ? IChickenBondManager.BondStatus.chickenedIn
+                        : IChickenBondManager.BondStatus.chickenedOut
+                )
+            })
         );
 
         vm.warp(endTime + lessThanLockout);
