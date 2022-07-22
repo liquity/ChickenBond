@@ -155,8 +155,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check permament buckets are > 0
-        assertGt(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertGt(chickenBondManager.getPermanentLUSDInSP(), 0);
+        assertGt(chickenBondManager.getPermanentLUSD(), 0);
 
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
@@ -164,14 +163,13 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Check permament buckets are 0
-        assertEq(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertEq(chickenBondManager.getPermanentLUSDInSP(), 0);
+        assertEq(chickenBondManager.getPermanentLUSD(), 0);
     }
 
 
     // --- Post-migration logic ---
 
-    function testPostMigrationTotalPOLCanBeRedeemedExceptForFinalRedemptionFee() public {
+    function testPostMigrationTotalPOLCanBeRedeemed() public {
         // Create some bonds
         uint256 bondAmount = 100000e18;
         uint A_bondID = createBondForUser(A, bondAmount);
@@ -224,9 +222,6 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
         vm.stopPrank();
 
-        uint256 acquiredLUSDInCurveBeforeCRedeem = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 acquiredYTokensBeforeCRedeem = yearnCurveVault.balanceOf(address(chickenBondManager));
-
         // Final bLUSD holder C redeems
         vm.startPrank(C);
         chickenBondManager.redeem(bLUSDToken.balanceOf(C), 0);
@@ -247,8 +242,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint256 acquiredYTokensAfter = yearnCurveVault.balanceOf(address(chickenBondManager));
 
         // Check that C was able to redeem nearly all of the remaining acquired LUSD in Curve
-        assertApproximatelyEqual(acquiredLUSDInCurveAfter, 0, acquiredLUSDInCurveBeforeCRedeem / 1000, "ac. LUSD in curve after full redeem not ~= 0"); // Within 0.1% relative error
-        assertApproximatelyEqual(acquiredYTokensAfter, 0, acquiredYTokensBeforeCRedeem / 1000, "Curve yTokens after full redeem not ~= 0"); // Within 0.1% relative error
+        assertEq(acquiredLUSDInCurveAfter, 0, "ac. LUSD in curve after full redeem not 0");
+        assertEq(acquiredYTokensAfter, 0, "Curve yTokens after full redeem not 0");
 
         // Check only pending LUSD remains in the SP
         pendingLUSDInSP = chickenBondManager.getPendingLUSD();
@@ -256,7 +251,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         rawBalSP = lusdToken.balanceOf(address(bammSPVault));
         assertEq(rawBalSP, 0, "B.AMM LUSD balance should be zero");
         uint256 lusdInBAMMSPVault = chickenBondManager.getLUSDInBAMMSPVault();
-        assertApproximatelyEqual(pendingLUSDInSP, lusdInBAMMSPVault, lusdInBAMMSPVault / 1e9, "SP bal != pending after full redemption");  // Within 1e-9 relative error
+        assertEq(pendingLUSDInSP, lusdInBAMMSPVault, "SP bal != pending after full redemption");
     }
 
 
@@ -361,8 +356,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         shiftFractionFromSPToCurve(10);
 
         // Check permanent buckets are  > 0 before migration
-        assertGt(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertGt(chickenBondManager.getPermanentLUSDInSP(), 0);
+        assertGt(chickenBondManager.getPermanentLUSD(), 0);
 
         // Yearn activates migration
         vm.startPrank(yearnGovernanceAddress);
@@ -370,16 +364,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Check permanent buckets are now 0
-        assertEq(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertEq(chickenBondManager.getPermanentLUSDInSP(), 0);
+        assertEq(chickenBondManager.getPermanentLUSD(), 0);
 
         vm.warp(block.timestamp + 10 days);
         // C chickens in
         chickenInForUser(C, C_bondID);
 
         // Check permanent buckets are still 0
-        assertEq(chickenBondManager.getPermanentLUSDInCurve(), 0);
-        assertEq(chickenBondManager.getPermanentLUSDInSP(), 0);
+        assertEq(chickenBondManager.getPermanentLUSD(), 0);
     }
 
     // - post migration CI doesnt change SP POL

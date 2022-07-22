@@ -133,13 +133,12 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // bootstrap period passes
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
-        uint256 initialAcquiredLUSDInSP = chickenBondManager.getAcquiredLUSDInSP();
-        uint256 initialAcquiredLUSDInCurve = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 initialPermanentLUSDInSP = chickenBondManager.getPermanentLUSDInSP();
-        uint256 initialPermanentLUSDInCurve = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 initialAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
+        uint256 initialPermanentLUSD = chickenBondManager.getPermanentLUSD();
 
         // A redeems full
         uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
+        uint256 redemptionFee = initialAcquiredLUSD * (1e18 - redemptionFeePercentage) / 1e18;
         vm.startPrank(A);
         chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
         // A withdraws from Yearn to make math simpler, otherwise harvest would be shared
@@ -169,35 +168,20 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // Backing ratio
         assertEq(chickenBondManager.calcSystemBackingRatio(), 1e18, "Backing ratio should be 1");
 
-        // Acquired in SP vault
+        // Acquired
         assertApproximatelyEqual(
-            chickenBondManager.getAcquiredLUSDInSP(),
+            chickenBondManager.getTotalAcquiredLUSD(),
             accruedBLUSD, // backing ratio is 1, so this will match
             1,
-            "Acquired LUSD in SP mismatch"
-        );
-        // Permanent in SP vault
-        assertApproximatelyEqual(
-            chickenBondManager.getPermanentLUSDInSP(),
-            initialPermanentLUSDInSP + _getAmountMinusChickenInFee(bondAmount2) - accruedBLUSD + initialAcquiredLUSDInSP * (1e18 - redemptionFeePercentage) / 1e18,
-            1,
-            "Permanent LUSD in SP mismatch"
+            "Acquired LUSD mismatch"
         );
 
-        // Acquired in Curve vault
+        // Permanent
         assertApproximatelyEqual(
-            chickenBondManager.getAcquiredLUSDInCurve(),
-            0,
-            20,
-            "Acquired LUSD in Curve mismatch"
-        );
-
-        // Permanent in Curve vault
-        assertApproximatelyEqual(
-            chickenBondManager.getPermanentLUSDInCurve(),
-            initialPermanentLUSDInCurve + initialAcquiredLUSDInCurve * (1e18 - redemptionFeePercentage) / 1e18,
+            chickenBondManager.getPermanentLUSD(),
+            initialPermanentLUSD + redemptionFee + _getAmountMinusChickenInFee(bondAmount2) - accruedBLUSD,
             1,
-            "Permanent LUSD in Curve mismatch"
+            "Permanent LUSD mismatch"
         );
 
         // Balance in rewards contract
@@ -365,7 +349,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // simulate B.Protocol loss
         uint256 leftInBAMMSPVault = 10;
         //console.log(chickenBondManager.getAcquiredLUSDInSP(), "chickenBondManager.getAcquiredLUSDInSP()");
-        //console.log(chickenBondManager.getPermanentLUSDInSP(), "chickenBondManager.getPermanentLUSDInSP()");
+        //console.log(chickenBondManager.getPermanentLUSD(), "chickenBondManager.getPermanentLUSD()");
         vm.startPrank(address(bammSPVault));
         lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - leftInBAMMSPVault);
         vm.stopPrank();

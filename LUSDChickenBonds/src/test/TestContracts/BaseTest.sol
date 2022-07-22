@@ -204,8 +204,7 @@ contract BaseTest is DSTest, stdCheats {
         console.log(chickenBondManager.getPendingLUSD(), "totalPendingLUSD");
         console.log(chickenBondManager.getAcquiredLUSDInSP(), "Acquired LUSD in SP");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
-        console.log(chickenBondManager.getPermanentLUSDInSP(), "Permanent LUSD in SP");
-        console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
+        console.log(chickenBondManager.getPermanentLUSD(), "Permanent LUSD");
         console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
         console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");
     }
