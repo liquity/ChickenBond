@@ -1591,6 +1591,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // console.log(curvePool.totalSupply(), "curvePool.totalSupply()");
 
         uint256 B_curveBalance0 = curvePool.balanceOf(B);
+        uint256 curveAcquiredBucket2 = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 redemptionPrice2 = chickenBondManager.calcSystemBackingRatio();
 
         // B redeems bLUSD
         vm.startPrank(B);
@@ -1654,6 +1656,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        uint256 curveAcquiredBucket3 = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 redemptionPrice3 = chickenBondManager.calcSystemBackingRatio();
 
         // B redeems bLUSD
         vm.startPrank(B);
@@ -1698,10 +1702,24 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             "Price after attack should be close"
         );
         assertRelativeError(
-            B_curveBalance1,
+            B_curveBalance1 - B_curveBalance0,
             B_curveBalance2 - B_curveBalance1,
-            4e11, // 0.00004%
+            6e13, // 0.006%
             "Obtained Curve should be approximately equal"
+        );
+        // see: https://github.com/liquity/ChickenBond/pull/115#issuecomment-1184382984
+        //console.log(curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2, "curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2");
+        //console.log(redemptionPrice3 * 1e18 / redemptionPrice2, "redemptionPrice3 * 1e18 / redemptionPrice2");
+        assertApproximatelyEqual(
+            curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2,
+            redemptionPrice3 * 1e18 / redemptionPrice2,
+            10,
+            "Redepmtion price and acquired bucket should grow the same (thx to manipulation fees)"
+        );
+        assertLe(
+            (B_curveBalance2 - B_curveBalance1) * 1e18 / (B_curveBalance1 - B_curveBalance0),
+            redemptionPrice3 * 1e18 / redemptionPrice2,
+            "Increase in Curve balance should be less or equal than increase in redemption price"
         );
         assertRelativeError(
             C_3crvBalanceBefore,
@@ -1792,6 +1810,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         console.log("");
         console.log("After shift 2nd time");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        uint256 curveAcquiredBucket2 = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 redemptionPrice2 = chickenBondManager.calcSystemBackingRatio();
 
         console.log("");
         console.log("Manipulate pool");
@@ -1808,6 +1828,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 C_3crvBalanceAfter = _3crvToken.balanceOf(C);
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice after pool manipulation");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "chickenBondManager.getAcquiredLUSDInCurve();");
+        uint256 curveAcquiredBucket3 = chickenBondManager.getAcquiredLUSDInCurve();
+        uint256 redemptionPrice3 = chickenBondManager.calcSystemBackingRatio();
 
         // B redeems bLUSD
         vm.startPrank(B);
@@ -1853,10 +1875,24 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             "Price after attack should be close"
         );
         assertRelativeError(
-            B_curveBalance1,
+            B_curveBalance1 - B_curveBalance0,
             B_curveBalance2 - B_curveBalance1,
-            4e11, // 0.00004%
+            9e14, // 0.09%
             "Obtained Curve should be approximately equal"
+        );
+        // see: https://github.com/liquity/ChickenBond/pull/115#issuecomment-1184382984
+        //console.log(curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2, "curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2");
+        //console.log(redemptionPrice3 * 1e18 / redemptionPrice2, "redemptionPrice3 * 1e18 / redemptionPrice2");
+        assertApproximatelyEqual(
+            curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2,
+            redemptionPrice3 * 1e18 / redemptionPrice2,
+            10,
+            "Redepmtion price and acquired bucket should grow the same (thx to manipulation fees)"
+        );
+        assertLe(
+            (B_curveBalance2 - B_curveBalance1) * 1e18 / (B_curveBalance1 - B_curveBalance0),
+            redemptionPrice3 * 1e18 / redemptionPrice2,
+            "Increase in Curve balance should be less or equal than increase in redemption price"
         );
         assertRelativeError(
             C_lusdBalanceBefore,
