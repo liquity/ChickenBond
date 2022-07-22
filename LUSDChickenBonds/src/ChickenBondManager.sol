@@ -330,9 +330,11 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             lusdInBAMMSPVault = _firstChickenIn(bond.startTime, bammLUSDValue, lusdInBAMMSPVault);
         }
 
-
+        // Get the LUSD amount to acquire from the bond in proportion to the system's current backing ratio, in order to maintain said ratio.
+        uint256 lusdToAcquire = _calcAccruedAmount(bond.startTime, bondAmountMinusChickenInFee, updatedAccrualParameter);
+        // Get backing ratio and accrued bLUSD
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
-        uint256 accruedBLUSD = _calcAccruedBLUSD(bond.startTime, bondAmountMinusChickenInFee, backingRatio, updatedAccrualParameter);
+        uint256 accruedBLUSD = lusdToAcquire * 1e18 / backingRatio;
 
         delete idToBondData[_bondID];
 
@@ -340,10 +342,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
-        /* Get the LUSD amount to acquire from the bond, and the remaining surplus.
-        *  Acquire LUSD in proportion to the system's current backing ratio, in order to maintain said ratio.
-        */
-        uint256 lusdToAcquire = accruedBLUSD * backingRatio / 1e18;
+        // Get the remaining surplus from the LUSD amount to acquire from the bond
         uint256 lusdSurplus = bondAmountMinusChickenInFee - lusdToAcquire;
 
         // Handle the surplus LUSD from the chicken-in:
@@ -687,19 +686,18 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     // Internal getter for calculating accrued LUSD based on BondData struct
-    function _calcAccruedBLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio, uint256 _accrualParameter) internal view returns (uint256) {
+    function _calcAccruedAmount(uint256 _startTime, uint256 _capAmount, uint256 _accrualParameter) internal view returns (uint256) {
         // All bonds have a non-zero creation timestamp, so return accrued sLQTY 0 if the startTime is 0
         if (_startTime == 0) {return 0;}
-        uint256 bondBLUSDCap = _calcBondBLUSDCap(_lusdAmount, _backingRatio);
 
         // Scale `bondDuration` up to an 18 digit fixed-point number.
         // This lets us add it to `accrualParameter`, which is also an 18-digit FP.
         uint256 bondDuration = 1e18 * (block.timestamp - _startTime);
 
-        uint256 accruedBLUSD = bondBLUSDCap * bondDuration / (bondDuration + _accrualParameter);
-        //assert(accruedBLUSD < bondBLUSDCap); // we leave it as a comment so we can uncomment it for automated testing tools
+        uint256 accruedAmount = _capAmount * bondDuration / (bondDuration + _accrualParameter);
+        //assert(accruedAmount < _capAmount); // we leave it as a comment so we can uncomment it for automated testing tools
 
-        return accruedBLUSD;
+        return accruedAmount;
     }
 
     // Gauge the average (size-weighted) outstanding bond age and adjust accrual parameter if it's higher than our target.
@@ -861,10 +859,22 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return (bond.lusdAmount, bond.startTime);
     }
 
+    function getLUSDToAcquire(uint256 _bondID) external view returns (uint256) {
+        BondData memory bond = idToBondData[_bondID];
+
+        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
+
+        return _calcAccruedAmount(bond.startTime, _getBondAmountMinusChickenInFee(bond.lusdAmount), updatedAccrualParameter);
+    }
+
     function calcAccruedBLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
+
+        uint256 bondBLUSDCap = _calcBondBLUSDCap(_getBondAmountMinusChickenInFee(bond.lusdAmount), calcSystemBackingRatio());
+
         (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
-        return _calcAccruedBLUSD(bond.startTime, _getBondAmountMinusChickenInFee(bond.lusdAmount), calcSystemBackingRatio(), updatedAccrualParameter);
+
+        return _calcAccruedAmount(bond.startTime, bondBLUSDCap, updatedAccrualParameter);
     }
 
     function calcBondBLUSDCap(uint256 _bondID) external view returns (uint256) {
