@@ -323,7 +323,7 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     function testCreateBondDoesNotChangePermanentBucket() public {
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         uint256 permanentLUSD_1 = chickenBondManager.getPermanentLUSD();
 
@@ -363,7 +363,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutReducesTotalPendingLUSD() public {
         // A, B create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -387,7 +387,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutDeletesBondData() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -438,7 +438,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutReducesBondNFTSupplyByOne() public {
         // A, B create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -461,7 +461,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutDoesNotChangeBondNFTTotalMinted() public {
         // A, B create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -484,7 +484,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutRemovesOwnerOfBondNFT() public {
         // A, B create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -534,7 +534,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutRevertsWhenCallerIsNotBonder() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -552,7 +552,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutRevertsWhenBonderChickensOutBondTheyDontOwn() public {
         // A, B create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -568,7 +568,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutDoesNotChangePermanentBucket() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
         uint256 bondID_A = bondNFT.totalMinted();
@@ -621,7 +621,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCalcAccruedBLUSDReturns0for0StartTime() public {
         // A, B create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -636,7 +636,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.assume(_interval > 0 && _interval < 5200 weeks);  // 0 < interval < 100 years
 
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -675,7 +675,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.assume(_interval > 0 && _interval < 5200 weeks);  // 0 < interval < 100 years
 
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -712,7 +712,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.assume( _interval > 0 && _interval < 5200 weeks);  // 0 < interval < 100 years
 
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -746,7 +746,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCalcBLUSDAccrualReturns0AfterBonderChickenOut() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -790,7 +790,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCalcBLUSDAccrualReturns0ForNonBonder() public {
           // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -810,7 +810,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 backingRatio_1 = chickenBondManager.calcSystemBackingRatio();
         assertEq(backingRatio_1, 1e18);
 
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         // A creates bond
         createBondForUser(A, bondAmount);
@@ -829,7 +829,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInFailsAfterShortBondingInterval() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -852,7 +852,7 @@ contract ChickenBondManagerTest is BaseTest {
         );
 
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -867,7 +867,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInDeletesBondData() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -901,7 +901,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInTransfersAccruedBLUSDToBonder() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -930,7 +930,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInDoesNotChangeBondHolderLUSDBalance() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -957,7 +957,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInDecreasesTotalPendingLUSDByBondAmount() public {
          // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -983,7 +983,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInIncreasesTotalAcquiredLUSD() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -1009,7 +1009,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInReducesBondNFTSupplyByOne() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -1033,7 +1033,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInDoesNotChangeTotalMinted() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -1057,7 +1057,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInDecreasesBonderNFTBalanceByOne() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -1083,7 +1083,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInRemovesOwnerOfBondNFT() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -1110,7 +1110,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInChargesChickenInFee() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         uint256 A_startTime = block.timestamp;
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -1163,7 +1163,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInRevertsWhenCallerIsNotABonder() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -1188,7 +1188,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenInRevertsWhenBonderChickensInBondTheyDontOwn() public {
          // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 
@@ -1212,7 +1212,7 @@ contract ChickenBondManagerTest is BaseTest {
 
      function testChickenInIncreasesPermanentLUSDBucket() public {
         // A, B create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1270,7 +1270,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testRedeemFailsAfterShortPeriod() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -1307,7 +1307,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testRedeemDecreasesCallersBLUSDBalance() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -1349,7 +1349,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testRedeemDecreasesTotalAcquiredLUSD() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -1394,7 +1394,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testRedeemDecreasesTotalBLUSDSupply() public {
          // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -1439,7 +1439,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testRedeemIncreasesCallersYTokenBalance() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -1482,13 +1482,13 @@ contract ChickenBondManagerTest is BaseTest {
     }
 
     function testRedeemDecreasesAcquiredLUSDInSPByCorrectFraction(uint256 redemptionFraction) public {
-        redemptionFraction = coerce(redemptionFraction, 1e9, 1e18);
+        redemptionFraction = coerce(redemptionFraction, 1e9, 99e16);
 
         // 1-r.  Fee goes to permanent
         uint256 expectedFractionRemainingAfterRedemption = 1e18 - redemptionFraction;
 
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 600e18;
 
         createBondForUser(A, bondAmount);
 
@@ -1545,7 +1545,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testRedeemChargesRedemptionFee() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
         uint256 ROUNDING_ERROR = 6000;
 
        createBondForUser(A, bondAmount);
@@ -1563,11 +1563,10 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenIn(A_bondID);
 
         // Check A's bLUSD balance is non-zero
-        A_bLUSDBalance = bLUSDToken.balanceOf(A);
-        assertTrue(A_bLUSDBalance > 0);
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
+        assertTrue(bLUSDBalance > 0);
 
         // A transfers his LUSD to B
-        uint256 bLUSDBalance = bLUSDToken.balanceOf(A);
         bLUSDToken.transfer(B, bLUSDBalance);
         assertEq(bLUSDBalance, bLUSDToken.balanceOf(B));
         vm.stopPrank();
@@ -1617,7 +1616,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testRedeemRevertsWhenCallerHasInsufficientBLUSD() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -1644,7 +1643,8 @@ contract ChickenBondManagerTest is BaseTest {
 
         // B tries to redeem more LUSD than they have
         vm.startPrank(B);
-        vm.expectRevert("ERC20: burn amount exceeds balance");
+        //vm.expectRevert("ERC20: burn amount exceeds balance");
+        vm.expectRevert("CBM: Cannot redeem below min supply");
         chickenBondManager.redeem(B_bLUSDBalance + 1, 0);
 
         // Reverts on transfer rather than burn, since it tries to redeem more than the total BLUSD supply, and therefore tries
@@ -1656,7 +1656,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testRedeemRevertsWithZeroInputAmount() public {
          // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
        createBondForUser(A, bondAmount);
 
@@ -1685,7 +1685,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testFailRedeemRevertsWhenTotalAcquiredLUSDisZero() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
 

@@ -92,11 +92,13 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
 
     uint256 constant public BOOTSTRAP_PERIOD_CHICKEN_IN = 7 days; // Min duration of first chicken-in
-    uint256 constant public BOOTSTRAP_PERIOD_REDEEM = 7 days; // Redemption lock period after first chicken in
-    uint256 constant public BOOTSTRAP_PERIOD_SHIFT = 90 days; // Period after launch during which shifter functions are disabled
-  
-    uint256 constant public SHIFTER_DELAY = 60 minutes;  // Duration of shifter countdown
-    uint256 constant public SHIFTER_WINDOW = 10 minutes;  // Interval in which shifting is possible after countdown finishes
+    uint256 constant public BOOTSTRAP_PERIOD_REDEEM = 7 days;     // Redemption lock period after first chicken in
+    uint256 constant public BOOTSTRAP_PERIOD_SHIFT = 90 days;     // Period after launch during which shifter functions are disabled
+
+    uint256 constant public SHIFTER_DELAY = 60 minutes;           // Duration of shifter countdown
+    uint256 constant public SHIFTER_WINDOW = 10 minutes;          // Interval in which shifting is possible after countdown finishes
+
+    uint256 constant public MIN_BLUSD_SUPPLY = 1e18;              // Minimum amount of bLUSD supply that must remain after a redemption
 
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
@@ -366,6 +368,12 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256) {
         _requireNonZeroAmount(_bLUSDToRedeem);
+        // TODO: stack too deep
+        //uint256 bLUSDTotalSupply = bLUSDToken.totalSupply();
+        if (!migration) {
+            //require(_bLUSDToRedeem < bLUSDTotalSupply, "CBM: Cannot redeem total supply");
+            require(_bLUSDToRedeem + MIN_BLUSD_SUPPLY <= bLUSDToken.totalSupply(), "CBM: Cannot redeem below min supply");
+        }
 
         require(block.timestamp >= firstChickenInTime + BOOTSTRAP_PERIOD_REDEEM, "CBM: Redemption after first chicken in must wait until bootstrap period is over");
 
@@ -470,7 +478,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _requireMigrationNotActive();
         _requireNonZeroBLUSDSupply();
         _requireShiftWindowIsOpen();
-        
+
         // We can’t shift more than what’s in Curve
         uint256 ownedLUSDInCurve = getTotalLUSDInCurve();
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, ownedLUSDInCurve);
@@ -846,7 +854,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     function _requireShiftWindowIsOpen() internal view {
         uint256 shiftWindowStartTime = lastShifterCountdownStartTime + SHIFTER_DELAY;
         uint256 shiftWindowFinishTime = shiftWindowStartTime + SHIFTER_WINDOW;
-        
+
         require(block.timestamp >= shiftWindowStartTime && block.timestamp < shiftWindowFinishTime, "CBM: Shift only possible inside shifting window");
     }
 
