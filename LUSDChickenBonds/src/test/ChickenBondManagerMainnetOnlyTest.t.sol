@@ -345,6 +345,73 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     // --- shiftLUSDFromSPToCurve tests ---
 
+    function testShiftLUSDFromSPToCurveRevertsBeforeEndOfShiftBootstrapPeriod() public{
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // CI bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
+       
+        // A chickens in
+        chickenInForUser(A, A_bondID);
+
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        assertGt(lusdToShift, 0);
+
+        // Attempt to shift LUSD
+        vm.expectRevert("CBM: Shifter only callable after shift bootstrap period ends");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        
+        // Warp to the time that is half way through the shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT / 2); 
+        vm.expectRevert("CBM: Shifter only callable after shift bootstrap period ends");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+
+        // Fastforward to 1 second before the shifter boostrap period ends
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT - 1); 
+        vm.expectRevert("CBM: Shifter only callable after shift bootstrap period ends");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+    }
+
+    function testShiftLUSDFromSPToCurveSucceedsAfterEndOfShiftBootstrapPeriod() public{
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // CI bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
+       
+        // A chickens in
+        chickenInForUser(A, A_bondID);
+
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        assertGt(lusdToShift, 0);
+
+        uint256 lusdInCurve_1 = chickenBondManager.getOwnedLUSDInCurve();
+        assertEq(lusdInCurve_1, 0);
+        
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
+        // Check shift to Curve succeeds
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        uint256 lusdInCurve_2 = chickenBondManager.getOwnedLUSDInCurve();
+        assertGt(lusdInCurve_2, lusdInCurve_1);
+
+        // Warp to some time after the end of bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT + 17 days);
+
+        // Check second shift to Curve succeeds
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+        uint256 lusdInCurve_3 = chickenBondManager.getOwnedLUSDInCurve();
+        assertGt(lusdInCurve_3, lusdInCurve_2);
+    }
+
     function testShiftLUSDFromSPToCurveRevertsForZeroAmount() public {
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -357,6 +424,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // A chickens in
         chickenInForUser(A, A_bondID);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
@@ -381,6 +451,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // A chickens in
         chickenInForUser(A, A_bondID);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceBelow1(200_000_000e18);
 
@@ -408,6 +481,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
@@ -455,6 +531,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Get total LUSD in CBM before
         uint256 CBM_lusdBalanceBefore = lusdToken.balanceOf(address(chickenBondManager));
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP
@@ -481,6 +560,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertGt(totalAcquiredLUSD, 0);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in Curve
@@ -532,6 +614,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 totalPermanentLUSDBefore = chickenBondManager.getPermanentLUSD();
         assertGt(totalPermanentLUSDBefore, 0);
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP
@@ -569,6 +654,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 totalPendingLUSDBefore = chickenBondManager.getPendingLUSD();
         assertTrue(totalPendingLUSDBefore > 0);
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         makeCurveSpotPriceAbove1(200_000_000e18);
 
        // Shift 10% of LUSD in SP
@@ -597,6 +685,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Get acquired LUSD in Yearn before
         uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInSP();
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP
@@ -623,6 +714,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         // Get CBM's view of LUSD in Yearn
         (uint256 lusdInSPBefore,,) = bammSPVault.getLUSDValue();
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
@@ -651,6 +745,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Get CBM's view of LUSD in Curve before
         uint256 lusdInCurveBefore = chickenBondManager.getAcquiredLUSDInCurve();
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         makeCurveSpotPriceAbove1(200_000_000e18);
 
         // Shift 10% of LUSD in SP
@@ -675,6 +772,73 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     // --- shiftLUSDFromCurveToSP tests ---
 
+     function testShiftLUSDFromCurveToSPRevertsBeforeEndOfShiftBootstrapPeriod() public{
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // CI bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
+       
+        // A chickens in
+        chickenInForUser(A, A_bondID);
+
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        assertGt(lusdToShift, 0);
+
+        // Attempt to shift LUSD
+        vm.expectRevert("CBM: Shifter only callable after shift bootstrap period ends");
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
+        
+        // Warp to the time that is half way through the shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT / 2); 
+        vm.expectRevert("CBM: Shifter only callable after shift bootstrap period ends");
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
+
+        // Fastforward to 1 second before the shifter boostrap period ends
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT - 1); 
+        vm.expectRevert("CBM: Shifter only callable after shift bootstrap period ends");
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdToShift);
+    }
+
+    function testShiftCurveToSPSucceedsAfterEndOfShiftBootstrapPeriod() public{
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // CI bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
+       
+        // A chickens in
+        chickenInForUser(A, A_bondID);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
+        makeCurveSpotPriceAbove1(200_000_000e18);
+        // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
+        shiftFractionFromSPToCurve(10);
+        makeCurveSpotPriceBelow1(200_000_000e18);
+
+        uint256 lusdInCurve_1 = chickenBondManager.getOwnedLUSDInCurve();
+        assertGt(lusdInCurve_1, 0);
+        
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdInCurve_1 / 10);
+        uint256 lusdInCurve_2 = chickenBondManager.getOwnedLUSDInCurve();
+        assertLt(lusdInCurve_2, lusdInCurve_1);
+
+        // Warp to some time after the end of bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT + 17 days);
+
+        // Check second shift Curve->SP succeeds
+        chickenBondManager.shiftLUSDFromCurveToSP(lusdInCurve_1 / 10);
+        uint256 lusdInCurve_3 = chickenBondManager.getOwnedLUSDInCurve();
+        assertLt(lusdInCurve_3, lusdInCurve_2);
+    }
 
     function testShiftLUSDFromCurveToSPRevertsForZeroAmount() public {
         // A creates bond
@@ -690,6 +854,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
@@ -715,6 +882,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
@@ -749,18 +919,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price start");
         makeCurveSpotPriceAbove1(50_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
-        console.log("A");
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price A");
+     
         shiftFractionFromSPToCurve(10);
-
-        console.log("B");
+   
         makeCurveSpotPriceBelow1(50_000_000e18);
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price B");
-        console.log("C");
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price before shift Curve->SP test");
         // Now, attempt to shift an amount which would raise the price back above 1.0, and expect it to fail
         vm.expectRevert("CBM: Curve->SP shift must increase 3CRV:LUSD exchange rate to a value above the withdrawal threshold");
         chickenBondManager.shiftLUSDFromCurveToSP(50_000_000e18);
@@ -771,7 +935,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // A creates bond
         uint256 bondAmount = 10e18;
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
         // bootstrap period passes
@@ -785,6 +949,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
@@ -818,6 +985,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertGt(totalAcquiredLUSD, 0);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
@@ -879,6 +1049,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 totalPermanentLUSD = chickenBondManager.getPermanentLUSD();
         assertGt(totalPermanentLUSD, 0);
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
         shiftFractionFromSPToCurve(10);
@@ -903,7 +1076,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // B and A create bonds
         createBondForUser(B, bondAmount);
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
         // bootstrap period passes
@@ -913,6 +1086,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
@@ -954,6 +1130,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(C_bondID);
         vm.stopPrank();
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         // Shift all LUSD in SP
         makeCurveSpotPriceAbove1(200_000_000e18);
         uint256 lusdToShift = lusdInSPAfter - 1;
@@ -993,6 +1172,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         (uint256 lusdInSP,,) = bammSPVault.getLUSDValue();
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         // Shift all LUSD in SP
         makeCurveSpotPriceAbove1(200_000_000e18);
         uint256 lusdToShift = lusdInSP - 1;
@@ -1022,6 +1204,10 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertGt(totalAcquiredLUSD, 0, "total ac. lusd not < 0 after chicken in");
+
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
@@ -1067,6 +1253,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
         shiftFractionFromSPToCurve(10);
@@ -1104,6 +1293,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // check total acquired LUSD > 0
         uint256 totalAcquiredLUSD = chickenBondManager.getTotalAcquiredLUSD();
         assertTrue(totalAcquiredLUSD > 0);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
@@ -1146,6 +1338,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Get acquired LUSD in Yearn Before
         uint256 acquiredLUSDInSPBefore = chickenBondManager.getAcquiredLUSDInSP();
         assertGt(acquiredLUSDInSPBefore, 0);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve

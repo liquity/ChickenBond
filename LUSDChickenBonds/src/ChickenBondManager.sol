@@ -91,7 +91,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     uint256 constant public BOOTSTRAP_PERIOD_CHICKEN_IN = 7 days; // Min duration of first chicken-in
     uint256 constant public BOOTSTRAP_PERIOD_REDEEM = 7 days; // Redemption lock period after first chicken in
-
+    uint256 constant public BOOTSTRAP_PERIOD_SHIFT = 90 days; // Period after launch during which shifter functions are disabled
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
      * Corresponds to (1 / ALPHA) in the Liquity white paper.
@@ -434,6 +434,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     function shiftLUSDFromSPToCurve(uint256 _maxLUSDToShift) external {
+        _requireShiftBootstrapPeriodEnded();
         _requireMigrationNotActive();
 
         (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
@@ -481,6 +482,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     function shiftLUSDFromCurveToSP(uint256 _maxLUSDToShift) external {
+        _requireShiftBootstrapPeriodEnded();
         _requireMigrationNotActive();
 
         // We can’t shift more than what’s in Curve
@@ -818,6 +820,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 lusdToWithdraw = Math.min(_requestedLUSD, lusdInBAMMSPVault);
 
         return lusdToWithdraw;
+    }
+
+    function _requireShiftBootstrapPeriodEnded() internal view {
+        require(block.timestamp - deploymentTimestamp >= BOOTSTRAP_PERIOD_SHIFT, "CBM: Shifter only callable after shift bootstrap period ends");
     }
 
     // --- Getter convenience functions ---
