@@ -490,6 +490,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromSPToCurveRevertsWhenShiftWouldDropCurvePriceBelow1() public {
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
+
         // A creates bond
         uint256 bondAmount = 500_000_000e18; // 500m
 
@@ -504,9 +507,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
-
-        // Warp to the end of shifter bootstrap period
-        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
 
         makeCurveSpotPriceAbove1(200_000_000e18);
 
@@ -1795,9 +1795,11 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // A creates bond
         uint256 bondAmount = 10e18;
 
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_SHIFT());
+
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_SHIFT());
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
         // A chickens in
         vm.startPrank(A);
@@ -1967,6 +1969,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testRedeemSandwichDecreaseLUSDPrice() public {
         // A creates bond
         uint256 bondAmount = 10e18;
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_SHIFT());
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 

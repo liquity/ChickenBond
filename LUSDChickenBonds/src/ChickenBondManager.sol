@@ -423,9 +423,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     function shiftLUSDFromSPToCurve(uint256 _maxLUSDToShift) external {
-        // _requireShiftBootstrapPeriodEnded();
+        _requireShiftBootstrapPeriodEnded();
         _requireMigrationNotActive();
-        // _requireNonZeroBLUSDSupply();
+        _requireNonZeroBLUSDSupply();
 
         (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
         uint256 lusdOwnedInBAMMSPVault = bammLUSDValue - pendingLUSD;
