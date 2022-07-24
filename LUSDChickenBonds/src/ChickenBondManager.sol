@@ -170,6 +170,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         targetAverageAgeSeconds = _targetAverageAgeSeconds;
         accrualParameter = _initialAccrualParameter;
         minimumAccrualParameter = _minimumAccrualParameter;
+        require(minimumAccrualParameter > 0, "CBM: Min accrual parameter cannot be zero");
         accrualAdjustmentMultiplier = 1e18 - _accrualAdjustmentRate;
         accrualAdjustmentPeriodSeconds = _accrualAdjustmentPeriodSeconds;
 
@@ -290,7 +291,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
      * all acquired LUSD must necessarily be pure yield.
      */
     function _firstChickenIn(uint256 _bondStartTime, uint256 _bammLUSDValue, uint256 _lusdInBAMMSPVault) internal returns (uint256) {
-        assert(!migration);
+        //assert(!migration); // we leave it as a comment so we can uncomment it for automated testing tools
 
         require(block.timestamp >= _bondStartTime + BOOTSTRAP_PERIOD_CHICKEN_IN, "CBM: First chicken in must wait until bootstrap period is over");
         firstChickenInTime = block.timestamp;
@@ -680,7 +681,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 bondDuration = 1e18 * (block.timestamp - _startTime);
 
         uint256 accruedBLUSD = bondBLUSDCap * bondDuration / (bondDuration + _accrualParameter);
-        assert(accruedBLUSD < bondBLUSDCap);
+        //assert(accruedBLUSD < bondBLUSDCap); // we leave it as a comment so we can uncomment it for automated testing tools
 
         return accruedBLUSD;
     }
