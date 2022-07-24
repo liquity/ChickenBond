@@ -25,10 +25,10 @@ contract ChickenBondManagerTest is BaseTest {
     // --- createBond tests ---
 
     function testNFTEnumerationWorks() public {
-        uint256 A_bondId_1 = createBondForUser(A,  1e18);
-        createBondForUser(A,  1e18);
-        createBondForUser(B,  1e18);
-        createBondForUser(B,  1e18);
+        uint256 A_bondId_1 = createBondForUser(A, MIN_BOND_AMOUNT + 1e18);
+        createBondForUser(A, MIN_BOND_AMOUNT + 1e18);
+        createBondForUser(B, MIN_BOND_AMOUNT + 1e18);
+        createBondForUser(B, MIN_BOND_AMOUNT + 1e18);
         assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 1);
         assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 2);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 0), 3);
@@ -39,20 +39,21 @@ contract ChickenBondManagerTest is BaseTest {
         chickenBondManager.chickenOut(A_bondId_1, 0);
         vm.stopPrank();
 
-        createBondForUser(B,  1e18);
-        createBondForUser(A,  1e18);
+        createBondForUser(B, MIN_BOND_AMOUNT + 1e18);
+        createBondForUser(A, MIN_BOND_AMOUNT + 1e18);
         assertEq(bondNFT.tokenOfOwnerByIndex(A, 0), 2);
         assertEq(bondNFT.tokenOfOwnerByIndex(A, 1), 6);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 0), 3);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 1), 4);
         assertEq(bondNFT.tokenOfOwnerByIndex(B, 2), 5);
     }
+
     function testFirstCreateBondDoesNotChangeBackingRatio() public {
         // Get initial backing ratio
         uint256 backingRatioBefore = chickenBondManager.calcSystemBackingRatio();
 
         // A approves the system for LUSD transfer and creates the bond
-        createBondForUser(A,  25e18);
+        createBondForUser(A, MIN_BOND_AMOUNT + 25e18);
 
         // check backing ratio after has not changed
         uint256 backingRatioAfter = chickenBondManager.calcSystemBackingRatio();
@@ -61,7 +62,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondDoesNotChangeBackingRatio() public {
         // A approves the system for LUSD transfer and creates the bond
-        createBondForUser(A, 25e18);
+        createBondForUser(A, MIN_BOND_AMOUNT + 25e18);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
@@ -69,7 +70,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 backingRatio_1 = chickenBondManager.calcSystemBackingRatio();
 
         // B approves the system for LUSD transfer and creates the bond
-        createBondForUser(B,  25e18);
+        createBondForUser(B, MIN_BOND_AMOUNT + 25e18);
 
         // check backing ratio after has not changed
         uint256 backingRatio_2 = chickenBondManager.calcSystemBackingRatio();
@@ -89,7 +90,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 backingRatio_3 = chickenBondManager.calcSystemBackingRatio();
 
         // C creates bond
-       createBondForUser(C,  25e18);
+        createBondForUser(C, MIN_BOND_AMOUNT + 25e18);
 
         // Check backing ratio is unchanged by the last bond creation
         uint256 backingRatio_4 = chickenBondManager.calcSystemBackingRatio();
@@ -98,12 +99,12 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondSucceedsAfterAnotherBonderChickensIn() public {
         // A approves the system for LUSD transfer and creates the bond
-        createBondForUser(A,  20e18);
+        createBondForUser(A, MIN_BOND_AMOUNT + 20e18);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
         // B approves the system for LUSD transfer and creates the bond
-        createBondForUser(B,  20e18);
+        createBondForUser(B, MIN_BOND_AMOUNT + 20e18);
 
         // bootstrap period passes
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
@@ -117,7 +118,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(totalAcquiredLUSD, 0);
 
         // C creates bond
-        createBondForUser(C,  25e18);
+        createBondForUser(C, MIN_BOND_AMOUNT + 25e18);
 
         uint256 bondID_C = bondNFT.totalMinted();
         (, uint256 bondStartTime_C) = chickenBondManager.getBondData(bondID_C);
@@ -128,12 +129,12 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondSucceedsAfterAnotherBonderChickensOut() public {
         // A approves the system for LUSD transfer and creates the bond
-        createBondForUser(A,  25e18);
+        createBondForUser(A, MIN_BOND_AMOUNT + 25e18);
 
         uint256 bondID_A = bondNFT.totalMinted();
 
         // B approves the system for LUSD transfer and creates the bond
-        createBondForUser(B,  25e18);
+        createBondForUser(B, MIN_BOND_AMOUNT + 25e18);
 
         // A chickens out
         vm.startPrank(A);
@@ -144,17 +145,17 @@ contract ChickenBondManagerTest is BaseTest {
         assertGt(totalPendingLUSD, 0);
 
         // C creates bond
-       createBondForUser(C,  25e18);
+        createBondForUser(C, MIN_BOND_AMOUNT + 25e18);
 
         vm.warp(block.timestamp + 600);
 
         uint256 bondID_C = bondNFT.totalMinted();
         (uint256 bondedLUSD_C, uint256 bondStartTime_C) = chickenBondManager.getBondData(bondID_C);
-        assertEq(bondedLUSD_C, 25e18);
+        assertEq(bondedLUSD_C, MIN_BOND_AMOUNT + 25e18);
         assertEq(bondStartTime_C, block.timestamp - 600);
     }
 
-    function testFirstCreateBondIncreasesTotalPendingLUSD(uint) public {
+    function testFirstCreateBondIncreasesTotalPendingLUSD() public {
         // Get initial pending LUSD
         uint256 totalPendingLUSDBefore = chickenBondManager.getPendingLUSD();
 
@@ -162,25 +163,25 @@ contract ChickenBondManagerTest is BaseTest {
         assertTrue(totalPendingLUSDBefore == 0);
 
         // A approves the system for LUSD transfer and creates the bond
-        createBondForUser(A,  25e18);
+        createBondForUser(A, MIN_BOND_AMOUNT + 25e18);
 
         // Check totalPendingLUSD has increased by the correct amount
         uint256 totalPendingLUSDAfter = chickenBondManager.getPendingLUSD();
-        assertTrue(totalPendingLUSDAfter == 25e18);
+        assertTrue(totalPendingLUSDAfter == MIN_BOND_AMOUNT + 25e18);
     }
 
     function testCreateBondIncreasesTotalPendingLUSD() public {
         // First, A creates an initial bond
-        createBondForUser(A, 25e18);
+        createBondForUser(A, MIN_BOND_AMOUNT + 25e18);
 
         // B creates the bond
-        createBondForUser(B, 10e18);
+        createBondForUser(B, MIN_BOND_AMOUNT + 10e18);
 
         vm.stopPrank();
 
         // Check totalPendingLUSD has increased by the correct amount
         uint256 totalPendingLUSDAfter = chickenBondManager.getPendingLUSD();
-        assertTrue(totalPendingLUSDAfter == 35e18);
+        assertTrue(totalPendingLUSDAfter == 2 * MIN_BOND_AMOUNT + 35e18);
     }
 
     function testCreateBondReducebLUSDBalanceOfBonder() public {
@@ -188,16 +189,16 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 balanceBefore = lusdToken.balanceOf(A);
 
         // A creates bond
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Check A balance has reduced by correct amount
         uint256 balanceAfter = lusdToken.balanceOf(A);
-        assertEq(balanceBefore - 10e18, balanceAfter);
+        assertEq(balanceBefore - MIN_BOND_AMOUNT, balanceAfter);
     }
 
     function testCreateBondRecordsBondData() public {
         // A creates bond #1
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Confirm bond data for bond #2 is 0
         (uint256 B_bondedLUSD, uint256 B_bondStartTime) = chickenBondManager.getBondData(2);
@@ -207,11 +208,11 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 currentTime = block.timestamp;
 
         // B creates bond
-        createBondForUser(B, 10e18);
+        createBondForUser(B, MIN_BOND_AMOUNT);
 
         // Check bonded amount and bond start time are now recorded for B's bond
         (B_bondedLUSD, B_bondStartTime) = chickenBondManager.getBondData(2);
-        assertEq(B_bondedLUSD, 10e18);
+        assertEq(B_bondedLUSD, MIN_BOND_AMOUNT);
         assertEq(B_bondStartTime, currentTime);
     }
 
@@ -220,7 +221,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 tokenSupplyBefore = bondNFT.tokenSupply();
 
         // A creates bond
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Check NFT token supply after has increased by 1
         uint256 tokenSupplyAfter = bondNFT.tokenSupply();
@@ -232,7 +233,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 totalMintedBefore = bondNFT.totalMinted();
 
         // A creates bond
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Check total minted after has increased by 1
         uint256 totalMintedAfter = bondNFT.totalMinted();
@@ -241,13 +242,13 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondIncreasesTheBondNFTSupplyByOne() public {
         // A creates bond
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Get NFT token supply before
         uint256 tokenSupplyBefore = bondNFT.tokenSupply();
 
         // B creates bond
-        createBondForUser(B,  10e18);
+        createBondForUser(B,  MIN_BOND_AMOUNT);
 
         // Check NFT token supply after has increased by 1
         uint256 tokenSupplyAfter = bondNFT.tokenSupply();
@@ -256,13 +257,13 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testCreateBondIncreasesTheBondNFTTotalMintedByOne() public {
         // A creates bond
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Get NFT total minted before
         uint256 totalMintedBefore = bondNFT.totalMinted();
 
         // B creates bond
-       createBondForUser(B, 10e18);
+       createBondForUser(B, MIN_BOND_AMOUNT);
 
         // Check NFT total minted after has increased by 1
         uint256 totalMintedAfter = bondNFT.totalMinted();
@@ -275,7 +276,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(A_NFTBalanceBefore, 0);
 
         // A creates bond
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Check A now has one NFT
         uint256 A_NFTBalanceAfter = bondNFT.balanceOf(A);
@@ -288,7 +289,7 @@ contract ChickenBondManagerTest is BaseTest {
         bondNFT.ownerOf(2);
 
         // A creates bond
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Check tokenSupply == 1 and A has NFT id #1
         assertEq(bondNFT.totalMinted(),  1);
@@ -296,7 +297,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(ownerOfID1, A);
 
         // B creates bond
-        createBondForUser(B, 10e18);
+        createBondForUser(B, MIN_BOND_AMOUNT);
 
         // Check owner of NFT id #2 is B
         address ownerOfID2After = bondNFT.ownerOf(2);
@@ -307,11 +308,11 @@ contract ChickenBondManagerTest is BaseTest {
         (, uint256 lusdInBAMMBefore,) = bammSPVault.getLUSDValue();
 
         // A creates bond
-        createBondForUser(A, 10e18);
+        createBondForUser(A, MIN_BOND_AMOUNT);
 
         (, uint256 lusdInBAMMAfter,) = bammSPVault.getLUSDValue();
 
-        assertEq(lusdInBAMMAfter, lusdInBAMMBefore + 10e18);
+        assertEq(lusdInBAMMAfter, lusdInBAMMBefore + MIN_BOND_AMOUNT);
     }
 
     function testCreateBondRevertsWithZeroInputAmount() public {
@@ -416,7 +417,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutTransferbLUSDToBonder() public {
         // A, B create bond
-        uint256 bondAmount = 171e17;
+        uint256 bondAmount = 171e17 + MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
 
@@ -509,7 +510,7 @@ contract ChickenBondManagerTest is BaseTest {
 
     function testChickenOutDecreasesBonderNFTBalanceByOne() public {
         // A, B create bond
-        uint256 bondAmount = 37432e15;
+        uint256 bondAmount = MIN_BOND_AMOUNT + 37432e15;
 
         createBondForUser(A, bondAmount);
 

@@ -8,7 +8,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
     function testMigrationOnlyYearnGovernanceCanCallActivateMigration() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
@@ -64,7 +64,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
     function testMigrationSetsMigrationFlagToTrue() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
@@ -88,7 +88,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
     function testMigrationOnlyCallableOnceByYearnGov() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
@@ -139,7 +139,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
     function testMigrationReducesPermanentBucketsToZero() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);

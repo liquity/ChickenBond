@@ -70,7 +70,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testFirstChickenInTransfersToRewardsContract() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -100,7 +100,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testFirstChickenInWithoutInitialYield() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -121,7 +121,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testFirstChickenInAfterRedemptionAlmostDepletionAndSPHarvestTransfersToRewardsContract() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -576,7 +576,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveRevertsForZeroAmount() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -605,7 +605,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveRevertsWhenCurvePriceLessThan1() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -681,7 +681,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     // CBM system trackers
     function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInCBM() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -718,7 +718,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveSlightlyIncreasesAcquiredLUSD() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
         // bootstrap period passes
@@ -771,7 +771,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveDoesntChangeCBMTotalPermanentLUSDTracker() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -810,12 +810,12 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromSPToCurveDoesntChangeCBMPendingLUSDTracker() public {
-        uint256 bondAmount = 25e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT + 25e18;
 
         // B and A create bonds
         createBondForUser(B, bondAmount);
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
         // bootstrap period passes
@@ -847,9 +847,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     // CBM Yearn and Curve trackers
     function testShiftLUSDFromSPToCurveDecreasesCBMAcquiredLUSDInSPTracker() public {
         // A creates bond
-        uint256 bondAmount = 25e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT + 25e18;
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
         // bootstrap period passes
@@ -879,9 +879,9 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveDecreasesCBMLUSDInSPTracker() public {
         // A creates bond
-        uint256 bondAmount = 25e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT + 25e18;
 
-       createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
 
         // bootstrap period passes
@@ -911,7 +911,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveIncreasesCBMLUSDInCurveTracker() public {
         // A creates bond
-        uint256 bondAmount = 25e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT + 25e18;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1180,7 +1180,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromCurveToSPRevertsForZeroAmount() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1210,7 +1210,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromCurveToSPRevertsWhenCurvePriceGreaterThan1() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1277,7 +1277,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInCBM() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1380,7 +1380,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromCurveToSPDoesntChangeCBMTotalPermanentLUSDTracker() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
        createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1421,7 +1421,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromCurveToSPDoesntChangeCBMPendingLUSDTracker() public {// A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         // B and A create bonds
         createBondForUser(B, bondAmount);
@@ -1541,7 +1541,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     // CBM Yearn and Curve trackers
 
     function testShiftLUSDFromCurveToSPIncreasesCBMAcquiredLUSDInSPTracker() public {
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         // B and A create bonds
         createBondForUser(B, bondAmount);
@@ -1591,7 +1591,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromCurveToSPIncreasesCBMLUSDInSPTracker() public {
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         // B and A create bonds
         createBondForUser(B, bondAmount);
@@ -1634,7 +1634,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromCurveToSPDecreasesCBMLUSDInCurveTracker() public {
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         // B and A create bonds
         createBondForUser(B, bondAmount);
@@ -1677,7 +1677,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromCurveToSPGetsClamped() public {
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         // B and A create bonds
         createBondForUser(B, bondAmount);
@@ -1990,7 +1990,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testSendFeeShareCallableOnlyByYearnGov() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
@@ -2050,7 +2050,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testSendFeeShareInMigrationModeReverts() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
@@ -2074,7 +2074,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testSendFeeShareInNormalModeIncreasesAcquiredLUSDInSP() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
@@ -2117,7 +2117,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testRedeemSandwichIncreaseLUSDPrice() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_SHIFT());
 
@@ -2298,7 +2298,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testRedeemSandwichDecreaseLUSDPrice() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_SHIFT());
 

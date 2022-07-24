@@ -99,6 +99,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     uint256 constant public SHIFTER_WINDOW = 10 minutes;          // Interval in which shifting is possible after countdown finishes
 
     uint256 constant public MIN_BLUSD_SUPPLY = 1e18;              // Minimum amount of bLUSD supply that must remain after a redemption
+    uint256 constant public MIN_BOND_AMOUNT = 100e18;             // Minimum amount of LUSD that needs to be bonded
 
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
@@ -215,6 +216,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function createBond(uint256 _lusdAmount) external returns (uint256) {
         _requireNonZeroAmount(_lusdAmount);
+        _requireMinBond(_lusdAmount);
         _requireMigrationNotActive();
 
         _updateAccrualParameter();
@@ -821,6 +823,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function _requireNonZeroBLUSDSupply() internal view {
         require(bLUSDToken.totalSupply() > 0, "CBM: bLUSD Supply must be > 0 upon shifting");
+    }
+
+    function _requireMinBond(uint256 _lusdAmount) internal pure {
+        require(_lusdAmount >= MIN_BOND_AMOUNT, "CBM: Bond minimum amount not reached");
     }
 
     function _requireRedemptionNotDepletingbLUSD(uint256 _bLUSDToRedeem) internal view {

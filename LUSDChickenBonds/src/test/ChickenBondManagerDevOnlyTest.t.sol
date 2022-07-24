@@ -13,7 +13,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInTransfersToRewardsContract() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -38,7 +38,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInWithoutInitialYield() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -59,7 +59,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInAfterRedemptionAlmostDepletionAndSPHarvestTransfersToRewardsContract() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -209,7 +209,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInWithoutEnoughLUSDInBAMM() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -245,7 +245,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInWithoutEnoughLUSDInBAMMForChickenInFee() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -272,7 +272,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testChickenOutMinTooBig() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -287,7 +287,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testChickenOutBelowMin() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
