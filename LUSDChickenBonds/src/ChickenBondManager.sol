@@ -312,18 +312,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         // From SP Vault
         if (acquiredLUSDInSP > 0) {
             _withdrawFromSPVaultAndTransferToRewardsStakingContract(acquiredLUSDInSP);
-        }
-
-        if (ownedLUSDInCurve > 0) {
-            // From Curve Vault
-            uint256 yTokensHeldByCBM = yearnCurveVault.balanceOf(address(this));
-            uint256 yTokensFromCurveVault = yTokensHeldByCBM * acquiredLUSDInCurve / ownedLUSDInCurve;
-
-            // withdraw LUSD3CRV from Curve Vault
-            if (yTokensFromCurveVault > 0) {
-                _withdrawFromCurveVaultAndTransferToRewardsStakingContract(yTokensFromCurveVault);
-            }
-        }
+        }  
 
         return _lusdInBAMMSPVault - acquiredLUSDInSP;
     }
@@ -434,8 +423,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     function shiftLUSDFromSPToCurve(uint256 _maxLUSDToShift) external {
-        _requireShiftBootstrapPeriodEnded();
+        // _requireShiftBootstrapPeriodEnded();
         _requireMigrationNotActive();
+        // _requireNonZeroBLUSDSupply();
 
         (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
         uint256 lusdOwnedInBAMMSPVault = bammLUSDValue - pendingLUSD;
@@ -484,7 +474,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     function shiftLUSDFromCurveToSP(uint256 _maxLUSDToShift) external {
         _requireShiftBootstrapPeriodEnded();
         _requireMigrationNotActive();
-
+        _requireNonZeroBLUSDSupply();
+        
         // We can’t shift more than what’s in Curve
         uint256 ownedLUSDInCurve = getTotalLUSDInCurve();
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, ownedLUSDInCurve);
@@ -801,6 +792,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function _requireNonZeroAmount(uint256 _amount) internal pure {
         require(_amount > 0, "CBM: Amount must be > 0");
+    }
+
+    function _requireNonZeroBLUSDSupply() internal view {
+        require(bLUSDToken.totalSupply() > 0, "CBM: bLUSD Supply must be > 0 upon shifting");
     }
 
     function _requireMigrationNotActive() internal view {

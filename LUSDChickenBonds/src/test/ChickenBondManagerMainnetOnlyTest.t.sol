@@ -200,6 +200,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
+
         // shift 50% to Curve
         shiftFractionFromSPToCurve(2);
 
@@ -344,6 +345,28 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     // --- shiftLUSDFromSPToCurve tests ---
+
+    function testShiftLUSDFromSPToCurveRevertsWhenZeroBLUSDSupply() public{
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // Shift bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
+
+        // B.Protocol LUSD Vault gets some yield
+        uint256 initialYield = 1e18;
+        _generateBAMMYield(initialYield, C);
+
+        uint256 lusdToShift = chickenBondManager.getOwnedLUSDInSP() / 10;
+        assertGt(lusdToShift, 0);
+
+         // Attempt to shift LUSD
+        vm.expectRevert("CBM: bLUSD Supply must be > 0 upon shifting");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+    }
 
     function testShiftLUSDFromSPToCurveRevertsBeforeEndOfShiftBootstrapPeriod() public{
         // A creates bond
@@ -772,6 +795,23 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     // --- shiftLUSDFromCurveToSP tests ---
 
+     function testShiftLUSDFromCurveToSPRevertsWhenZeroBLUSDSupply() public{
+        // A creates bond
+        uint256 bondAmount = 10e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalMinted();
+
+        // Shift bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
+
+        uint256 lusdToShift = 10e18;
+
+        // Attempt to shift LUSD from Curve->SP There's none in Curve anyway, but it should revert with this reason string
+        vm.expectRevert("CBM: bLUSD Supply must be > 0 upon shifting");
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
+    }
+
      function testShiftLUSDFromCurveToSPRevertsBeforeEndOfShiftBootstrapPeriod() public{
         // A creates bond
         uint256 bondAmount = 10e18;
@@ -1178,7 +1218,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // Shift all LUSD in SP
         makeCurveSpotPriceAbove1(200_000_000e18);
         uint256 lusdToShift = lusdInSP - 1;
-        vm.expectRevert("CBM: Amount must be > 0");
+        vm.expectRevert("CBM: bLUSD Supply must be > 0 upon shifting");
         chickenBondManager.shiftLUSDFromSPToCurve(lusdToShift);
     }
 
@@ -1757,7 +1797,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
-        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_SHIFT());
 
         // A chickens in
         vm.startPrank(A);
