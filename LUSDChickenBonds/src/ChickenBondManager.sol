@@ -368,12 +368,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256) {
         _requireNonZeroAmount(_bLUSDToRedeem);
-        // TODO: stack too deep
-        //uint256 bLUSDTotalSupply = bLUSDToken.totalSupply();
-        if (!migration) {
-            //require(_bLUSDToRedeem < bLUSDTotalSupply, "CBM: Cannot redeem total supply");
-            require(_bLUSDToRedeem + MIN_BLUSD_SUPPLY <= bLUSDToken.totalSupply(), "CBM: Cannot redeem below min supply");
-        }
+        _requireRedemptionNotDepletingbLUSD(_bLUSDToRedeem);
 
         require(block.timestamp >= firstChickenInTime + BOOTSTRAP_PERIOD_REDEEM, "CBM: Redemption after first chicken in must wait until bootstrap period is over");
 
@@ -826,6 +821,13 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function _requireNonZeroBLUSDSupply() internal view {
         require(bLUSDToken.totalSupply() > 0, "CBM: bLUSD Supply must be > 0 upon shifting");
+    }
+
+    function _requireRedemptionNotDepletingbLUSD(uint256 _bLUSDToRedeem) internal view {
+        if (!migration) {
+            //require(_bLUSDToRedeem < bLUSDTotalSupply, "CBM: Cannot redeem total supply");
+            require(_bLUSDToRedeem + MIN_BLUSD_SUPPLY <= bLUSDToken.totalSupply(), "CBM: Cannot redeem below min supply");
+        }
     }
 
     function _requireMigrationNotActive() internal view {
