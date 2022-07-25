@@ -50,8 +50,6 @@ https://github.com/gakonst/foundry
 
 The bulk of significant testing has been done using a mainnet fork, since ChickenBonds will heavily depend on the deployed B.Protocol, Yearn vault, Curve pool and Convex.
 
-As of 04/07/2022, mainnet tests are commented out as the B.AMM instance is not yet deployed. We intend to uncomment and update these mainnet fork tests  as soon as the B.AMM is deployed to mainnet and active.
-
 For mainnet fork testing in Foundry, please set the env variable `ETH_RPC_URL` equal to your API key for a Ethereum RPC node service such as Alchemy or Infura. Run all mainnet tests with:
 forge test --fork-url $ETH_RPC_URL
 
