@@ -129,6 +129,7 @@ contract MainnetTestSetup is BaseTest {
 
         CHICKEN_IN_AMM_FEE = chickenBondManager.CHICKEN_IN_AMM_FEE();
         MIN_BLUSD_SUPPLY = chickenBondManager.MIN_BLUSD_SUPPLY();
+        MIN_BOND_AMOUNT = chickenBondManager.MIN_BOND_AMOUNT();
         BOOTSTRAP_PERIOD_CHICKEN_IN = chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN();
         BOOTSTRAP_PERIOD_REDEEM = chickenBondManager.BOOTSTRAP_PERIOD_REDEEM();
         BOOTSTRAP_PERIOD_SHIFT = chickenBondManager.BOOTSTRAP_PERIOD_SHIFT();
