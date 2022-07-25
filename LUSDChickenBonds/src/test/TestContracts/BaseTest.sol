@@ -118,7 +118,7 @@ contract BaseTest is DSTest, stdCheats {
         vm.stopPrank();
 
         // bond ID
-        return bondNFT.totalMinted();
+        return bondNFT.totalSupply();
     }
 
     function chickenInForUser(address _user, uint256 _bondID) public {

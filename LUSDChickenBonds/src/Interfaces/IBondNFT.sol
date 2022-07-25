@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
+import "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
-interface IBondNFT is IERC721 {
+interface IBondNFT is IERC721Enumerable {
     function mint(address _bonder) external returns (uint256);
-
-    function totalSupply() external view returns (uint256);
-
-    function totalMinted() external view returns (uint256);
 }

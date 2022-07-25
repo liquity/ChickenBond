@@ -51,11 +51,6 @@ contract BondNFT is ERC721Enumerable, Ownable {
         return address(artwork) != address(0) ? artwork.tokenURI(_tokenID) : "";
     }
 
-    // Tokens are never burnt, therefore total minted equals the total supply.
-    function totalMinted() external view returns (uint256) {
-        return totalSupply();
-    }
-
     // Prevent transfers for a period of time after chickening in or out
     function _beforeTokenTransfer(address _from, address _to, uint256 _tokenID) internal virtual override {
         if (_from != address(0)) {
