@@ -170,6 +170,29 @@ https://docs.google.com/document/d/1fagBvVWRy9hQjrJvK4daK_F8iT9lfUeUrmlxC56Qzfw/
 
 The choice of thresholds ensures that shifting LUSD is profitable for the Chicken Bonds system.
 
+### Additional shifter conditions
+
+- **Initial bootstrap period**. Both shifters are disabled for an initial period  post-launch (currently set to 90 days - the final value is TBD). As a result, all system funds remain in B.Protocol for this initial period.
+- **bLUSD supply must be > 0**. There must be a non-zero supply of bLUSD for shifters to work.  This ensures that all system funds remain deposited in B.Protocol before the first Chicken In.
+
+### Shifter countdown period and shifting window
+
+It is not possible to shift funds without first starting a countdown. 
+
+In order to shift funds, someone must first start the countdown via the permissionless `startShifterCountdown` function. The countdown period is set to 1 hour (final value TBD). 
+
+When the countdown period ends, the "shifting window" opens: this period is 10 minutes (final value TBD). During the shifting window, anyone may shift funds (subject to the other shifting conditions).
+
+A new countdown can only be started if the previous countdown period and subsequent shifting window have ended.
+
+#### Purpose of countdown and shifting window
+
+The intent is to minimize the frontrunning of Liquity liquidations by shifts of Chicken Bonds funds.
+
+Shifts are only possible during the shifting window which opens when a countdown has been initiated and completed. 
+
+Since Liquity liquidations can happen at any time, then statistically, even if an attacker kept restarting countdowns as soon as possible, a large proportion of liquidations would not fall within the shifting window and therefore could not be frontrun. Assuming liquidations are randomly distributed in time (since they depend on the Ether price), the tighter the shifting window relative to the countdown period, then the lower the percentage of liquidations that will fall within the window.
+
 
 ## Core smart contract architecture
 
@@ -214,6 +237,8 @@ Yearn Curve vault is periodically manually harvested by the Yearn team in order 
 - `sendFeeShare(_lusdAmount):` Callable only by Yearn Governance. Transfers the provided LUSD to the ChickenBondManager contract, and deposits it to the B.AMM SP vault.
 
 - `activateMigration():` Callable only by Yearn Governance. Moves all funds in permanent buckets to their corresponding acquired buckets, thus making all system funds (except for the pending bucket) redeemable.
+
+- `startShifterCountdown()`: Permissionless function that starts a new shifter countdown to a shifting window, if the previous countdown and subsequent shifting window have both ended.
 
 ## Controller
 The system incorporates an asymmetrical controller, designed to maintain the economic attractiveness of bonding. Without any form of control it seems likely that the break-even bonding time would increase. As the system matures, it may be necessary to steepen the bLUSD accrual curve. Controlling the accrual curve successfully should have the effect of keeping the break-even time and optimal rebonding time below some acceptable upper bound.
