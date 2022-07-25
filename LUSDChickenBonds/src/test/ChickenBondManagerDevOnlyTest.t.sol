@@ -129,6 +129,8 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
+        _startShiftCountdownAndWarpInsideWindow();
+
         // shift 50% to Curve
         MockCurvePool(address(curvePool)).setNextPrankPrice(105e16);
         shiftFractionFromSPToCurve(2);

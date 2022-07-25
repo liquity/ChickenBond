@@ -2174,6 +2174,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // --- Reset state! ---
         setUp();
 
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_SHIFT());
+
         A_bondID = createBondForUser(A, bondAmount);
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
@@ -2351,8 +2353,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // --- Reset state! ---
         setUp();
 
-        // reset redemption fee
-        chickenBondManager.resetRedemptionBaseFee();
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_SHIFT());
 
         A_bondID = createBondForUser(A, bondAmount);
 
