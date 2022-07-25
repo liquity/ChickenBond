@@ -93,6 +93,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     uint256 constant public BOOTSTRAP_PERIOD_CHICKEN_IN = 7 days; // Min duration of first chicken-in
     uint256 constant public BOOTSTRAP_PERIOD_REDEEM = 7 days; // Redemption lock period after first chicken in
+    uint256 constant public BOOTSTRAP_PERIOD_SHIFT = 90 days; // Period after launch during which shifter functions are disabled
+  
+    uint256 constant public SHIFTER_DELAY = 60 minutes;  // Duration of shifter countdown
+    uint256 constant public SHIFTER_WINDOW = 10 minutes;  // Interval in which shifting is possible after countdown finishes
 
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
@@ -111,6 +115,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     // Thresholds of SP <=> Curve shifting
     uint256 public immutable curveDepositLUSD3CRVExchangeRateThreshold;
     uint256 public immutable curveWithdrawal3CRVLUSDExchangeRateThreshold;
+
+    // Timestamp at which the last shifter countdown started
+    uint256 public lastShifterCountdownStartTime;
 
     // --- Accrual control variables ---
 
@@ -272,21 +279,6 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _transferToRewardsStakingContract(_lusdAmount);
     }
 
-    function _withdrawFromCurveVaultAndTransferToRewardsStakingContract(uint256 _yTokensToSwap) internal {
-        uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
-        _withdrawFromCurve(_yTokensToSwap);
-        uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
-
-        // obtain LUSD from Curve
-        if (LUSD3CRVBalanceDelta > 0) {
-            uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-            curvePool.remove_liquidity_one_coin(LUSD3CRVBalanceDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);
-
-            uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-            _transferToRewardsStakingContract(lusdBalanceDelta);
-        }
-    }
-
     /* Divert acquired yield to LUSD/bLUSD AMM LP rewards staking contract
      * It happens on the very first chicken in event of the system, or any time that redemptions deplete bLUSD total supply to zero
      * Assumption: When there have been no chicken ins since the bLUSD supply was set to 0 (either due to system deployment, or full bLUSD redemption),
@@ -300,9 +292,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         (
             uint256 acquiredLUSDInSP,
-            uint256 acquiredLUSDInCurve,
+            /* uint256 acquiredLUSDInCurve */,
             /* uint256 ownedLUSDInSP */,
-            uint256 ownedLUSDInCurve,
+            /* uint256 ownedLUSDInCurve */,
             /* uint256 permanentLUSDCached */
         ) = _getLUSDSplit(_bammLUSDValue);
 
@@ -315,16 +307,6 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         // From SP Vault
         if (acquiredLUSDInSP > 0) {
             _withdrawFromSPVaultAndTransferToRewardsStakingContract(acquiredLUSDInSP);
-        }
-
-        if (ownedLUSDInCurve > 0) {
-            // From Curve Vault
-            uint256 yTokensFromCurveVault = yTokensHeldByCBM * acquiredLUSDInCurve / ownedLUSDInCurve;
-
-            // withdraw LUSD3CRV from Curve Vault
-            if (yTokensFromCurveVault > 0) {
-                _withdrawFromCurveVaultAndTransferToRewardsStakingContract(yTokensFromCurveVault);
-            }
         }
 
         return _lusdInBAMMSPVault - acquiredLUSDInSP;
@@ -435,7 +417,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     function shiftLUSDFromSPToCurve(uint256 _maxLUSDToShift) external {
+        _requireShiftBootstrapPeriodEnded();
         _requireMigrationNotActive();
+        _requireNonZeroBLUSDSupply();
+        _requireShiftWindowIsOpen();
 
         (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
         uint256 lusdOwnedInBAMMSPVault = bammLUSDValue - pendingLUSD;
@@ -482,8 +467,11 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     function shiftLUSDFromCurveToSP(uint256 _maxLUSDToShift) external {
+        _requireShiftBootstrapPeriodEnded();
         _requireMigrationNotActive();
-
+        _requireNonZeroBLUSDSupply();
+        _requireShiftWindowIsOpen();
+        
         // We can’t shift more than what’s in Curve
         uint256 ownedLUSDInCurve = getTotalLUSDInCurve();
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, ownedLUSDInCurve);
@@ -604,6 +592,16 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Zero the permament LUSD tracker. This implicitly makes all permament liquidity acquired (and redeemable)
         permanentLUSD = 0;
+    }
+
+    // --- Shifter countdown starter ---
+
+    function startShifterCountdown() public {
+        // First check that the previous delay and shifting window have passed
+        require(block.timestamp >= lastShifterCountdownStartTime + SHIFTER_DELAY + SHIFTER_WINDOW, "CBM: Previous shift delay and window must have passed");
+
+        // Begin the new countdown from now
+        lastShifterCountdownStartTime = block.timestamp;
     }
 
     // --- Fee share ---
@@ -820,6 +818,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         require(_amount > 0, "CBM: Amount must be > 0");
     }
 
+    function _requireNonZeroBLUSDSupply() internal view {
+        require(bLUSDToken.totalSupply() > 0, "CBM: bLUSD Supply must be > 0 upon shifting");
+    }
+
     function _requireMigrationNotActive() internal view {
         require(!migration, "CBM: Migration must be not be active");
     }
@@ -837,6 +839,17 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 lusdToWithdraw = Math.min(_requestedLUSD, lusdInBAMMSPVault);
 
         return lusdToWithdraw;
+    }
+
+    function _requireShiftBootstrapPeriodEnded() internal view {
+        require(block.timestamp - deploymentTimestamp >= BOOTSTRAP_PERIOD_SHIFT, "CBM: Shifter only callable after shift bootstrap period ends");
+    }
+
+    function _requireShiftWindowIsOpen() internal view {
+        uint256 shiftWindowStartTime = lastShifterCountdownStartTime + SHIFTER_DELAY;
+        uint256 shiftWindowFinishTime = shiftWindowStartTime + SHIFTER_WINDOW;
+        
+        require(block.timestamp >= shiftWindowStartTime && block.timestamp < shiftWindowFinishTime, "CBM: Shift only possible inside shifting window");
     }
 
     // --- Getter convenience functions ---
