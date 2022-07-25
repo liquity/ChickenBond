@@ -127,6 +127,8 @@ contract MainnetTestSetup is BaseTest {
             10004e14  /* 1.0004 */             // _curveWithdrawalDxdyThreshold
         );
 
+        CHICKEN_IN_AMM_FEE = chickenBondManager.CHICKEN_IN_AMM_FEE();
+        MIN_BLUSD_SUPPLY = chickenBondManager.MIN_BLUSD_SUPPLY();
         BOOTSTRAP_PERIOD_CHICKEN_IN = chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN();
         BOOTSTRAP_PERIOD_REDEEM = chickenBondManager.BOOTSTRAP_PERIOD_REDEEM();
         BOOTSTRAP_PERIOD_SHIFT = chickenBondManager.BOOTSTRAP_PERIOD_SHIFT();

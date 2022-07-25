@@ -92,11 +92,13 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
 
     uint256 constant public BOOTSTRAP_PERIOD_CHICKEN_IN = 7 days; // Min duration of first chicken-in
-    uint256 constant public BOOTSTRAP_PERIOD_REDEEM = 7 days; // Redemption lock period after first chicken in
-    uint256 constant public BOOTSTRAP_PERIOD_SHIFT = 90 days; // Period after launch during which shifter functions are disabled
-  
-    uint256 constant public SHIFTER_DELAY = 60 minutes;  // Duration of shifter countdown
-    uint256 constant public SHIFTER_WINDOW = 10 minutes;  // Interval in which shifting is possible after countdown finishes
+    uint256 constant public BOOTSTRAP_PERIOD_REDEEM = 7 days;     // Redemption lock period after first chicken in
+    uint256 constant public BOOTSTRAP_PERIOD_SHIFT = 90 days;     // Period after launch during which shifter functions are disabled
+
+    uint256 constant public SHIFTER_DELAY = 60 minutes;           // Duration of shifter countdown
+    uint256 constant public SHIFTER_WINDOW = 10 minutes;          // Interval in which shifting is possible after countdown finishes
+
+    uint256 constant public MIN_BLUSD_SUPPLY = 1e18;              // Minimum amount of bLUSD supply that must remain after a redemption
 
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
@@ -330,9 +332,11 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             lusdInBAMMSPVault = _firstChickenIn(bond.startTime, bammLUSDValue, lusdInBAMMSPVault);
         }
 
-
+        // Get the LUSD amount to acquire from the bond in proportion to the system's current backing ratio, in order to maintain said ratio.
+        uint256 lusdToAcquire = _calcAccruedAmount(bond.startTime, bondAmountMinusChickenInFee, updatedAccrualParameter);
+        // Get backing ratio and accrued bLUSD
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
-        uint256 accruedBLUSD = _calcAccruedBLUSD(bond.startTime, bondAmountMinusChickenInFee, backingRatio, updatedAccrualParameter);
+        uint256 accruedBLUSD = lusdToAcquire * 1e18 / backingRatio;
 
         delete idToBondData[_bondID];
 
@@ -340,10 +344,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
-        /* Get the LUSD amount to acquire from the bond, and the remaining surplus.
-        *  Acquire LUSD in proportion to the system's current backing ratio, in order to maintain said ratio.
-        */
-        uint256 lusdToAcquire = accruedBLUSD * backingRatio / 1e18;
+        // Get the remaining surplus from the LUSD amount to acquire from the bond
         uint256 lusdSurplus = bondAmountMinusChickenInFee - lusdToAcquire;
 
         // Handle the surplus LUSD from the chicken-in:
@@ -367,6 +368,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256) {
         _requireNonZeroAmount(_bLUSDToRedeem);
+        _requireRedemptionNotDepletingbLUSD(_bLUSDToRedeem);
 
         require(block.timestamp >= firstChickenInTime + BOOTSTRAP_PERIOD_REDEEM, "CBM: Redemption after first chicken in must wait until bootstrap period is over");
 
@@ -471,7 +473,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _requireMigrationNotActive();
         _requireNonZeroBLUSDSupply();
         _requireShiftWindowIsOpen();
-        
+
         // We can’t shift more than what’s in Curve
         uint256 ownedLUSDInCurve = getTotalLUSDInCurve();
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, ownedLUSDInCurve);
@@ -687,19 +689,18 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     // Internal getter for calculating accrued LUSD based on BondData struct
-    function _calcAccruedBLUSD(uint256 _startTime, uint256 _lusdAmount, uint256 _backingRatio, uint256 _accrualParameter) internal view returns (uint256) {
+    function _calcAccruedAmount(uint256 _startTime, uint256 _capAmount, uint256 _accrualParameter) internal view returns (uint256) {
         // All bonds have a non-zero creation timestamp, so return accrued sLQTY 0 if the startTime is 0
         if (_startTime == 0) {return 0;}
-        uint256 bondBLUSDCap = _calcBondBLUSDCap(_lusdAmount, _backingRatio);
 
         // Scale `bondDuration` up to an 18 digit fixed-point number.
         // This lets us add it to `accrualParameter`, which is also an 18-digit FP.
         uint256 bondDuration = 1e18 * (block.timestamp - _startTime);
 
-        uint256 accruedBLUSD = bondBLUSDCap * bondDuration / (bondDuration + _accrualParameter);
-        //assert(accruedBLUSD < bondBLUSDCap); // we leave it as a comment so we can uncomment it for automated testing tools
+        uint256 accruedAmount = _capAmount * bondDuration / (bondDuration + _accrualParameter);
+        //assert(accruedAmount < _capAmount); // we leave it as a comment so we can uncomment it for automated testing tools
 
-        return accruedBLUSD;
+        return accruedAmount;
     }
 
     // Gauge the average (size-weighted) outstanding bond age and adjust accrual parameter if it's higher than our target.
@@ -822,6 +823,13 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         require(bLUSDToken.totalSupply() > 0, "CBM: bLUSD Supply must be > 0 upon shifting");
     }
 
+    function _requireRedemptionNotDepletingbLUSD(uint256 _bLUSDToRedeem) internal view {
+        if (!migration) {
+            //require(_bLUSDToRedeem < bLUSDTotalSupply, "CBM: Cannot redeem total supply");
+            require(_bLUSDToRedeem + MIN_BLUSD_SUPPLY <= bLUSDToken.totalSupply(), "CBM: Cannot redeem below min supply");
+        }
+    }
+
     function _requireMigrationNotActive() internal view {
         require(!migration, "CBM: Migration must be not be active");
     }
@@ -848,7 +856,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     function _requireShiftWindowIsOpen() internal view {
         uint256 shiftWindowStartTime = lastShifterCountdownStartTime + SHIFTER_DELAY;
         uint256 shiftWindowFinishTime = shiftWindowStartTime + SHIFTER_WINDOW;
-        
+
         require(block.timestamp >= shiftWindowStartTime && block.timestamp < shiftWindowFinishTime, "CBM: Shift only possible inside shifting window");
     }
 
@@ -861,10 +869,22 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return (bond.lusdAmount, bond.startTime);
     }
 
+    function getLUSDToAcquire(uint256 _bondID) external view returns (uint256) {
+        BondData memory bond = idToBondData[_bondID];
+
+        (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
+
+        return _calcAccruedAmount(bond.startTime, _getBondAmountMinusChickenInFee(bond.lusdAmount), updatedAccrualParameter);
+    }
+
     function calcAccruedBLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
+
+        uint256 bondBLUSDCap = _calcBondBLUSDCap(_getBondAmountMinusChickenInFee(bond.lusdAmount), calcSystemBackingRatio());
+
         (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
-        return _calcAccruedBLUSD(bond.startTime, _getBondAmountMinusChickenInFee(bond.lusdAmount), calcSystemBackingRatio(), updatedAccrualParameter);
+
+        return _calcAccruedAmount(bond.startTime, bondBLUSDCap, updatedAccrualParameter);
     }
 
     function calcBondBLUSDCap(uint256 _bondID) external view returns (uint256) {

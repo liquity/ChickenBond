@@ -94,5 +94,10 @@ contract DevTestSetup is BaseTest {
 
         bondNFT.setAddresses(address(chickenBondManager));
         bLUSDToken.setAddresses(address(chickenBondManager));
+
+        CHICKEN_IN_AMM_FEE = chickenBondManager.CHICKEN_IN_AMM_FEE();
+        MIN_BLUSD_SUPPLY = chickenBondManager.MIN_BLUSD_SUPPLY();
+        SHIFTER_DELAY = chickenBondManager.SHIFTER_DELAY();
+        SHIFTER_WINDOW = chickenBondManager.SHIFTER_WINDOW();
     }
 }
