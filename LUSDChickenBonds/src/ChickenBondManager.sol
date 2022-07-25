@@ -115,7 +115,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     uint256 public immutable curveWithdrawal3CRVLUSDExchangeRateThreshold;
 
     // Timestamp at which the last shifter countdown started
-    uint256 lastShifterCountdownStartTime;
+    uint256 public lastShifterCountdownStartTime;
 
     // --- Accrual control variables ---
 
@@ -593,7 +593,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function startShifterCountdown() public {
         // First check that the previous delay and shifting window have passed
-        require(block.timestamp >= lastShifterCountdownStartTime + SHIFTER_DELAY + SHIFTER_WINDOW, "CBM: Previous shift window must have closed");
+        require(block.timestamp >= lastShifterCountdownStartTime + SHIFTER_DELAY + SHIFTER_WINDOW, "CBM: Previous shift delay and window must have passed");
 
         // Begin the new countdown from now
         lastShifterCountdownStartTime = block.timestamp;

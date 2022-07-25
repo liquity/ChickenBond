@@ -1980,4 +1980,102 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 accrualParameter3 = chickenBondManager.calcUpdatedAccrualParameter();
         assertLtDecimal(accrualParameter3, accrualParameter2, 18);
     }
+
+     // --- Shifter countdown tests ---
+
+    function testStartShifterCountdownSetsCountdownStartTime() public {
+        vm.warp(block.timestamp + 30 days); // Move time forward so that we're not close to a block.timestamp of 0
+        
+        uint256 startTime1 = chickenBondManager.lastShifterCountdownStartTime();
+        assertEq(startTime1, 0);
+
+        vm.startPrank(A);
+        chickenBondManager.startShifterCountdown();
+
+        uint256 startTime2 = chickenBondManager.lastShifterCountdownStartTime();
+        assertEq(startTime2, block.timestamp);
+    }
+
+    function testStartShifterCountdownRevertsDuringCountdown() public {
+        vm.warp(block.timestamp + 30 days); // Move time forward so that we're not close to a block.timestamp of 0
+        
+        uint256 delay = chickenBondManager.SHIFTER_DELAY();
+        uint256 window = chickenBondManager.SHIFTER_WINDOW();
+
+        vm.startPrank(A);
+        chickenBondManager.startShifterCountdown();
+
+        uint256 startTime = chickenBondManager.lastShifterCountdownStartTime();
+        assertGt(startTime, 0);
+
+        // Fast forward to middle of delay
+        vm.warp(startTime + delay / 2);
+
+        console.log(block.timestamp, "block.timestamp");
+        console.log(startTime + delay + window, "time it should be allowed");
+
+        vm.expectRevert("CBM: Previous shift delay and window must have passed");
+        chickenBondManager.startShifterCountdown();
+
+        // Fast forward to last second of delay
+        vm.warp(startTime + delay - 1);
+        vm.expectRevert("CBM: Previous shift delay and window must have passed");
+        chickenBondManager.startShifterCountdown();
+    }
+
+     function testStartShifterCountdownRevertsDuringShiftingWindow() public {
+        vm.warp(block.timestamp + 30 days); // Move time forward so that we're not close to a block.timestamp of 0
+        
+        uint256 delay = chickenBondManager.SHIFTER_DELAY();
+        uint256 window = chickenBondManager.SHIFTER_WINDOW();
+
+        vm.startPrank(A);
+        chickenBondManager.startShifterCountdown();
+
+        uint256 startTime = chickenBondManager.lastShifterCountdownStartTime();
+        assertGt(startTime, 0);
+
+        // Fast forward to middle of shifting window
+        vm.warp(startTime + delay + window / 2);
+
+        console.log(block.timestamp, "block.timestamp");
+        console.log(startTime + delay + window, "time it should be allowed");
+
+        vm.expectRevert("CBM: Previous shift delay and window must have passed");
+        chickenBondManager.startShifterCountdown();
+
+        // Fast forward to last second of shifting window
+        vm.warp(startTime + delay + window - 1);
+        vm.expectRevert("CBM: Previous shift delay and window must have passed");
+        chickenBondManager.startShifterCountdown();
+    }
+
+    function testStartShifterCountdownSucceedsAfterShiftingWindow() public {
+        vm.warp(block.timestamp + 30 days); // Move time forward so that we're not close to a block.timestamp of 0
+        
+        uint256 delay = chickenBondManager.SHIFTER_DELAY();
+        uint256 window = chickenBondManager.SHIFTER_WINDOW();
+
+        vm.startPrank(A);
+        chickenBondManager.startShifterCountdown();
+
+        uint256 startTime1 = chickenBondManager.lastShifterCountdownStartTime();
+        assertGt(startTime1, 0);
+
+        // Fast forward to end of shifting window
+        vm.warp(startTime1 + delay + window);
+
+        chickenBondManager.startShifterCountdown();
+
+        uint256 startTime2 = chickenBondManager.lastShifterCountdownStartTime();
+        assertEq(startTime2, block.timestamp);
+
+        // Fast to after end of latest shifting window
+        vm.warp(startTime2 + delay + window + 17 days);
+       
+        chickenBondManager.startShifterCountdown();
+
+        uint256 startTime3 = chickenBondManager.lastShifterCountdownStartTime();
+        assertEq(startTime3, block.timestamp);
+    }
 }

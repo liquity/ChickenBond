@@ -28,6 +28,8 @@ contract MainnetTestSetup is BaseTest {
     uint256 BOOTSTRAP_PERIOD_CHICKEN_IN;
     uint256 BOOTSTRAP_PERIOD_REDEEM;
     uint256 BOOTSTRAP_PERIOD_SHIFT;
+    uint256 SHIFTER_DELAY;
+    uint256 SHIFTER_WINDOW;
     uint256 CBMDeploymentTime;
 
     function setUp() public {
@@ -130,6 +132,9 @@ contract MainnetTestSetup is BaseTest {
         BOOTSTRAP_PERIOD_CHICKEN_IN = chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN();
         BOOTSTRAP_PERIOD_REDEEM = chickenBondManager.BOOTSTRAP_PERIOD_REDEEM();
         BOOTSTRAP_PERIOD_SHIFT = chickenBondManager.BOOTSTRAP_PERIOD_SHIFT();
+        SHIFTER_DELAY = chickenBondManager.SHIFTER_DELAY();
+        SHIFTER_WINDOW = chickenBondManager.SHIFTER_WINDOW();
+        
         CBMDeploymentTime = chickenBondManager.deploymentTimestamp();
 
         // Add LUSD as reward token for Curve Liquidity Gauge, and set ChickenBondManager as distributor
