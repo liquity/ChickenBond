@@ -297,9 +297,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         (
             uint256 acquiredLUSDInSP,
-            uint256 acquiredLUSDInCurve,
+            /* uint256 acquiredLUSDInCurve */,
             /* uint256 ownedLUSDInSP */,
-            uint256 ownedLUSDInCurve,
+            /* uint256 ownedLUSDInCurve */,
             /* uint256 permanentLUSDCached */
         ) = _getLUSDSplit(_bammLUSDValue);
 

@@ -351,7 +351,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 10e18;
 
         createBondForUser(A, bondAmount);
-        uint256 A_bondID = bondNFT.totalMinted();
+        bondNFT.totalMinted();
 
         // Shift bootstrap period passes
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
@@ -800,7 +800,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 bondAmount = 10e18;
 
         createBondForUser(A, bondAmount);
-        uint256 A_bondID = bondNFT.totalMinted();
+        bondNFT.totalMinted();
 
         // Shift bootstrap period passes
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
