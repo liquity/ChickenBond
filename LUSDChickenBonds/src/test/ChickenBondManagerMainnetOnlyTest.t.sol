@@ -353,7 +353,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
         
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -376,7 +376,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
         
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -414,7 +414,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
         
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -451,7 +451,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
         
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -481,7 +481,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveRevertsWhenZeroBLUSDSupply() public{
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         bondNFT.totalMinted();
@@ -503,7 +503,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveRevertsBeforeEndOfShiftBootstrapPeriod() public{
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -536,7 +536,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromSPToCurveSucceedsAfterEndOfShiftBootstrapPeriod() public{
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -959,7 +959,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
         
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -981,7 +981,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
         
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1017,7 +1017,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
         
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1053,7 +1053,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         vm.warp(block.timestamp + BOOTSTRAP_PERIOD_SHIFT);
         
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1088,7 +1088,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
      function testShiftLUSDFromCurveToSPRevertsWhenZeroBLUSDSupply() public{
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         bondNFT.totalMinted();
@@ -1105,7 +1105,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
      function testShiftLUSDFromCurveToSPRevertsBeforeEndOfShiftBootstrapPeriod() public{
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
@@ -1136,7 +1136,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftCurveToSPSucceedsAfterEndOfShiftBootstrapPeriod() public{
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalMinted();
