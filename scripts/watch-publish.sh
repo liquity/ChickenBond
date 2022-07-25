@@ -6,5 +6,5 @@ cd "$(dirname "$0")"
 
 echo -e "Watching LUSD / LQTY compilations...\n"
 
-nodemon --delay 1 -e js,json --watch ../lusd/dist/ --on-change-only --exec 'yarn publish:local'
+nodemon --delay 5 -e js,json --watch ../lusd/dist/ --on-change-only --exec 'yarn publish:local'
 
