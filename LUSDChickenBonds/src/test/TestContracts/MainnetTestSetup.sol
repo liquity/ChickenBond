@@ -28,8 +28,6 @@ contract MainnetTestSetup is BaseTest {
     uint256 BOOTSTRAP_PERIOD_CHICKEN_IN;
     uint256 BOOTSTRAP_PERIOD_REDEEM;
     uint256 BOOTSTRAP_PERIOD_SHIFT;
-    uint256 SHIFTER_DELAY;
-    uint256 SHIFTER_WINDOW;
     uint256 CBMDeploymentTime;
 
     function setUp() public {

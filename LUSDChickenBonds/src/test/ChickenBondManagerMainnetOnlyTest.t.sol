@@ -6,12 +6,6 @@ import "../Interfaces/StrategyAPI.sol";
 
 
 contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
-    function _startShiftCountdownAndWarpInsideWindow() internal {
-         // Start countdown and fast-forward to inside shifting window
-        chickenBondManager.startShifterCountdown();
-        uint256 countdownStartTime = chickenBondManager.lastShifterCountdownStartTime();
-        vm.warp(countdownStartTime + SHIFTER_DELAY + SHIFTER_WINDOW - 1);
-    }
 
     function _generateBAMMYield(uint256 _yieldAmount, address _user) internal {
         (uint256 ethAmount,) = bammSPVault.getSwapEthAmount(_yieldAmount);
