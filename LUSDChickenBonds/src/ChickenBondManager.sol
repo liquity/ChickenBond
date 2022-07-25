@@ -269,21 +269,6 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _transferToRewardsStakingContract(_lusdAmount);
     }
 
-    function _withdrawFromCurveVaultAndTransferToRewardsStakingContract(uint256 _yTokensToSwap) internal {
-        uint256 LUSD3CRVBalanceBefore = curvePool.balanceOf(address(this));
-        yearnCurveVault.withdraw(_yTokensToSwap);
-        uint256 LUSD3CRVBalanceDelta = curvePool.balanceOf(address(this)) - LUSD3CRVBalanceBefore;
-
-        // obtain LUSD from Curve
-        if (LUSD3CRVBalanceDelta > 0) {
-            uint256 lusdBalanceBefore = lusdToken.balanceOf(address(this));
-            curvePool.remove_liquidity_one_coin(LUSD3CRVBalanceDelta, INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL, 0);
-
-            uint256 lusdBalanceDelta = lusdToken.balanceOf(address(this)) - lusdBalanceBefore;
-            _transferToRewardsStakingContract(lusdBalanceDelta);
-        }
-    }
-
     /* Divert acquired yield to LUSD/bLUSD AMM LP rewards staking contract
      * It happens on the very first chicken in event of the system, or any time that redemptions deplete bLUSD total supply to zero
      * Assumption: When there have been no chicken ins since the bLUSD supply was set to 0 (either due to system deployment, or full bLUSD redemption),
