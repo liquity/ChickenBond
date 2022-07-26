@@ -152,7 +152,7 @@ class LUSDChickenBondDeployment {
       "LUSDBondNFT",
       "LUSDBOND",
       AddressZero,
-      config.bondNFTTransferLockoutPeriodSeconds,
+      params.bondNFTTransferLockoutPeriodSeconds,
       overrides
     );
 
