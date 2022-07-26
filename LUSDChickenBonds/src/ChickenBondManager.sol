@@ -59,6 +59,27 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         address curveLiquidityGaugeAddress;
     }
 
+    struct Params {
+        uint256 targetAverageAgeSeconds;        // Average outstanding bond age above which the controller will adjust `accrualParameter` in order to speed up accrual
+        uint256 initialAccrualParameter;        // Initial value for `accrualParameter`
+        uint256 minimumAccrualParameter;        // Stop adjusting `accrualParameter` when this value is reached
+        uint256 accrualAdjustmentRate;          // `accrualParameter` is multiplied `1 - accrualAdjustmentRate` every time there's an adjustment
+        uint256 accrualAdjustmentPeriodSeconds; // The duration of an adjustment period in seconds
+        uint256 chickenInAMMFee;                // Fraction of bonded amount that is sent to Curve Liquidity Gauge to incentivize LUSD-bLUSD liquidity
+        uint256 curveDepositDydxThreshold;      // Threshold of SP => Curve shifting
+        uint256 curveWithdrawalDxdyThreshold;   // Threshold of Curve => SP shifting
+        uint256 bootstrapPeriodChickenIn;       // Min duration of first chicken-in
+        uint256 bootstrapPeriodRedeem;          // Redemption lock period after first chicken in
+        uint256 bootstrapPeriodShift;           // Period after launch during which shifter functions are disabled
+        uint256 shifterDelay;                   // Duration of shifter countdown
+        uint256 shifterWindow;                  // Interval in which shifting is possible after countdown finishes
+        uint256 minBLUSDSupply;                 // Minimum amount of bLUSD supply that must remain after a redemption
+        uint256 minBondAmount;                  // Minimum amount of LUSD that needs to be bonded
+        uint256 nftRandomnessDivisor;           // Divisor for permanent LUSD amount in NFT pseudo-randomness computation (see comment below)
+        uint256 redemptionFeeBeta;              // Parameter by which to divide the redeemed fraction, in order to calculate the new base rate from a redemption
+        uint256 redemptionFeeMinuteDecayFactor; // Factor by which redemption fee decays (exponentially) every minute
+    }
+
     struct BondData {
         uint256 lusdAmount;
         uint256 startTime;
@@ -94,33 +115,28 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     uint256 constant public SECONDS_IN_ONE_MINUTE = 60;
 
-    uint256 constant public BOOTSTRAP_PERIOD_CHICKEN_IN = 7 days; // Min duration of first chicken-in
-    uint256 constant public BOOTSTRAP_PERIOD_REDEEM = 7 days;     // Redemption lock period after first chicken in
-    uint256 constant public BOOTSTRAP_PERIOD_SHIFT = 90 days;     // Period after launch during which shifter functions are disabled
+    uint256 public immutable BOOTSTRAP_PERIOD_CHICKEN_IN; // Min duration of first chicken-in
+    uint256 public immutable BOOTSTRAP_PERIOD_REDEEM;     // Redemption lock period after first chicken in
+    uint256 public immutable BOOTSTRAP_PERIOD_SHIFT;      // Period after launch during which shifter functions are disabled
 
-    uint256 constant public SHIFTER_DELAY = 60 minutes;           // Duration of shifter countdown
-    uint256 constant public SHIFTER_WINDOW = 10 minutes;          // Interval in which shifting is possible after countdown finishes
+    uint256 public immutable SHIFTER_DELAY;               // Duration of shifter countdown
+    uint256 public immutable SHIFTER_WINDOW;              // Interval in which shifting is possible after countdown finishes
 
-    uint256 constant public MIN_BLUSD_SUPPLY = 1e18;              // Minimum amount of bLUSD supply that must remain after a redemption
-    uint256 constant public MIN_BOND_AMOUNT = 100e18;             // Minimum amount of LUSD that needs to be bonded
+    uint256 public immutable MIN_BLUSD_SUPPLY;            // Minimum amount of bLUSD supply that must remain after a redemption
+    uint256 public immutable MIN_BOND_AMOUNT;             // Minimum amount of LUSD that needs to be bonded
     // This is the minimum amount the permanent bucket needs to be increased by an  attacker (thrugh previous chicken in or redemption fee),
     // in order to manipulate the obtained NFT. If the attacker finds the desired outcome at attempt N,
     // the permanent increase should be N * NFT_RANDOMNESS_DIVISOR.
     // It also means that as long as Permanent doesn’t change in that order of magnitude, attacker can try to manipulate
     // only changing the event date.
-    uint256 constant public NFT_RANDOMNESS_DIVISOR = 1000e18;
+    uint256 public immutable NFT_RANDOMNESS_DIVISOR;
 
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
      * Corresponds to (1 / ALPHA) in the Liquity white paper.
      */
-    uint256 constant public BETA = 2;
-    /*
-     * TODO:
-     * Half-life of 12h. 12h = 720 min
-     * (1/2) = d^720 => d = (1/2)^(1/720)
-     */
-    uint256 constant public MINUTE_DECAY_FACTOR = 999037758833783000;
+    uint256 public immutable BETA;
+    uint256 public immutable MINUTE_DECAY_FACTOR;
 
     uint256 constant CURVE_FEE_DENOMINATOR = 1e10;
 
@@ -167,14 +183,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     constructor
     (
         ExternalAdresses memory _externalContractAddresses, // to avoid stack too deep issues
-        uint256 _targetAverageAgeSeconds,
-        uint256 _initialAccrualParameter,
-        uint256 _minimumAccrualParameter,
-        uint256 _accrualAdjustmentRate,
-        uint256 _accrualAdjustmentPeriodSeconds,
-        uint256 _CHICKEN_IN_AMM_FEE,
-        uint256 _curveDepositDydxThreshold,
-        uint256 _curveWithdrawalDxdyThreshold
+        Params memory _params
     )
     {
         bondNFT = IBondNFT(_externalContractAddresses.bondNFTAddress);
@@ -188,15 +197,15 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         yearnGovernanceAddress = _externalContractAddresses.yearnGovernanceAddress;
 
         deploymentTimestamp = block.timestamp;
-        targetAverageAgeSeconds = _targetAverageAgeSeconds;
-        accrualParameter = _initialAccrualParameter;
-        minimumAccrualParameter = _minimumAccrualParameter;
+        targetAverageAgeSeconds = _params.targetAverageAgeSeconds;
+        accrualParameter = _params.initialAccrualParameter;
+        minimumAccrualParameter = _params.minimumAccrualParameter;
         require(minimumAccrualParameter > 0, "CBM: Min accrual parameter cannot be zero");
-        accrualAdjustmentMultiplier = 1e18 - _accrualAdjustmentRate;
-        accrualAdjustmentPeriodSeconds = _accrualAdjustmentPeriodSeconds;
+        accrualAdjustmentMultiplier = 1e18 - _params.accrualAdjustmentRate;
+        accrualAdjustmentPeriodSeconds = _params.accrualAdjustmentPeriodSeconds;
 
         curveLiquidityGauge = ICurveLiquidityGaugeV4(_externalContractAddresses.curveLiquidityGaugeAddress);
-        CHICKEN_IN_AMM_FEE = _CHICKEN_IN_AMM_FEE;
+        CHICKEN_IN_AMM_FEE = _params.chickenInAMMFee;
 
         uint256 fee = curvePool.fee(); // This is practically immutable (can only be set once, in `initialize()`)
 
@@ -206,9 +215,20 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         // which are not exposed by Curve directly. Instead, we turn our thresholds into thresholds on the exchange rate
         // by taking into account the fee.
         curveDepositLUSD3CRVExchangeRateThreshold =
-            _curveDepositDydxThreshold * (CURVE_FEE_DENOMINATOR - fee) / CURVE_FEE_DENOMINATOR;
+            _params.curveDepositDydxThreshold * (CURVE_FEE_DENOMINATOR - fee) / CURVE_FEE_DENOMINATOR;
         curveWithdrawal3CRVLUSDExchangeRateThreshold =
-            _curveWithdrawalDxdyThreshold * (CURVE_FEE_DENOMINATOR - fee) / CURVE_FEE_DENOMINATOR;
+            _params.curveWithdrawalDxdyThreshold * (CURVE_FEE_DENOMINATOR - fee) / CURVE_FEE_DENOMINATOR;
+
+        BOOTSTRAP_PERIOD_CHICKEN_IN = _params.bootstrapPeriodChickenIn;
+        BOOTSTRAP_PERIOD_REDEEM = _params.bootstrapPeriodRedeem;
+        BOOTSTRAP_PERIOD_SHIFT = _params.bootstrapPeriodShift;
+        SHIFTER_DELAY = _params.shifterDelay;
+        SHIFTER_WINDOW = _params.shifterWindow;
+        MIN_BLUSD_SUPPLY = _params.minBLUSDSupply;
+        MIN_BOND_AMOUNT = _params.minBondAmount;
+        NFT_RANDOMNESS_DIVISOR = _params.nftRandomnessDivisor;
+        BETA = _params.redemptionFeeBeta;
+        MINUTE_DECAY_FACTOR = _params.redemptionFeeMinuteDecayFactor;
 
         // TODO: Decide between one-time infinite LUSD approval to Yearn and Curve (lower gas cost per user tx, less secure
         // or limited approval at each bonder action (higher gas cost per user tx, more secure)
@@ -849,7 +869,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         require(bLUSDToken.totalSupply() > 0, "CBM: bLUSD Supply must be > 0 upon shifting");
     }
 
-    function _requireMinBond(uint256 _lusdAmount) internal pure {
+    function _requireMinBond(uint256 _lusdAmount) internal view {
         require(_lusdAmount >= MIN_BOND_AMOUNT, "CBM: Bond minimum amount not reached");
     }
 

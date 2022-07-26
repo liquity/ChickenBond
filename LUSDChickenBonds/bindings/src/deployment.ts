@@ -92,7 +92,11 @@ class LUSDChickenBondDeployment {
   }
 
   private async deployContracts(): Promise<LUSDChickenBondDeployedContracts> {
-    const { factories, overrides, config } = this;
+    const {
+      factories,
+      overrides,
+      config: { yearnGovernanceAddress, ...params }
+    } = this;
 
     const lusdToken = await this.deployContract(
       factories.lusdToken,
@@ -148,7 +152,7 @@ class LUSDChickenBondDeployment {
       "LUSDBondNFT",
       "LUSDBOND",
       AddressZero,
-      config.bondNFTTransferLockoutPeriodSeconds,
+      params.bondNFTTransferLockoutPeriodSeconds,
       overrides
     );
 
@@ -171,18 +175,11 @@ class LUSDChickenBondDeployment {
         curveLiquidityGaugeAddress: curveLiquidityGauge.contract.address,
         bLUSDTokenAddress: bLUSDToken.contract.address,
         yearnCurveVaultAddress: yearnCurveVault.contract.address,
-        yearnGovernanceAddress: config.yearnGovernanceAddress,
+        yearnGovernanceAddress,
         bammSPVaultAddress: bammSPVault.contract.address,
         yearnRegistryAddress: yearnRegistry.contract.address
       },
-      config.targetAverageAgeSeconds,
-      config.initialAccrualParameter,
-      config.minimumAccrualParameter,
-      config.accrualAdjustmentRate,
-      config.accrualAdjustmentPeriodSeconds,
-      config.chickenInAMMTax,
-      config.curveDepositDydxThreshold,
-      config.curveWithdrawalDxdyThreshold,
+      params,
       overrides
     );
 
