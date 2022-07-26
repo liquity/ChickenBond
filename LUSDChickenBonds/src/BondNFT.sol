@@ -35,6 +35,7 @@ contract BondNFT is ERC721Enumerable, Ownable {
     function mint(address _bonder) external returns (uint256) {
         requireCallerIsChickenBondsManager();
 
+        // We actually increase totalSupply in `ERC721Enumerable._beforeTokenTransfer` when we `_mint`.
         uint256 tokenID = totalSupply() + 1;
         _mint(_bonder, tokenID);
 
@@ -64,5 +65,25 @@ contract BondNFT is ERC721Enumerable, Ownable {
         }
 
         super._beforeTokenTransfer(_from, _to, _tokenID);
+    }
+
+    function getBondAmount(uint256 _tokenID) external view returns (uint256 amount) {
+        (amount,,,,) = chickenBondManager.getBondData(_tokenID);
+    }
+
+    function getBondStartTime(uint256 _tokenID) external view returns (uint256 startTime) {
+        (,startTime,,,) = chickenBondManager.getBondData(_tokenID);
+    }
+
+    function getBondEndTime(uint256 _tokenID) external view returns (uint256 endTime) {
+        (,, endTime,,) = chickenBondManager.getBondData(_tokenID);
+    }
+
+    function getBondDna(uint256 _tokenID) external view returns (uint256 dna) {
+        (,,, dna,) = chickenBondManager.getBondData(_tokenID);
+    }
+
+    function getBondStatus(uint256 _tokenID) external view returns (uint8 status) {
+        (,,,, status) = chickenBondManager.getBondData(_tokenID);
     }
 }
