@@ -75,6 +75,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 shifterWindow;                  // Interval in which shifting is possible after countdown finishes
         uint256 minBLUSDSupply;                 // Minimum amount of bLUSD supply that must remain after a redemption
         uint256 minBondAmount;                  // Minimum amount of LUSD that needs to be bonded
+        uint256 nftRandomnessDivisor;           // Divisor for permanent LUSD amount in NFT pseudo-randomness computation (see comment below)
         uint256 redemptionFeeBeta;              // Parameter by which to divide the redeemed fraction, in order to calculate the new base rate from a redemption
         uint256 redemptionFeeMinuteDecayFactor; // Factor by which redemption fee decays (exponentially) every minute
     }
@@ -225,6 +226,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         SHIFTER_WINDOW = _params.shifterWindow;
         MIN_BLUSD_SUPPLY = _params.minBLUSDSupply;
         MIN_BOND_AMOUNT = _params.minBondAmount;
+        NFT_RANDOMNESS_DIVISOR = _params.nftRandomnessDivisor;
         BETA = _params.redemptionFeeBeta;
         MINUTE_DECAY_FACTOR = _params.redemptionFeeMinuteDecayFactor;
 

@@ -96,6 +96,7 @@ contract DevTestSetup is BaseTest {
             shifterWindow: 10 minutes,
             minBLUSDSupply: 1e18,
             minBondAmount: 100e18,
+            nftRandomnessDivisor: 1000e18,
             redemptionFeeBeta: 2,
             redemptionFeeMinuteDecayFactor: 999037758833783000 // Half-life of 12h
         });
