@@ -35,14 +35,14 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
 
     function testCreateBond() public {
         // bond
-        uint256 bondId = createBondForProxy(A, 10e18);
+        uint256 bondId = createBondForProxy(A, MIN_BOND_AMOUNT);
 
         assertEq(bondId, 1);
     }
 
     function testChickenIn() public {
         // bond
-        uint256 bondId = createBondForProxy(A, 10e18);
+        uint256 bondId = createBondForProxy(A, MIN_BOND_AMOUNT);
 
         vm.warp(block.timestamp + 30 days);
 
@@ -59,7 +59,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         uint256 previousBalance = lusdToken.balanceOf(A);
 
         // bond
-        uint256 bondId = createBondForProxy(A, 10e18);
+        uint256 bondId = createBondForProxy(A, MIN_BOND_AMOUNT);
 
         // chicken-out
         vm.startPrank(A);
@@ -72,7 +72,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
 
     function testRedeem() public {
         // create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 bondId = createBondForProxy(A, bondAmount);
 
         vm.warp(block.timestamp + 30 days);
@@ -108,7 +108,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
 
     function testRedeemAndWithdraw() public {
         // create bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 bondId = createBondForProxy(A, bondAmount);
 
         vm.warp(block.timestamp + 30 days);

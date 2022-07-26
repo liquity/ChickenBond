@@ -50,8 +50,6 @@ https://github.com/gakonst/foundry
 
 The bulk of significant testing has been done using a mainnet fork, since ChickenBonds will heavily depend on the deployed B.Protocol, Yearn vault, Curve pool and Convex.
 
-As of 04/07/2022, mainnet tests are commented out as the B.AMM instance is not yet deployed. We intend to uncomment and update these mainnet fork tests  as soon as the B.AMM is deployed to mainnet and active.
-
 For mainnet fork testing in Foundry, please set the env variable `ETH_RPC_URL` equal to your API key for a Ethereum RPC node service such as Alchemy or Infura. Run all mainnet tests with:
 forge test --fork-url $ETH_RPC_URL
 
@@ -170,6 +168,29 @@ https://docs.google.com/document/d/1fagBvVWRy9hQjrJvK4daK_F8iT9lfUeUrmlxC56Qzfw/
 
 The choice of thresholds ensures that shifting LUSD is profitable for the Chicken Bonds system.
 
+### Additional shifter conditions
+
+- **Initial bootstrap period**. Both shifters are disabled for an initial period  post-launch (currently set to 90 days - the final value is TBD). As a result, all system funds remain in B.Protocol for this initial period.
+- **bLUSD supply must be > 0**. There must be a non-zero supply of bLUSD for shifters to work.  This ensures that all system funds remain deposited in B.Protocol before the first Chicken In.
+
+### Shifter countdown period and shifting window
+
+It is not possible to shift funds without first starting a countdown. 
+
+In order to shift funds, someone must first start the countdown via the permissionless `startShifterCountdown` function. The countdown period is set to 1 hour (final value TBD). 
+
+When the countdown period ends, the "shifting window" opens: this period is 10 minutes (final value TBD). During the shifting window, anyone may shift funds (subject to the other shifting conditions).
+
+A new countdown can only be started if the previous countdown period and subsequent shifting window have ended.
+
+#### Purpose of countdown and shifting window
+
+The intent is to minimize the frontrunning of Liquity liquidations by shifts of Chicken Bonds funds.
+
+Shifts are only possible during the shifting window which opens when a countdown has been initiated and completed. 
+
+Since Liquity liquidations can happen at any time, then statistically, even if an attacker kept restarting countdowns as soon as possible, a large proportion of liquidations would not fall within the shifting window and therefore could not be frontrun. Assuming liquidations are randomly distributed in time (since they depend on the Ether price), the tighter the shifting window relative to the countdown period, then the lower the percentage of liquidations that will fall within the window.
+
 
 ## Core smart contract architecture
 
@@ -205,7 +226,7 @@ Yearn Curve vault is periodically manually harvested by the Yearn team in order 
 
 - `chickenIn(bondID):` removes the given bond from the system and burns the bond NFT. Makes a portion of the bonded LUSD “acquired” and redeemable, and the remainder of the bonded LUSD permanently protocol-owned.  The split between these two quantities is determined such that the global system backing ratio remains constant.
 
-- `redeem(_bLUSDAmount, _minLUSDFromBAMMSPVault):` Burns the provided bLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the B.AMM SP and Curve vaults and sent to the redeemer. Takes a `_minLUSDFromBAMMSPVault` parameter which allows the user to specify the minimum LUSD that should be redeemed from the B.AMM (useful in case there is temporarily not enough LUSD in the B.AMM SP vault to fulfil a proportional redemption request, and the user simply wants to redeem as much LUSD as possible). Funds coming from the Yearn Curve vault are not unwrapped, so the user would receive yTokens instead of LUSD.
+- `redeem(_bLUSDAmount, _minLUSDFromBAMMSPVault):` Burns the provided bLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the B.AMM SP and Curve vaults and sent to the redeemer. Takes a `_minLUSDFromBAMMSPVault` parameter which allows the user to specify the minimum LUSD that should be redeemed from the B.AMM (useful in case there is temporarily not enough LUSD in the B.AMM SP vault to fulfil a proportional redemption request, and the user simply wants to redeem as much LUSD as possible). Funds coming from the Yearn Curve vault are not unwrapped, so the user would receive yTokens instead of LUSD.  A redemption can not deplete the total bLUSD supply below 1 LUSD.
 
 - `shiftLUSDFromSPToCurve(_maxLUSDToShift):` Shifts up to the given LUSD amount from the B.AMM SP vault to Curve, and deposits the received LP tokens to the Curve vault. Pulls funds from the acquired and permanent buckes in the SP vault, and moves them to the acquired and permanent buckets in the Curve vault, respectively. Only succeeds if the shift improves the LUSD peg.
 
@@ -214,6 +235,8 @@ Yearn Curve vault is periodically manually harvested by the Yearn team in order 
 - `sendFeeShare(_lusdAmount):` Callable only by Yearn Governance. Transfers the provided LUSD to the ChickenBondManager contract, and deposits it to the B.AMM SP vault.
 
 - `activateMigration():` Callable only by Yearn Governance. Moves all funds in permanent buckets to their corresponding acquired buckets, thus making all system funds (except for the pending bucket) redeemable.
+
+- `startShifterCountdown()`: Permissionless function that starts a new shifter countdown to a shifting window, if the previous countdown and subsequent shifting window have both ended.
 
 ## Controller
 The system incorporates an asymmetrical controller, designed to maintain the economic attractiveness of bonding. Without any form of control it seems likely that the break-even bonding time would increase. As the system matures, it may be necessary to steepen the bLUSD accrual curve. Controlling the accrual curve successfully should have the effect of keeping the break-even time and optimal rebonding time below some acceptable upper bound.

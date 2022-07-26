@@ -41,6 +41,8 @@ contract BaseTest is DSTest, stdCheats {
     address liquitySPAddress;
 
     uint256 CHICKEN_IN_AMM_FEE = 1e16; // 1%
+    uint256 MIN_BLUSD_SUPPLY = 1e18;
+    uint256 MIN_BOND_AMOUNT = 100e18;
 
     address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
     address constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
@@ -52,6 +54,9 @@ contract BaseTest is DSTest, stdCheats {
     uint256 constant TARGET_AVERAGE_AGE_SECONDS = 30 days;
     uint256 constant ACCRUAL_ADJUSTMENT_PERIOD_SECONDS = 1 days;
     uint256 constant BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS = 1 days;
+
+    uint256 SHIFTER_DELAY;
+    uint256 SHIFTER_WINDOW;
 
     Vm vm = Vm(CHEATCODE_ADDRESS);
 
@@ -146,6 +151,13 @@ contract BaseTest is DSTest, stdCheats {
         vm.stopPrank();
     }
 
+    function _startShiftCountdownAndWarpInsideWindow() internal {
+        // Start countdown and fast-forward to inside shifting window
+        chickenBondManager.startShifterCountdown();
+        uint256 countdownStartTime = chickenBondManager.lastShifterCountdownStartTime();
+        vm.warp(countdownStartTime + SHIFTER_DELAY + SHIFTER_WINDOW - 1);
+    }
+
     function makeCurveSpotPriceBelow1(uint256 _lusdDeposit) public {
         uint256 curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         if (curveLUSDSpotPrice < 1e18) {return;}
@@ -153,7 +165,7 @@ contract BaseTest is DSTest, stdCheats {
         // C makes large LUSD deposit to Curve, moving Curve spot price below 1.0
         depositLUSDToCurveForUser(C, _lusdDeposit); // C deposits 200m LUSD
         curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
-         require(curveLUSDSpotPrice < 1e18, "test helper: deposit insufficient to makeCurveSpotPriceBelow1");
+        require(curveLUSDSpotPrice < 1e18, "test helper: deposit insufficient to makeCurveSpotPriceBelow1");
     }
 
     function makeCurveSpotPriceAbove1(uint256 _3crvDeposit) public {

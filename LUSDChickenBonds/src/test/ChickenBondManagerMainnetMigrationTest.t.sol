@@ -8,7 +8,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
     function testMigrationOnlyYearnGovernanceCanCallActivateMigration() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
@@ -64,7 +64,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
     function testMigrationSetsMigrationFlagToTrue() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
@@ -88,7 +88,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
     function testMigrationOnlyCallableOnceByYearnGov() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
@@ -139,16 +139,19 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
 
     function testMigrationReducesPermanentBucketsToZero() public {
         // Create some bonds
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some LUSD from SP->Curve
         makeCurveSpotPriceAbove1(200_000_000e18);
@@ -176,11 +179,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some funds to Curve
         chickenBondManager.shiftLUSDFromSPToCurve(bondAmount / 5);
@@ -289,7 +295,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
@@ -299,6 +306,8 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         vm.startPrank(yearnGovernanceAddress);
         chickenBondManager.activateMigration();
         vm.stopPrank();
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         vm.expectRevert("CBM: Migration must be not be active");
         chickenBondManager.shiftLUSDFromSPToCurve(1);
@@ -314,11 +323,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // Put some LUSD in Curve
         chickenBondManager.shiftLUSDFromSPToCurve(10e18);
@@ -345,11 +357,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some LUSD from SP->Curve
         makeCurveSpotPriceAbove1(200_000_000e18);
@@ -383,11 +398,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some LUSD from SP->Curve
         makeCurveSpotPriceAbove1(200_000_000e18);
@@ -420,11 +438,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some LUSD from SP->Curve
         makeCurveSpotPriceAbove1(200_000_000e18);
@@ -458,11 +479,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some LUSD from SP->Curve
         makeCurveSpotPriceAbove1(200_000_000e18);
@@ -495,11 +519,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some LUSD from SP->Curve
         makeCurveSpotPriceAbove1(200_000_000e18);
@@ -543,11 +570,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some LUSD from SP->Curve
         makeCurveSpotPriceAbove1(200_000_000e18);
@@ -581,11 +611,14 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
 
-        vm.warp(block.timestamp + 30 days);
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
 
         // Chicken some bonds in
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
+
+        _startShiftCountdownAndWarpInsideWindow();
 
         // shift some LUSD from SP->Curve
         makeCurveSpotPriceAbove1(200_000_000e18);
