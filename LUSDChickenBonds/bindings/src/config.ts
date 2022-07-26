@@ -17,6 +17,7 @@ export interface LUSDChickenBondConfig {
     shifterWindow: BigNumber;
     minBLUSDSupply: BigNumber;
     minBondAmount: BigNumber;
+    nftRandomnessDivisor: BigNumber;
     redemptionFeeBeta: BigNumber;
     redemptionFeeMinuteDecayFactor: BigNumber;
     bondNFTTransferLockoutPeriodSeconds: BigNumber;
@@ -39,6 +40,7 @@ export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
     shifterWindow: BigNumber.from("600"),
     minBLUSDSupply: BigNumber.from("1000000000000000000"),
     minBondAmount: BigNumber.from("100000000000000000000"),
+    nftRandomnessDivisor: BigNumber.from("1000000000000000000000"),
     redemptionFeeBeta: BigNumber.from("2"),
     redemptionFeeMinuteDecayFactor: BigNumber.from("999037758833783000"),
     bondNFTTransferLockoutPeriodSeconds: BigNumber.from("86400"),
