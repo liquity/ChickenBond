@@ -80,17 +80,27 @@ contract DevTestSetup is BaseTest {
             yearnGovernanceAddress: yearnGovernanceAddress
         });
 
-        chickenBondManager = new ChickenBondManagerWrap(
-            externalContractAddresses,
-            TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds
-            INITIAL_ACCRUAL_PARAMETER,         // _initialAccrualParameter
-            MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
-            ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
-            ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
-            CHICKEN_IN_AMM_FEE,                // _CHICKEN_IN_AMM_FEE
-            1e18,                              // _curveDepositDydxThreshold
-            1e18                               // _curveWithdrawalDxdyThreshold
-        );
+        ChickenBondManager.Params memory params = ChickenBondManager.Params({
+            targetAverageAgeSeconds: TARGET_AVERAGE_AGE_SECONDS,
+            initialAccrualParameter: INITIAL_ACCRUAL_PARAMETER,
+            minimumAccrualParameter: MINIMUM_ACCRUAL_PARAMETER,
+            accrualAdjustmentRate: ACCRUAL_ADJUSTMENT_RATE,
+            accrualAdjustmentPeriodSeconds: ACCRUAL_ADJUSTMENT_PERIOD_SECONDS,
+            chickenInAMMFee: CHICKEN_IN_AMM_FEE,
+            curveDepositDydxThreshold: 1e18,
+            curveWithdrawalDxdyThreshold: 1e18,
+            bootstrapPeriodChickenIn: 7 days,
+            bootstrapPeriodRedeem: 7 days,
+            bootstrapPeriodShift: 90 days,
+            shifterDelay: 60 minutes,
+            shifterWindow: 10 minutes,
+            minBLUSDSupply: 1e18,
+            minBondAmount: 100e18,
+            redemptionFeeBeta: 2,
+            redemptionFeeMinuteDecayFactor: 999037758833783000 // Half-life of 12h
+        });
+
+        chickenBondManager = new ChickenBondManagerWrap(externalContractAddresses, params);
 
         bondNFT.setAddresses(address(chickenBondManager));
         bLUSDToken.setAddresses(address(chickenBondManager));

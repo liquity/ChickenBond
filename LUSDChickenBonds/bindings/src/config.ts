@@ -7,9 +7,18 @@ export interface LUSDChickenBondConfig {
   minimumAccrualParameter: BigNumber;
   accrualAdjustmentRate: BigNumber;
   accrualAdjustmentPeriodSeconds: BigNumber;
-  chickenInAMMTax: BigNumber;
+  chickenInAMMFee: BigNumber;
   curveDepositDydxThreshold: BigNumber;
   curveWithdrawalDxdyThreshold: BigNumber;
+  bootstrapPeriodChickenIn: BigNumber;
+  bootstrapPeriodRedeem: BigNumber;
+  bootstrapPeriodShift: BigNumber;
+  shifterDelay: BigNumber;
+  shifterWindow: BigNumber;
+  minBLUSDSupply: BigNumber;
+  minBondAmount: BigNumber;
+  redemptionFeeBeta: BigNumber;
+  redemptionFeeMinuteDecayFactor: BigNumber;
   yearnGovernanceAddress: string;
 }
 
@@ -19,9 +28,18 @@ export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   minimumAccrualParameter: BigNumber.from("2592000000000000000000"),
   accrualAdjustmentRate: BigNumber.from("10000000000000000"),
   accrualAdjustmentPeriodSeconds: BigNumber.from("86400"),
-  chickenInAMMTax: BigNumber.from("10000000000000000"),
+  chickenInAMMFee: BigNumber.from("10000000000000000"),
   curveDepositDydxThreshold: BigNumber.from("1000000000000000000"),
   curveWithdrawalDxdyThreshold: BigNumber.from("10000000000000000"),
+  bootstrapPeriodChickenIn: BigNumber.from("604800"),
+  bootstrapPeriodRedeem: BigNumber.from("604800"),
+  bootstrapPeriodShift: BigNumber.from("7776000"),
+  shifterDelay: BigNumber.from("3600"),
+  shifterWindow: BigNumber.from("600"),
+  minBLUSDSupply: BigNumber.from("1000000000000000000"),
+  minBondAmount: BigNumber.from("100000000000000000000"),
+  redemptionFeeBeta: BigNumber.from("2"),
+  redemptionFeeMinuteDecayFactor: BigNumber.from("999037758833783000"),
   yearnGovernanceAddress: AddressZero
 };
 
