@@ -7,6 +7,8 @@ import "./TestContracts/TestUtils.sol";
 import "../BondNFT.sol";
 import "../Interfaces/IBondNFTArtwork.sol";
 
+import "forge-std/console.sol";
+
 contract DummyArtwork is IBondNFTArtwork {
     using Strings for uint256;
 
@@ -28,6 +30,7 @@ contract DummyChickenBondManager {
         uint256 lusdAmount;
         uint256 startTime;
         uint256 endTime;
+        uint256 dna;
         uint8 status;
     }
 
@@ -132,6 +135,7 @@ contract BondNFTTest is DSTest {
                 lusdAmount: 1e18, // doesn't matter
                 startTime: endTime, // doesn't matter, just use same as endTime
                 endTime: endTime,
+                dna: 1,
                 status: uint8(
                     inOut
                         ? IChickenBondManager.BondStatus.chickenedIn

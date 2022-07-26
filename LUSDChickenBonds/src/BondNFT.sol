@@ -6,6 +6,8 @@ import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./Interfaces/IChickenBondManager.sol";
 import "./Interfaces/IBondNFTArtwork.sol";
 
+//import "forge-std/console.sol";
+
 contract BondNFT is ERC721Enumerable, Ownable {
     IChickenBondManager public chickenBondManager;
     IBondNFTArtwork public artwork;
