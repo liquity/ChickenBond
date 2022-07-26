@@ -30,7 +30,7 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
         vm.stopPrank();
 
         // bond ID
-        return bondNFT.totalMinted();
+        return bondNFT.totalSupply();
     }
 
     function testCreateBond() public {

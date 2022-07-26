@@ -62,6 +62,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     struct BondData {
         uint256 lusdAmount;
         uint256 startTime;
+        uint256 endTime; // Timestamp of chicken in/out event
+        uint256 dna;
+        BondStatus status;
     }
 
     uint256 public firstChickenInTime; // Timestamp of the first chicken in after bLUSD supply is zero
@@ -100,6 +103,12 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     uint256 constant public MIN_BLUSD_SUPPLY = 1e18;              // Minimum amount of bLUSD supply that must remain after a redemption
     uint256 constant public MIN_BOND_AMOUNT = 100e18;             // Minimum amount of LUSD that needs to be bonded
+    // This is the minimum amount the permanent bucket needs to be increased by an  attacker (thrugh previous chicken in or redemption fee),
+    // in order to manipulate the obtained NFT. If the attacker finds the desired outcome at attempt N,
+    // the permanent increase should be N * NFT_RANDOMNESS_DIVISOR.
+    // It also means that as long as Permanent doesn’t change in that order of magnitude, attacker can try to manipulate
+    // only changing the event date.
+    uint256 constant public NFT_RANDOMNESS_DIVISOR = 1000e18;
 
     /*
      * BETA: 18 digit decimal. Parameter by which to divide the redeemed fraction, in order to calc the new base rate from a redemption.
@@ -228,6 +237,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         BondData memory bondData;
         bondData.lusdAmount = _lusdAmount;
         bondData.startTime = block.timestamp;
+        bondData.dna = getDna(0);
+        bondData.status = BondStatus.active;
         idToBondData[bondID] = bondData;
 
         pendingLUSD += _lusdAmount;
@@ -242,13 +253,17 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     function chickenOut(uint256 _bondID, uint256 _minLUSD) external {
+        BondData memory bond = idToBondData[_bondID];
+
         _requireCallerOwnsBond(_bondID);
+        _requireActiveStatus(bond.status);
 
         _updateAccrualParameter();
 
-        BondData memory bond = idToBondData[_bondID];
+        idToBondData[_bondID].status = BondStatus.chickenedOut;
+        idToBondData[_bondID].endTime = block.timestamp;
+        idToBondData[_bondID].dna = getDna(bond.dna);
 
-        delete idToBondData[_bondID];
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
@@ -263,8 +278,6 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Withdraw from B.Protocol LUSD vault
         _withdrawFromBAMM(lusdToWithdraw, msg.sender);
-
-        bondNFT.burn(_bondID);
     }
 
     // transfer _lusdToTransfer to the LUSD/bLUSD AMM LP Rewards staking contract
@@ -317,12 +330,14 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     }
 
     function chickenIn(uint256 _bondID) external {
+        BondData memory bond = idToBondData[_bondID];
+
         _requireCallerOwnsBond(_bondID);
+        _requireActiveStatus(bond.status);
 
         uint256 updatedAccrualParameter = _updateAccrualParameter();
         (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
 
-        BondData memory bond = idToBondData[_bondID];
         (uint256 chickenInFeeAmount, uint256 bondAmountMinusChickenInFee) = _getBondWithChickenInFeeApplied(bond.lusdAmount);
 
         /* Upon the first chicken-in after a) system deployment or b) redemption of the full bLUSD supply, divert
@@ -340,7 +355,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
         uint256 accruedBLUSD = lusdToAcquire * 1e18 / backingRatio;
 
-        delete idToBondData[_bondID];
+        idToBondData[_bondID].status = BondStatus.chickenedIn;
+        idToBondData[_bondID].endTime = block.timestamp;
+        idToBondData[_bondID].dna = getDna(bond.dna);
 
         // Subtract the bonded amount from the total pending LUSD (and implicitly increase the total acquired LUSD)
         pendingLUSD -= bond.lusdAmount;
@@ -360,7 +377,6 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         }
 
         bLUSDToken.mint(msg.sender, accruedBLUSD);
-        bondNFT.burn(_bondID);
 
         // Transfer the chicken in fee to the LUSD/bLUSD AMM LP Rewards staking contract during normal mode.
         if (!migration && lusdInBAMMSPVault >= chickenInFeeAmount) {
@@ -522,6 +538,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             finalExchangeRate >= curveWithdrawal3CRVLUSDExchangeRateThreshold,
             "CBM: Curve->SP shift must increase 3CRV:LUSD exchange rate to a value above the withdrawal threshold"
         );
+    }
+
+    function getDna(uint256 _previousDna) internal view returns (uint256) {
+        return uint256(keccak256(abi.encode(_previousDna, block.timestamp, permanentLUSD / NFT_RANDOMNESS_DIVISOR)));
     }
 
     // --- B.Protocol debt functions ---
@@ -817,6 +837,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         require(msg.sender == bondNFT.ownerOf(_bondID), "CBM: Caller must own the bond");
     }
 
+    function _requireActiveStatus(BondStatus status) internal pure {
+        require(status == BondStatus.active, "CBM: Bond must be active");
+    }
+
     function _requireNonZeroAmount(uint256 _amount) internal pure {
         require(_amount > 0, "CBM: Amount must be > 0");
     }
@@ -870,9 +894,19 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // Bond getters
 
-    function getBondData(uint256 _bondID) external view returns (uint256 lusdAmount, uint256 startTime) {
+    function getBondData(uint256 _bondID)
+        external
+        view
+        returns (
+            uint256 lusdAmount,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 dna,
+            uint8 status
+        )
+    {
         BondData memory bond = idToBondData[_bondID];
-        return (bond.lusdAmount, bond.startTime);
+        return (bond.lusdAmount, bond.startTime, bond.endTime, bond.dna, uint8(bond.status));
     }
 
     function getLUSDToAcquire(uint256 _bondID) external view returns (uint256) {
@@ -885,6 +919,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function calcAccruedBLUSD(uint256 _bondID) external view returns (uint256) {
         BondData memory bond = idToBondData[_bondID];
+
+        if (bond.status != BondStatus.active) {
+            return 0;
+        }
 
         uint256 bondBLUSDCap = _calcBondBLUSDCap(_getBondAmountMinusChickenInFee(bond.lusdAmount), calcSystemBackingRatio());
 
