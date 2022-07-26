@@ -44,7 +44,7 @@ contract ChickenBondOperationsScript {
     }
 
     function chickenOut(uint256 _bondID, uint256 _minLUSD) external {
-        (uint256 lusdAmount,,, ) = chickenBondManager.getBondData(_bondID);
+        (uint256 lusdAmount,,,, ) = chickenBondManager.getBondData(_bondID);
         assert(lusdAmount > 0);
 
         // Chicken out

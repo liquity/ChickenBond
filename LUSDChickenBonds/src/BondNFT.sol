@@ -54,7 +54,7 @@ contract BondNFT is ERC721Enumerable, Ownable {
     // Prevent transfers for a period of time after chickening in or out
     function _beforeTokenTransfer(address _from, address _to, uint256 _tokenID) internal virtual override {
         if (_from != address(0)) {
-            (,, uint256 endTime, uint8 status) = chickenBondManager.getBondData(_tokenID);
+            (,, uint256 endTime,, uint8 status) = chickenBondManager.getBondData(_tokenID);
 
             require(
                 status == uint8(IChickenBondManager.BondStatus.active) ||
