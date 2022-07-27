@@ -177,6 +177,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     event BaseRedemptionRateUpdated(uint256 _baseRedemptionRate);
     event LastRedemptionTimeUpdated(uint256 _lastRedemptionFeeOpTime);
+    event BondCreated(address indexed bonder, uint bondId, uint amount, uint256 bondDna);
+    event BondClaimed(address indexed bonder, uint bondId, uint lusdAmount, uint bLusdAmount, uint256 bondDna);
+    event BondCancelled(address indexed bonder, uint bondId, uint principalLusdAmount, uint minLusdAmount, uint withdrawnLusdAmount, uint256 bondDna);
+    event BLUSDRedeemed(address indexed redeemer, uint bLusdAmount, uint minLusdAmount, uint lusdAmount, uint yTokens, uint redemptionFee);
 
     // --- Constructor ---
 
@@ -268,6 +272,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Deposit the LUSD to the B.Protocol LUSD vault
         _depositToBAMM(_lusdAmount);
+        
+        emit BondCreated(msg.sender, bondID, _lusdAmount, bondData.dna);
 
         return bondID;
     }
@@ -298,6 +304,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Withdraw from B.Protocol LUSD vault
         _withdrawFromBAMM(lusdToWithdraw, msg.sender);
+        
+        emit BondCancelled(msg.sender, _bondID, bond.lusdAmount, _minLUSD, lusdToWithdraw, bond.dna);
     }
 
     // transfer _lusdToTransfer to the LUSD/bLUSD AMM LP Rewards staking contract
@@ -402,6 +410,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         if (!migration && lusdInBAMMSPVault >= chickenInFeeAmount) {
             _withdrawFromSPVaultAndTransferToRewardsStakingContract(chickenInFeeAmount);
         }
+
+        emit BondClaimed(msg.sender, _bondID, bond.lusdAmount, accruedBLUSD, bond.dna);
     }
 
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256) {
@@ -452,6 +462,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Burn the redeemed bLUSD
         bLUSDToken.burn(msg.sender, _bLUSDToRedeem);
+    
+        emit BLUSDRedeemed(msg.sender, _bLUSDToRedeem, _minLUSDFromBAMMSPVault, lusdToWithdrawFromSP, yTokensFromCurveVault, redemptionFeeLUSD);
 
         return (lusdToWithdrawFromSP, yTokensFromCurveVault);
     }
@@ -1040,7 +1052,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return _getLUSDSplit(bammLUSDValue);
     }
 
-    function getTotalAcquiredLUSD() external view returns (uint256) {
+    function getTotalAcquiredLUSD() public view returns (uint256) {
         uint256 bammLUSDValue = _getInternalBAMMLUSDValue();
         (uint256 acquiredLUSDInSP, uint256 acquiredLUSDInCurve,,,) = _getLUSDSplit(bammLUSDValue);
         return acquiredLUSDInSP + acquiredLUSDInCurve;
@@ -1107,5 +1119,15 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function getBAMMLUSDDebt() external view returns (uint256) {
         return bammLUSDDebt;
+    }
+
+    function getTreasury() external view returns (uint256, uint256, uint256) {
+        uint256 totalAcquiredLUSD = getTotalAcquiredLUSD();
+
+        return (
+            pendingLUSD,
+            totalAcquiredLUSD,
+            permanentLUSD
+        );
     }
 }

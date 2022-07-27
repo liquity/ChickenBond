@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import "./BaseTest.sol";
 import "./QuickSort.sol" as QuickSort;
+import "forge-std/console.sol";
 
 contract ChickenBondManagerTest is BaseTest {
     function testSetupSetsBondNFTAddressInCBM() public {
@@ -2023,5 +2024,156 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 startTime3 = chickenBondManager.lastShifterCountdownStartTime();
         assertEq(startTime3, block.timestamp);
+    }
+
+    function testTreasuryChangesAfterCreateBond() public {
+        (
+            uint256 pendingBeforeCreateBond,
+            uint256 acquiredBeforeCreateBond,
+            uint256 permanentBeforeCreateBond
+        ) = chickenBondManager.getTreasury();
+        
+        uint256 bondAmount = 100e18;
+        createBondForUser(A, bondAmount);
+        uint256 bondIdA = bondNFT.totalSupply();
+
+        (
+            uint256 pendingAfterCreateBond,
+            uint256 acquiredAfterCreateBond,
+            uint256 permanentAfterCreateBond
+        ) = chickenBondManager.getTreasury();
+
+        assertEq(pendingAfterCreateBond, pendingBeforeCreateBond + bondAmount, "Pending bucket should have increased by the bonded amount");
+        assertEq(acquiredAfterCreateBond, acquiredBeforeCreateBond, "Acquired bucket shouldn't have changed");
+        assertEq(permanentAfterCreateBond, permanentBeforeCreateBond, "Permanent bucket shouldn't have changed");
+    }
+
+    function testTreasuryChangesAfterChickenIn() public {
+        uint256 bondAmount = 100e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 bondIdA = bondNFT.totalSupply();
+
+        createBondForUser(B, bondAmount);
+        uint256 bondIdB = bondNFT.totalSupply();
+
+        (
+            uint256 pendingBeforeChickenIn,
+            uint256 acquiredBeforeChickenIn,
+            uint256 permanentBeforeChickenIn
+        ) = chickenBondManager.getTreasury();
+
+        // Fast forward 7 days to accrue some bLUSD which increases the Acquired bucket on Chicken in
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+
+        uint256 accruedA = chickenBondManager.calcAccruedBLUSD(bondIdA);
+
+        vm.prank(A);
+        chickenBondManager.chickenIn(bondIdA);
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        uint256 accruedB = chickenBondManager.calcAccruedBLUSD(bondIdB);
+
+        vm.prank(B);
+        chickenBondManager.chickenIn(bondIdB);
+
+        (
+            uint256 pendingAfterChickenIn,
+            uint256 acquiredAfterChickenIn,
+            uint256 permanentAfterChickenIn
+        ) = chickenBondManager.getTreasury();
+
+        uint256 bondAmountWithFeeDeducted = bondAmount - _getChickenInFeeForAmount(bondAmount);
+
+        uint256 expectedPending = pendingBeforeChickenIn - bondAmount * 2;
+        uint256 expectedAcquired = acquiredBeforeChickenIn + accruedA + accruedB;
+        uint256 expectedPermanent = permanentBeforeChickenIn + bondAmountWithFeeDeducted * 2 - accruedA - accruedB;
+
+        assertEq(pendingAfterChickenIn, expectedPending, "Pending bucket should have decreased by the bonded amounts");
+        assertEq(acquiredAfterChickenIn, expectedAcquired, "Acquired bucket should have increase by the amount of bLUSD accrued");
+        assertEq(permanentAfterChickenIn, expectedPermanent, "Permanent bucket should have increased by bond amount minus fee");
+    }
+
+    function testTreasuryChangesAfterChickenOut() public {
+        // Fast forward past bootstrap period
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        uint256 bondAmount = 100e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 bondIdA = bondNFT.totalSupply();  
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+
+        createBondForUser(B, bondAmount);
+        uint256 bondIdB = bondNFT.totalSupply();  
+
+        (
+            uint256 pendingBeforeChickenOut,
+            uint256 acquiredBeforeChickenOut,
+            uint256 permanentBeforeChickenOut
+        ) = chickenBondManager.getTreasury();
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        uint256 accruedB = chickenBondManager.calcAccruedBLUSD(bondIdB);
+        vm.prank(B);
+        chickenBondManager.chickenOut(bondIdB, 0);
+
+         (
+            uint256 pendingAfterChickenOut,
+            uint256 acquiredAfterChickenOut,
+            uint256 permanentAfterChickenOut
+        ) = chickenBondManager.getTreasury();
+        
+        uint256 bondAmountWithFeeDeducted = bondAmount - _getChickenInFeeForAmount(bondAmount);
+
+        assertEq(pendingAfterChickenOut, pendingBeforeChickenOut - bondAmount, "Pending bucket should have decreased by the bonded amount");
+        assertEq(acquiredAfterChickenOut, acquiredBeforeChickenOut, "Acquired bucket shouldn't have changed");
+        assertEq(permanentAfterChickenOut, permanentBeforeChickenOut, "Permanent bucket shouldn't have changed");
+    }
+
+    function testTreasuryChangesAfterRedeem() public {
+        // Obtain some bLUSD by creating/claiming a bond
+        uint256 bondAmount = 100e18;
+        createBondForUser(A, bondAmount);
+        uint256 bondId = bondNFT.totalSupply();
+        vm.warp(block.timestamp + 300 days);
+        uint256 accrued = chickenBondManager.calcAccruedBLUSD(bondId);
+        vm.prank(A);
+        chickenBondManager.chickenIn(bondId);
+
+        (
+            uint256 pendingBeforeRedeem,
+            uint256 acquiredBeforeRedeem,
+            uint256 permanentBeforeRedeem
+        ) = chickenBondManager.getTreasury();
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
+
+        // Redeem some bLUSD
+        uint256 someBLusd = accrued / 2;
+        vm.prank(A);
+        (uint256 lusdReceived,) = chickenBondManager.redeem(someBLusd, 0);
+
+        (
+            uint256 pendingAfterRedeem,
+            uint256 acquiredAfterRedeem,
+            uint256 permanentAfterRedeem
+        ) = chickenBondManager.getTreasury();
+        
+        uint256 lusdRedemptionAmountWithoutFee = ((someBLusd * 1e18) / bLUSDToken.totalSupply()) * acquiredBeforeRedeem;
+        
+        console.log("Pending before redeem", pendingBeforeRedeem);
+        console.log("Pending after redeem", pendingAfterRedeem);
+        console.log("Acquired before redeem", acquiredBeforeRedeem);
+        console.log("Acquired after redeem", acquiredAfterRedeem);
+        console.log("Permanent before redeem", permanentBeforeRedeem);
+        console.log("Permanent after redeem", permanentAfterRedeem);
+        console.log("Accrued bLUSD / 2", someBLusd);
+        console.log("LUSD redemption amount", lusdReceived);
+        console.log("LUSD redemption amount without fee", lusdRedemptionAmountWithoutFee);
+        
+        assertEq(pendingAfterRedeem, 0, "Pending bucket should be empty");
+        assertEq(acquiredAfterRedeem, acquiredBeforeRedeem - lusdReceived, "Acquired bucket should have decreased by the redeemed amount of LUSD");
+        assertEq(permanentAfterRedeem, permanentBeforeRedeem + lusdRedemptionAmountWithoutFee - lusdReceived, "Permanent bucket should have increased by the LUSD taken as a redemption fee");
     }
 }
