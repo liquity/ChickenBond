@@ -96,7 +96,7 @@ In migration mode, no funds are permanent. The buckets are split in this manner:
 
 ### Example buckets state
 
-![Chicken bond buckets drawio](https://user-images.githubusercontent.com/701095/170958185-fb2242aa-07f9-41ac-9384-294c5ecfa4db.png)
+![Chicken bond buckets 2 drawio](https://user-images.githubusercontent.com/701095/181210047-91267f00-b0c4-4a9c-bcc6-15dce5c28dba.png)
 
 _This diagram shows an example state of the individual buckets in normal mode.  Exact quantities in each individual **acquired** and **permanent** bucket will vary over time - their sizes depend on the history of shift events and the magnitude and and timing of early chicken-ins._
 
