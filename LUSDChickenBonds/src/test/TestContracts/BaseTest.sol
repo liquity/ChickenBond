@@ -14,6 +14,7 @@ import "../../Interfaces/IBAMM.sol";
 import "../../Interfaces/ICurvePool.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "./TestUtils.sol";
 
 import "forge-std/console.sol";
 
@@ -40,6 +41,8 @@ contract BaseTest is DSTest, stdCheats {
     address liquitySPAddress;
 
     uint256 CHICKEN_IN_AMM_FEE = 1e16; // 1%
+    uint256 MIN_BLUSD_SUPPLY = 1e18;
+    uint256 MIN_BOND_AMOUNT = 100e18;
 
     address constant CHEATCODE_ADDRESS = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D;
     address constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
@@ -50,6 +53,10 @@ contract BaseTest is DSTest, stdCheats {
     uint256 constant ACCRUAL_ADJUSTMENT_RATE = 1e16; // 1% (0.01)
     uint256 constant TARGET_AVERAGE_AGE_SECONDS = 30 days;
     uint256 constant ACCRUAL_ADJUSTMENT_PERIOD_SECONDS = 1 days;
+    uint256 constant BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS = 1 days;
+
+    uint256 SHIFTER_DELAY;
+    uint256 SHIFTER_WINDOW;
 
     Vm vm = Vm(CHEATCODE_ADDRESS);
 
@@ -106,27 +113,6 @@ contract BaseTest is DSTest, stdCheats {
         return x > y ? x - y : y - x;
     }
 
-    // Coerce x into range [a, b] (inclusive) by modulo division.
-    // Preserves x if it's already within range.
-    function coerce(uint256 x, uint256 a, uint256 b) public pure returns (uint256) {
-        (uint256 min, uint256 max) = a < b ? (a, b) : (b, a);
-
-        if (min <= x && x <= max) {
-            return x;
-        }
-
-        // The only case in which this would overflow is min = 0, max = 2**256-1;
-        // however in that case we would have returned by now (see above).
-        uint256 modulus = max - min + 1;
-
-        if (x >= min) {
-            return min + (x - min) % modulus;
-        } else {
-            // x < min, therefore x < max, also
-            return max - (max - x) % modulus;
-        }
-    }
-
     // --- Helpers ---
 
     // Create a bond for `_user` using `_bondAmount` amount of LUSD, then return the bond's ID.
@@ -137,13 +123,23 @@ contract BaseTest is DSTest, stdCheats {
         vm.stopPrank();
 
         // bond ID
-        return bondNFT.totalMinted();
+        return bondNFT.totalSupply();
     }
 
     function chickenInForUser(address _user, uint256 _bondID) public {
         vm.startPrank(_user);
         chickenBondManager.chickenIn(_bondID);
         vm.stopPrank();
+    }
+
+    function chickenOutForUser(address _user, uint256 _bondID, uint256 _minLUSD) public {
+        vm.startPrank(_user);
+        chickenBondManager.chickenOut(_bondID, _minLUSD);
+        vm.stopPrank();
+    }
+
+    function chickenOutForUser(address _user, uint256 _bondID) public {
+        chickenOutForUser(_user, _bondID, 0);
     }
 
     function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
@@ -155,6 +151,13 @@ contract BaseTest is DSTest, stdCheats {
         vm.stopPrank();
     }
 
+    function _startShiftCountdownAndWarpInsideWindow() internal {
+        // Start countdown and fast-forward to inside shifting window
+        chickenBondManager.startShifterCountdown();
+        uint256 countdownStartTime = chickenBondManager.lastShifterCountdownStartTime();
+        vm.warp(countdownStartTime + SHIFTER_DELAY + SHIFTER_WINDOW - 1);
+    }
+
     function makeCurveSpotPriceBelow1(uint256 _lusdDeposit) public {
         uint256 curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
         if (curveLUSDSpotPrice < 1e18) {return;}
@@ -162,7 +165,7 @@ contract BaseTest is DSTest, stdCheats {
         // C makes large LUSD deposit to Curve, moving Curve spot price below 1.0
         depositLUSDToCurveForUser(C, _lusdDeposit); // C deposits 200m LUSD
         curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
-         require(curveLUSDSpotPrice < 1e18, "test helper: deposit insufficient to makeCurveSpotPriceBelow1");
+        require(curveLUSDSpotPrice < 1e18, "test helper: deposit insufficient to makeCurveSpotPriceBelow1");
     }
 
     function makeCurveSpotPriceAbove1(uint256 _3crvDeposit) public {
@@ -213,8 +216,7 @@ contract BaseTest is DSTest, stdCheats {
         console.log(chickenBondManager.getPendingLUSD(), "totalPendingLUSD");
         console.log(chickenBondManager.getAcquiredLUSDInSP(), "Acquired LUSD in SP");
         console.log(chickenBondManager.getAcquiredLUSDInCurve(), "Acquired LUSD in Curve");
-        console.log(chickenBondManager.getPermanentLUSDInSP(), "Permanent LUSD in SP");
-        console.log(chickenBondManager.getPermanentLUSDInCurve(), "Permanent LUSD in Curve");
+        console.log(chickenBondManager.getPermanentLUSD(), "Permanent LUSD");
         console.log(chickenBondManager.getOwnedLUSDInSP(), "Owned LUSD in SP (Ac. + Perm.)");
         console.log(chickenBondManager.getOwnedLUSDInCurve(), "Owned LUSD in Curve (Ac. + Perm.)");
     }

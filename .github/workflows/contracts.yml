@@ -38,7 +38,7 @@ jobs:
         run: >-
           forge test
           -vvv
-          --match-contract ChickenBondManagerDev
+          --match-contract '(ChickenBondManagerDev|BondNFT)'
 
   mainnet-test:
     name: Mainnet tests
@@ -79,4 +79,4 @@ jobs:
       - name: Check console imports
         working-directory: LUSDChickenBonds
         run: >-
-          ! grep -R console src | grep import | grep -v "://" | grep -v TestContracts | grep -v ExternalContracts
+          ! grep -R console src | grep import | grep -v "://" | grep -v TestContracts | grep -v ExternalContracts  | grep -v "\.t\.sol"

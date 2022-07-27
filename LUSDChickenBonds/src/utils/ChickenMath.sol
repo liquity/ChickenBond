@@ -45,14 +45,11 @@ contract ChickenMath is BaseMath {
 
         // Exponentiation-by-squaring
         while (n > 1) {
-            if (n % 2 == 0) {
-                x = decMul(x, x);
-                n = n / 2;
-            } else { // if (n % 2 != 0)
+            if (n % 2 != 0) {
                 y = decMul(x, y);
-                x = decMul(x, x);
-                n = (n - 1) / 2;
             }
+            x = decMul(x, x);
+            n = n / 2;
         }
 
         return decMul(x, y);

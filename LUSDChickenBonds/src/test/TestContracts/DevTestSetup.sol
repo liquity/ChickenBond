@@ -62,7 +62,7 @@ contract DevTestSetup is BaseTest {
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract
-        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND");
+        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0), BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS);
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract
         curveLiquidityGauge = ICurveLiquidityGaugeV4(address(new MockCurveLiquidityGaugeV4()));
@@ -80,19 +80,36 @@ contract DevTestSetup is BaseTest {
             yearnGovernanceAddress: yearnGovernanceAddress
         });
 
-        chickenBondManager = new ChickenBondManagerWrap(
-            externalContractAddresses,
-            TARGET_AVERAGE_AGE_SECONDS,        // _targetAverageAgeSeconds
-            INITIAL_ACCRUAL_PARAMETER,         // _initialAccrualParameter
-            MINIMUM_ACCRUAL_PARAMETER,         // _minimumAccrualParameter
-            ACCRUAL_ADJUSTMENT_RATE,           // _accrualAdjustmentRate
-            ACCRUAL_ADJUSTMENT_PERIOD_SECONDS, // _accrualAdjustmentPeriodSeconds
-            CHICKEN_IN_AMM_FEE,                // _CHICKEN_IN_AMM_FEE
-            1e18,                              // _curveDepositDydxThreshold
-            1e18                               // _curveWithdrawalDxdyThreshold
-        );
+        ChickenBondManager.Params memory params = ChickenBondManager.Params({
+            targetAverageAgeSeconds: TARGET_AVERAGE_AGE_SECONDS,
+            initialAccrualParameter: INITIAL_ACCRUAL_PARAMETER,
+            minimumAccrualParameter: MINIMUM_ACCRUAL_PARAMETER,
+            accrualAdjustmentRate: ACCRUAL_ADJUSTMENT_RATE,
+            accrualAdjustmentPeriodSeconds: ACCRUAL_ADJUSTMENT_PERIOD_SECONDS,
+            chickenInAMMFee: CHICKEN_IN_AMM_FEE,
+            curveDepositDydxThreshold: 1e18,
+            curveWithdrawalDxdyThreshold: 1e18,
+            bootstrapPeriodChickenIn: 7 days,
+            bootstrapPeriodRedeem: 7 days,
+            bootstrapPeriodShift: 90 days,
+            shifterDelay: 60 minutes,
+            shifterWindow: 10 minutes,
+            minBLUSDSupply: 1e18,
+            minBondAmount: 100e18,
+            nftRandomnessDivisor: 1000e18,
+            redemptionFeeBeta: 2,
+            redemptionFeeMinuteDecayFactor: 999037758833783000 // Half-life of 12h
+        });
+
+        chickenBondManager = new ChickenBondManagerWrap(externalContractAddresses, params);
 
         bondNFT.setAddresses(address(chickenBondManager));
         bLUSDToken.setAddresses(address(chickenBondManager));
+
+        CHICKEN_IN_AMM_FEE = chickenBondManager.CHICKEN_IN_AMM_FEE();
+        MIN_BLUSD_SUPPLY = chickenBondManager.MIN_BLUSD_SUPPLY();
+        MIN_BOND_AMOUNT = chickenBondManager.MIN_BOND_AMOUNT();
+        SHIFTER_DELAY = chickenBondManager.SHIFTER_DELAY();
+        SHIFTER_WINDOW = chickenBondManager.SHIFTER_WINDOW();
     }
 }

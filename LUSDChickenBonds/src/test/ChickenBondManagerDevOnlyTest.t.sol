@@ -13,7 +13,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInTransfersToRewardsContract() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -38,7 +38,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInWithoutInitialYield() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -57,9 +57,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         assertEq(bLUSDToken.balanceOf(A), accruedBLUSD_A, "bLUSD balance of A doesn't match");
     }
 
-    function testFirstChickenInAfterRedemptionDepletionAndSPHarvestTransfersToRewardsContract() public {
+    function testFirstChickenInAfterRedemptionAlmostDepletionAndSPHarvestTransfersToRewardsContract() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
         uint256 chickenInFeeAmount = _getChickenInFeeForAmount(bondAmount);
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
@@ -83,9 +83,12 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // bootstrap period passes
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
-        // A redeems full
+        // A redeems can’t redeem full, redeems max possible
         vm.startPrank(A);
-        chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
+        // TODO
+        //vm.expectRevert("CBM: Cannot redeem below min supply");
+        //chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
+        chickenBondManager.redeem(bLUSDToken.balanceOf(A) - MIN_BLUSD_SUPPLY, 0);
         vm.stopPrank();
 
         vm.warp(block.timestamp + 600);
@@ -103,7 +106,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // Checks
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            initialYield + secondYield + 2 * chickenInFeeAmount,
+            initialYield + 2 * chickenInFeeAmount,
             5,
             "Balance of rewards contract doesn't match"
         );
@@ -111,7 +114,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         assertEq(bLUSDToken.balanceOf(B), accruedBLUSD_B, "bLUSD balance of B doesn't match");
     }
 
-    function testFirstChickenInAfterRedemptionDepletionAndCurveHarvestTransfersToRewardsContract() external {
+    function testFirstChickenInAfterRedemptionAlmostDepletionAndCurveHarvestTransfersToRewardsContract() external {
         uint256 bondAmount1 = 1000e18;
         uint256 bondAmount2 = 100e18;
 
@@ -126,6 +129,8 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
+        _startShiftCountdownAndWarpInsideWindow();
+
         // shift 50% to Curve
         MockCurvePool(address(curvePool)).setNextPrankPrice(105e16);
         shiftFractionFromSPToCurve(2);
@@ -133,18 +138,21 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // bootstrap period passes
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_REDEEM());
 
-        uint256 initialAcquiredLUSDInSP = chickenBondManager.getAcquiredLUSDInSP();
-        uint256 initialAcquiredLUSDInCurve = chickenBondManager.getAcquiredLUSDInCurve();
-        uint256 initialPermanentLUSDInSP = chickenBondManager.getPermanentLUSDInSP();
-        uint256 initialPermanentLUSDInCurve = chickenBondManager.getPermanentLUSDInCurve();
+        uint256 initialPermanentLUSD = chickenBondManager.getPermanentLUSD();
 
-        // A redeems full
-        uint256 redemptionFeePercentage = chickenBondManager.calcRedemptionFeePercentage(1e18);
+        // A redeems can’t redeem full, redeems max possible
+        uint256 redeemAmount = bLUSDToken.balanceOf(A) - MIN_BLUSD_SUPPLY;
+        uint256 redemptionFeeAmount = redeemAmount * chickenBondManager.calcRedemptionFeePercentage(redeemAmount * 1e18 / bLUSDToken.balanceOf(A)) / 1e18 * chickenBondManager.calcSystemBackingRatio() / 1e18;
         vm.startPrank(A);
-        chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
+        // TODO
+        //vm.expectRevert("CBM: Cannot redeem below min supply");
+        //vm.expectRevert(abi.encodePacked("CBM: Cannot redeem below min supply"));
+        //chickenBondManager.redeem(bLUSDToken.balanceOf(A), 0);
+        chickenBondManager.redeem(redeemAmount, 0);
         // A withdraws from Yearn to make math simpler, otherwise harvest would be shared
         yearnCurveVault.withdraw(yearnCurveVault.balanceOf(A));
         vm.stopPrank();
+        uint256 acquiredLUSDAfterRedemption = chickenBondManager.getTotalAcquiredLUSD();
 
         // harvest curve
         uint256 prevValue = chickenBondManager.getTotalLUSDInCurve();
@@ -158,7 +166,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         vm.warp(block.timestamp + 100 days);
 
         // A chickens in
-        uint256 accruedBLUSD = chickenBondManager.calcAccruedBLUSD(A_bondID);
+        uint256 lusdToAcquire2 = chickenBondManager.getLUSDToAcquire(A_bondID);
 
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
@@ -167,43 +175,33 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // Checks
 
         // Backing ratio
-        assertEq(chickenBondManager.calcSystemBackingRatio(), 1e18, "Backing ratio should be 1");
-
-        // Acquired in SP vault
         assertApproximatelyEqual(
-            chickenBondManager.getAcquiredLUSDInSP(),
-            accruedBLUSD, // backing ratio is 1, so this will match
-            1,
-            "Acquired LUSD in SP mismatch"
-        );
-        // Permanent in SP vault
-        assertApproximatelyEqual(
-            chickenBondManager.getPermanentLUSDInSP(),
-            initialPermanentLUSDInSP + _getAmountMinusChickenInFee(bondAmount2) - accruedBLUSD + initialAcquiredLUSDInSP * (1e18 - redemptionFeePercentage) / 1e18,
-            1,
-            "Permanent LUSD in SP mismatch"
+            chickenBondManager.calcSystemBackingRatio(),
+            acquiredLUSDAfterRedemption + curveYield,
+            1000,
+            "Backing ratio mismatch"
         );
 
-        // Acquired in Curve vault
+        // Acquired
         assertApproximatelyEqual(
-            chickenBondManager.getAcquiredLUSDInCurve(),
-            0,
-            20,
-            "Acquired LUSD in Curve mismatch"
+            chickenBondManager.getTotalAcquiredLUSD(),
+            acquiredLUSDAfterRedemption + lusdToAcquire2 + curveYield,
+            1,
+            "Acquired LUSD mismatch"
         );
 
-        // Permanent in Curve vault
+        // Permanent
         assertApproximatelyEqual(
-            chickenBondManager.getPermanentLUSDInCurve(),
-            initialPermanentLUSDInCurve + initialAcquiredLUSDInCurve * (1e18 - redemptionFeePercentage) / 1e18,
-            1,
-            "Permanent LUSD in Curve mismatch"
+            chickenBondManager.getPermanentLUSD(),
+            initialPermanentLUSD + redemptionFeeAmount + _getAmountMinusChickenInFee(bondAmount2) - lusdToAcquire2,
+            1000,
+            "Permanent LUSD mismatch"
         );
 
         // Balance in rewards contract
         assertApproximatelyEqual(
             lusdToken.balanceOf(address(curveLiquidityGauge)),
-            curveYield + _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2),
+            _getChickenInFeeForAmount(bondAmount1) + _getChickenInFeeForAmount(bondAmount2),
             250,
             "Rewards contract balance mismatch"
         );
@@ -211,7 +209,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInWithoutEnoughLUSDInBAMM() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -247,7 +245,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testFirstChickenInWithoutEnoughLUSDInBAMMForChickenInFee() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -274,7 +272,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testChickenOutMinTooBig() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -289,7 +287,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testChickenOutBelowMin() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = MIN_BOND_AMOUNT;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -311,7 +309,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
 
     function testRedeemMinTooBig() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -337,13 +335,13 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // B redeems bLUSD
         vm.startPrank(B);
         vm.expectRevert("CBM: Min value cannot be greater than nominal amount");
-        chickenBondManager.redeem(A_bLUSDBalance, acquiredLUSD + 1);
+        chickenBondManager.redeem(A_bLUSDBalance - MIN_BLUSD_SUPPLY, acquiredLUSD + 1);
         vm.stopPrank();
     }
 
     function testRedeemBelowMin() public {
         // A creates bond
-        uint256 bondAmount = 10e18;
+        uint256 bondAmount = 100e18;
 
         uint256 A_bondID = createBondForUser(A, bondAmount);
 
@@ -365,7 +363,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // simulate B.Protocol loss
         uint256 leftInBAMMSPVault = 10;
         //console.log(chickenBondManager.getAcquiredLUSDInSP(), "chickenBondManager.getAcquiredLUSDInSP()");
-        //console.log(chickenBondManager.getPermanentLUSDInSP(), "chickenBondManager.getPermanentLUSDInSP()");
+        //console.log(chickenBondManager.getPermanentLUSD(), "chickenBondManager.getPermanentLUSD()");
         vm.startPrank(address(bammSPVault));
         lusdToken.transfer(C, lusdToken.balanceOf(address(bammSPVault)) - leftInBAMMSPVault);
         vm.stopPrank();
@@ -376,9 +374,9 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // B redeems bLUSD
         vm.startPrank(B);
         vm.expectRevert("CBM: Not enough LUSD available in B.Protocol");
-        chickenBondManager.redeem(A_bLUSDBalance, leftInBAMMSPVault + 1);
+        chickenBondManager.redeem(A_bLUSDBalance - MIN_BLUSD_SUPPLY, leftInBAMMSPVault + 1);
         // with the remaining amount it works
-        chickenBondManager.redeem(A_bLUSDBalance, leftInBAMMSPVault);
+        chickenBondManager.redeem(A_bLUSDBalance - MIN_BLUSD_SUPPLY, leftInBAMMSPVault);
         vm.stopPrank();
     }
 }
