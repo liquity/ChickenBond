@@ -286,9 +286,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         _updateAccrualParameter();
 
+        uint256 newDna = getDna(bond.dna);
         idToBondData[_bondID].status = BondStatus.chickenedOut;
         idToBondData[_bondID].endTime = block.timestamp;
-        idToBondData[_bondID].dna = getDna(bond.dna);
+        idToBondData[_bondID].dna = newDna;
 
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
@@ -304,8 +305,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Withdraw from B.Protocol LUSD vault
         _withdrawFromBAMM(lusdToWithdraw, msg.sender);
-        
-        emit BondCancelled(msg.sender, _bondID, bond.lusdAmount, _minLUSD, lusdToWithdraw, bond.dna);
+
+        emit BondCancelled(msg.sender, _bondID, bond.lusdAmount, _minLUSD, lusdToWithdraw, newDna);
     }
 
     // transfer _lusdToTransfer to the LUSD/bLUSD AMM LP Rewards staking contract
@@ -383,9 +384,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
         uint256 accruedBLUSD = lusdToAcquire * 1e18 / backingRatio;
 
+        uint256 newDna = getDna(bond.dna);
         idToBondData[_bondID].status = BondStatus.chickenedIn;
         idToBondData[_bondID].endTime = block.timestamp;
-        idToBondData[_bondID].dna = getDna(bond.dna);
+        idToBondData[_bondID].dna = newDna;
 
         // Subtract the bonded amount from the total pending LUSD (and implicitly increase the total acquired LUSD)
         pendingLUSD -= bond.lusdAmount;
@@ -411,7 +413,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             _withdrawFromSPVaultAndTransferToRewardsStakingContract(chickenInFeeAmount);
         }
 
-        emit BondClaimed(msg.sender, _bondID, bond.lusdAmount, accruedBLUSD, bond.dna);
+        emit BondClaimed(msg.sender, _bondID, bond.lusdAmount, accruedBLUSD, newDna);
     }
 
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256) {
