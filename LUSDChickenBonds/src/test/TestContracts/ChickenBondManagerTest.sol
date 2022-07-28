@@ -476,6 +476,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondID = createBondForUser(A, bondAmount);
 
         (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint128 bdInitialHalfDna, uint128 bdFinalHalfDna, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
+        uint128 initialHalfDna = bdInitialHalfDna;
         assertEq(bdLUSDAmount, bondAmount);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, 0);
@@ -492,6 +493,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bdEndTime, block.timestamp);
         assertGt(bdInitialHalfDna, 0);
         assertGt(bdFinalHalfDna, 0);
+        assertEq(bdInitialHalfDna, initialHalfDna);
         assert(bdFinalHalfDna != bdInitialHalfDna);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedOut));
     }
@@ -1019,6 +1021,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondID = createBondForUser(A, bondAmount);
 
         (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint128 bdInitialHalfDna, uint128 bdFinalHalfDna, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
+        uint128 initialHalfDna = bdInitialHalfDna;
         assertEq(bdLUSDAmount, bondAmount);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, 0);
@@ -1035,6 +1038,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bdEndTime, block.timestamp);
         assertGt(bdInitialHalfDna, 0);
         assertGt(bdFinalHalfDna, 0);
+        assertEq(bdInitialHalfDna, initialHalfDna);
         assert(bdFinalHalfDna != bdInitialHalfDna);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedIn));
     }
