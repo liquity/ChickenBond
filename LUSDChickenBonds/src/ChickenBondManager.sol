@@ -84,7 +84,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 lusdAmount;
         uint256 startTime;
         uint256 endTime; // Timestamp of chicken in/out event
-        uint256 dna;
+        uint128 initialHalfDna;
+        uint128 finalHalfDna;
         BondStatus status;
     }
 
@@ -177,9 +178,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     event BaseRedemptionRateUpdated(uint256 _baseRedemptionRate);
     event LastRedemptionTimeUpdated(uint256 _lastRedemptionFeeOpTime);
-    event BondCreated(address indexed bonder, uint256 bondId, uint256 amount, uint256 bondDna);
-    event BondClaimed(address indexed bonder, uint256 bondId, uint256 lusdAmount, uint256 bLusdAmount, uint256 bondDna);
-    event BondCancelled(address indexed bonder, uint256 bondId, uint256 principalLusdAmount, uint256 minLusdAmount, uint256 withdrawnLusdAmount, uint256 bondDna);
+    event BondCreated(address indexed bonder, uint256 bondId, uint256 amount, uint128 bondInitialHalfDna);
+    event BondClaimed(address indexed bonder, uint256 bondId, uint256 lusdAmount, uint256 bLusdAmount, uint128 bondFinalHalfDna);
+    event BondCancelled(address indexed bonder, uint256 bondId, uint256 principalLusdAmount, uint256 minLusdAmount, uint256 withdrawnLusdAmount, uint128 bondFinalHalfDna);
     event BLUSDRedeemed(address indexed redeemer, uint256 bLusdAmount, uint256 minLusdAmount, uint256 lusdAmount, uint256 yTokens, uint256 redemptionFee);
 
     // --- Constructor ---
@@ -261,7 +262,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         BondData memory bondData;
         bondData.lusdAmount = _lusdAmount;
         bondData.startTime = block.timestamp;
-        bondData.dna = getDna(0);
+        bondData.initialHalfDna = getHalfDna(bondID);
         bondData.status = BondStatus.active;
         idToBondData[bondID] = bondData;
 
@@ -272,8 +273,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Deposit the LUSD to the B.Protocol LUSD vault
         _depositToBAMM(_lusdAmount);
-        
-        emit BondCreated(msg.sender, bondID, _lusdAmount, bondData.dna);
+
+        emit BondCreated(msg.sender, bondID, _lusdAmount, bondData.initialHalfDna);
 
         return bondID;
     }
@@ -286,10 +287,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         _updateAccrualParameter();
 
-        uint256 newDna = getDna(bond.dna);
+        uint128 newDna = getHalfDna(_bondID);
         idToBondData[_bondID].status = BondStatus.chickenedOut;
         idToBondData[_bondID].endTime = block.timestamp;
-        idToBondData[_bondID].dna = newDna;
+        idToBondData[_bondID].finalHalfDna = newDna;
 
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
@@ -384,10 +385,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
         uint256 accruedBLUSD = lusdToAcquire * 1e18 / backingRatio;
 
-        uint256 newDna = getDna(bond.dna);
+        uint128 newDna = getHalfDna(_bondID);
         idToBondData[_bondID].status = BondStatus.chickenedIn;
         idToBondData[_bondID].endTime = block.timestamp;
-        idToBondData[_bondID].dna = newDna;
+        idToBondData[_bondID].finalHalfDna = newDna;
 
         // Subtract the bonded amount from the total pending LUSD (and implicitly increase the total acquired LUSD)
         pendingLUSD -= bond.lusdAmount;
@@ -464,7 +465,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Burn the redeemed bLUSD
         bLUSDToken.burn(msg.sender, _bLUSDToRedeem);
-    
+
         emit BLUSDRedeemed(msg.sender, _bLUSDToRedeem, _minLUSDFromBAMMSPVault, lusdToWithdrawFromSP, yTokensFromCurveVault, redemptionFeeLUSD);
 
         return (lusdToWithdrawFromSP, yTokensFromCurveVault);
@@ -574,8 +575,12 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         );
     }
 
-    function getDna(uint256 _previousDna) internal view returns (uint256) {
-        return uint256(keccak256(abi.encode(_previousDna, block.timestamp, permanentLUSD / NFT_RANDOMNESS_DIVISOR)));
+    function getHalfDna(uint256 _tokenID) internal view returns (uint128) {
+        return uint128(
+            uint256(
+                keccak256(abi.encode(_tokenID, block.timestamp, permanentLUSD / NFT_RANDOMNESS_DIVISOR))
+            ) >> 128
+        );
     }
 
     // --- B.Protocol debt functions ---
@@ -935,12 +940,13 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
             uint256 lusdAmount,
             uint256 startTime,
             uint256 endTime,
-            uint256 dna,
+            uint128 initialHalfDna,
+            uint128 finalHalfDna,
             uint8 status
         )
     {
         BondData memory bond = idToBondData[_bondID];
-        return (bond.lusdAmount, bond.startTime, bond.endTime, bond.dna, uint8(bond.status));
+        return (bond.lusdAmount, bond.startTime, bond.endTime, bond.initialHalfDna, bond.finalHalfDna, uint8(bond.status));
     }
 
     function getLUSDToAcquire(uint256 _bondID) external view returns (uint256) {

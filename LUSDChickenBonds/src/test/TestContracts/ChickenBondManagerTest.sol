@@ -120,7 +120,7 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(C, MIN_BOND_AMOUNT + 25e18);
 
         uint256 bondID_C = bondNFT.totalSupply();
-        (, uint256 bondStartTime_C,,,) = chickenBondManager.getBondData(bondID_C);
+        (, uint256 bondStartTime_C,,,,) = chickenBondManager.getBondData(bondID_C);
 
         // assertEq(bondedLUSD_C, 25e18);
         assertEq(bondStartTime_C, block.timestamp);
@@ -149,7 +149,7 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 600);
 
         uint256 bondID_C = bondNFT.totalSupply();
-        (uint256 bondedLUSD_C, uint256 bondStartTime_C,,,) = chickenBondManager.getBondData(bondID_C);
+        (uint256 bondedLUSD_C, uint256 bondStartTime_C,,,,) = chickenBondManager.getBondData(bondID_C);
         assertEq(bondedLUSD_C, MIN_BOND_AMOUNT + 25e18);
         assertEq(bondStartTime_C, block.timestamp - 600);
     }
@@ -200,10 +200,11 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Confirm bond data for bond #2 is 0
-        (uint256 B_bondedLUSD, uint256 B_bondStartTime,, uint256 B_bondDna, uint8 B_bondStatus) = chickenBondManager.getBondData(2);
+        (uint256 B_bondedLUSD, uint256 B_bondStartTime,, uint128 B_bondInitialHalfDna, uint128 B_bondFinalHalfDna, uint8 B_bondStatus) = chickenBondManager.getBondData(2);
         assertEq(B_bondedLUSD, 0);
         assertEq(B_bondStartTime, 0);
-        assertEq(B_bondDna, 0);
+        assertEq(B_bondInitialHalfDna, 0);
+        assertEq(B_bondFinalHalfDna, 0);
         assertEq(B_bondStatus, uint8(IChickenBondManager.BondStatus.nonExistent));
 
         uint256 currentTime = block.timestamp;
@@ -212,10 +213,11 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(B, MIN_BOND_AMOUNT);
 
         // Check bonded amount and bond start time are now recorded for B's bond
-        (B_bondedLUSD, B_bondStartTime,, B_bondDna, B_bondStatus) = chickenBondManager.getBondData(2);
+        (B_bondedLUSD, B_bondStartTime,, B_bondInitialHalfDna, B_bondFinalHalfDna, B_bondStatus) = chickenBondManager.getBondData(2);
         assertEq(B_bondedLUSD, MIN_BOND_AMOUNT);
         assertEq(B_bondStartTime, currentTime);
-        assertGt(B_bondDna, 0);
+        assertGt(B_bondInitialHalfDna, 0);
+        assertEq(B_bondFinalHalfDna, 0);
         assertEq(B_bondStatus, uint8(IChickenBondManager.BondStatus.active));
     }
 
@@ -473,24 +475,24 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 expectedStartTime = block.timestamp;
         uint256 bondID = createBondForUser(A, bondAmount);
 
-        (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint256 bdDna, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
-        uint256 bdDna1 = bdDna;
+        (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint128 bdInitialHalfDna, uint128 bdFinalHalfDna, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdLUSDAmount, bondAmount);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, 0);
-        assertGt(bdDna1, 0);
+        assertGt(bdInitialHalfDna, 0);
+        assertEq(bdFinalHalfDna, 0);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.active));
 
         vm.warp(block.timestamp + 600);
         chickenOutForUser(A, bondID);
 
-        (bdLUSDAmount, bdStartTime, bdEndTime, bdDna, bdStatus) = chickenBondManager.getBondData(bondID);
-        uint256 bdDna2 = bdDna;
+        (bdLUSDAmount, bdStartTime, bdEndTime, bdInitialHalfDna, bdFinalHalfDna, bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdLUSDAmount, bondAmount);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, block.timestamp);
-        assertGt(bdDna2, 0);
-        assert(bdDna2 != bdDna1);
+        assertGt(bdInitialHalfDna, 0);
+        assertGt(bdFinalHalfDna, 0);
+        assert(bdFinalHalfDna != bdInitialHalfDna);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedOut));
     }
 
@@ -1016,24 +1018,24 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 expectedStartTime = block.timestamp;
         uint256 bondID = createBondForUser(A, bondAmount);
 
-        (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint256 bdDna, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
-        uint256 bdDna1 = bdDna;
+        (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint128 bdInitialHalfDna, uint128 bdFinalHalfDna, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdLUSDAmount, bondAmount);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, 0);
-        assertGt(bdDna1, 0);
+        assertGt(bdInitialHalfDna, 0);
+        assertEq(bdFinalHalfDna, 0);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.active));
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
         chickenInForUser(A, bondID);
 
-        (bdLUSDAmount, bdStartTime, bdEndTime, bdDna, bdStatus) = chickenBondManager.getBondData(bondID);
-        uint256 bdDna2 = bdDna;
+        (bdLUSDAmount, bdStartTime, bdEndTime, bdInitialHalfDna, bdFinalHalfDna, bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdLUSDAmount, bondAmount);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, block.timestamp);
-        assertGt(bdDna2, 0);
-        assert(bdDna2 != bdDna1);
+        assertGt(bdInitialHalfDna, 0);
+        assertGt(bdFinalHalfDna, 0);
+        assert(bdFinalHalfDna != bdInitialHalfDna);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedIn));
     }
 

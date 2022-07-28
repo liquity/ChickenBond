@@ -57,7 +57,7 @@ contract BondNFT is ERC721Enumerable, Ownable {
     // Prevent transfers for a period of time after chickening in or out
     function _beforeTokenTransfer(address _from, address _to, uint256 _tokenID) internal virtual override {
         if (_from != address(0)) {
-            (,, uint256 endTime,, uint8 status) = chickenBondManager.getBondData(_tokenID);
+            (,, uint256 endTime,,, uint8 status) = chickenBondManager.getBondData(_tokenID);
 
             require(
                 status == uint8(IChickenBondManager.BondStatus.active) ||
@@ -70,22 +70,36 @@ contract BondNFT is ERC721Enumerable, Ownable {
     }
 
     function getBondAmount(uint256 _tokenID) external view returns (uint256 amount) {
-        (amount,,,,) = chickenBondManager.getBondData(_tokenID);
+        (amount,,,,,) = chickenBondManager.getBondData(_tokenID);
     }
 
     function getBondStartTime(uint256 _tokenID) external view returns (uint256 startTime) {
-        (,startTime,,,) = chickenBondManager.getBondData(_tokenID);
+        (,startTime,,,,) = chickenBondManager.getBondData(_tokenID);
     }
 
     function getBondEndTime(uint256 _tokenID) external view returns (uint256 endTime) {
-        (,, endTime,,) = chickenBondManager.getBondData(_tokenID);
+        (,, endTime,,,) = chickenBondManager.getBondData(_tokenID);
     }
 
-    function getBondDna(uint256 _tokenID) external view returns (uint256 dna) {
-        (,,, dna,) = chickenBondManager.getBondData(_tokenID);
+    function getBondInitialHalfDna(uint256 _tokenID) external view returns (uint128 initialHalfDna) {
+        (,,, initialHalfDna,,) = chickenBondManager.getBondData(_tokenID);
+    }
+
+    function getBondInitialDna(uint256 _tokenID) external view returns (uint256 initialDna) {
+        (,,, uint128 initialHalfDna,,) = chickenBondManager.getBondData(_tokenID);
+        return uint256(initialHalfDna);
+    }
+
+    function getBondFinalHalfDna(uint128 _tokenID) external view returns (uint128 finalHalfDna) {
+        (,,,, finalHalfDna,) = chickenBondManager.getBondData(_tokenID);
+    }
+
+    function getBondFinalDna(uint256 _tokenID) external view returns (uint256 finalDna) {
+        (,,, uint128 initialHalfDna, uint128 finalHalfDna,) = chickenBondManager.getBondData(_tokenID);
+        return (uint256(initialHalfDna) << 128) + uint256(finalHalfDna);
     }
 
     function getBondStatus(uint256 _tokenID) external view returns (uint8 status) {
-        (,,,, status) = chickenBondManager.getBondData(_tokenID);
+        (,,,,, status) = chickenBondManager.getBondData(_tokenID);
     }
 }
