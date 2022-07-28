@@ -2179,7 +2179,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertRelativeError(
             initialCurvePrice,
             finalCurvePrice,
-            6e12, // 0.0006%
+            8e12, // 0.0008%
             "Price after attack should be close"
         );
         assertRelativeError(
@@ -2360,7 +2360,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertRelativeError(
             initialCurvePrice,
             finalCurvePrice,
-            2e14, // 0.02%
+            3e14, // 0.03%
             "Price after attack should be close"
         );
         assertRelativeError(
