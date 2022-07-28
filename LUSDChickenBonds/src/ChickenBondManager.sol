@@ -1121,13 +1121,19 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return bammLUSDDebt;
     }
 
-    function getTreasury() external view returns (uint256, uint256, uint256) {
-        uint256 totalAcquiredLUSD = getTotalAcquiredLUSD();
-
-        return (
-            pendingLUSD,
-            totalAcquiredLUSD,
-            permanentLUSD
-        );
+    function getTreasury()
+        external
+        view
+        returns (
+            // We don't normally use leading underscores for return values,
+            // but we do so here in order to avoid shadowing state variables
+            uint256 _pendingLUSD,
+            uint256 _totalAcquiredLUSD,
+            uint256 _permanentLUSD
+        )
+    {
+        _pendingLUSD = pendingLUSD;
+        _totalAcquiredLUSD = getTotalAcquiredLUSD();
+        _permanentLUSD = permanentLUSD;
     }
 }
