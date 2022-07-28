@@ -30,7 +30,8 @@ contract DummyChickenBondManager {
         uint256 lusdAmount;
         uint256 startTime;
         uint256 endTime;
-        uint256 dna;
+        uint128 initialHalfDna;
+        uint128 finalHalfDna;
         uint8 status;
     }
 
@@ -135,7 +136,8 @@ contract BondNFTTest is DSTest {
                 lusdAmount: 1e18, // doesn't matter
                 startTime: endTime, // doesn't matter, just use same as endTime
                 endTime: endTime,
-                dna: 1,
+                initialHalfDna: 1,
+                finalHalfDna: 1,
                 status: uint8(
                     inOut
                         ? IChickenBondManager.BondStatus.chickenedIn
