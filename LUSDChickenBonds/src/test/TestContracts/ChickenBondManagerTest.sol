@@ -2134,12 +2134,12 @@ contract ChickenBondManagerTest is BaseTest {
     function testTreasuryChangesAfterRedeem() public {
         // Obtain some bLUSD by creating/claiming a bond
         uint256 bondAmount = 100e18;
-        createBondForUser(A, bondAmount);
-        uint256 bondId = bondNFT.totalSupply();
+        uint256 bondId = createBondForUser(A, bondAmount);
+
         vm.warp(block.timestamp + 300 days);
+
         uint256 accrued = chickenBondManager.calcAccruedBLUSD(bondId);
-        vm.prank(A);
-        chickenBondManager.chickenIn(bondId);
+        chickenInForUser(A, bondId);
 
         (
             uint256 pendingBeforeRedeem,
@@ -2151,8 +2151,9 @@ contract ChickenBondManagerTest is BaseTest {
 
         // Redeem some bLUSD
         uint256 someBLusd = accrued / 2;
+        uint256 lusdRedemptionAmountPlusFee = acquiredBeforeRedeem * someBLusd / bLUSDToken.totalSupply();
         vm.prank(A);
-        (uint256 lusdReceived,) = chickenBondManager.redeem(someBLusd, 0);
+        (uint256 lusdRedemptionAmount,) = chickenBondManager.redeem(someBLusd, 0);
 
         (
             uint256 pendingAfterRedeem,
@@ -2160,20 +2161,30 @@ contract ChickenBondManagerTest is BaseTest {
             uint256 permanentAfterRedeem
         ) = chickenBondManager.getTreasury();
         
-        uint256 lusdRedemptionAmountWithoutFee = ((someBLusd * 1e18) / bLUSDToken.totalSupply()) * acquiredBeforeRedeem;
-        
-        console.log("Pending before redeem", pendingBeforeRedeem);
-        console.log("Pending after redeem", pendingAfterRedeem);
-        console.log("Acquired before redeem", acquiredBeforeRedeem);
-        console.log("Acquired after redeem", acquiredAfterRedeem);
-        console.log("Permanent before redeem", permanentBeforeRedeem);
-        console.log("Permanent after redeem", permanentAfterRedeem);
-        console.log("Accrued bLUSD / 2", someBLusd);
-        console.log("LUSD redemption amount", lusdReceived);
-        console.log("LUSD redemption amount without fee", lusdRedemptionAmountWithoutFee);
-        
+        // emit log_named_decimal_uint("Pending before redeem", pendingBeforeRedeem, 18);
+        // emit log_named_decimal_uint("Pending after redeem", pendingAfterRedeem, 18);
+        // emit log_named_decimal_uint("Acquired before redeem", acquiredBeforeRedeem, 18);
+        // emit log_named_decimal_uint("Acquired after redeem", acquiredAfterRedeem, 18);
+        // emit log_named_decimal_uint("Permanent before redeem", permanentBeforeRedeem, 18);
+        // emit log_named_decimal_uint("Permanent after redeem", permanentAfterRedeem, 18);
+        // emit log_named_decimal_uint("Redeemed bLUSD", someBLusd, 18);
+        // emit log_named_decimal_uint("LUSD redemption amount", lusdRedemptionAmount, 18);
+        // emit log_named_decimal_uint("LUSD redemption amount + fee", lusdRedemptionAmountPlusFee, 18);
+
         assertEq(pendingAfterRedeem, 0, "Pending bucket should be empty");
-        assertEq(acquiredAfterRedeem, acquiredBeforeRedeem - lusdReceived, "Acquired bucket should have decreased by the redeemed amount of LUSD");
-        assertEq(permanentAfterRedeem, permanentBeforeRedeem + lusdRedemptionAmountWithoutFee - lusdReceived, "Permanent bucket should have increased by the LUSD taken as a redemption fee");
+
+        assertApproximatelyEqual(
+            acquiredAfterRedeem,
+            acquiredBeforeRedeem - lusdRedemptionAmountPlusFee,
+            100,
+            "Acquired bucket should have decreased by the redeemed amount of LUSD and the fee"
+        );
+
+        assertApproximatelyEqual(
+            permanentAfterRedeem,
+            permanentBeforeRedeem + lusdRedemptionAmountPlusFee - lusdRedemptionAmount,
+            100,
+            "Permanent bucket should have increased by the LUSD taken as a redemption fee"
+        );
     }
 }
