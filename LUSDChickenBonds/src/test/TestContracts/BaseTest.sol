@@ -158,20 +158,30 @@ contract BaseTest is DSTest, stdCheats {
         vm.warp(countdownStartTime + SHIFTER_DELAY + SHIFTER_WINDOW - 1);
     }
 
+    function _getLUSD3CRVExchangeRate() internal view returns (uint256) {
+        return curvePool.get_dy(0, 1, curveBasePool.get_virtual_price());
+    }
+
+    function _get3CRVLUSDExchangeRate() internal view returns (uint256) {
+        return curvePool.get_dy(1, 0, 1e36 / curveBasePool.get_virtual_price());
+    }
+
     function makeCurveSpotPriceBelow1(uint256 _lusdDeposit) public {
-        uint256 curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
-        if (curveLUSDSpotPrice < 1e18) {return;}
+        uint256 withdrawalThreshold = chickenBondManager.curveWithdrawal3CRVLUSDExchangeRateThreshold();
+        uint256 _3crvLUSDExchangeRate = _get3CRVLUSDExchangeRate();
+        if (_3crvLUSDExchangeRate > withdrawalThreshold) {return;}
 
         // C makes large LUSD deposit to Curve, moving Curve spot price below 1.0
-        depositLUSDToCurveForUser(C, _lusdDeposit); // C deposits 200m LUSD
-        curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
-        require(curveLUSDSpotPrice < 1e18, "test helper: deposit insufficient to makeCurveSpotPriceBelow1");
+        depositLUSDToCurveForUser(C, _lusdDeposit);
+
+        _3crvLUSDExchangeRate = _get3CRVLUSDExchangeRate();
+        require(_3crvLUSDExchangeRate > withdrawalThreshold, "test helper: deposit insufficient to makeCurveSpotPriceBelow1");
     }
 
     function makeCurveSpotPriceAbove1(uint256 _3crvDeposit) public {
-        uint256 curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
-        //console.log(curveLUSDSpotPrice, "curveLUSDSpotPrice test helper before");
-        if (curveLUSDSpotPrice > 1e18) {return;}
+        uint256 depositThreshold = chickenBondManager.curveDepositLUSD3CRVExchangeRateThreshold();
+        uint256 lusd3CRVExchangeRate = _getLUSD3CRVExchangeRate();
+        if (lusd3CRVExchangeRate > depositThreshold) {return;}
 
         // C makes large 3CRV deposit to Curve, moving Curve spot price above 1.0
         tip(address(_3crvToken), C, _3crvDeposit);
@@ -181,10 +191,8 @@ contract BaseTest is DSTest, stdCheats {
         curvePool.add_liquidity([0, _3crvDeposit], 0);
         vm.stopPrank();
 
-        curveLUSDSpotPrice = curvePool.get_dy_underlying(0, 1, 1e18);
-        console.log(curveLUSDSpotPrice, "curveLUSDSpotPrice test helper after");
-
-        require(curveLUSDSpotPrice > 1e18, "test helper: deposit insufficient to makeCurveSpotPriceAbove1");
+        lusd3CRVExchangeRate = _getLUSD3CRVExchangeRate();
+        require(lusd3CRVExchangeRate > depositThreshold, "test helper: deposit insufficient to makeCurveSpotPriceAbove1");
     }
 
     function shiftFractionFromSPToCurve(uint256 _divisor) public returns (uint256) {

@@ -1247,7 +1247,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromCurveToSPRevertsWhenShiftWouldRaiseCurvePriceAbove1() public {
         // A creates bond
-        uint256 bondAmount = 100_000_000e18; // 500m
+        uint256 bondAmount = 200_000_000e18; // 200m
 
         tip(address(lusdToken), A, bondAmount);
         createBondForUser(A, bondAmount);
@@ -1264,15 +1264,19 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         _startShiftCountdownAndWarpInsideWindow();
 
         makeCurveSpotPriceAbove1(50_000_000e18);
+        emit log_named_decimal_uint("3CRV:LUSD exchange rate 0", _get3CRVLUSDExchangeRate(), 18);
+
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
-     
         shiftFractionFromSPToCurve(10);
    
+        emit log_named_decimal_uint("3CRV:LUSD exchange rate 1", _get3CRVLUSDExchangeRate(), 18);
         makeCurveSpotPriceBelow1(50_000_000e18);
+        emit log_named_decimal_uint("3CRV:LUSD exchange rate 2", _get3CRVLUSDExchangeRate(), 18);
+
         // Now, attempt to shift an amount which would raise the price back above 1.0, and expect it to fail
         vm.expectRevert("CBM: Curve->SP shift must increase 3CRV:LUSD exchange rate to a value above the withdrawal threshold");
         chickenBondManager.shiftLUSDFromCurveToSP(50_000_000e18);
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price after final shift Curve->SP");
+        emit log_named_decimal_uint("3CRV:LUSD exchange rate 3", _get3CRVLUSDExchangeRate(), 18);
     }
 
     function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInCBM() public {
@@ -1896,96 +1900,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         loopOverCurveLUSDDepositSizes(10);
     }
 
-    struct Vars {
-            uint256 _depositMagnitude;
-            uint256 stepMultiplier;
-            int steps;
-            uint256 _lusdDepositAmount;
-            uint256 _3crvDepositAmount;
-            uint256 LUSDto3CRVDepositRatioBefore;
-            uint256 LUSDto3CRVBalRatioAfter;
-        }
-
-    function loopOverProportionalDepositSizes(int steps) public {
-        Vars memory vars;
-        vars._depositMagnitude = 1e18;
-        vars.stepMultiplier = 10;
-        vars.steps = 10;
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
-
-        uint256 curve3CRVSpot = curvePool.get_dy_underlying(1, 0, 1e18);
-
-        vm.startPrank(address(chickenBondManager));
-
-        for (int i = 1; i <= steps; i++) {
-
-            // multiply by the lusd-per-3crv
-            vars._lusdDepositAmount =  curve3CRVSpot * vars._depositMagnitude / 1e18;
-            vars._3crvDepositAmount = vars._depositMagnitude;
-
-            uint256 total3CRVValueBefore = vars._depositMagnitude * 2;
-
-            // Tip CBM some LUSD and 3CRV
-            tip(address(lusdToken), address(chickenBondManager), vars._lusdDepositAmount);
-            tip(address(_3crvToken), address(chickenBondManager), vars._3crvDepositAmount);
-            vars.LUSDto3CRVDepositRatioBefore = vars._lusdDepositAmount * 1e18 / vars._3crvDepositAmount;
-            console.log(vars.LUSDto3CRVDepositRatioBefore, "lusd to 3crv deposit ratio");
-
-            lusdToken.approve(address(curvePool), vars._lusdDepositAmount);
-            _3crvToken.approve(address(curvePool), vars._3crvDepositAmount);
-            curvePool.add_liquidity([vars._lusdDepositAmount, vars._3crvDepositAmount], 0); // deposit both tokens
-
-            uint256 cbmLUSDBalBefore = lusdToken.balanceOf(address(chickenBondManager));
-            uint256 cbm3CRVBalBefore = _3crvToken.balanceOf(address(chickenBondManager));
-            assertEq(cbmLUSDBalBefore, 0);
-            assertEq(cbm3CRVBalBefore, 0);
-
-            // Artificially withdraw all the share value as CBM
-            uint256 cbmShares = curvePool.balanceOf(address(chickenBondManager));
-            curvePool.remove_liquidity(cbmShares, [uint256(0), uint256(0)]); // receive both LUSD and 3CRV, no minimums
-
-            uint256 cbmLUSDBalAfter = lusdToken.balanceOf(address(chickenBondManager));
-            uint256 cbm3CRVBalAfter = _3crvToken.balanceOf(address(chickenBondManager));
-            vars.LUSDto3CRVBalRatioAfter = cbmLUSDBalAfter * 1e18 / cbm3CRVBalAfter;
-            console.log(vars.LUSDto3CRVBalRatioAfter, "lUSD to 3crv balance ratio");
-            uint256 curve3CRVSpotAfter = curvePool.get_dy_underlying(1, 0, 1e18);
-
-            // divide the LUSD by the LUSD-per-3CRV, to get the value of the LUSD in 3CRV
-            uint256 total3CRVValueAfter = cbm3CRVBalAfter + (cbmLUSDBalAfter * 1e18 /  curve3CRVSpotAfter);
-
-            uint256 total3CRVRelativeDepositLoss = diffOrZero(total3CRVValueBefore, total3CRVValueAfter) * 1e18 / total3CRVValueBefore;
-
-            console.log(vars._depositMagnitude / 1e18);
-            console.log(total3CRVRelativeDepositLoss);
-
-            vars._depositMagnitude *= vars.stepMultiplier;
-        }
-    }
-
-    function testCurveImmediateProportionalLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne1() public {
-        makeCurveSpotPriceAbove1(50_000_000e18);
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
-        loopOverProportionalDepositSizes(10);
-    }
-
-     function testCurveImmediateProportionalLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceAboveOne2() public {
-        makeCurveSpotPriceAbove1(1000_000_000e18);
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
-        loopOverProportionalDepositSizes(10);
-    }
-
-    function testCurveImmediateProportionalLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceBelowOne1() public {
-        makeCurveSpotPriceBelow1(50_000_000e18);
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
-        loopOverProportionalDepositSizes(10);
-    }
-
-     function testCurveImmediateProportionalLUSDDepositAndWithdrawalLossVariesWithDepositSize_PriceBelowOne2() public {
-        makeCurveSpotPriceAbove1(1000_000_000e18);
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curve spot price before");
-        loopOverProportionalDepositSizes(10);
-    }
-
     // --- Fee share test ---
 
     function testSendFeeShareCallableOnlyByYearnGov() public {
@@ -2265,7 +2179,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertRelativeError(
             initialCurvePrice,
             finalCurvePrice,
-            6e12, // 0.0006%
+            8e12, // 0.0008%
             "Price after attack should be close"
         );
         assertRelativeError(
@@ -2446,7 +2360,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertRelativeError(
             initialCurvePrice,
             finalCurvePrice,
-            2e14, // 0.02%
+            3e14, // 0.03%
             "Price after attack should be close"
         );
         assertRelativeError(
