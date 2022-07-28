@@ -177,10 +177,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     event BaseRedemptionRateUpdated(uint256 _baseRedemptionRate);
     event LastRedemptionTimeUpdated(uint256 _lastRedemptionFeeOpTime);
-    event BondCreated(address indexed bonder, uint bondId, uint amount, uint256 bondDna);
-    event BondClaimed(address indexed bonder, uint bondId, uint lusdAmount, uint bLusdAmount, uint256 bondDna);
-    event BondCancelled(address indexed bonder, uint bondId, uint principalLusdAmount, uint minLusdAmount, uint withdrawnLusdAmount, uint256 bondDna);
-    event BLUSDRedeemed(address indexed redeemer, uint bLusdAmount, uint minLusdAmount, uint lusdAmount, uint yTokens, uint redemptionFee);
+    event BondCreated(address indexed bonder, uint256 bondId, uint256 amount, uint256 bondDna);
+    event BondClaimed(address indexed bonder, uint256 bondId, uint256 lusdAmount, uint256 bLusdAmount, uint256 bondDna);
+    event BondCancelled(address indexed bonder, uint256 bondId, uint256 principalLusdAmount, uint256 minLusdAmount, uint256 withdrawnLusdAmount, uint256 bondDna);
+    event BLUSDRedeemed(address indexed redeemer, uint256 bLusdAmount, uint256 minLusdAmount, uint256 lusdAmount, uint256 yTokens, uint256 redemptionFee);
 
     // --- Constructor ---
 
