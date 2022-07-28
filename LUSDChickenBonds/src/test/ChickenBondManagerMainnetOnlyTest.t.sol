@@ -1247,7 +1247,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromCurveToSPRevertsWhenShiftWouldRaiseCurvePriceAbove1() public {
         // A creates bond
-        uint256 bondAmount = 100_000_000e18; // 500m
+        uint256 bondAmount = 200_000_000e18; // 200m
 
         tip(address(lusdToken), A, bondAmount);
         createBondForUser(A, bondAmount);
@@ -1264,15 +1264,19 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         _startShiftCountdownAndWarpInsideWindow();
 
         makeCurveSpotPriceAbove1(50_000_000e18);
+        emit log_named_decimal_uint("3CRV:LUSD exchange rate 0", _get3CRVLUSDExchangeRate(), 18);
+
         // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
-     
         shiftFractionFromSPToCurve(10);
    
+        emit log_named_decimal_uint("3CRV:LUSD exchange rate 1", _get3CRVLUSDExchangeRate(), 18);
         makeCurveSpotPriceBelow1(50_000_000e18);
+        emit log_named_decimal_uint("3CRV:LUSD exchange rate 2", _get3CRVLUSDExchangeRate(), 18);
+
         // Now, attempt to shift an amount which would raise the price back above 1.0, and expect it to fail
         vm.expectRevert("CBM: Curve->SP shift must increase 3CRV:LUSD exchange rate to a value above the withdrawal threshold");
         chickenBondManager.shiftLUSDFromCurveToSP(50_000_000e18);
-        console.log(curvePool.get_dy_underlying(0, 1, 1e18), "Curve price after final shift Curve->SP");
+        emit log_named_decimal_uint("3CRV:LUSD exchange rate 3", _get3CRVLUSDExchangeRate(), 18);
     }
 
     function testShiftLUSDFromCurveToSPDoesntChangeTotalLUSDInCBM() public {
