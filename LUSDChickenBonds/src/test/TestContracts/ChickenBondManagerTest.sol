@@ -2035,7 +2035,6 @@ contract ChickenBondManagerTest is BaseTest {
         
         uint256 bondAmount = 100e18;
         createBondForUser(A, bondAmount);
-        uint256 bondIdA = bondNFT.totalSupply();
 
         (
             uint256 pendingAfterCreateBond,
@@ -2100,7 +2099,6 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 bondAmount = 100e18;
 
         createBondForUser(A, bondAmount);
-        uint256 bondIdA = bondNFT.totalSupply();  
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
 
@@ -2114,7 +2112,6 @@ contract ChickenBondManagerTest is BaseTest {
         ) = chickenBondManager.getTreasury();
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
-        uint256 accruedB = chickenBondManager.calcAccruedBLUSD(bondIdB);
         vm.prank(B);
         chickenBondManager.chickenOut(bondIdB, 0);
 
@@ -2124,8 +2121,6 @@ contract ChickenBondManagerTest is BaseTest {
             uint256 permanentAfterChickenOut
         ) = chickenBondManager.getTreasury();
         
-        uint256 bondAmountWithFeeDeducted = bondAmount - _getChickenInFeeForAmount(bondAmount);
-
         assertEq(pendingAfterChickenOut, pendingBeforeChickenOut - bondAmount, "Pending bucket should have decreased by the bonded amount");
         assertEq(acquiredAfterChickenOut, acquiredBeforeChickenOut, "Acquired bucket shouldn't have changed");
         assertEq(permanentAfterChickenOut, permanentBeforeChickenOut, "Permanent bucket shouldn't have changed");
@@ -2142,7 +2137,7 @@ contract ChickenBondManagerTest is BaseTest {
         chickenInForUser(A, bondId);
 
         (
-            uint256 pendingBeforeRedeem,
+            /* uint256 pendingBeforeRedeem */,
             uint256 acquiredBeforeRedeem,
             uint256 permanentBeforeRedeem
         ) = chickenBondManager.getTreasury();
