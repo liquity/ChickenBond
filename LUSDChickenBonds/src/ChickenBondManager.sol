@@ -177,6 +177,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     event BaseRedemptionRateUpdated(uint256 _baseRedemptionRate);
     event LastRedemptionTimeUpdated(uint256 _lastRedemptionFeeOpTime);
+    event BondCreated(address indexed bonder, uint256 bondId, uint256 amount, uint256 bondDna);
+    event BondClaimed(address indexed bonder, uint256 bondId, uint256 lusdAmount, uint256 bLusdAmount, uint256 bondDna);
+    event BondCancelled(address indexed bonder, uint256 bondId, uint256 principalLusdAmount, uint256 minLusdAmount, uint256 withdrawnLusdAmount, uint256 bondDna);
+    event BLUSDRedeemed(address indexed redeemer, uint256 bLusdAmount, uint256 minLusdAmount, uint256 lusdAmount, uint256 yTokens, uint256 redemptionFee);
 
     // --- Constructor ---
 
@@ -268,6 +272,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Deposit the LUSD to the B.Protocol LUSD vault
         _depositToBAMM(_lusdAmount);
+        
+        emit BondCreated(msg.sender, bondID, _lusdAmount, bondData.dna);
 
         return bondID;
     }
@@ -280,9 +286,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         _updateAccrualParameter();
 
+        uint256 newDna = getDna(bond.dna);
         idToBondData[_bondID].status = BondStatus.chickenedOut;
         idToBondData[_bondID].endTime = block.timestamp;
-        idToBondData[_bondID].dna = getDna(bond.dna);
+        idToBondData[_bondID].dna = newDna;
 
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
@@ -298,6 +305,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Withdraw from B.Protocol LUSD vault
         _withdrawFromBAMM(lusdToWithdraw, msg.sender);
+
+        emit BondCancelled(msg.sender, _bondID, bond.lusdAmount, _minLUSD, lusdToWithdraw, newDna);
     }
 
     // transfer _lusdToTransfer to the LUSD/bLUSD AMM LP Rewards staking contract
@@ -375,9 +384,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
         uint256 accruedBLUSD = lusdToAcquire * 1e18 / backingRatio;
 
+        uint256 newDna = getDna(bond.dna);
         idToBondData[_bondID].status = BondStatus.chickenedIn;
         idToBondData[_bondID].endTime = block.timestamp;
-        idToBondData[_bondID].dna = getDna(bond.dna);
+        idToBondData[_bondID].dna = newDna;
 
         // Subtract the bonded amount from the total pending LUSD (and implicitly increase the total acquired LUSD)
         pendingLUSD -= bond.lusdAmount;
@@ -402,6 +412,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         if (!migration && lusdInBAMMSPVault >= chickenInFeeAmount) {
             _withdrawFromSPVaultAndTransferToRewardsStakingContract(chickenInFeeAmount);
         }
+
+        emit BondClaimed(msg.sender, _bondID, bond.lusdAmount, accruedBLUSD, newDna);
     }
 
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256) {
@@ -452,6 +464,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Burn the redeemed bLUSD
         bLUSDToken.burn(msg.sender, _bLUSDToRedeem);
+    
+        emit BLUSDRedeemed(msg.sender, _bLUSDToRedeem, _minLUSDFromBAMMSPVault, lusdToWithdrawFromSP, yTokensFromCurveVault, redemptionFeeLUSD);
 
         return (lusdToWithdrawFromSP, yTokensFromCurveVault);
     }
@@ -1040,7 +1054,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return _getLUSDSplit(bammLUSDValue);
     }
 
-    function getTotalAcquiredLUSD() external view returns (uint256) {
+    function getTotalAcquiredLUSD() public view returns (uint256) {
         uint256 bammLUSDValue = _getInternalBAMMLUSDValue();
         (uint256 acquiredLUSDInSP, uint256 acquiredLUSDInCurve,,,) = _getLUSDSplit(bammLUSDValue);
         return acquiredLUSDInSP + acquiredLUSDInCurve;
@@ -1107,5 +1121,21 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     function getBAMMLUSDDebt() external view returns (uint256) {
         return bammLUSDDebt;
+    }
+
+    function getTreasury()
+        external
+        view
+        returns (
+            // We don't normally use leading underscores for return values,
+            // but we do so here in order to avoid shadowing state variables
+            uint256 _pendingLUSD,
+            uint256 _totalAcquiredLUSD,
+            uint256 _permanentLUSD
+        )
+    {
+        _pendingLUSD = pendingLUSD;
+        _totalAcquiredLUSD = getTotalAcquiredLUSD();
+        _permanentLUSD = permanentLUSD;
     }
 }

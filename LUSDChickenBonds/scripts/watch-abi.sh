@@ -11,7 +11,6 @@ nodemon --delay 1 -e json \
 --watch ../out/BondNFT.sol/ \
 --watch ../out/BLUSDToken.sol/ \
 --watch ../out/ChickenBondManager.sol/ \
---watch ../out/LUSDSilo.sol/ \
 --on-change-only \
 --exec "echo 'Regenerating ABI typescript files...\n' && yarn generate-types"
 

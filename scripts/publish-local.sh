@@ -9,7 +9,7 @@ echo -e "Publishing dist to local store...\n"
 # Generate dist output to publish
 yarn prepare-compilations
 
-# Publish from the dist directory so that consumers don't have to import with "/dist" in the path
+# Publish with ./dist as the root, so consumers don't have to import with "/dist" in the path
 cp ../package.json ../dist
 yalc push --changed ../dist
 
