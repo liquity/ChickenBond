@@ -604,6 +604,20 @@ Regarding the Pending Bucket, we know that its content will eventually transitio
 
 We call this the \textit{naive formula}. Although the formula looks oversimplified (glossing over the fact that rebonding may have a different impact on the price than assumed), it turns out to have interesting properties which seem to validate it to some extent.
 
+We can rewrite it in terms of redemption price ($p_r$) instead of the bTKN supply ($S$) as:
+
+\begin{equation}
+  \label{eq:naive-5}
+   p_f = p_r \left(1 + \frac{q_p}{q_r} + \frac{q_d}{q_r} \frac{r_d}{r_r} d_f \right)
+\end{equation}
+
+And then obtain an expression for the premium $\lambda$:
+
+\begin{equation}
+  \label{eq:naive-6-premium}
+   \lambda = \frac{p_f}{p_r} = 1 + \frac{q_p}{q_r} + \frac{q_d}{q_r} \frac{r_d}{r_r} d_f
+\end{equation}
+
 \paragraph{Growth rate of bTKN supply and Treasury value}
 We posit that in the long run the bTKN supply $S$ should grow at roughly the same pace as the total value of the Treasury (denoted by $R_v$, and measured in TKN). The argument goes as follows: since the bTKN constitutes an economic share in the system, a faster growth rate of $S$ relative to $R_v$ would imply a future dilution of bTKN, while a slower growth rate would amount to a future appreciation. We can expect the market to factor such effects into the current price of bTKN, implying that the fair price $p_f$ should correspond to the price which results in the same relative growth rate for both.
 
