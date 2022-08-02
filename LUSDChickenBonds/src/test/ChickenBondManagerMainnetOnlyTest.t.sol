@@ -2427,7 +2427,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertRelativeError(
             curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2,
             redemptionPrice3 * 1e18 / redemptionPrice2,
-            2e13, // 0.002%
+            11e13, // 0.011%
             "Redemption price and acquired bucket should grow the same (thx to manipulation fees)"
         );
         assertLe(
