@@ -66,6 +66,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 accrualAdjustmentRate;          // `accrualParameter` is multiplied `1 - accrualAdjustmentRate` every time there's an adjustment
         uint256 accrualAdjustmentPeriodSeconds; // The duration of an adjustment period in seconds
         uint256 chickenInAMMFee;                // Fraction of bonded amount that is sent to Curve Liquidity Gauge to incentivize LUSD-bLUSD liquidity
+        uint256 lusdInCurveLimitSlope;          // Rate of growth for dynamic percentage limit of funds in Curve over total owned
         uint256 curveDepositDydxThreshold;      // Threshold of SP => Curve shifting
         uint256 curveWithdrawalDxdyThreshold;   // Threshold of Curve => SP shifting
         uint256 bootstrapPeriodChickenIn;       // Min duration of first chicken-in
@@ -141,6 +142,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     uint256 constant CURVE_FEE_DENOMINATOR = 1e10;
 
+    // Rate of growth for dynamic percentage limit of funds in Curve over total owned
+    // in percentage points per second
+    uint256 public immutable lusdInCurveLimitSlope;
+
     // Thresholds of SP <=> Curve shifting
     uint256 public immutable curveDepositLUSD3CRVExchangeRateThreshold;
     uint256 public immutable curveWithdrawal3CRVLUSDExchangeRateThreshold;
@@ -213,6 +218,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         CHICKEN_IN_AMM_FEE = _params.chickenInAMMFee;
 
         uint256 fee = curvePool.fee(); // This is practically immutable (can only be set once, in `initialize()`)
+
+        lusdInCurveLimitSlope = _params.lusdInCurveLimitSlope;
 
         // By exchange rate, we mean the rate at which Curve exchanges LUSD <=> $ value of 3CRV (at the virtual price),
         // which is reduced by the fee.
@@ -480,11 +487,23 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
         uint256 lusdOwnedInBAMMSPVault = bammLUSDValue - pendingLUSD;
 
+        uint256 totalLUSDInCurve = getTotalLUSDInCurve();
+        // it can happen due to profits from shifts or rounding errors:
+        uint256 lusdInCurveLimit =
+            _requireLUSDInCurveUnderLimit(lusdOwnedInBAMMSPVault, totalLUSDInCurve);
+
         // Make sure pending bucket is not moved to Curve, so it can be withdrawn on chicken out
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, lusdOwnedInBAMMSPVault);
 
         // Make sure there’s enough LUSD available in B.Protocol
         clampedLUSDToShift = Math.min(clampedLUSDToShift, lusdInBAMMSPVault);
+
+        // Make sure we don’t make Curve bucket is not greater than Permanent
+        // subtraction is safe per _requirePermanentGreaterThanCurve above
+        clampedLUSDToShift = Math.min(
+            clampedLUSDToShift,
+            lusdInCurveLimit - totalLUSDInCurve
+        );
 
         _requireNonZeroAmount(clampedLUSDToShift);
 
@@ -929,6 +948,27 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         require(block.timestamp >= shiftWindowStartTime && block.timestamp < shiftWindowFinishTime, "CBM: Shift only possible inside shifting window");
     }
 
+    function _getLUSDInCurveLimit(uint256 _lusdOwnedInBAMMSPVault, uint256 _totalLUSDInCurve) internal view returns (uint256) {
+        // subtract is safe from shifting function per previous call to _requireShiftBootstrapPeriodEnded
+        uint256 lusdInCurveLimitPercentage = Math.min(
+            1e18, // cap at 100%
+            lusdInCurveLimitSlope * (block.timestamp - deploymentTimestamp - BOOTSTRAP_PERIOD_SHIFT)
+        );
+        uint256 totalLUSDOwned = _lusdOwnedInBAMMSPVault + _totalLUSDInCurve;
+        uint256 lusdInCurveLimit =
+            totalLUSDOwned * lusdInCurveLimitPercentage / 1e18;
+
+        return lusdInCurveLimit;
+    }
+
+    function _requireLUSDInCurveUnderLimit(uint256 _lusdOwnedInBAMMSPVault, uint256 _totalLUSDInCurve) internal view returns (uint256) {
+        uint256 lusdInCurveLimit = _getLUSDInCurveLimit(_lusdOwnedInBAMMSPVault, _totalLUSDInCurve);
+
+        require(lusdInCurveLimit >= _totalLUSDInCurve, "CBM: The amount in Curve cannot be greater than the current limit");
+
+        return lusdInCurveLimit;
+    }
+
     // --- Getter convenience functions ---
 
     // Bond getters
@@ -1123,6 +1163,17 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     function calcUpdatedAccrualParameter() external view returns (uint256) {
         (uint256 updatedAccrualParameter, ) = _calcUpdatedAccrualParameter(accrualParameter, accrualAdjustmentPeriodCount);
         return updatedAccrualParameter;
+    }
+
+    function getLUSDInCurveLimit() external view returns (uint256 lusdInCurveLimit) {
+        if (block.timestamp <= deploymentTimestamp + BOOTSTRAP_PERIOD_SHIFT) {
+            return 0;
+        }
+
+        uint256 bammLUSDValue = _getInternalBAMMLUSDValue();
+        uint256 lusdOwnedInBAMMSPVault = bammLUSDValue - pendingLUSD;
+
+        return _getLUSDInCurveLimit(lusdOwnedInBAMMSPVault, getTotalLUSDInCurve());
     }
 
     function getBAMMLUSDDebt() external view returns (uint256 _bammLUSDDebt) {

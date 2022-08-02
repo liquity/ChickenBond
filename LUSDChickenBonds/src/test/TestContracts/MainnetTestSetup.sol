@@ -122,6 +122,7 @@ contract MainnetTestSetup is BaseTest {
             accrualAdjustmentRate: ACCRUAL_ADJUSTMENT_RATE,
             accrualAdjustmentPeriodSeconds: ACCRUAL_ADJUSTMENT_PERIOD_SECONDS,
             chickenInAMMFee: CHICKEN_IN_AMM_FEE,
+            lusdInCurveLimitSlope: 31709791984,   // 1 year to reach 100% (1e18 / 60*60*24*365)
             curveDepositDydxThreshold: 10004e14, // 1.0004
             curveWithdrawalDxdyThreshold: 10004e14, // 1.0004
             bootstrapPeriodChickenIn: 7 days,
