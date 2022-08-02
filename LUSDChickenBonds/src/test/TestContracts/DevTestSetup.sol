@@ -87,6 +87,7 @@ contract DevTestSetup is BaseTest {
             accrualAdjustmentRate: ACCRUAL_ADJUSTMENT_RATE,
             accrualAdjustmentPeriodSeconds: ACCRUAL_ADJUSTMENT_PERIOD_SECONDS,
             chickenInAMMFee: CHICKEN_IN_AMM_FEE,
+            curveOverPermanentThreshold: 1e17,   // 10%
             curveDepositDydxThreshold: 1e18,
             curveWithdrawalDxdyThreshold: 1e18,
             bootstrapPeriodChickenIn: 7 days,

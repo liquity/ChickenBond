@@ -941,6 +941,49 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertTrue(lusdInCurveAfter > lusdInCurveBefore);
     }
 
+    function testShiftLUSDFromSPToCurveFailsIfCurveGreaterThanPermanentPlusThreshold() public {
+        // A creates bond
+        uint256 bondAmount = MIN_BOND_AMOUNT + 25e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalSupply();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
+
+        // A chickens in
+        chickenInForUser(A, A_bondID);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
+
+        _startShiftCountdownAndWarpInsideWindow();
+
+        makeCurveSpotPriceAbove1(200_000_000e18);
+
+        uint256 ownedInSPBefore = chickenBondManager.getOwnedLUSDInSP();
+
+        console.log("Before");
+        console.log(chickenBondManager.getOwnedLUSDInSP(), "getOwnedLUSDInSP()");
+        console.log(chickenBondManager.getTotalLUSDInCurve(), "getTotalLUSDInCurve()");
+        console.log(chickenBondManager.getPermanentLUSD(), "getPermanentLUSD()");
+        // Shift permanent + 1
+        uint256 lusdInPermanentPlusCurveThreshold =
+            chickenBondManager.getPermanentLUSD() +
+            ownedInSPBefore * chickenBondManager.curveOverPermanentThreshold() / 1e18;
+        chickenBondManager.shiftLUSDFromSPToCurve(lusdInPermanentPlusCurveThreshold + 1);
+        console.log("After");
+        console.log(chickenBondManager.getOwnedLUSDInSP(), "getOwnedLUSDInSP()");
+        console.log(chickenBondManager.getTotalLUSDInCurve(), "getTotalLUSDInCurve()");
+        console.log(chickenBondManager.getPermanentLUSD(), "getPermanentLUSD()");
+
+        // check amount was clamped
+        assertEq(chickenBondManager.getOwnedLUSDInSP(), ownedInSPBefore - lusdInPermanentPlusCurveThreshold);
+
+        // Now the max is reached, nothing else can be shifted
+        vm.expectRevert("CBM: The amount in Curve cannot be greater than the Permanent bucket plus allowed threshold");
+        chickenBondManager.shiftLUSDFromSPToCurve(1);
+    }
 
     // Actual Yearn and Curve balance tests
     // function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInSPAndCurveVault() public {}
