@@ -476,11 +476,13 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _requireMigrationNotActive();
         _requireNonZeroBLUSDSupply();
         _requireShiftWindowIsOpen();
-        // it can happen due to profits from shifts or rounding errors:
-        _requirePermanentGreaterThanCurve();
 
         (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
         uint256 lusdOwnedInBAMMSPVault = bammLUSDValue - pendingLUSD;
+
+        uint256 totalLUSDInCurve = getTotalLUSDInCurve();
+        // it can happen due to profits from shifts or rounding errors:
+        _requirePermanentGreaterThanCurve(totalLUSDInCurve);
 
         // Make sure pending bucket is not moved to Curve, so it can be withdrawn on chicken out
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, lusdOwnedInBAMMSPVault);
@@ -490,7 +492,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         // Make sure we don’t make Curve bucket is not greater than Permanent
         // subtraction is safe per _requirePermanentGreaterThanCurve above
-        clampedLUSDToShift = Math.min(clampedLUSDToShift, permanentLUSD - getTotalLUSDInCurve());
+        clampedLUSDToShift = Math.min(clampedLUSDToShift, permanentLUSD - totalLUSDInCurve);
 
         _requireNonZeroAmount(clampedLUSDToShift);
 
@@ -935,8 +937,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         require(block.timestamp >= shiftWindowStartTime && block.timestamp < shiftWindowFinishTime, "CBM: Shift only possible inside shifting window");
     }
 
-    function _requirePermanentGreaterThanCurve() internal view {
-        require(permanentLUSD >= getTotalLUSDInCurve(), "CBM: The amount in Curve cannot be greater than the Permanent bucket");
+    function _requirePermanentGreaterThanCurve(uint256 _totalLUSDInCurve) internal view {
+        require(permanentLUSD >= _totalLUSDInCurve, "CBM: The amount in Curve cannot be greater than the Permanent bucket");
     }
 
     // --- Getter convenience functions ---
