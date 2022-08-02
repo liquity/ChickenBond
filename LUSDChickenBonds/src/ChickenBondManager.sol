@@ -1125,7 +1125,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return updatedAccrualParameter;
     }
 
-    function getBAMMLUSDDebt() external view returns (uint256) {
+    function getBAMMLUSDDebt() external view returns (uint256 _bammLUSDDebt) {
         return bammLUSDDebt;
     }
 

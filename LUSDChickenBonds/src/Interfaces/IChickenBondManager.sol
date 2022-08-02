@@ -46,5 +46,6 @@ interface IChickenBondManager {
     function getOwnedLUSDInCurve() external view returns (uint256);
     function calcSystemBackingRatio() external view returns (uint256);
     function calcUpdatedAccrualParameter() external view returns (uint256);
-    function getBAMMLUSDDebt() external view returns (uint256);
+    function getBAMMLUSDDebt() external view returns (uint256 bammLUSDDebt);
+    function getTreasury() external view returns (uint256 pendingLUSD, uint256 totalAcquiredLUSD, uint256 permanentLUSD);
 }
