@@ -490,7 +490,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         // Make sure there’s enough LUSD available in B.Protocol
         clampedLUSDToShift = Math.min(clampedLUSDToShift, lusdInBAMMSPVault);
 
-        // Make sure we don’t make Curve bucket is not greater than Permanent
+        // Make sure we don’t make Curve bucket greater than Permanent one with the shift
         // subtraction is safe per _requirePermanentGreaterThanCurve above
         clampedLUSDToShift = Math.min(clampedLUSDToShift, permanentLUSD - totalLUSDInCurve);
 
