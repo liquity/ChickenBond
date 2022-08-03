@@ -633,9 +633,6 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     }
 
     function testShiftLUSDFromSPToCurveRevertsWhenShiftWouldDropCurvePriceBelow1() public {
-        // Warp to the end of shifter bootstrap period
-        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT); 
-
         // A creates bond
         uint256 bondAmount = 500_000_000e18; // 500m
 
@@ -643,14 +640,16 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalSupply();
 
-        // 1 year passes
-        vm.warp(block.timestamp + 365 days);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
         _startShiftCountdownAndWarpInsideWindow();
 
         makeCurveSpotPriceAbove1(200_000_000e18);
@@ -941,6 +940,47 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         assertTrue(lusdInCurveAfter > lusdInCurveBefore);
     }
 
+    function testShiftLUSDFromSPToCurveFailsIfCurveGreaterThanPermanent() public {
+        // A creates bond
+        uint256 bondAmount = MIN_BOND_AMOUNT + 25e18;
+
+        createBondForUser(A, bondAmount);
+        uint256 A_bondID = bondNFT.totalSupply();
+
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
+
+        // A chickens in
+        chickenInForUser(A, A_bondID);
+
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
+
+        _startShiftCountdownAndWarpInsideWindow();
+
+        makeCurveSpotPriceAbove1(200_000_000e18);
+
+        uint256 ownedInSPBefore = chickenBondManager.getOwnedLUSDInSP();
+
+        console.log("Before");
+        console.log(chickenBondManager.getOwnedLUSDInSP(), "getOwnedLUSDInSP()");
+        console.log(chickenBondManager.getTotalLUSDInCurve(), "getTotalLUSDInCurve()");
+        console.log(chickenBondManager.getPermanentLUSD(), "getPermanentLUSD()");
+        // Shift permanent + 1
+        uint256 permanentLUSD = chickenBondManager.getPermanentLUSD();
+        chickenBondManager.shiftLUSDFromSPToCurve(permanentLUSD + 1);
+        console.log("After");
+        console.log(chickenBondManager.getOwnedLUSDInSP(), "getOwnedLUSDInSP()");
+        console.log(chickenBondManager.getTotalLUSDInCurve(), "getTotalLUSDInCurve()");
+        console.log(chickenBondManager.getPermanentLUSD(), "getPermanentLUSD()");
+
+        // check amount was clamped
+        assertEq(chickenBondManager.getOwnedLUSDInSP(), ownedInSPBefore - permanentLUSD);
+
+        // Now the max is reached, nothing else can be shifted
+        vm.expectRevert("CBM: The amount in Curve cannot be greater than the Permanent bucket");
+        chickenBondManager.shiftLUSDFromSPToCurve(1);
+    }
 
     // Actual Yearn and Curve balance tests
     // function testShiftLUSDFromSPToCurveDoesntChangeTotalLUSDInSPAndCurveVault() public {}
@@ -1247,28 +1287,31 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
     function testShiftLUSDFromCurveToSPRevertsWhenShiftWouldRaiseCurvePriceAbove1() public {
         // A creates bond
-        uint256 bondAmount = 200_000_000e18; // 200m
+        uint256 bondAmount = 700_000_000e18; // 700m
 
         tip(address(lusdToken), A, bondAmount);
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalSupply();
 
-        // 1 year passes
-        vm.warp(block.timestamp + 365 days);
+        // bootstrap period passes
+        vm.warp(block.timestamp + BOOTSTRAP_PERIOD_CHICKEN_IN);
 
         // A chickens in
         vm.startPrank(A);
         chickenBondManager.chickenIn(A_bondID);
         vm.stopPrank();
 
+        // Warp to the end of shifter bootstrap period
+        vm.warp(CBMDeploymentTime + BOOTSTRAP_PERIOD_SHIFT);
+
         _startShiftCountdownAndWarpInsideWindow();
 
         makeCurveSpotPriceAbove1(50_000_000e18);
         emit log_named_decimal_uint("3CRV:LUSD exchange rate 0", _get3CRVLUSDExchangeRate(), 18);
 
-        // Put some initial LUSD in SP (10% of its acquired + permanent) into Curve
-        shiftFractionFromSPToCurve(10);
-   
+        // Put some initial LUSD in SP (20% of its acquired + permanent) into Curve
+        shiftFractionFromSPToCurve(20);
+
         emit log_named_decimal_uint("3CRV:LUSD exchange rate 1", _get3CRVLUSDExchangeRate(), 18);
         makeCurveSpotPriceBelow1(50_000_000e18);
         emit log_named_decimal_uint("3CRV:LUSD exchange rate 2", _get3CRVLUSDExchangeRate(), 18);
@@ -2189,13 +2232,17 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             "Obtained Curve should be approximately equal"
         );
         // see: https://github.com/liquity/ChickenBond/pull/115#issuecomment-1184382984
+        //console.log(curveAcquiredBucket2, "curveAcquiredBucket2");
+        //console.log(curveAcquiredBucket3, "curveAcquiredBucket3");
+        //console.log(redemptionPrice2, "redemptionPrice2");
+        //console.log(redemptionPrice3, "redemptionPrice3");
         //console.log(curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2, "curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2");
         //console.log(redemptionPrice3 * 1e18 / redemptionPrice2, "redemptionPrice3 * 1e18 / redemptionPrice2");
-        assertApproximatelyEqual(
+        assertRelativeError(
             curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2,
             redemptionPrice3 * 1e18 / redemptionPrice2,
-            10,
-            "Redepmtion price and acquired bucket should grow the same (thx to manipulation fees)"
+            2e13, // 0.002%
+            "Redemption price and acquired bucket should grow the same (thx to manipulation fees)"
         );
         assertLe(
             (B_curveBalance2 - B_curveBalance1) * 1e18 / (B_curveBalance1 - B_curveBalance0),
@@ -2370,13 +2417,17 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             "Obtained Curve should be approximately equal"
         );
         // see: https://github.com/liquity/ChickenBond/pull/115#issuecomment-1184382984
+        //console.log(curveAcquiredBucket2, "curveAcquiredBucket2");
+        //console.log(curveAcquiredBucket3, "curveAcquiredBucket3");
+        //console.log(redemptionPrice2, "redemptionPrice2");
+        //console.log(redemptionPrice3, "redemptionPrice3");
         //console.log(curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2, "curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2");
         //console.log(redemptionPrice3 * 1e18 / redemptionPrice2, "redemptionPrice3 * 1e18 / redemptionPrice2");
-        assertApproximatelyEqual(
+        assertRelativeError(
             curveAcquiredBucket3 * 1e18 / curveAcquiredBucket2,
             redemptionPrice3 * 1e18 / redemptionPrice2,
-            10,
-            "Redepmtion price and acquired bucket should grow the same (thx to manipulation fees)"
+            2e13, // 0.002%
+            "Redemption price and acquired bucket should grow the same (thx to manipulation fees)"
         );
         assertLe(
             (B_curveBalance2 - B_curveBalance1) * 1e18 / (B_curveBalance1 - B_curveBalance0),

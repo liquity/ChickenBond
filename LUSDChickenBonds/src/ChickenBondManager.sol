@@ -480,11 +480,19 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         (uint256 bammLUSDValue, uint256 lusdInBAMMSPVault) = _updateBAMMDebt();
         uint256 lusdOwnedInBAMMSPVault = bammLUSDValue - pendingLUSD;
 
+        uint256 totalLUSDInCurve = getTotalLUSDInCurve();
+        // it can happen due to profits from shifts or rounding errors:
+        _requirePermanentGreaterThanCurve(totalLUSDInCurve);
+
         // Make sure pending bucket is not moved to Curve, so it can be withdrawn on chicken out
         uint256 clampedLUSDToShift = Math.min(_maxLUSDToShift, lusdOwnedInBAMMSPVault);
 
         // Make sure there’s enough LUSD available in B.Protocol
         clampedLUSDToShift = Math.min(clampedLUSDToShift, lusdInBAMMSPVault);
+
+        // Make sure we don’t make Curve bucket greater than Permanent one with the shift
+        // subtraction is safe per _requirePermanentGreaterThanCurve above
+        clampedLUSDToShift = Math.min(clampedLUSDToShift, permanentLUSD - totalLUSDInCurve);
 
         _requireNonZeroAmount(clampedLUSDToShift);
 
@@ -927,6 +935,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 shiftWindowFinishTime = shiftWindowStartTime + SHIFTER_WINDOW;
 
         require(block.timestamp >= shiftWindowStartTime && block.timestamp < shiftWindowFinishTime, "CBM: Shift only possible inside shifting window");
+    }
+
+    function _requirePermanentGreaterThanCurve(uint256 _totalLUSDInCurve) internal view {
+        require(permanentLUSD >= _totalLUSDInCurve, "CBM: The amount in Curve cannot be greater than the Permanent bucket");
     }
 
     // --- Getter convenience functions ---

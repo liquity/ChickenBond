@@ -175,6 +175,8 @@ contract BaseTest is DSTest, stdCheats {
         depositLUSDToCurveForUser(C, _lusdDeposit);
 
         _3crvLUSDExchangeRate = _get3CRVLUSDExchangeRate();
+        //console.log(_3crvLUSDExchangeRate, "_3crvLUSDExchangeRate");
+        //console.log(withdrawalThreshold, "withdrawalThreshold");
         require(_3crvLUSDExchangeRate > withdrawalThreshold, "test helper: deposit insufficient to makeCurveSpotPriceBelow1");
     }
 
