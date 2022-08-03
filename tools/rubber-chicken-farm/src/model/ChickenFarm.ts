@@ -51,6 +51,7 @@ const statsFrom = (population: Chicken[], restIn: Pair): ChickenFarmStats => {
 export interface ChickenFarmCommonParams {
   k: number;
   stats: ChickenFarmStats;
+  polRatio: number;
   coop: Chicken<"cooped">[];
 }
 
@@ -59,7 +60,6 @@ export interface ChickenFarmSteerParams extends ChickenFarmCommonParams {
   e: number;
   u: number;
   y: number;
-  premium: number;
 }
 
 export interface ChickenFarmMoveParams extends ChickenFarmSteerParams {
@@ -119,10 +119,10 @@ const validateHatch = (x: unknown): number =>
 const validateMove = (x: unknown): ChickenMove =>
   x === "in" || x === "out" || x === "re" ? x : panic("move() must return either 'in' or 'out'");
 
-const roi = (c: number, premium: number) => c * (1 + premium) - 1;
+const roi = (c: number, lambda: number) => c * lambda - 1;
 
-const arr = (bond: { c: number; dk: number }, premium: number, period: number) =>
-  (1 + roi(bond.c, premium)) ** (period / bond.dk) - 1;
+const arr = (bond: { c: number; dk: number }, lambda: number, period: number) =>
+  (1 + roi(bond.c, lambda)) ** (period / bond.dk) - 1;
 
 export class ChickenFarm {
   readonly params: Readonly<ChickenFarmParams>;
@@ -145,31 +145,32 @@ export class ChickenFarm {
   farm(): ChickenFarmDatum {
     const k = this._k;
     const stats = this._stats;
+    const polRatio = calculateRatio(stats.in);
     const coop = this.population.filter(isCooped);
 
-    const commonParams = { k, stats, coop };
+    const commonParams = { k, stats, polRatio, coop };
 
     const grow = validateGrow(this.params.grow(commonParams));
     const yieldPerStep = (1 + grow) ** (1 / this.params.period) - 1;
     const harvest = (stats.coop.TOKEN + stats.in.TOKEN) * yieldPerStep;
 
-    const spot = validateSpot(this.params.spot(commonParams));
-    const polRatio = calculateRatio(stats.in);
-    const premium = spot / polRatio - 1;
+    const marketPrice = validateSpot(this.params.spot(commonParams));
+    const lambda = marketPrice / polRatio;
+    const premium = marketPrice - polRatio;
 
     const u = this._u;
     const r = validatePoint(this.params.point(commonParams));
     const y = validateGauge(this.params.gauge(commonParams));
     const e = r - y;
 
-    const steerParams = { ...commonParams, r, e, u, y, premium };
+    const steerParams = { ...commonParams, r, e, u, y };
 
     const uNext = validateSteer(this.params.steer(steerParams));
 
     this.population.push(
       ...this._phoenices.map<Chicken>(phoenix => ({
         state: "cooped",
-        bond: new ChickenBond(this.params.curve, k, spot * phoenix.bond.sTOKEN),
+        bond: new ChickenBond(this.params.curve, k, marketPrice * phoenix.bond.sTOKEN),
         phoenix
       })),
 
@@ -186,8 +187,8 @@ export class ChickenFarm {
         const curr = chicken.bond._poke(k, u, polRatio);
         const next = chicken.bond.peek(k + 1, u, polRatio);
 
-        const currArr = arr(curr, premium, this.params.period);
-        const nextArr = arr(next, premium, this.params.period);
+        const currArr = arr(curr, lambda, this.params.period);
+        const nextArr = arr(next, lambda, this.params.period);
         const dArr = nextArr - currArr;
 
         const retMove = this.params.move({ ...steerParams, bond: chicken.bond, dArr });

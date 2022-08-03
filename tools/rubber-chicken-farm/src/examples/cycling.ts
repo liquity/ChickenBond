@@ -1,4 +1,4 @@
-import { lambertW0 } from "lambert-w";
+// import { lambertW0 } from "lambert-w";
 
 import { Chicken, ChickenFarm } from "../model/ChickenFarm";
 
@@ -7,7 +7,7 @@ const u0 = 10;
 
 const getAge = (k: number) => (c: Chicken) => k - c.bond.k0;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-const tMaxArr = (premium: number) => 1 / (1 / lambertW0(Math.E / (1 + premium)) - 1);
+// const tMaxArr = (premium: number) => 1 / (1 / lambertW0(Math.E / (1 + premium)) - 1);
 
 export const cyclingFarm = () =>
   new ChickenFarm({
@@ -26,6 +26,5 @@ export const cyclingFarm = () =>
     steer: ({ k, e }) => e * (k < 1000 ? 10 : 20),
     spot: ({ stats }) => (stats.coop.TOKEN + stats.in.TOKEN) / stats.in.sTOKEN,
     hatch: () => 100,
-    move: ({ k, u, premium, bond }) =>
-      k >= Math.round(bond.k0 + u * tMaxArr(premium)) ? "in" : null
+    move: ({ dArr }) => (dArr < 0 ? "in" : null)
   });

@@ -28,29 +28,29 @@ export interface ParsedSimulationKnobs extends Omit<ChickenFarmParams, "period" 
 export type SimulationKnobs = { [P in keyof ParsedSimulationKnobs]: string };
 
 export const simulationDefaults: SimulationKnobs = {
-  periods: "4",
-  u0: "8",
+  periods: "1",
+  u0: "30",
   in0: "[1, 1]",
   curve: "(dk, u) => dk / (dk + u)",
 
-  grow: "() => 0.05",
-
-  //   spot: `
-  // ({ stats: s }) => (
-  //   s.coop.TOKEN +
-  //   s.in.TOKEN +
-  //   s.tollTOKEN * 0.5
-  // ) / s.in.sTOKEN`.trim(),
+  grow: "({ stats: s }) => s.in.TOKEN <= 1 ? 0 : 0.1",
 
   spot: `
-({ stats: s }) =>
-  s.in.TOKEN / s.in.sTOKEN * (1 + (
-    s.coop.TOKEN * (1.05 ** (120/365) - 1) +
-    s.in.TOKEN   * (1.05 ** (120/365) - 1) +
-    s.tollTOKEN  * (1.02 ** (120/365) - 1)
-  ) / s.in.TOKEN) ** 2`.trim(),
+  ({ k, stats: s }) => k <= 30 ? 7 : (
+    s.coop.TOKEN +
+    s.in.TOKEN +
+    s.tollTOKEN * 0.5
+  ) / s.in.sTOKEN`.trim(),
 
-  point: "() => 60",
+  //   spot: `
+  // ({ stats: s }) =>
+  //   s.in.TOKEN / s.in.sTOKEN * (1 + (
+  //     s.coop.TOKEN * (1.05 ** (120/365) - 1) +
+  //     s.in.TOKEN   * (1.05 ** (120/365) - 1) +
+  //     s.tollTOKEN  * (1.02 ** (120/365) - 1)
+  //   ) / s.in.TOKEN) ** 2`.trim(),
+
+  point: "() => 15",
 
   gauge: `
 ({ k, coop }) => coop
@@ -66,7 +66,7 @@ export const simulationDefaults: SimulationKnobs = {
 ).fill().map(() => 100 * random())`.trim(),
 
   move: `
-({ dArr }) => dArr < 0
+({ k, dArr }) => k >= 7 && dArr < 0
   ? (random() < 0.5 ? "re" : "in")
   : null`.trim(),
 

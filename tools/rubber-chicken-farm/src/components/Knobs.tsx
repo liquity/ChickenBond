@@ -50,7 +50,7 @@ export const Knobs: React.FC = () => {
           <Label sx={{ mt: 3 }}>Curve</Label>
           <Textarea rows={1} value={state.curve} onChange={e => set("curve", e.target.value)} />
 
-          <Label sx={{ mt: 3 }}>TOKEN APY [%]</Label>
+          <Label sx={{ mt: 3 }}>TOKEN APY</Label>
           <Textarea rows={1} value={state.grow} onChange={e => set("grow", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>sTOKEN Market Price [TOKEN]</Label>

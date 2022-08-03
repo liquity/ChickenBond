@@ -43,12 +43,14 @@ export interface SimulationProviderProps {
   debounceDelayMs: number;
   period: number;
   passes: number;
+  passPerRender: number;
 }
 
 export const SimulationProvider: React.FC<SimulationProviderProps> = ({
   debounceDelayMs,
   period,
   passes,
+  passPerRender,
   children
 }) => {
   const { state } = useKnobs<SimulationKnobs>();
@@ -85,11 +87,11 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
 
         let collectedData: ChickenFarmDatum[] = [];
         let pass = 1;
+        let renderCounter = 0;
 
         const scheduleOnePass = () =>
           setTimeout(() => {
-            const samplesThisPass =
-              Math.round((pass / passes) ** 2 * samples) - collectedData.length;
+            const samplesThisPass = Math.round((pass / passes) * samples) - collectedData.length;
 
             try {
               collectedData = [
@@ -97,11 +99,15 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
                 ...collectSamples(samplesThisPass, () => farm.farm())
               ];
 
-              setData(collectedData);
-
               if (pass++ < passes) {
+                if (renderCounter++ % passPerRender === 0) {
+                  setData(collectedData);
+                }
+
                 timeoutId = scheduleOnePass();
               } else {
+                setData(collectedData);
+
                 const endTime = new Date();
                 const durationMs = endTime.getTime() - startTime.getTime();
                 const lastDatum = collectedData[collectedData.length - 1];
@@ -129,7 +135,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
     }, debounceDelayMs);
 
     return () => clearTimeout(timeoutId);
-  }, [debounceDelayMs, passes, period, state]);
+  }, [debounceDelayMs, passes, passPerRender, period, state]);
 
   return (
     <SimulationContext.Provider value={{ period, data }}>{children}</SimulationContext.Provider>
