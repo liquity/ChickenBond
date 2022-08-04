@@ -18,8 +18,8 @@ class ConstantPricePool(AmmInterface):
 
             self.lp_token.mint(account, token_A_amount)
         else:
-            token_A_pol = self.token_A_balance()
-            liquidity_minted = token_A_amount * total_liquidity / token_A_pol
+            token_A_reserve = self.token_A_balance()
+            liquidity_minted = token_A_amount * total_liquidity / token_A_reserve
 
             self.token_A.transfer(account, self.pool_account, token_A_amount)
             self.token_B.transfer(account, self.pool_account, token_A_amount)
@@ -28,7 +28,7 @@ class ConstantPricePool(AmmInterface):
         return
 
     def add_liquidity_single_A(self, account, token_A_amount, max_slippage):
-        token_A_pol = self.token_A_balance()
+        token_A_reserve = self.token_A_balance()
         amount_to_add = token_A_amount / 2
         amount_to_swap = token_A_amount - amount_to_add
         token_B_amount = self.swap_A_for_B(account, amount_to_swap)

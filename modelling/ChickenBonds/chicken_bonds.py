@@ -16,7 +16,7 @@ def deploy():
     lqty = Token('LQTY')
     slqty = Token('sLQTY')
 
-    chicken = Chicken(coll, lqty, slqty, "Coop", "POL", "AMM", AMM_FEE, "STOKEN_AMM", AMM_FEE)
+    chicken = Chicken(coll, lqty, slqty, "Pending", "RESERVE", "AMM", AMM_FEE, "bTKN_AMM", AMM_FEE)
 
     chicks = list(map(lambda chick: User(f"chick_{chick:02}"), range(NUM_CHICKS)))
     # Initial CHICK balance
@@ -30,9 +30,9 @@ def deploy():
     whale = User("whale")
     whale_amount = NUM_CHICKS * INITIAL_AMOUNT * 100000
     lqty.mint(whale.account, whale_amount)
-    chicken.stoken_amm.add_liquidity_single_A(whale.account, whale_amount, 1)
+    chicken.btkn_amm.add_liquidity_single_A(whale.account, whale_amount, 1)
     # to be discounted for APR calculation
-    chicken.stoken_amm.set_initial_A_liquidity(whale_amount)
+    chicken.btkn_amm.set_initial_A_liquidity(whale_amount)
 
     return chicken, chicks, borrower
 
@@ -60,7 +60,7 @@ def main(tester):
 
     for iteration in range(ITERATIONS):
         natural_rate = tester.get_natural_rate(natural_rate, iteration)
-        chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(chicken.stoken_amm, accrued_fees_A, accrued_fees_B)
+        chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(chicken.btkn_amm, accrued_fees_A, accrued_fees_B)
         chicken.amm_average_apr = get_amm_average_apr(data, iteration)
         #print(f"AMM iteration APR: {chicken.amm_iteration_apr:.3%}")
         #print(f"AMM average APR: {chicken.amm_average_apr:.3%}")

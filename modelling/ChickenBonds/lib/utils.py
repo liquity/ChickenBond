@@ -26,6 +26,6 @@ def get_amm_average_apr(data, iteration):
 
 def get_chick_total_LQTY_value(chicken, chick):
     token_amount = chicken.token.balance_of(chick.account)
-    stoken_value = chicken.stoken.balance_of(chick.account) * chicken.amm.get_token_B_price()
+    btkn_value = chicken.btkn.balance_of(chick.account) * chicken.amm.get_token_B_price()
 
-    return token_amount + chick.bond_amount + stoken_value
+    return token_amount + chick.bond_amount + btkn_value

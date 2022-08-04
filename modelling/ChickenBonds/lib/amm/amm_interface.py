@@ -83,14 +83,14 @@ class AmmInterface():
         print(f" liquidity to remove: {liquidity:,.2f}")
         liquidity = min(account_liquidity, liquidity)
 
-        token_A_pol = self.token_A_balance()
-        token_B_pol = self.token_B_balance()
+        token_A_reserve = self.token_A_balance()
+        token_B_reserve = self.token_B_balance()
         # prevent from draining pool to avoid rounding and zero division errors
-        #if token_A_pol < 1000 or token_B_pol < 100:
+        #if token_A_reserve < 1000 or token_B_reserve < 100:
         #    return 0, 0
 
-        token_A_amount = liquidity * token_A_pol / total_liquidity
-        token_B_amount = liquidity * token_B_pol / total_liquidity
+        token_A_amount = liquidity * token_A_reserve / total_liquidity
+        token_B_amount = liquidity * token_B_reserve / total_liquidity
         #print(f"Withdrawing {token_A_amount:,.2f} {self.token_A.symbol}")
         #print(f"Withdrawing {token_B_amount:,.2f} {self.token_B.symbol}")
         self.token_A.transfer(self.pool_account, account, token_A_amount)

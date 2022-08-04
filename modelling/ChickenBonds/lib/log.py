@@ -2,19 +2,19 @@ from functools import reduce
 
 def log_system(chicken, tester):
     token = chicken.token
-    stoken = chicken.stoken
-    coop_bal = chicken.coop_token_balance()
-    pol_bal = chicken.pol_token_balance()
-    amm_value = chicken.amm.get_value_in_token_A_of(chicken.pol_account)
+    btkn = chicken.btkn
+    pending_bal = chicken.pending_token_balance()
+    reserve_bal = chicken.reserve_token_balance()
+    amm_value = chicken.amm.get_value_in_token_A_of(chicken.reserve_account)
     print(f"")
     print("Chicken Bonds state")
     #print(f" - Outstanding debt: {chicken.outstanding_debt:,.2f}")
-    print(f" - Pending {token.symbol}:               {coop_bal:,.2f}")
-    print(f" - Acquired {token.symbol}:              {pol_bal:,.2f}")
+    print(f" - Pending {token.symbol}:               {pending_bal:,.2f}")
+    print(f" - Reserve {token.symbol}:              {reserve_bal:,.2f}")
     print(f" - Permanent (DEX) {token.symbol} value: {amm_value:,.2f}")
-    print(f" - {stoken.symbol} supply:               {stoken.total_supply:,.2f}")
-    if stoken.total_supply > 0:
-        print(f" - Backing ratio (| no AMM): {chicken.get_pol_ratio_with_amm():,.2f}   |   {chicken.get_pol_ratio_no_amm():,.2f}")
+    print(f" - {btkn.symbol} supply:               {btkn.total_supply:,.2f}")
+    if btkn.total_supply > 0:
+        print(f" - Backing ratio:           {chicken.get_backing_ratio():,.2f}")
 
     print("")
     print(f"Fair price:      {tester.get_fair_price(chicken):,.2f}")
@@ -33,36 +33,36 @@ def log_amm(chicken):
     print(f" - AMM APR: {chicken.amm_iteration_apr:.3%}")
     return
 
-def log_stoken_amm(chicken):
-    log_amm_pool(chicken.stoken_amm, "sTOKEN AMM")
+def log_btkn_amm(chicken):
+    log_amm_pool(chicken.btkn_amm, "bTKN AMM")
     return
 
 def log_chick_balances(chicken, chick):
     token_bal = chicken.token.balance_of(chick.account)
-    stoken_bal = chicken.stoken.balance_of(chick.account)
-    stoken_value = chicken.stoken.balance_of(chick.account) * chicken.amm.get_token_B_price()
-    amm_value = chicken.stoken_amm.get_value_in_token_A_of(chick.account)
+    btkn_bal = chicken.btkn.balance_of(chick.account)
+    btkn_value = chicken.btkn.balance_of(chick.account) * chicken.amm.get_token_B_price()
+    amm_value = chicken.btkn_amm.get_value_in_token_A_of(chick.account)
     print("")
     print(f"User {chick.account}:")
     print(f" - {chicken.token.symbol} balance:  {token_bal:,.2f}")
     print(f" - {chicken.token.symbol} bonded:   {chick.bond_amount:,.2f}")
-    print(f" - {chicken.stoken.symbol} balance: {stoken_bal:,.2f}")
-    print(f" - {chicken.stoken.symbol} value:   {stoken_value:,.2f}")
+    print(f" - {chicken.btkn.symbol} balance: {btkn_bal:,.2f}")
+    print(f" - {chicken.btkn.symbol} value:   {btkn_value:,.2f}")
     print(f" - AMM value:     {amm_value:,.2f}")
-    print(f" - Total value: {token_bal + chick.bond_amount + stoken_value + amm_value:,.2f}")
+    print(f" - Total value: {token_bal + chick.bond_amount + btkn_value + amm_value:,.2f}")
     return
 
-def log_stoken_balances(chicken, chicks):
+def log_btkn_balances(chicken, chicks):
     chicks.sort(key = lambda c: c.account)
     print("")
-    print(f"{chicken.stoken.symbol} balances:")
-    total_stoken = 0
+    print(f"{chicken.btkn.symbol} balances:")
+    total_btkn = 0
     for chick in chicks:
-        chick_bal = chicken.stoken.balance_of(chick.account)
+        chick_bal = chicken.btkn.balance_of(chick.account)
         if chick_bal > 0:
             print(f"{chick.account}: {chick_bal:,.2f}")
-        total_stoken = total_stoken + chick_bal
-    print(f"Total : {total_stoken:,.2f}")
+        total_btkn = total_btkn + chick_bal
+    print(f"Total : {total_btkn:,.2f}")
     return
 
 def log_chicks(chicken, chicks, tokens):
@@ -77,7 +77,7 @@ def log_state(chicken, chicks, tester, log_level=1, iteration=0):
     print("  -------------------\033[0m\n")
     log_system(chicken, tester)
     log_amm(chicken)
-    log_stoken_amm(chicken)
+    log_btkn_amm(chicken)
     #log_chicks(chicken, chicks)
     print("")
     return
