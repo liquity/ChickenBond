@@ -33,7 +33,7 @@ class TesterInterface():
     def get_fair_price(self, chicken):
         pass
 
-    def get_stoken_spot_price(self, chicken):
+    def get_btkn_spot_price(self, chicken):
         pass
 
     def get_natural_rate(self, natural_rate, iteration):
@@ -45,16 +45,16 @@ class TesterInterface():
     def get_bonding_apr_twap(self, chicken, data, iteration):
         pass
 
-    def get_stoken_apr_spot(self, chicken, data, iteration):
+    def get_btkn_apr_spot(self, chicken, data, iteration):
         pass
 
-    def get_stoken_apr_twap(self, chicken, data, iteration):
+    def get_btkn_apr_twap(self, chicken, data, iteration):
         pass
 
-    def get_stoken_apr(self, chicken, data, iteration):
+    def get_btkn_apr(self, chicken, data, iteration):
         pass
 
-    def get_pol_ratio(self, chicken):
+    def get_backing_ratio(self, chicken):
         pass
 
     def get_avg_outstanding_bond_age(self, chicks, iteration):
@@ -95,7 +95,7 @@ class TesterSimpleToll(TesterInterface):
         self.chicken_in_gamma_shape = CHICKEN_IN_GAMMA[0]
         self.chicken_in_gamma_scale = CHICKEN_IN_GAMMA[1]
         self.chicken_out_probability = CHICKEN_OUT_PROBABILITY
-        self.chicken_in_amm_tax = CHICKEN_IN_AMM_TAX
+        self.chicken_in_amm_fee = CHICKEN_IN_AMM_FEE
 
         self.rebonders = NUM_REBONDERS
         self.lps = NUM_LPS
@@ -139,16 +139,16 @@ class TesterSimpleToll(TesterInterface):
         return list(
             filter(lambda chick: chick.bond_amount == 0 and chicken.token.balance_of(chick.account) > 0, chicks))
 
-    def get_chicks_with_stoken(self, chicken, chicks, threshold=0):
-        return list(filter(lambda chick: chicken.stoken.balance_of(chick.account) > threshold, chicks))
+    def get_chicks_with_btkn(self, chicken, chicks, threshold=0):
+        return list(filter(lambda chick: chicken.btkn.balance_of(chick.account) > threshold, chicks))
 
     def is_pre_chicken_in_phase(self, chicken, chicks):
-        return len(self.get_chicks_with_stoken(chicken, chicks)) == 0
+        return len(self.get_chicks_with_btkn(chicken, chicks)) == 0
 
-    def get_bond_cap(self, bond_amount, pol_ratio):
-        if pol_ratio == 0:
+    def get_bond_cap(self, bond_amount, backing_ratio):
+        if backing_ratio == 0:
             return 999999999
-        return bond_amount / pol_ratio
+        return bond_amount / backing_ratio
 
     def get_natural_rate(self, previous_natural_rate, iteration):
         np.random.seed(2021 * iteration)
@@ -161,37 +161,37 @@ class TesterSimpleToll(TesterInterface):
 
     def get_premium_by_yield_comparison(self, chicken):
         expected_bonding_time = 2 * TARGET_AVERAGE_AGE
-        acquired_bucket = chicken.pol_token_balance()
-        pending_bucket = chicken.coop_token_balance()
+        reserve_bucket = chicken.reserve_token_balance()
+        pending_bucket = chicken.pending_token_balance()
         permanent_bucket = chicken.amm.get_value_in_token_A()
 
-        acquired_yield = self.get_yield_amount(acquired_bucket, self.external_yield, expected_bonding_time)
+        reserve_yield = self.get_yield_amount(reserve_bucket, self.external_yield, expected_bonding_time)
         pending_yield = self.get_yield_amount(pending_bucket, self.external_yield, expected_bonding_time)
         amm_yield = self.get_yield_amount(permanent_bucket, self.amm_yield, expected_bonding_time)
 
-        holding_roi = (acquired_yield + pending_yield + amm_yield) / acquired_bucket
+        holding_roi = (reserve_yield + pending_yield + amm_yield) / reserve_bucket
 
-        redemption_price = self.get_pol_ratio(chicken)
+        redemption_price = self.get_backing_ratio(chicken)
         fair_price = redemption_price * ((1 + holding_roi) ** 2)
         premium = fair_price - redemption_price
 
         return premium
 
     def get_premium(self, chicken):
-        stoken_supply = chicken.stoken.total_supply
-        if stoken_supply == 0:
+        btkn_supply = chicken.btkn.total_supply
+        if btkn_supply == 0:
             return 0
 
-        base_amount = chicken.pol_token_balance()
+        base_amount = chicken.reserve_token_balance()
 
         mu = base_amount * PREMIUM_MU
         sigma = mu * PREMIUM_SIGMA
 
         # Different methods to estimate the premium of sLQTY tokens.
-        premium_mapper = {"normal_dist": np.random.normal(mu, sigma, 1)[0] / stoken_supply,
-                          "perpetuity": (chicken.coop_token_balance() * EXTERNAL_YIELD) ** (1 / TIME_UNITS_PER_YEAR),
-                          "coop_balance": chicken.coop_token_balance() / stoken_supply,
-                          "full_balance": (chicken.coop_token_balance() + (self.amm_yield/self.external_yield) * chicken.amm.get_value_in_token_A()) / stoken_supply,
+        premium_mapper = {"normal_dist": np.random.normal(mu, sigma, 1)[0] / btkn_supply,
+                          "perpetuity": (chicken.pending_token_balance() * EXTERNAL_YIELD) ** (1 / TIME_UNITS_PER_YEAR),
+                          "pending_balance": chicken.pending_token_balance() / btkn_supply,
+                          "full_balance": (chicken.pending_token_balance() + (self.amm_yield/self.external_yield) * chicken.amm.get_value_in_token_A()) / btkn_supply,
                           "yield_comparison": self.get_premium_by_yield_comparison(chicken),
                           }
 
@@ -204,12 +204,12 @@ class TesterSimpleToll(TesterInterface):
         @return: The sLQTY spot price.
         """
 
-        stoken_supply = chicken.stoken.total_supply
-        if stoken_supply == 0:
+        btkn_supply = chicken.btkn.total_supply
+        if btkn_supply == 0:
             return self.initial_price
 
-        base_amount = chicken.pol_token_balance()
-        price_floor = base_amount / stoken_supply
+        base_amount = chicken.reserve_token_balance()
+        price_floor = base_amount / btkn_supply
 
         # Different methods to include volatility in the price.
         volatility_mapper = {"None": 0,
@@ -223,31 +223,31 @@ class TesterSimpleToll(TesterInterface):
 
         return total_price
 
-    def get_stoken_spot_price(self, chicken):
+    def get_btkn_spot_price(self, chicken):
         return self.get_fair_price(chicken)
 
-    def get_stoken_twap(self, data, iteration):
+    def get_btkn_twap(self, data, iteration):
         if iteration <= self.twap_period:
             return self.initial_price
-        # print(data[iteration - self.twap_period : iteration]["stoken_price"])
-        # print(f"average: {data[iteration - self.twap_period : iteration].mean()['stoken_price']:,.2f}")
-        return data[iteration - self.twap_period: iteration].mean()["stoken_price"]
+        # print(data[iteration - self.twap_period : iteration]["btkn_price"])
+        # print(f"average: {data[iteration - self.twap_period : iteration].mean()['btkn_price']:,.2f}")
+        return data[iteration - self.twap_period: iteration].mean()["btkn_price"]
 
-    def get_stoken_price(self, chicken, data, iteration):
-        return self.get_stoken_twap(data, iteration)
+    def get_btkn_price(self, chicken, data, iteration):
+        return self.get_btkn_twap(data, iteration)
 
-    def get_pol_ratio(self, chicken):
-        return chicken.get_pol_ratio_no_amm()
+    def get_backing_ratio(self, chicken):
+        return chicken.get_backing_ratio()
 
     def get_optimal_apr_chicken_in_time(self, chicken):
         # market/fair price
-        m = self.get_stoken_spot_price(chicken)
+        m = self.get_btkn_spot_price(chicken)
         # backing ratio
-        r = self.get_pol_ratio(chicken)
+        r = self.get_backing_ratio(chicken)
         # accrual param
         u = self.accrual_param
-        # market/fair price with tax applied
-        t = (1 - self.chicken_in_amm_tax) * m
+        # market/fair price with chicken in fee applied
+        t = (1 - self.chicken_in_amm_fee) * m
 
         if t <= r:
             return ITERATIONS
@@ -275,14 +275,14 @@ class TesterSimpleToll(TesterInterface):
         return data[iteration - self.twap_period: iteration].mean()[variable]
 
     def get_bonding_apr_spot(self, chicken):
-        m = self.get_stoken_spot_price(chicken)
-        r = self.get_pol_ratio(chicken)
+        m = self.get_btkn_spot_price(chicken)
+        r = self.get_backing_ratio(chicken)
         u = self.accrual_param
         if m <= r:
             return 0
         # optimal_time
         t = self.get_optimal_apr_chicken_in_time(chicken)
-        apr = ((1 - self.chicken_in_amm_tax) * m/r * t / (t+u) - 1) * TIME_UNITS_PER_YEAR / t
+        apr = ((1 - self.chicken_in_amm_fee) * m/r * t / (t+u) - 1) * TIME_UNITS_PER_YEAR / t
         """
         print(f"backing ratio: {r:,.2f}")
         print(f"spot price:    {m:,.2f}")
@@ -295,26 +295,26 @@ class TesterSimpleToll(TesterInterface):
     def get_bonding_apr_twap(self, chicken, data, iteration):
         return self.get_twap_metric(chicken, data, iteration, "bonding_apr")
 
-    def get_stoken_apr_spot(self, chicken, data, iteration):
+    def get_btkn_apr_spot(self, chicken, data, iteration):
         APR_SPAN = 30
         if iteration == 0:
             return 0
 
         span = min(APR_SPAN, iteration)
-        previous_spot_price = data["stoken_price"][iteration-span]
+        previous_spot_price = data["btkn_price"][iteration-span]
         if previous_spot_price == 0:
             return 0
-        current_spot_price = self.get_stoken_spot_price(chicken)
+        current_spot_price = self.get_btkn_spot_price(chicken)
         #print(f"previous_spot_price: {previous_spot_price:,.2f}")
         #print(f"current_spot_price:  {current_spot_price:,.2f}")
 
         return (current_spot_price / previous_spot_price - 1) * TIME_UNITS_PER_YEAR / span
 
-    def get_stoken_apr_twap(self, chicken, data, iteration):
-        return self.get_twap_metric(chicken, data, iteration, "stoken_apr")
+    def get_btkn_apr_twap(self, chicken, data, iteration):
+        return self.get_twap_metric(chicken, data, iteration, "btkn_apr")
 
-    def get_stoken_apr(self, chicken, data, iteration):
-        return self.get_stoken_apr_twap(chicken, data, iteration)
+    def get_btkn_apr(self, chicken, data, iteration):
+        return self.get_btkn_apr_twap(chicken, data, iteration)
 
     # https://www.desmos.com/calculator/taphbjrugg
     # See also: https://homepage.divms.uiowa.edu/~mbognar/applets/gamma.html
@@ -324,7 +324,7 @@ class TesterSimpleToll(TesterInterface):
     def get_yield_amount(self, base_amount, yield_percentage, time_units=1):
         return base_amount * ((1 + yield_percentage) ** (time_units / TIME_UNITS_PER_YEAR) - 1)
 
-    # Special case before the first chicken in (actually, when sTOKEN supply is zero)
+    # Special case before the first chicken in (actually, when bTKN supply is zero)
     # to avoid giving advantage to the first one
     def distribute_yield_pre_chicken_in(self, chicken, chicks, iteration):
         # Reserve generated yield
@@ -332,11 +332,11 @@ class TesterSimpleToll(TesterInterface):
         if generated_yield == 0:
             return
 
-        chicken.token.mint(chicken.pol_account, generated_yield)
-        chicken.stoken.mint(chicken.pol_account, generated_yield/2)
+        chicken.token.mint(chicken.reserve_account, generated_yield)
+        chicken.btkn.mint(chicken.reserve_account, generated_yield/2)
 
         #print(f"Yield to AMM: {generated_yield/2:,.2f}")
-        chicken.stoken_amm.add_liquidity(chicken.pol_account, generated_yield/2, generated_yield/2)
+        chicken.btkn_amm.add_liquidity(chicken.reserve_account, generated_yield/2, generated_yield/2)
         return
 
     def distribute_yield(self, chicken, chicks, iteration):
@@ -345,12 +345,12 @@ class TesterSimpleToll(TesterInterface):
         # Reserve generated yield
         generated_yield = self.get_yield_amount(chicken.reserve_token_balance(), self.external_yield)
 
-        chicken.token.mint(chicken.pol_account, generated_yield)
+        chicken.token.mint(chicken.reserve_account, generated_yield)
 
         # AMM generated yield
         generated_yield = self.get_yield_amount(chicken.amm.get_value_in_token_A(), self.amm_yield)
 
-        chicken.token.mint(chicken.pol_account, generated_yield)
+        chicken.token.mint(chicken.reserve_account, generated_yield)
 
         return
 
@@ -389,14 +389,14 @@ class TesterSimpleToll(TesterInterface):
             chicken.bond(chick, amount, target_profit, iteration)
         return
 
-    def get_pol_ratio_update_chicken(self, chicken, chick, iteration):
+    def get_backing_ratio_update_chicken(self, chicken, chick, iteration):
         assert iteration >= chick.bond_time
-        pol_ratio = self.get_pol_ratio(chicken)
-        #print(f"backing ratio: {pol_ratio}")
-        assert pol_ratio == 0 or pol_ratio - 1 > -0.00001
-        if pol_ratio == 0:
-            pol_ratio = 1
-        return pol_ratio
+        backing_ratio = self.get_backing_ratio(chicken)
+        #print(f"backing ratio: {backing_ratio}")
+        assert backing_ratio == 0 or backing_ratio - 1 > -0.00001
+        if backing_ratio == 0:
+            backing_ratio = 1
+        return backing_ratio
 
     def get_avg_outstanding_bond_age(self, chicks, iteration):
         bonded_chicks = self.get_bonded_chicks(chicks)
@@ -430,7 +430,7 @@ class TesterSimpleToll(TesterInterface):
         #print(f"Bonded Chicks ini: {len(bonded_chicks)}")
 
         for chick in bonded_chicks:
-            pol_ratio = self.get_pol_ratio_update_chicken(chicken, chick, iteration)
+            backing_ratio = self.get_backing_ratio_update_chicken(chicken, chick, iteration)
 
             # Check if chicken-out conditions are met and eventually chicken-out
             self.chicken_out(chicken, chick, iteration, data)
@@ -441,7 +441,7 @@ class TesterSimpleToll(TesterInterface):
         #print(f"Bonded Chicks: {len(bonded_chicks)}")
 
         for chick in bonded_chicks:
-            pol_ratio = self.get_pol_ratio_update_chicken(chicken, chick, iteration)
+            backing_ratio = self.get_backing_ratio_update_chicken(chicken, chick, iteration)
 
             # Check if chicken-in conditions are met and eventually chicken-in
             self.chicken_in(chicken, chick, iteration, data)
@@ -451,7 +451,7 @@ class TesterSimpleToll(TesterInterface):
         #print(f"Bonded Chicks: {len(bonded_chicks)}")
 
         for chick in bonded_chicks:
-            pol_ratio = self.get_pol_ratio_update_chicken(chicken, chick, iteration)
+            backing_ratio = self.get_backing_ratio_update_chicken(chicken, chick, iteration)
 
             # Check if chicken-in conditions are met and eventually chicken-in
             self.chicken_in(chicken, chick, iteration, data)
@@ -469,27 +469,27 @@ class TesterSimpleToll(TesterInterface):
         return
 
     def is_bootstrap_chicken_out(self, chick, iteration):
-        return iteration <= BOOTSTRAP_ITERATION and chick.bond_time == 0
+        return iteration <= BOOTSTRAP_PERIOD_CHICKEN_IN and chick.bond_time == 0
 
     def set_accrual_param(self, new_value):
         self.accrual_param = new_value
 
-    def get_claimable_amount(self, chicken, chick, iteration):
-        pol_ratio = self.get_pol_ratio(chicken)
-        bond_cap = self.get_bond_cap(chick.bond_amount, pol_ratio)
+    def get_claimable_btkn_amount(self, chicken, chick, iteration):
+        backing_ratio = self.get_backing_ratio(chicken)
+        bond_cap = self.get_bond_cap(chick.bond_amount, backing_ratio)
         bond_duration = iteration - chick.bond_time
-        claimable_amount =  bond_cap * bond_duration / (bond_duration + self.accrual_param)
+        claimable_btkn_amount =  bond_cap * bond_duration / (bond_duration + self.accrual_param)
         """
         print("")
-        print(f"pol_ratio:        {pol_ratio}")
+        print(f"backing_ratio:        {backing_ratio}")
         print(f"bond_cap:         {bond_cap}")
         print(f"bond_amount:      {chick.bond_amount}")
         print(f"bond_duration:    {bond_duration}")
         print(f"T factor:         {bond_duration / (bond_duration + 1)}")
-        print(f"claimable_amount: {claimable_amount}")
+        print(f"claimable_btkn_amount: {claimable_btkn_amount}")
         """
-        assert claimable_amount < bond_cap or claimable_amount == 0
-        return claimable_amount, bond_cap
+        assert claimable_btkn_amount < bond_cap or claimable_btkn_amount == 0
+        return claimable_btkn_amount, bond_cap
 
     def chicken_out(self, chicken, chick, iteration, data):
         """ Chicken  out defines leaving users. User are only allowed to leave if
@@ -502,11 +502,11 @@ class TesterSimpleToll(TesterInterface):
         @param data:
         """
 
-        # use actual stoken price instead of weighted average
-        # stoken_price = self.get_stoken_price(chicken, data, iteration)
-        stoken_price = self.get_stoken_spot_price(chicken)
-        claimable_amount, _ = self.get_claimable_amount(chicken, chick, iteration)
-        profit = claimable_amount * stoken_price - chick.bond_amount
+        # use actual btkn price instead of weighted average
+        # btkn_price = self.get_btkn_price(chicken, data, iteration)
+        btkn_price = self.get_btkn_spot_price(chicken)
+        claimable_btkn_amount, _ = self.get_claimable_btkn_amount(chicken, chick, iteration)
+        profit = claimable_btkn_amount * btkn_price - chick.bond_amount
 
         # skip chicken out for bootstrappers
         if self.is_bootstrap_chicken_out(chick, iteration):
@@ -525,21 +525,21 @@ class TesterSimpleToll(TesterInterface):
         return
 
     def is_bootstrap_chicken_in(self, chick, iteration):
-        return iteration == BOOTSTRAP_ITERATION and chick.bond_time == 0
+        return iteration == BOOTSTRAP_PERIOD_CHICKEN_IN and chick.bond_time == 0
 
-    def get_amm_amounts(self, chicken, bond_cap, claimable_amount):
-        pol_ratio = self.get_pol_ratio(chicken)
+    def get_amm_amounts(self, chicken, bond_cap, claimable_btkn_amount):
+        backing_ratio = self.get_backing_ratio(chicken)
 
-        amm_stoken_amount = bond_cap - claimable_amount
+        amm_btkn_amount = bond_cap - claimable_btkn_amount
         # Forget about LQTY/ETH price for now
-        amm_token_amount = amm_stoken_amount * pol_ratio / 2 * (1 - self.chicken_in_amm_tax)
+        amm_token_amount = amm_btkn_amount * backing_ratio / 2 * (1 - self.chicken_in_amm_fee)
         amm_coll_amount = amm_token_amount
 
         """
         print("- Divert to AMM")
         print(f"token:      {amm_token_amount:,.2f}")
         print(f"2 x token:  {2*amm_token_amount:,.2f}")
-        print(f"stoken:     {amm_stoken_amount:,.2f}")
+        print(f"btkn:     {amm_btkn_amount:,.2f}")
         print("")
         """
 
@@ -548,57 +548,40 @@ class TesterSimpleToll(TesterInterface):
     def divert_to_amm(self, chicken, token_amount, coll_amount):
         # Simulate a swap LQTY -> ETH
         # “magically” mint ETH
-        chicken.coll_token.mint(chicken.pol_account, coll_amount+1)
+        chicken.coll_token.mint(chicken.reserve_account, coll_amount+1)
         # “magically” burn LQTY
-        chicken.token.burn(chicken.pol_account, token_amount)
+        chicken.token.burn(chicken.reserve_account, token_amount)
 
         # Add liquidity
-        chicken.amm.add_liquidity(chicken.pol_account, token_amount, coll_amount)
+        chicken.amm.add_liquidity(chicken.reserve_account, token_amount, coll_amount)
 
         return
 
-    def tax_and_chicken_in(self, chicken, chick, claimable_amount):
-        # Compute tax and deduct it from bond
-        tax_amount = chick.bond_amount * self.chicken_in_amm_tax
-        chick.bond_amount = chick.bond_amount - tax_amount
-
-        # Transfer tax amount
-        chicken.token.transfer(chicken.coop_account, chicken.stoken_amm.pool_account, tax_amount)
-        # Account for extra AMM revenue
-        chicken.stoken_amm.add_rewards(tax_amount, 0)
-
-        # Reduce claimable amount proportionally
-        claimable_amount = claimable_amount * (1 - self.chicken_in_amm_tax)
-        # Chicken in
-        chicken.chicken_in(chick, claimable_amount)
-
-        return claimable_amount
-
     def get_rebond_time(self, chicken):
         from scipy.special import lambertw
-        stoken_spot_price = self.get_stoken_spot_price(chicken)
-        pol_ratio = self.get_pol_ratio(chicken)
-        reduced_spot_price = (1 - self.chicken_in_amm_tax) * stoken_spot_price
-        if stoken_spot_price == 0 or pol_ratio >= reduced_spot_price:
-            #print(f"stoken price:     {stoken_spot_price}")
-            #print(f"redemption price: {pol_ratio}")
+        btkn_spot_price = self.get_btkn_spot_price(chicken)
+        backing_ratio = self.get_backing_ratio(chicken)
+        reduced_spot_price = (1 - self.chicken_in_amm_fee) * btkn_spot_price
+        if btkn_spot_price == 0 or backing_ratio >= reduced_spot_price:
+            #print(f"btkn price:     {btkn_spot_price}")
+            #print(f"redemption price: {backing_ratio}")
             return ITERATIONS
 
-        w = lambertw(math.exp(1) * pol_ratio / reduced_spot_price).real
+        w = lambertw(math.exp(1) * backing_ratio / reduced_spot_price).real
         rebond_time = w / (1 - w)
         """
         print("")
-        print(f"stoken price:     {stoken_spot_price}")
-        print(f"redemption price: {pol_ratio}")
-        print(f"price with tax:   {reduced_spot_price}")
-        print(f"lambda:           {stoken_spot_price/pol_ratio}")
-        print(f"lambertW:         {w}")
-        print(f"\033[34mrebond_time:      {rebond_time:,.2f}\033[0m")
+        print(f"btkn price:                {btkn_spot_price}")
+        print(f"redemption price:          {backing_ratio}")
+        print(f"price with chicken in fee: {reduced_spot_price}")
+        print(f"lambda:                    {btkn_spot_price/backing_ratio}")
+        print(f"lambertW:                  {w}")
+        print(f"\033[34mrebond_time:              {rebond_time:,.2f}\033[0m")
         """
 
         return min(self.accrual_param * rebond_time.real, ITERATIONS)
 
-    def rebond(self, chicken, chick, claimable_amount, iteration):
+    def rebond(self, chicken, chick, claimable_btkn_amount, iteration):
         # If it’s a rebonder and the optimal point hasn’t been reached yet
         rebond_time = self.get_rebond_time(chicken)
         if iteration - chick.bond_time < rebond_time:
@@ -607,20 +590,20 @@ class TesterSimpleToll(TesterInterface):
             return 0
 
         #print("\n --> Chickening in!")
-        claimable_amount = self.tax_and_chicken_in(chicken, chick, claimable_amount)
+        claimable_btkn_amount = chicken.chicken_in(chick, claimable_btkn_amount, self.chicken_in_amm_fee)
 
-        # sell sTOKEN in the AMM
-        chicken.stoken_amm.set_price_B(self.get_stoken_spot_price(chicken))
+        # sell bTKN in the AMM
+        chicken.btkn_amm.set_price_B(self.get_btkn_spot_price(chicken))
         # we use all balance in case a previous rebond was capped due to low liquidity
-        stoken_balance = chicken.stoken.balance_of(chick.account)
-        assert stoken_balance >= claimable_amount
-        max_swap_amount = chicken.stoken_amm.get_input_B_for_max_slippage(self.max_slippage, 0, 0)
-        stoken_swap_amount = min(
+        btkn_balance = chicken.btkn.balance_of(chick.account)
+        assert btkn_balance >= claimable_btkn_amount
+        max_swap_amount = chicken.btkn_amm.get_input_B_for_max_slippage(self.max_slippage, 0, 0)
+        btkn_swap_amount = min(
             max_swap_amount,
-            stoken_balance,
+            btkn_balance,
         )
         #print("Rebond -> sell sLQTY")
-        bought_token_amount = chicken.stoken_amm.swap_B_for_A(chick.account, stoken_swap_amount)
+        bought_token_amount = chicken.btkn_amm.swap_B_for_A(chick.account, btkn_swap_amount)
         if bought_token_amount < 1e-3:
             #print(f"max swap:     {max_swap_amount:,.2f}")
             return 1
@@ -629,26 +612,26 @@ class TesterSimpleToll(TesterInterface):
 
         """
         #if chick.account == 'chick_01':
-        if max_swap_amount < stoken_balance:
+        if max_swap_amount < btkn_balance:
             print("")
             print("-- Rebond")
             print(chick)
             print(f"max swap:     {max_swap_amount:,.2f}")
-            print(f"claimable:    {claimable_amount:,.2f}")
-            print(f"balance:      {stoken_balance:,.2f}")
-            print(f"Sold sTOKEN:  {stoken_swap_amount:,.2f}")
+            print(f"claimable:    {claimable_btkn_amount:,.2f}")
+            print(f"balance:      {btkn_balance:,.2f}")
+            print(f"Sold bTKN:  {btkn_swap_amount:,.2f}")
             print(f"Bought TOKEN: {bought_token_amount:,.2f}")
             print("\n \033[32mBalances after\033[0m")
             print(f" - {chicken.token.symbol} balance: {chicken.token.balance_of(chick.account):,.2f}")
             print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
-            print(f" - {chicken.stoken.symbol} balance: {chicken.stoken.balance_of(chick.account):,.2f}")
+            print(f" - {chicken.btkn.symbol} balance: {chicken.btkn.balance_of(chick.account):,.2f}")
         """
 
         assert chick.bond_amount > 0.1
 
         return 1
 
-    def lp_chicken_in(self, chicken, chick, claimable_amount, iteration):
+    def lp_chicken_in(self, chicken, chick, claimable_btkn_amount, iteration):
         # If it’s an LP and the optimal point hasn’t been reached yet
         chicken_in_time = self.get_optimal_apr_chicken_in_time(chicken)
         if iteration - chick.bond_time < chicken_in_time:
@@ -657,39 +640,39 @@ class TesterSimpleToll(TesterInterface):
             return 0
 
         #print("\n --> Chickening in!")
-        claimable_amount = self.tax_and_chicken_in(chicken, chick, claimable_amount)
+        claimable_btkn_amount = chicken.chicken_in(chick, claimable_btkn_amount, self.chicken_in_amm_fee)
 
-        # Provide liquidity to TOKEN/sTOKEN pool
+        # Provide liquidity to TOKEN/bTKN pool
         #print("\n \033[32mAdd liquidity!\033[0m \n")
         # As we are using a mock AMM, avoid unrealistic high prices during bootstrap
-        if chicken.stoken_amm.token_B_balance() == 0:
-            chicken.stoken_amm.set_price_B(1)
-        liquidity_amount = chicken.stoken_amm.get_A_amount_for_liquidity(claimable_amount)
+        if chicken.btkn_amm.token_B_balance() == 0:
+            chicken.btkn_amm.set_price_B(1)
+        liquidity_amount = chicken.btkn_amm.get_A_amount_for_liquidity(claimable_btkn_amount)
         token_liquidity_amount = min(
             liquidity_amount * 0.9999, # to avoid rounding issues
             chicken.token.balance_of(chick.account)
         )
         if token_liquidity_amount > 0:
-            chicken.stoken_amm.add_liquidity(chick.account, token_liquidity_amount, claimable_amount)
+            chicken.btkn_amm.add_liquidity(chick.account, token_liquidity_amount, claimable_btkn_amount)
         """
         if chick.account == 'chick_50':
             print("")
             print("-- LP")
             print(chick)
-            print(f"claimable:    {claimable_amount:,.2f}")
+            print(f"claimable:    {claimable_btkn_amount:,.2f}")
             print(f"liquidity:    {liquidity_amount:,.2f}")
             print(f"balance:      {chicken.token.balance_of(chick.account):,.2f}")
             print("\n \033[32mBalances after\033[0m")
             print(f" - {chicken.token.symbol} balance: {chicken.token.balance_of(chick.account):,.2f}")
             print(f" - {chicken.token.symbol} bonded:  {chick.bond_amount:,.2f}")
-            print(f" - {chicken.stoken.symbol} balance: {chicken.stoken.balance_of(chick.account):,.2f}")
-            print(f" - {chicken.stoken_amm.lp_token.symbol} balance: {chicken.stoken_amm.lp_token.balance_of(chick.account):,.2f}")
-            print(chicken.stoken_amm)
+            print(f" - {chicken.btkn.symbol} balance: {chicken.btkn.balance_of(chick.account):,.2f}")
+            print(f" - {chicken.btkn_amm.lp_token.symbol} balance: {chicken.btkn_amm.lp_token.balance_of(chick.account):,.2f}")
+            print(chicken.btkn_amm)
         """
 
         return 1
 
-    def regular_chicken_in(self, chicken, chick, claimable_amount, iteration):
+    def regular_chicken_in(self, chicken, chick, claimable_btkn_amount, iteration):
         chicken_in_time = self.get_optimal_apr_chicken_in_time(chicken)
         # If the optimal point hasn’t been reached yet
         if iteration - chick.bond_time < chicken_in_time:
@@ -700,7 +683,7 @@ class TesterSimpleToll(TesterInterface):
                 return 0
 
         #print("\n --> Chickening in!")
-        claimable_amount = self.tax_and_chicken_in(chicken, chick, claimable_amount)
+        claimable_btkn_amount = chicken.chicken_in(chick, claimable_btkn_amount, self.chicken_in_amm_fee)
 
         return 1
 
@@ -714,40 +697,40 @@ class TesterSimpleToll(TesterInterface):
         @param data: Logging data
         """
 
-        if iteration < BOOTSTRAP_ITERATION:
+        if iteration < BOOTSTRAP_PERIOD_CHICKEN_IN:
             return 0, 0, 0
 
-        claimable_amount, bond_cap = self.get_claimable_amount(chicken, chick, iteration)
-        if claimable_amount == 0:
+        claimable_btkn_amount, bond_cap = self.get_claimable_btkn_amount(chicken, chick, iteration)
+        if claimable_btkn_amount == 0:
             return
-        amm_token_amount, amm_coll_amount = self.get_amm_amounts(chicken, bond_cap, claimable_amount)
+        amm_token_amount, amm_coll_amount = self.get_amm_amounts(chicken, bond_cap, claimable_btkn_amount)
 
         """
         if chick.account == 'chick_72':
             print("")
             print(chick)
             print("-- Chicken in")
-            print(f"claimable_amount: {claimable_amount:,.2f}")
+            print(f"claimable_btkn_amount: {claimable_btkn_amount:,.2f}")
             print(f"bond cap:         {bond_cap:,.2f}")
             print(f"bond amount:      {chick.bond_amount:,.2f}")
             print(f"bond time:        {chick.bond_time}")
             print(f"amm amount:       {amm_token_amount:,.2f}")
-            print(f"pol ratio:        {self.get_pol_ratio(chicken):,.2f}")
-            print(f"new pol amount:   {chick.bond_amount - 2*amm_token_amount:,.2f}")
-            print(f"new ratio:        {(chick.bond_amount - 2*amm_token_amount) / claimable_amount:,.2f}")
+            print(f"reserve ratio:        {self.get_backing_ratio(chicken):,.2f}")
+            print(f"new reserve amount:   {chick.bond_amount - 2*amm_token_amount:,.2f}")
+            print(f"new ratio:        {(chick.bond_amount - 2*amm_token_amount) / claimable_btkn_amount:,.2f}")
         """
 
         # if for some reason bond amount goes below lower limit, it’s better to do a regular chicken in and start over
         if chick.rebonder and chick.bond_amount > BOND_AMOUNT[0]:
             # Rebond
             #print("\n \033[33m--> Rebonding!\033[0m")
-            new_chicken_in = self.rebond(chicken, chick, claimable_amount, iteration)
+            new_chicken_in = self.rebond(chicken, chick, claimable_btkn_amount, iteration)
         elif chick.lp:
             #print("\n \033[33m--> LP!\033[0m")
-            new_chicken_in = self.lp_chicken_in(chicken, chick, claimable_amount, iteration)
+            new_chicken_in = self.lp_chicken_in(chicken, chick, claimable_btkn_amount, iteration)
         else:
             #print("\n \033[33m--> regular!\033[0m")
-            new_chicken_in = self.regular_chicken_in(chicken, chick, claimable_amount, iteration)
+            new_chicken_in = self.regular_chicken_in(chicken, chick, claimable_btkn_amount, iteration)
 
         self.chicken_in_counter += new_chicken_in
 

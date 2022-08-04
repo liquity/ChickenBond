@@ -24,43 +24,43 @@ class TestChicken:
 
     chicken = chicken.Chicken(coll_token=coll,
                               token=lqty,
-                              stoken=slqty,
-                              coop_account="Coop",
-                              pol_account="POL",
+                              btkn=slqty,
+                              pending_account="Pending",
+                              reserve_account="RESERVE",
                               amm_account="AMM",
                               amm_fee=0.1)
 
-    def test_coop_token_balance(self):
-        """ Test get the coop-token balance."""
+    def test_pending_token_balance(self):
+        """ Test get the pending-token balance."""
 
         minting = 5
-        self.chicken.token.mint(self.chicken.coop_account, minting)
+        self.chicken.token.mint(self.chicken.pending_account, minting)
 
-        assert self.chicken.coop_token_balance() == minting
+        assert self.chicken.pending_token_balance() == minting
         # Reset the initial state
-        self.chicken.token.burn(self.chicken.coop_account, minting)
+        self.chicken.token.burn(self.chicken.pending_account, minting)
 
-    def test_pol_token_balance(self):
-        """ Test get the pol-token balance."""
+    def test_reserve_token_balance(self):
+        """ Test get the reserve-token balance."""
 
         minting = 5
-        self.chicken.token.mint(self.chicken.pol_account, minting)
+        self.chicken.token.mint(self.chicken.reserve_account, minting)
 
-        assert self.chicken.pol_token_balance() == minting
+        assert self.chicken.reserve_token_balance() == minting
         # Reset the initial state
-        self.chicken.token.burn(self.chicken.pol_account, minting)
+        self.chicken.token.burn(self.chicken.reserve_account, minting)
 
     def test_reserve_token_balance(self):
         """ Test get the reserve token balance."""
 
         minting = 5
-        self.chicken.token.mint(self.chicken.coop_account, minting)
-        self.chicken.token.mint(self.chicken.pol_account, minting)
+        self.chicken.token.mint(self.chicken.pending_account, minting)
+        self.chicken.token.mint(self.chicken.reserve_account, minting)
 
         assert self.chicken.reserve_token_balance() == 2 * minting
         # Reset the initial state
-        self.chicken.token.burn(self.chicken.coop_account, minting)
-        self.chicken.token.burn(self.chicken.pol_account, minting)
+        self.chicken.token.burn(self.chicken.pending_account, minting)
+        self.chicken.token.burn(self.chicken.reserve_account, minting)
 
     def test_bond(self):
         """ Test bonding in a new user."""
@@ -70,7 +70,7 @@ class TestChicken:
         self.chicken.token.mint(self.user.account, minting)
         self.chicken.bond(self.user, bonding, 5, 0)
         assert self.user.bond_amount == bonding
-        assert self.chicken.coop_token_balance() == bonding
+        assert self.chicken.pending_token_balance() == bonding
         assert self.chicken.token.balance_of(self.user.account) == minting - bonding
 
         with pytest.raises(AssertionError):
@@ -92,15 +92,15 @@ class TestChicken:
         # Chicken in with claimable sLQTY of 100% bonded LQTY
         self.chicken.chicken_in(self.user, bonding)
 
-        assert self.chicken.stoken.balance_of(self.user.account) == bonding
-        assert self.chicken.coop_token_balance() == 0
-        assert self.chicken.pol_token_balance() == bonding
+        assert self.chicken.btkn.balance_of(self.user.account) == bonding
+        assert self.chicken.pending_token_balance() == 0
+        assert self.chicken.reserve_token_balance() == bonding
         assert self.chicken.token.balance_of(self.user.account) == minting - bonding
 
         # Reset the initial state
         self.chicken.token.burn(self.user.account, minting - bonding)
-        self.chicken.pol_account = 0
-        self.chicken.stoken.balances = {}
+        self.chicken.reserve_account = 0
+        self.chicken.btkn.balances = {}
 
     def test_chicken_out(self):
         """ Test redeeming the bond by a user."""
@@ -114,9 +114,9 @@ class TestChicken:
         self.chicken.chicken_out(self.user)
 
         assert self.chicken.token.balance_of(self.user.account) == minting
-        assert self.chicken.stoken.balance_of(self.user.account) == 0
-        assert self.chicken.coop_token_balance() == 0
-        assert self.chicken.pol_token_balance() == 0
+        assert self.chicken.btkn.balance_of(self.user.account) == 0
+        assert self.chicken.pending_token_balance() == 0
+        assert self.chicken.reserve_token_balance() == 0
         assert self.user.bond_amount == 0
 
         # Reset the inital state

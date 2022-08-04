@@ -6,13 +6,13 @@ class UniswapPool(AmmInterface):
         return math.sqrt(self.token_A_balance() * self.token_B_balance())
 
     def get_A_amount_for_liquidity(self, token_B_amount):
-        token_A_pol = self.token_A_balance()
-        token_B_pol = self.token_B_balance()
-        return token_B_amount * token_A_pol / token_B_pol
+        token_A_reserve = self.token_A_balance()
+        token_B_reserve = self.token_B_balance()
+        return token_B_amount * token_A_reserve / token_B_reserve
     def get_B_amount_for_liquidity(self, token_A_amount):
-        token_A_pol = self.token_A_balance()
-        token_B_pol = self.token_B_balance()
-        return token_A_amount * token_B_pol / token_A_pol
+        token_A_reserve = self.token_A_balance()
+        token_B_reserve = self.token_B_balance()
+        return token_A_amount * token_B_reserve / token_A_reserve
     def add_liquidity(self, account, token_A_amount, max_token_B_amount):
         total_liquidity = self.get_total_liquidity()
         if total_liquidity == 0: # initial liquidity
@@ -29,8 +29,8 @@ class UniswapPool(AmmInterface):
             #print(f"max_token_B_amount: {max_token_B_amount:,.2f}")
             #assert token_B_amount <= max_token_B_amount
 
-            token_A_pol = self.token_A_balance()
-            liquidity_minted = token_A_amount * total_liquidity / token_A_pol
+            token_A_reserve = self.token_A_balance()
+            liquidity_minted = token_A_amount * total_liquidity / token_A_reserve
 
             self.token_A.transfer(account, self.pool_account, token_A_amount)
             self.token_B.transfer(account, self.pool_account, token_B_amount)
@@ -41,8 +41,8 @@ class UniswapPool(AmmInterface):
     """
     def add_liquidity_single_A(self, account, token_A_amount, max_slippage):
         # TODO: Max slippage
-        token_A_pol = self.token_A_balance()
-        amount_to_add = token_A_pol + token_A_amount - math.sqrt(token_A_pol * (token_A_pol + token_A_amount))
+        token_A_reserve = self.token_A_balance()
+        amount_to_add = token_A_reserve + token_A_amount - math.sqrt(token_A_reserve * (token_A_reserve + token_A_amount))
         amount_to_swap = token_A_amount - amount_to_add
         token_B_amount = self.swap_A_for_B(account, amount_to_swap)
         return self.add_liquidity(account, amount_to_add, token_B_amount)
