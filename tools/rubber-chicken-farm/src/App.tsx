@@ -30,8 +30,6 @@ Object.assign(window, {
   W: lambertW0
 });
 
-const period = 365;
-
 const App = () => (
   <ThemeProvider theme={theme}>
     <KnobsProvider defaults={simulationDefaults}>
@@ -41,7 +39,7 @@ const App = () => (
         <Knobs />
 
         <Box sx={{ flexGrow: 1, py: 4, maxHeight: "100vh", overflow: "auto" }}>
-          <SimulationProvider period={period} debounceDelayMs={200} passes={100} passPerRender={20}>
+          <SimulationProvider period={360} debounceDelayMs={200} passes={100} passPerRender={20}>
             <ControlChart />
             <ProtocolChart />
           </SimulationProvider>

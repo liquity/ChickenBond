@@ -1,3 +1,5 @@
+import React from "react";
+
 import {
   VictoryArea,
   VictoryAxis,
@@ -10,6 +12,7 @@ import {
 } from "victory";
 
 import { ChickenFarmDatum } from "../model/ChickenFarm";
+import { months } from "../utils";
 import { useSimulation } from "../context/SimulationProvider";
 import { areaStyle, colorScale, lineStyle, padding } from "../chartStyle";
 import { ChartTooltip } from "./ChartTooltip";
@@ -45,9 +48,12 @@ const findMaxLeftAxis = findMax<ChickenFarmDatum>(datum => [
 
 const findMaxRightAxis = findMax<ChickenFarmDatum>(datum => [datum.polRatio + datum.premium]);
 
-export const ProtocolChart: React.FC = () => {
-  const { data } = useSimulation();
+interface ProtocolChartProps {
+  data: ChickenFarmDatum[];
+  period: number;
+}
 
+const ProtocolChartWithProps: React.FC<ProtocolChartProps> = ({ data, period }) => {
   const maxLeftAxis = findMaxLeftAxis(data);
   const maxRightAxis = findMaxRightAxis(data);
   const scale = maxLeftAxis / maxRightAxis;
@@ -71,7 +77,7 @@ export const ProtocolChart: React.FC = () => {
         <VictoryVoronoiContainer
           voronoiDimension="x"
           labels={({ datum }) =>
-            `${datum.childName}: ${(datum.isPercent ? percent(2) : round(0))(datum._y)}`
+            `${datum.childName}: ${(datum.isPercent ? percent(2) : millions(2))(datum._y)}`
           }
           labelComponent={<ChartTooltip centerOffset={{ y: -56 }} />}
         />
@@ -90,7 +96,7 @@ export const ProtocolChart: React.FC = () => {
         ]}
       />
 
-      <VictoryAxis />
+      <VictoryAxis tickValues={months(data.length / period)} />
       <VictoryAxis dependentAxis tickFormat={percent(0)} />
       <VictoryAxis dependentAxis tickFormat={millions(0)} orientation="right" />
 
@@ -113,4 +119,12 @@ export const ProtocolChart: React.FC = () => {
       </VictoryStack>
     </VictoryChart>
   );
+};
+
+const MemoizedProtocolChart = React.memo(ProtocolChartWithProps);
+
+export const ProtocolChart: React.FC = () => {
+  const { data, period } = useSimulation();
+
+  return <MemoizedProtocolChart data={data} period={period} />;
 };

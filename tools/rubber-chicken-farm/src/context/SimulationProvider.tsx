@@ -53,7 +53,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
   passPerRender,
   children
 }) => {
-  const { state } = useKnobs<SimulationKnobs>();
+  const { latchedState } = useKnobs<SimulationKnobs>();
   const [data, setData] = useState<ChickenFarmDatum[]>([]);
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
           pidKi,
           pidKd,
           ...params
-        } = parseSimulationKnobs(state);
+        } = parseSimulationKnobs(latchedState);
 
         const samples = periods * period + 1;
 
@@ -135,7 +135,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({
     }, debounceDelayMs);
 
     return () => clearTimeout(timeoutId);
-  }, [debounceDelayMs, passes, passPerRender, period, state]);
+  }, [debounceDelayMs, passes, passPerRender, period, latchedState]);
 
   return (
     <SimulationContext.Provider value={{ period, data }}>{children}</SimulationContext.Provider>

@@ -29,18 +29,24 @@ export type SimulationKnobs = { [P in keyof ParsedSimulationKnobs]: string };
 
 export const simulationDefaults: SimulationKnobs = {
   periods: "1",
-  u0: "30",
+  u0: "5",
   in0: "[1, 1]",
   curve: "(dk, u) => dk / (dk + u)",
 
-  grow: "({ stats: s }) => s.in.TOKEN <= 1 ? 0 : 0.1",
+  grow: `
+({ stats: s }) => s.in.TOKEN <= 1 ? 0 : [
+  0.2,
+  0.05
+]`.trim(),
 
-  spot: `
-  ({ k, stats: s }) => k <= 30 ? 7 : (
-    s.coop.TOKEN +
-    s.in.TOKEN +
-    s.tollTOKEN * 0.5
-  ) / s.in.sTOKEN`.trim(),
+  spot: "({ polRatio }) => polRatio + 0.25",
+
+  //   spot: `
+  // ({ stats: s }) => s.in.TOKEN <= 1 ? 1.55 : (
+  //     s.coop.TOKEN * 0.01 +
+  //     s.in.TOKEN +
+  //     s.tollTOKEN * 2
+  //   ) / s.in.sTOKEN`.trim(),
 
   //   spot: `
   // ({ stats: s }) =>
@@ -50,7 +56,7 @@ export const simulationDefaults: SimulationKnobs = {
   //     s.tollTOKEN  * (1.02 ** (120/365) - 1)
   //   ) / s.in.TOKEN) ** 2`.trim(),
 
-  point: "() => 15",
+  point: "() => 30",
 
   gauge: `
 ({ k, coop }) => coop
@@ -63,12 +69,39 @@ export const simulationDefaults: SimulationKnobs = {
   hatch: `
 ({ k }) => new Array(
   randomBinomial(10, 0.998 ** k)
-).fill().map(() => 100 * random())`.trim(),
+).fill().map(() => 50000 * random())`.trim(),
 
   move: `
-({ k, dArr }) => k >= 7 && dArr < 0
-  ? (random() < 0.5 ? "re" : "in")
-  : null`.trim(),
+({ k, dArr }) => k < 7 ? null : (
+  dArr < 0
+    ? (random() < 0.5 ? "re" : "in")
+    : null
+)`.trim(),
+
+  // ({ k, dArr, bond }) => k < 7 ? null : (
+  //   random() < 0.7 ** k ?
+  //     "in" :
+  //   dArr < 0 ?
+  //     (random() < 0.5 ? "re" : "in") :
+  //   k > bond.k0 + 60 ?
+  //     (random() < 0.1 ? "out" : null) :
+  //   null
+  // )
+
+  // ({ k, dArr, bond, stats }) => k < 7 ? null : (
+  //   random() < 0.7 ** k ?
+  //     "in" :
+  //   random() < 0.1 && stats.in.TOKEN > 1 && (
+  //     stats.coop.TOKEN +
+  //     stats.tollTOKEN
+  //   ) / stats.in.TOKEN > 1 - bond.c ?
+  //     "in" :
+  //   dArr < 0 ?
+  //     (random() < 0.5 ? "re" : "in") :
+  //   k > bond.k0 + 60 ?
+  //     (random() < 0.1 ? "out" : null) :
+  //   null
+  // )
 
   selectedSteer: "asymmetric",
 

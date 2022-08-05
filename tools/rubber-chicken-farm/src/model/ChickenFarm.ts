@@ -83,8 +83,12 @@ export interface ChickenFarmParams {
   move: (params: ChickenFarmMoveParams) => unknown;
 }
 
-const validateGrow = (x: unknown): number =>
-  typeof x === "number" ? x : panic("grow() must return a number");
+const validateGrow = (x: unknown): [number, number] =>
+  typeof x === "number"
+    ? [x, x]
+    : Array.isArray(x) && x.length === 2 && x.every(y => typeof y === "number")
+    ? (x as [number, number])
+    : panic("grow() must return a number");
 
 const validatePoint = (x: unknown): number =>
   typeof x === "number" ? x : panic("point() must return a number");
@@ -151,8 +155,8 @@ export class ChickenFarm {
     const commonParams = { k, stats, polRatio, coop };
 
     const grow = validateGrow(this.params.grow(commonParams));
-    const yieldPerStep = (1 + grow) ** (1 / this.params.period) - 1;
-    const harvest = (stats.coop.TOKEN + stats.in.TOKEN) * yieldPerStep;
+    const [coopInYield, tollYield] = grow.map(apy => (1 + apy) ** (1 / this.params.period) - 1);
+    const harvest = (stats.coop.TOKEN + stats.in.TOKEN) * coopInYield + stats.tollTOKEN * tollYield;
 
     const marketPrice = validateSpot(this.params.spot(commonParams));
     const lambda = marketPrice / polRatio;

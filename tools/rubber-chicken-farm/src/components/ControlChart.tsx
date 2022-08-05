@@ -1,3 +1,5 @@
+import React from "react";
+
 import {
   VictoryAxis,
   VictoryChart,
@@ -7,15 +9,20 @@ import {
   VictoryVoronoiContainer
 } from "victory";
 
+import { ChickenFarmDatum } from "../model/ChickenFarm";
+import { months } from "../utils";
 import { useSimulation } from "../context/SimulationProvider";
 import { colorScale, lineStyle, padding } from "../chartStyle";
 import { ChartTooltip } from "./ChartTooltip";
 
 const [yStyle, rStyle, uStyle, eStyle] = colorScale.map(color => lineStyle(color));
 
-export const ControlChart: React.FC = () => {
-  const { data } = useSimulation();
+interface ControlChartProps {
+  data: ChickenFarmDatum[];
+  period: number;
+}
 
+export const ControlChartWithProps: React.FC<ControlChartProps> = ({ data, period }) => {
   return (
     <VictoryChart
       theme={VictoryTheme.material}
@@ -38,7 +45,7 @@ export const ControlChart: React.FC = () => {
         data={[{ name: "y" }, { name: "r" }, { name: "u" }, { name: "e" }]}
       />
 
-      <VictoryAxis />
+      <VictoryAxis tickValues={months(data.length / period)} />
       <VictoryAxis dependentAxis />
 
       <VictoryLine name="y" data={data} x="k" y="y" style={yStyle} />
@@ -47,4 +54,12 @@ export const ControlChart: React.FC = () => {
       <VictoryLine name="e" data={data} x="k" y="e" style={eStyle} />
     </VictoryChart>
   );
+};
+
+const MemoizedControlChart = React.memo(ControlChartWithProps);
+
+export const ControlChart: React.FC = () => {
+  const { data, period } = useSimulation();
+
+  return <MemoizedControlChart data={data} period={period} />;
 };
