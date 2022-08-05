@@ -232,10 +232,6 @@ class LUSDChickenBondDeployment {
   async deployAndSetupContracts(): Promise<LUSDChickenBondDeploymentResult> {
     const { deployer, log } = this;
 
-    if (!deployer.provider) {
-      throw new Error("deployer must have provider");
-    }
-
     const deployed = await this.deployContracts();
 
     log("Connecting contracts...");
@@ -245,14 +241,14 @@ class LUSDChickenBondDeployment {
       a.receipt.blockNumber < b.receipt.blockNumber ? a : b
     );
 
-    const firstDeploymentBlock = await deployer.provider.getBlock(firstReceipt.blockNumber);
+    const deploymentTimestamp = await deployed.chickenBondManager.contract.deploymentTimestamp();
 
     return {
       deployed,
       manifest: {
         addresses: mapContracts<DeployedContract, string>(deployed, x => x.contract.address),
         chainId: await deployer.getChainId(),
-        deploymentTimestamp: firstDeploymentBlock.timestamp,
+        deploymentTimestamp: deploymentTimestamp.toNumber(),
         startBlock: firstReceipt.blockNumber
       }
     };
