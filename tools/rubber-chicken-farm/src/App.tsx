@@ -12,7 +12,8 @@ import { collectSamples, csv, flatten, lowpass, randomBinomial } from "./utils";
 import { KnobsProvider } from "./context/KnobsProvider";
 import { SimulationProvider } from "./context/SimulationProvider";
 import { Knobs } from "./components/Knobs";
-import { SimulationChart } from "./components/SimulationChart";
+import { ControlChart } from "./components/ControlChart";
+import { ProtocolChart } from "./components/ProtocolChart";
 
 Object.assign(window, {
   ChickenFarm,
@@ -29,8 +30,6 @@ Object.assign(window, {
   W: lambertW0
 });
 
-const period = 365;
-
 const App = () => (
   <ThemeProvider theme={theme}>
     <KnobsProvider defaults={simulationDefaults}>
@@ -39,9 +38,10 @@ const App = () => (
       <Flex sx={{ alignItems: "flex-start" }}>
         <Knobs />
 
-        <Box sx={{ flexGrow: 1, mt: 4 }}>
-          <SimulationProvider period={period} debounceDelayMs={200} passes={20}>
-            <SimulationChart />
+        <Box sx={{ flexGrow: 1, py: 4, maxHeight: "100vh", overflow: "auto" }}>
+          <SimulationProvider period={360} debounceDelayMs={200} passes={100} passPerRender={20}>
+            <ControlChart />
+            <ProtocolChart />
           </SimulationProvider>
         </Box>
       </Flex>

@@ -1,4 +1,4 @@
-import { lambertW0 } from "lambert-w";
+// import { lambertW0 } from "lambert-w";
 
 import { Chicken, ChickenFarm } from "../model/ChickenFarm";
 
@@ -8,7 +8,7 @@ const adjustmentRate = 0.01;
 
 const getAge = (k: number) => (c: Chicken) => k - c.bond.k0;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-const tMaxArr = (premium: number) => 1 / (1 / lambertW0(Math.E / (1 + premium)) - 1);
+// const tMaxArr = (premium: number) => 1 / (1 / lambertW0(Math.E / (1 + premium)) - 1);
 
 export const asymmetricFarm = () =>
   new ChickenFarm({
@@ -28,6 +28,5 @@ export const asymmetricFarm = () =>
     gauge: ({ k, coop }) => avg(coop.map(getAge(k))),
     steer: ({ e, u }) => (e < 0 ? u * (1 - adjustmentRate) : u),
     hatch: ({ k }) => (k < 1000 ? 100 : 200),
-    move: ({ k, u, premium, bond }) =>
-      k >= Math.round(bond.k0 + u * tMaxArr(premium)) ? "in" : null
+    move: ({ dArr }) => (dArr < 0 ? "in" : null)
   });

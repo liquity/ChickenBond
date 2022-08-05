@@ -19,7 +19,8 @@ const groupStyle: ThemeUICSSObject = {
 };
 
 export const Knobs: React.FC = () => {
-  const { state, set, resetAll } = useKnobs<SimulationKnobs>();
+  const { state, latchedState, set, latch, resetAll } = useKnobs<SimulationKnobs>();
+  const isLatched = state === latchedState;
 
   return (
     <Flex sx={{ flexDirection: "column", width: "430px", maxHeight: "100vh", p: 3 }}>
@@ -29,9 +30,20 @@ export const Knobs: React.FC = () => {
         <Button variant="text" onClick={resetAll}>
           ⟲ Reset all
         </Button>
+
+        <Flex sx={{ flexGrow: 1, alignItems: "center", justifyContent: "flex-end" }}>
+          <Button
+            variant="text"
+            disabled={isLatched}
+            sx={{ p: 0, fontSize: 5, opacity: isLatched ? 0.5 : 1 }}
+            onClick={latch}
+          >
+            ▶️
+          </Button>
+        </Flex>
       </Flex>
 
-      <Flex sx={{ flexDirection: "column", alignItems: "stretch", pr: "24px", overflow: "auto" }}>
+      <Flex sx={{ flexDirection: "column", alignItems: "stretch", overflow: "auto" }}>
         <Heading as="h4">Simulation</Heading>
 
         <Box sx={groupStyle}>
@@ -44,23 +56,23 @@ export const Knobs: React.FC = () => {
             onChange={e => set("periods", e.target.value)}
           />
 
-          <Label sx={{ mt: 3 }}>Initial Acquired Bucket [TOKEN, sTOKEN]</Label>
+          <Label sx={{ mt: 3 }}>Initial Reserve [TOKEN, sTOKEN]</Label>
           <Input type="text" value={state.in0} onChange={e => set("in0", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Curve</Label>
           <Textarea rows={1} value={state.curve} onChange={e => set("curve", e.target.value)} />
 
-          <Label sx={{ mt: 3 }}>TOKEN APY [%]</Label>
-          <Textarea rows={1} value={state.grow} onChange={e => set("grow", e.target.value)} />
+          <Label sx={{ mt: 3 }}>TOKEN APY [Pending&amp;Reserve, Permanent]</Label>
+          <Textarea rows={4} value={state.grow} onChange={e => set("grow", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>sTOKEN Market Price [TOKEN]</Label>
-          <Textarea rows={6} value={state.spot} onChange={e => set("spot", e.target.value)} />
+          <Textarea rows={1} value={state.spot} onChange={e => set("spot", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Bonding Inflow [TOKEN]</Label>
           <Textarea rows={3} value={state.hatch} onChange={e => set("hatch", e.target.value)} />
 
           <Label sx={{ mt: 3 }}>Chickening</Label>
-          <Textarea rows={3} value={state.move} onChange={e => set("move", e.target.value)} />
+          <Textarea rows={5} value={state.move} onChange={e => set("move", e.target.value)} />
         </Box>
 
         <Heading as="h4">Control</Heading>
