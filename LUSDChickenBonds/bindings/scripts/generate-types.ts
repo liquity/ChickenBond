@@ -5,14 +5,14 @@ import { Interface, ParamType } from "@ethersproject/abi";
 
 import BondNFT from "../../out/BondNFT.sol/BondNFT.json";
 import ChickenBondManager from "../../out/ChickenBondManager.sol/ChickenBondManager.json";
-import ERC20 from "../../out/ERC20.sol/ERC20.json";
-import LUSDTokenTester from "../../out/LUSDTokenTester.sol/LUSDTokenTester.json";
-import MockBAMMSPVault from "../../out/MockBAMMSPVault.sol/MockBAMMSPVault.json";
+import ERC20Faucet from "../../out/ERC20Faucet.sol/ERC20Faucet.json";
+import TestnetBAMM from "../../out/TestnetBAMM.sol/TestnetBAMM.json";
 import MockCurvePool from "../../out/MockCurvePool.sol/MockCurvePool.json";
 import MockYearnRegistry from "../../out/MockYearnRegistry.sol/MockYearnRegistry.json";
 import MockYearnVault from "../../out/MockYearnVault.sol/MockYearnVault.json";
 import BLUSDToken from "../../out/BLUSDToken.sol/BLUSDToken.json";
 import MockCurveLiquidityGaugeV4 from "../../out/MockCurveLiquidityGaugeV4.sol/MockCurveLiquidityGaugeV4.json";
+import Harvester from "../../out/Harvester.sol/Harvester.json";
 
 const getTupleType = (components: ParamType[], flexible: boolean) => {
   if (components.every(component => component.name)) {
@@ -142,14 +142,14 @@ const declareInterface = ({
 const contractArtifacts = Object.entries({
   BondNFT,
   ChickenBondManager,
-  ERC20,
-  LUSDTokenTester,
-  MockBAMMSPVault,
+  ERC20Faucet,
+  TestnetBAMM,
   MockCurvePool,
   MockYearnRegistry,
   MockYearnVault,
   BLUSDToken,
-  MockCurveLiquidityGaugeV4
+  MockCurveLiquidityGaugeV4,
+  Harvester
 });
 
 const contracts = contractArtifacts.map(([contractName, { abi }]) => ({

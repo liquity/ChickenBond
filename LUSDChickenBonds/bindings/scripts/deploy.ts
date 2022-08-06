@@ -21,7 +21,7 @@ const runSmokeTest = async (wallet: Wallet, addresses: LUSDChickenBondContractAd
   const { lusdToken, chickenBondManager } = connectToContracts(wallet, addresses);
   const bondLUSDAmount = Decimal.from(100).hex;
 
-  await lusdToken.unprotectedMint(wallet.address, bondLUSDAmount).then(txWait);
+  await lusdToken.tap().then(txWait);
   await lusdToken.approve(chickenBondManager.address, bondLUSDAmount).then(txWait);
   await chickenBondManager.createBond(bondLUSDAmount).then(txWait);
 };

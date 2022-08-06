@@ -11,23 +11,32 @@ import {
   LUSDChickenBondDeploymentResult
 } from "@liquity/lusd-chicken-bonds-bindings";
 
-import { Pair } from ".";
-
 const ONE_DAY = 24 * 60 * 60;
 
-export interface LUSDChickenBondData extends Pair {
-  bondID: number;
-  startTime: number;
+export interface LUSDChickenBondTokenPair {
+  LUSD: number;
+  bLUSD: number;
 }
 
-export interface LUSDChickenBondVaults {
-  SP: number;
-  curve: number;
+const statuses = ["nonExistent", "active", "chickenedOut", "chickenedIn"] as const;
+
+export type LUSDChickenBondStatus = typeof statuses[number];
+
+const lookupStatus = (status: number): LUSDChickenBondStatus => statuses[status];
+
+export interface LUSDChickenBondData extends LUSDChickenBondTokenPair {
+  bondID: number;
+  startTime: number;
+  endTime: number;
+  initialHalfDna: string;
+  finalHalfDna: string;
+  status: LUSDChickenBondStatus;
 }
 
 export interface LUSDChickenBondBuckets {
   pendingSP: number;
-  acquired: LUSDChickenBondVaults;
+  acquiredSP: number;
+  acquiredCurve: number;
   permanent: number;
 }
 
@@ -35,15 +44,17 @@ export interface LUSDChickenBondGlobalFunctions {
   deploy(): Promise<LUSDChickenBondDeploymentResult>;
   connect(user: Wallet): LUSDChickenBondContracts;
 
-  loot(amount: Decimalish): Promise<void>;
-  balance(address?: string): Promise<Pair>;
+  tap(): Promise<void>;
+  balance(address?: string): Promise<LUSDChickenBondTokenPair>;
   allowance(spender?: string, owner?: string): Promise<number>;
   send(to: string, amount: Decimalish): Promise<void>;
 
+  bond(bondID?: number): Promise<LUSDChickenBondData>;
+
   createBond(amount: Decimalish): Promise<number>;
-  getBond(bondID?: number): Promise<LUSDChickenBondData>;
   chickenIn(bondID?: number): Promise<void>;
   chickenOut(bondID?: number): Promise<void>;
+
   redeem(amount: Decimalish): Promise<void>;
   redeemAll(): Promise<void>;
 
@@ -53,8 +64,7 @@ export interface LUSDChickenBondGlobalFunctions {
   backingRatio(): Promise<number>;
   buckets(): Promise<LUSDChickenBondBuckets>;
 
-  // harvestSP(amount: number): Promise<void>;
-  harvestCurve(amount: number): Promise<void>;
+  harvest(): Promise<void>;
 
   trace(txHash: string): Promise<unknown>;
   warp(timestamp: number): Promise<unknown>;
@@ -110,23 +120,21 @@ export const getLUSDChickenBondGlobalFunctions = (
     return globalObj.contracts;
   },
 
-  async loot(amount) {
-    await receipt(() =>
-      globalObj.contracts.lusdToken.unprotectedMint(globalObj.user.address, Decimal.from(amount).hex)
-    )();
+  async tap() {
+    await receipt(() => globalObj.contracts.lusdToken.tap())();
   },
 
   async balance(address = globalObj.user.address) {
     const { lusdToken, bLUSDToken } = globalObj.contracts;
 
-    const [lusdBalance, sLUSDBalance] = await Promise.all([
+    const [lusdBalance, bLUSDBalance] = await Promise.all([
       lusdToken.balanceOf(address),
       bLUSDToken.balanceOf(address)
     ]);
 
     return {
-      TOKEN: numberifyDecimal(lusdBalance),
-      sTOKEN: numberifyDecimal(sLUSDBalance)
+      LUSD: numberifyDecimal(lusdBalance),
+      bLUSD: numberifyDecimal(bLUSDBalance)
     };
   },
 
@@ -144,7 +152,6 @@ export const getLUSDChickenBondGlobalFunctions = (
     const { lusdToken, chickenBondManager, bondNFT } = globalObj.contracts;
 
     await sequence(
-      () => lusdToken.unprotectedMint(globalObj.user.address, amountHex),
       () => lusdToken.approve(chickenBondManager.address, amountHex),
       () => chickenBondManager.createBond(amountHex)
     );
@@ -153,19 +160,23 @@ export const getLUSDChickenBondGlobalFunctions = (
     return (globalObj.bondID = bondID.toNumber());
   },
 
-  async getBond(bondID = globalObj.bondID): Promise<LUSDChickenBondData> {
+  async bond(bondID = globalObj.bondID): Promise<LUSDChickenBondData> {
     const { chickenBondManager } = globalObj.contracts;
 
-    const [{ lusdAmount, startTime }, accruedBLUSD] = await Promise.all([
+    const [bondData, accruedBLUSD] = await Promise.all([
       chickenBondManager.getBondData(bondID),
       chickenBondManager.calcAccruedBLUSD(bondID)
     ]);
 
     return {
       bondID,
-      startTime: startTime.toNumber(),
-      TOKEN: numberifyDecimal(lusdAmount),
-      sTOKEN: numberifyDecimal(accruedBLUSD)
+      LUSD: numberifyDecimal(bondData.lusdAmount),
+      bLUSD: numberifyDecimal(accruedBLUSD),
+      startTime: bondData.startTime.toNumber(),
+      endTime: bondData.endTime.toNumber(),
+      initialHalfDna: bondData.initialHalfDna.toHexString(),
+      finalHalfDna: bondData.finalHalfDna.toHexString(),
+      status: lookupStatus(bondData.status)
     };
   },
 
@@ -226,20 +237,14 @@ export const getLUSDChickenBondGlobalFunctions = (
 
     return {
       pendingSP,
-      acquired: {
-        SP: acquiredSP,
-        curve: acquiredCurve
-      },
+      acquiredSP,
+      acquiredCurve,
       permanent
     };
   },
 
-  // async harvestSP(amount) {
-  //   await receipt(() => globalObj.contracts.bammSPVault.harvest(Decimal.from(amount).hex))();
-  // },
-
-  async harvestCurve(amount) {
-    await receipt(() => globalObj.contracts.yearnCurveVault.harvest(Decimal.from(amount).hex))();
+  async harvest() {
+    await receipt(() => globalObj.contracts.harvester.harvest())();
   },
 
   trace: txHash => provider.send("trace_transaction", [txHash]),

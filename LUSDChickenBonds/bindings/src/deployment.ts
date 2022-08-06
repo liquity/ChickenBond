@@ -100,9 +100,10 @@ class LUSDChickenBondDeployment {
 
     const lusdToken = await this.deployContract(
       factories.lusdToken,
-      AddressZero,
-      AddressZero,
-      AddressZero,
+      "LUSD Stablecoin",
+      "LUSD",
+      params.lusdFaucetTapAmount,
+      params.lusdFaucetTapPeriod,
       overrides
     );
 
@@ -156,13 +157,6 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const uniToken = await this.deployContract(
-      factories.uniToken,
-      "Uniswap LP Token",
-      "UNI",
-      overrides
-    );
-
     const curveLiquidityGauge = await this.deployContract(factories.curveLiquidityGauge, overrides);
 
     const chickenBondManager = await this.deployContract(
@@ -183,6 +177,18 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const harvester = await this.deployContract(
+      factories.harvester,
+      lusdToken.contract.address,
+      [
+        {
+          apr: params.harvesterBAMMAPR,
+          receiver: bammSPVault.contract.address
+        }
+      ],
+      overrides
+    );
+
     return {
       bondNFT,
       chickenBondManager,
@@ -190,10 +196,10 @@ class LUSDChickenBondDeployment {
       lusdToken,
       curveLiquidityGauge,
       bLUSDToken,
-      uniToken,
       yearnCurveVault,
       bammSPVault,
-      yearnRegistry
+      yearnRegistry,
+      harvester
     };
   }
 
@@ -218,6 +224,24 @@ class LUSDChickenBondDeployment {
       () =>
         deployed.bLUSDToken.contract.setAddresses(
           deployed.chickenBondManager.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.bammSPVault.contract.setChicken(
+          deployed.chickenBondManager.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.lusdToken.contract.transferOwnership(
+          deployed.harvester.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.bammSPVault.contract.transferOwnership(
+          deployed.harvester.contract.address,
           overrides
         )
     ];
