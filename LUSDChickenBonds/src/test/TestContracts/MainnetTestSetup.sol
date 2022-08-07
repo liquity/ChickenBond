@@ -4,7 +4,7 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
 import "../../ExternalContracts/MockCurvePool.sol";
-import "./Interfaces/ICurveFactory.sol";
+import "./Interfaces/ICurveCryptoFactory.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
 
 
@@ -19,7 +19,7 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_CURVE_BASE_POOL_ADDRESS = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
-    address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
+    address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xF18056Bbd320E96A48e3Fbf8bC061322531aac99;
     address constant MAINNET_CHAINLINK_ETH_USD_ADDRESS = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address constant MAINNET_CHAINLINK_LUSD_USD_ADDRESS = 0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0;
     address constant MAINNET_BPROTOCOL_FEE_POOL_ADDRESS = 0x7095F0B91A1010c11820B4E263927835A4CF52c9;
@@ -88,16 +88,22 @@ contract MainnetTestSetup is BaseTest {
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0), BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS);
 
         // Deploy LUSD/bLUSD AMM Curve V2 pool and LiquidityGauge V4
-        ICurveFactory curveFactory = ICurveFactory(MAINNET_CURVE_V2_FACTORY_ADDRESS);
-        address[4] memory bLUSDCurvePoolCoins = [address(bLUSDToken), address(lusdToken), address(0), address(0)];
-        address bLUSDCurvePoolAddress = curveFactory.deploy_plain_pool(
-            "bLUSD_LUSD",               // name
-            "bLUSDLUSDC",              // symbol
-            bLUSDCurvePoolCoins,        // coins
-            1000,                       // A
-            4000000,                    // fee
-            1,                          // asset type
-            1                           // implementation idx
+        ICurveCryptoFactory curveFactory = ICurveCryptoFactory(MAINNET_CURVE_V2_FACTORY_ADDRESS);
+        address[2] memory bLUSDCurvePoolCoins = [address(bLUSDToken), address(lusdToken)];
+        address bLUSDCurvePoolAddress = curveFactory.deploy_pool(
+            "bLUSD_LUSD",        // _name
+            "bLUSDLUSDC",        // _symbol
+            bLUSDCurvePoolCoins, // _coins
+            4000,                // A
+            0.000145e18,         // gamma
+            0.5e8,               // mid_fee (%)
+            1.0e8,               // out_fee (%)
+            0.000002e18,         // allowed_extra_profit
+            0.0023e18,           // fee_gamma
+            0.000146e18,         // adjustment_step
+            50e8,                // admin_fee (%)
+            1 days,              // ma_half_time
+            1.2e18               // initial_price (token1 / token2)
         );
         address curveLiquidityGaugeAddress = curveFactory.deploy_gauge(bLUSDCurvePoolAddress);
         curveLiquidityGauge = ICurveLiquidityGaugeV4(curveLiquidityGaugeAddress);
