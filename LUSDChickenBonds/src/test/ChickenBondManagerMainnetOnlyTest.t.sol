@@ -2468,7 +2468,11 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             lusdToken.approve(address(bLUSDCurvePool), type(uint256).max);
             bLUSDToken.approve(address(bLUSDCurvePool), type(uint256).max);
 
-            bLUSDCurvePool.add_liquidity([bLUSDToken.balanceOf(B), lusdToken.balanceOf(B)], 0);
+            // Can't inline this into add_liquidity(), because it trips up vm.expectRevert()
+            uint256[2] memory amounts = [bLUSDToken.balanceOf(B), lusdToken.balanceOf(B)];
+
+            vm.expectRevert();
+            bLUSDCurvePool.add_liquidity(amounts, 0);
         } vm.stopPrank();
     }
 }
