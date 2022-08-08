@@ -18,6 +18,10 @@ export interface LUSDChickenBondTokenPair {
   bLUSD: number;
 }
 
+export interface LUSDChickenBondBalances extends LUSDChickenBondTokenPair {
+  LP: number;
+}
+
 const statuses = ["nonExistent", "active", "chickenedOut", "chickenedIn"] as const;
 
 export type LUSDChickenBondStatus = typeof statuses[number];
@@ -45,11 +49,13 @@ export interface LUSDChickenBondGlobalFunctions {
   connect(user: Wallet): LUSDChickenBondContracts;
 
   tap(): Promise<void>;
-  balance(address?: string): Promise<LUSDChickenBondTokenPair>;
+  balance(address?: string): Promise<LUSDChickenBondBalances>;
   allowance(spender?: string, owner?: string): Promise<number>;
   send(to: string, amount: Decimalish): Promise<void>;
 
   bond(bondID?: number): Promise<LUSDChickenBondData>;
+  backingRatio(): Promise<number>;
+  buckets(): Promise<LUSDChickenBondBuckets>;
 
   createBond(amount: Decimalish): Promise<number>;
   chickenIn(bondID?: number): Promise<void>;
@@ -61,8 +67,11 @@ export interface LUSDChickenBondGlobalFunctions {
   shiftSPToCurve(amount: number): Promise<void>;
   shiftCurveToSP(amount: number): Promise<void>;
 
-  backingRatio(): Promise<number>;
-  buckets(): Promise<LUSDChickenBondBuckets>;
+  spot(): Promise<number>;
+  deposit(bLUSDAmount?: number, lusdAmount?: number): Promise<void>;
+  withdraw(LP?: number): Promise<void>;
+  swapLUSD(amount?: number): Promise<void>;
+  swapBLUSD(amount?: number): Promise<void>;
 
   harvest(): Promise<void>;
 
@@ -125,16 +134,18 @@ export const getLUSDChickenBondGlobalFunctions = (
   },
 
   async balance(address = globalObj.user.address) {
-    const { lusdToken, bLUSDToken } = globalObj.contracts;
+    const { lusdToken, bLUSDToken, bLUSDCurveToken } = globalObj.contracts;
 
-    const [lusdBalance, bLUSDBalance] = await Promise.all([
+    const [LUSD, bLUSD, LP] = await Promise.all([
       lusdToken.balanceOf(address),
-      bLUSDToken.balanceOf(address)
+      bLUSDToken.balanceOf(address),
+      bLUSDCurveToken.balanceOf(address)
     ]);
 
     return {
-      LUSD: numberifyDecimal(lusdBalance),
-      bLUSD: numberifyDecimal(bLUSDBalance)
+      LUSD: numberifyDecimal(LUSD),
+      bLUSD: numberifyDecimal(bLUSD),
+      LP: numberifyDecimal(LP)
     };
   },
 
@@ -243,12 +254,75 @@ export const getLUSDChickenBondGlobalFunctions = (
     };
   },
 
+  spot: () => globalObj.contracts.bLUSDCurvePool.get_dy(0, 1, 1).then(numberifyDecimal),
+
+  async deposit(bLUSDAmount, lusdAmount) {
+    const { lusdToken, bLUSDToken, bLUSDCurvePool } = globalObj.contracts;
+
+    const dBLUSDAmount = bLUSDAmount
+      ? Decimal.from(bLUSDAmount)
+      : Decimal.fromBigNumberString(
+          (await bLUSDToken.balanceOf(globalObj.user.address)).toHexString()
+        );
+
+    const dLUSDAmount = lusdAmount ? Decimal.from(lusdAmount) : dBLUSDAmount.mul(1.2);
+
+    await sequence(
+      () => lusdToken.approve(bLUSDCurvePool.address, dLUSDAmount.hex),
+      () => bLUSDToken.approve(bLUSDCurvePool.address, dBLUSDAmount.hex),
+      () =>
+        bLUSDCurvePool["add_liquidity(uint256[2],uint256)"]([dBLUSDAmount.hex, dLUSDAmount.hex], 0)
+    );
+  },
+
+  async withdraw(LP) {
+    const { bLUSDCurveToken, bLUSDCurvePool } = globalObj.contracts;
+
+    const dLP = LP
+      ? Decimal.from(LP)
+      : Decimal.fromBigNumberString(
+          (await bLUSDCurveToken.balanceOf(globalObj.user.address)).toHexString()
+        );
+
+    await bLUSDCurvePool["remove_liquidity(uint256,uint256[2])"](dLP.hex, [0, 0]);
+  },
+
+  async swapLUSD(amount) {
+    const { lusdToken, bLUSDCurvePool } = globalObj.contracts;
+
+    const dLUSDAmount = amount
+      ? Decimal.from(amount)
+      : Decimal.fromBigNumberString(
+          (await lusdToken.balanceOf(globalObj.user.address)).toHexString()
+        );
+
+    await sequence(
+      () => lusdToken.approve(bLUSDCurvePool.address, dLUSDAmount.hex),
+      () => bLUSDCurvePool["exchange(uint256,uint256,uint256,uint256)"](1, 0, dLUSDAmount.hex, 0)
+    );
+  },
+
+  async swapBLUSD(amount) {
+    const { bLUSDToken, bLUSDCurvePool } = globalObj.contracts;
+
+    const dBLUSDAmount = amount
+      ? Decimal.from(amount)
+      : Decimal.fromBigNumberString(
+          (await bLUSDToken.balanceOf(globalObj.user.address)).toHexString()
+        );
+
+    await sequence(
+      () => bLUSDToken.approve(bLUSDCurvePool.address, dBLUSDAmount.hex),
+      () => bLUSDCurvePool["exchange(uint256,uint256,uint256,uint256)"](0, 1, dBLUSDAmount.hex, 0)
+    );
+  },
+
   async harvest() {
     await receipt(() => globalObj.contracts.harvester.harvest())();
   },
 
   trace: txHash => provider.send("trace_transaction", [txHash]),
-  warp: timestamp => provider.send("evm_setNextBlockTimestamp", ["0x" + timestamp.toString(16)]),
+  warp: timestamp => provider.send("evm_setNextBlockTimestamp", [timestamp]),
   day: k => globalObj.warp(globalObj.deployment.manifest.deploymentTimestamp + k * ONE_DAY),
   mine: () => provider.send("evm_mine", []),
 

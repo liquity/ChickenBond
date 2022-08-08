@@ -1,7 +1,7 @@
 import fs from "fs-extra";
 import path from "path";
 
-import { Interface, ParamType } from "@ethersproject/abi";
+import { Interface, JsonFragment, ParamType } from "@ethersproject/abi";
 
 import BondNFT from "../../out/BondNFT.sol/BondNFT.json";
 import ChickenBondManager from "../../out/ChickenBondManager.sol/ChickenBondManager.json";
@@ -11,8 +11,16 @@ import MockCurvePool from "../../out/MockCurvePool.sol/MockCurvePool.json";
 import MockYearnRegistry from "../../out/MockYearnRegistry.sol/MockYearnRegistry.json";
 import MockYearnVault from "../../out/MockYearnVault.sol/MockYearnVault.json";
 import BLUSDToken from "../../out/BLUSDToken.sol/BLUSDToken.json";
-import MockCurveLiquidityGaugeV4 from "../../out/MockCurveLiquidityGaugeV4.sol/MockCurveLiquidityGaugeV4.json";
+import TestnetCurveLiquidityGauge from "../../out/TestnetCurveLiquidityGauge.sol/TestnetCurveLiquidityGauge.json";
 import Harvester from "../../out/Harvester.sol/Harvester.json";
+
+// Curve v2
+import CurveCryptoSwap2ETH from "../curve/CurveCryptoSwap2ETH.json";
+import CurveToken from "../curve/CurveTokenV5.json";
+import CurveFactory from "../curve/Factory.json";
+// import CurveLiquidityGauge from "../curve/LiquidityGauge.json";
+
+type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
 const getTupleType = (components: ParamType[], flexible: boolean) => {
   if (components.every(component => component.name)) {
@@ -64,6 +72,8 @@ const declareInterface = ({
   contractName: string;
   interface: Interface;
 }) => {
+  const functionEntries = Object.entries(functions);
+
   const constructorParams = [
     ...declareParams(deploy.inputs),
     `_overrides?: ${deploy.payable ? "PayableOverrides" : "Overrides"}`
@@ -71,9 +81,13 @@ const declareInterface = ({
 
   return [
     `interface ${contractName}Calls {`,
-    ...Object.values(functions)
-      .filter(({ constant }) => constant)
-      .map(({ name, inputs, outputs }) => {
+    ...functionEntries
+      .filter(([, { constant }]) => constant)
+      .map(([signature, { name, inputs, outputs }]) => {
+        const overloaded = functionEntries.some(
+          ([otherSignature, other]) => other.name === name && otherSignature !== signature
+        );
+
         const params = [...declareParams(inputs), `_overrides?: CallOverrides`];
 
         let returnType: string;
@@ -85,16 +99,21 @@ const declareInterface = ({
           returnType = getTupleType(outputs, false);
         }
 
-        return `  ${name}(${params.join(", ")}): Promise<${returnType}>;`;
+        return `  ${overloaded ? `["${signature}"]` : name}(${params.join(
+          ", "
+        )}): Promise<${returnType}>;`;
       }),
     "}\n",
 
     `interface ${contractName}Transactions {`,
-    ...Object.values(functions)
-      .filter(({ constant }) => !constant)
-      .map(({ name, payable, inputs, outputs }) => {
-        const overridesType = payable ? "PayableOverrides" : "Overrides";
+    ...functionEntries
+      .filter(([, { constant }]) => !constant)
+      .map(([signature, { name, payable, inputs, outputs }]) => {
+        const overloaded = functionEntries.some(
+          ([otherSignature, other]) => other.name === name && otherSignature !== signature
+        );
 
+        const overridesType = payable ? "PayableOverrides" : "Overrides";
         const params = [...declareParams(inputs), `_overrides?: ${overridesType}`];
 
         let returnType: string;
@@ -106,7 +125,9 @@ const declareInterface = ({
           returnType = getTupleType(outputs, false);
         }
 
-        return `  ${name}(${params.join(", ")}): Promise<${returnType}>;`;
+        return `  ${overloaded ? `["${signature}"]` : name}(${params.join(
+          ", "
+        )}): Promise<${returnType}>;`;
       }),
     "}\n",
 
@@ -148,11 +169,19 @@ const contractArtifacts = Object.entries({
   MockYearnRegistry,
   MockYearnVault,
   BLUSDToken,
-  MockCurveLiquidityGaugeV4,
+  TestnetCurveLiquidityGauge,
   Harvester
 });
 
-const contracts = contractArtifacts.map(([contractName, { abi }]) => ({
+// XXX Vyper artifacts are different
+const curveV2Artifacts = Object.entries({
+  CurveToken,
+  CurveCryptoSwap2ETH,
+  // CurveLiquidityGauge,
+  CurveFactory
+}) as [string, { abi: Writable<JsonFragment>[]; bytecode: string }][];
+
+const contracts = [...contractArtifacts, ...curveV2Artifacts].map(([contractName, { abi }]) => ({
   contractName,
   interface: new Interface(abi)
 }));
@@ -181,6 +210,19 @@ for (const [
     bytecode: { object: bytecode }
   }
 ] of contractArtifacts) {
+  fs.writeFileSync(
+    path.join("artifacts", `${contractName}.json`),
+    JSON.stringify({ contractName, abi, bytecode }, undefined, 2)
+  );
+}
+
+for (const [contractName, { abi, bytecode }] of curveV2Artifacts) {
+  for (const fragment of abi) {
+    // Ethers typings assume that gas can only be a string, but Vyper outputs a number
+    // Let's just scrub it since we don't use it anyway
+    delete fragment.gas;
+  }
+
   fs.writeFileSync(
     path.join("artifacts", `${contractName}.json`),
     JSON.stringify({ contractName, abi, bytecode }, undefined, 2)

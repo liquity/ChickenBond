@@ -1,7 +1,10 @@
-import { TransactionReceipt } from "@ethersproject/abstract-provider";
+import assert from "assert";
+
+import { TransactionReceipt, Log } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
 import { ContractTransaction, Overrides } from "@ethersproject/contracts";
+import { Decimal } from "@liquity/lib-base";
 
 import { TypedContract, TypedContractFactory } from "./typing";
 import { fillConfig, LUSDChickenBondConfig } from "./config";
@@ -91,12 +94,65 @@ class LUSDChickenBondDeployment {
     return { contract, receipt };
   }
 
+  private async deployContractViaFactoryContract<T extends TypedContract>(
+    { contractName, factory }: NamedFactory<T, unknown[]>,
+    deployTransactionPromise: Promise<ContractTransaction>,
+    extractDeployedContractAddress: (logs: Log[]) => string
+  ): Promise<DeployedContract<T>> {
+    const { log } = this;
+
+    log(`Deploying ${contractName} via factory ...`);
+    const deployTransaction = await deployTransactionPromise;
+
+    log(`Waiting for transaction ${deployTransaction.hash} ...`);
+    const receipt = await deployTransaction.wait();
+    const contract = factory
+      .connect(this.deployer)
+      .attach(extractDeployedContractAddress(receipt.logs));
+
+    log({
+      contractAddress: contract.address,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toNumber()
+    });
+
+    log();
+
+    return { contract, receipt };
+  }
+
   private async deployContracts(): Promise<LUSDChickenBondDeployedContracts> {
     const {
       factories,
       overrides,
       config: { yearnGovernanceAddress, ...params }
     } = this;
+
+    const curveCryptoPoolImplementation = await this.deployContract(
+      factories.curveCryptoPoolImplementation,
+      AddressZero, // _weth
+      overrides
+    );
+
+    const curveLiquidityGaugeImplementation = await this.deployContract(
+      factories.curveLiquidityGaugeImplementation,
+      overrides
+    );
+
+    const curveTokenImplementation = await this.deployContract(
+      factories.curveTokenImplementation,
+      overrides
+    );
+
+    const curveFactory = await this.deployContract(
+      factories.curveFactory,
+      AddressZero, // _fee_receiver
+      curveCryptoPoolImplementation.contract.address,
+      curveTokenImplementation.contract.address,
+      curveLiquidityGaugeImplementation.contract.address,
+      AddressZero, // _weth
+      overrides
+    );
 
     const lusdToken = await this.deployContract(
       factories.lusdToken,
@@ -157,7 +213,50 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const curveLiquidityGauge = await this.deployContract(factories.curveLiquidityGauge, overrides);
+    const bLUSDCurvePoolCoins: [string, string] = [
+      bLUSDToken.contract.address,
+      lusdToken.contract.address
+    ];
+
+    const bLUSDCurveToken = await this.deployContractViaFactoryContract(
+      factories.bLUSDCurveToken,
+      curveFactory.contract.deploy_pool(
+        "bLUSD_LUSD", // _name
+        "bLUSDLUSDC", // _symbol
+        bLUSDCurvePoolCoins, // _coins
+        4000, // A
+        Decimal.from(0.000145).hex, // gamma
+        Decimal.from(0.5).div(1e10).hex, // mid_fee (%)
+        Decimal.from(1.0).div(1e10).hex, // out_fee (%)
+        Decimal.from(0.000002).hex, // allowed_extra_profit
+        Decimal.from(0.0023).hex, // fee_gamma
+        Decimal.from(0.000146).hex, // adjustment_step
+        Decimal.from(50).div(1e10).hex, // admin_fee (%)
+        24 * 60 * 60, // ma_half_time
+        Decimal.from(1.2).hex, // initial_price (token1 / token2)
+        overrides
+      ),
+      logs => curveFactory.contract.extractEvents(logs, "CryptoPoolDeployed")[0].args.token
+    );
+
+    const bLUSDCurvePoolAddress = await curveFactory.contract[
+      "find_pool_for_coins(address,address)"
+    ](...bLUSDCurvePoolCoins, overrides);
+
+    const bLUSDCurvePool = {
+      contract: factories.bLUSDCurvePool.factory
+        .connect(this.deployer)
+        .attach(bLUSDCurvePoolAddress),
+      receipt: bLUSDCurveToken.receipt
+    };
+
+    assert((await bLUSDCurvePool.contract.token()) === bLUSDCurveToken.contract.address);
+
+    const curveLiquidityGauge = await this.deployContractViaFactoryContract(
+      factories.curveLiquidityGauge,
+      curveFactory.contract.deploy_gauge(bLUSDCurvePoolAddress, overrides),
+      logs => curveFactory.contract.extractEvents(logs, "LiquidityGaugeDeployed")[0].args.gauge
+    );
 
     const chickenBondManager = await this.deployContract(
       factories.chickenBondManager,
@@ -190,16 +289,22 @@ class LUSDChickenBondDeployment {
     );
 
     return {
+      lusdToken,
+      curvePool,
       bondNFT,
       chickenBondManager,
-      curvePool,
-      lusdToken,
-      curveLiquidityGauge,
       bLUSDToken,
+      bLUSDCurveToken,
+      bLUSDCurvePool,
+      curveLiquidityGauge,
       yearnCurveVault,
       bammSPVault,
       yearnRegistry,
-      harvester
+      harvester,
+      curveCryptoPoolImplementation,
+      curveLiquidityGaugeImplementation,
+      curveTokenImplementation,
+      curveFactory
     };
   }
 
