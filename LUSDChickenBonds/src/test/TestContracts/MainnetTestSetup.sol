@@ -29,6 +29,7 @@ contract MainnetTestSetup is BaseTest {
     uint256 BOOTSTRAP_PERIOD_REDEEM;
     uint256 BOOTSTRAP_PERIOD_SHIFT;
     uint256 CBMDeploymentTime;
+    ICurvePool bLUSDCurvePool;
 
     function setUp() public {
         // pinBlock(MAINNET_PINNED_BLOCK);
@@ -90,22 +91,26 @@ contract MainnetTestSetup is BaseTest {
         // Deploy LUSD/bLUSD AMM Curve V2 pool and LiquidityGauge V4
         ICurveCryptoFactory curveFactory = ICurveCryptoFactory(MAINNET_CURVE_V2_FACTORY_ADDRESS);
         address[2] memory bLUSDCurvePoolCoins = [address(bLUSDToken), address(lusdToken)];
-        address bLUSDCurvePoolAddress = curveFactory.deploy_pool(
-            "bLUSD_LUSD",        // _name
-            "bLUSDLUSDC",        // _symbol
-            bLUSDCurvePoolCoins, // _coins
-            4000,                // A
-            0.000145e18,         // gamma
-            0.5e8,               // mid_fee (%)
-            1.0e8,               // out_fee (%)
-            0.000002e18,         // allowed_extra_profit
-            0.0023e18,           // fee_gamma
-            0.000146e18,         // adjustment_step
-            50e8,                // admin_fee (%)
-            1 days,              // ma_half_time
-            1.2e18               // initial_price (token1 / token2)
+
+        bLUSDCurvePool = ICurvePool(
+            curveFactory.deploy_pool(
+                "bLUSD_LUSD",        // _name
+                "bLUSDLUSDC",        // _symbol
+                bLUSDCurvePoolCoins, // _coins
+                4000,                // A
+                0.000145e18,         // gamma
+                0.5e8,               // mid_fee (%)
+                1.0e8,               // out_fee (%)
+                0.000002e18,         // allowed_extra_profit
+                0.0023e18,           // fee_gamma
+                0.000146e18,         // adjustment_step
+                50e8,                // admin_fee (%)
+                1 days,              // ma_half_time
+                1.2e18               // initial_price (token1 / token2)
+            )
         );
-        address curveLiquidityGaugeAddress = curveFactory.deploy_gauge(bLUSDCurvePoolAddress);
+
+        address curveLiquidityGaugeAddress = curveFactory.deploy_gauge(address(bLUSDCurvePool));
         curveLiquidityGauge = ICurveLiquidityGaugeV4(curveLiquidityGaugeAddress);
 
         ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
@@ -175,7 +180,7 @@ contract MainnetTestSetup is BaseTest {
         console.log(address(chickenBondManager), "ChickenBondManager address");
         console.log(address(bLUSDToken), "bLUSDToken address");
         console.log(address(bondNFT), "BondNFT address");
-        console.log(bLUSDCurvePoolAddress, "Curve bLUSD/LUSD pool address");
+        console.log(address(bLUSDCurvePool), "Curve bLUSD/LUSD pool address");
         console.log(curveLiquidityGaugeAddress, "Curve Liquidity Gauge address");
     }
 

@@ -2441,4 +2441,34 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             "Attacker should have the same amount of LUSD"
         );
     }
+
+    // Curve bLUSD:LUSD pool tests
+
+    function testBLUSDPoolBreaksAfterTotalWithdrawal() public {
+        uint256 amount = 1000e18;
+        uint256 bondID = createBondForUser(A, amount);
+        vm.warp(block.timestamp + 100 days);
+        chickenInForUser(A, bondID);
+
+        tip(address(lusdToken), A, amount);
+        
+        vm.startPrank(A); {
+            lusdToken.approve(address(bLUSDCurvePool), type(uint256).max);
+            bLUSDToken.approve(address(bLUSDCurvePool), type(uint256).max);
+
+            uint256 lp = bLUSDCurvePool.add_liquidity([bLUSDToken.balanceOf(A), lusdToken.balanceOf(A)], 0);
+            bLUSDCurvePool.remove_liquidity(lp, [uint256(0), uint256(0)]);
+
+            lusdToken.transfer(B, lusdToken.balanceOf(A));
+            bLUSDToken.transfer(B, bLUSDToken.balanceOf(A));
+        } vm.stopPrank();
+
+        // Now B can't deposit any more, yikes
+        vm.startPrank(B); {
+            lusdToken.approve(address(bLUSDCurvePool), type(uint256).max);
+            bLUSDToken.approve(address(bLUSDCurvePool), type(uint256).max);
+
+            bLUSDCurvePool.add_liquidity([bLUSDToken.balanceOf(B), lusdToken.balanceOf(B)], 0);
+        } vm.stopPrank();
+    }
 }
