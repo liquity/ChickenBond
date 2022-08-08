@@ -92,7 +92,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         uint A_bondID = createBondForUser(A, bondAmount);
         uint B_bondID = createBondForUser(B, bondAmount);
         uint C_bondID = createBondForUser(C, bondAmount);
-        tip(address(lusdToken), D, 1e24);
+        deal(address(lusdToken), D, 1e24);
         uint D_bondID = createBondForUser(D, bondAmount);
 
         vm.warp(block.timestamp + 30 days);
@@ -279,7 +279,7 @@ contract ChickenBondManagerMainnetMigrationTest is BaseTest, MainnetTestSetup {
         chickenBondManager.activateMigration();
         vm.stopPrank();
 
-        tip(address(lusdToken), D, bondAmount);
+        deal(address(lusdToken), D, bondAmount);
 
         vm.startPrank(D);
         lusdToken.approve(address(chickenBondManager), bondAmount);
