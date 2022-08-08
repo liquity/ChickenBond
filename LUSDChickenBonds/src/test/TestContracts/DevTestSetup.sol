@@ -28,9 +28,9 @@ contract DevTestSetup is BaseTest {
 
         // Give some LUSD to test accounts
         uint256 initialLUSDAmount = 2000e18;
-        tip(address(lusdToken), A, initialLUSDAmount);
-        tip(address(lusdToken), B, initialLUSDAmount);
-        tip(address(lusdToken), C, initialLUSDAmount);
+        deal(address(lusdToken), A, initialLUSDAmount);
+        deal(address(lusdToken), B, initialLUSDAmount);
+        deal(address(lusdToken), C, initialLUSDAmount);
 
         // Check accounts are funded
         assertEq(lusdToken.balanceOf(A), initialLUSDAmount);

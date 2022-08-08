@@ -7,7 +7,7 @@ import "./TestContracts/DevTestSetup.sol";
 
 contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
     function _generateBAMMYield(uint256 _yieldAmount) internal {
-        tip(address(lusdToken), address(bammSPVault), lusdToken.balanceOf(address(bammSPVault)) + _yieldAmount);
+        deal(address(lusdToken), address(bammSPVault), lusdToken.balanceOf(address(bammSPVault)) + _yieldAmount);
         chickenBondManager.updateBAMMDebt();
     }
 

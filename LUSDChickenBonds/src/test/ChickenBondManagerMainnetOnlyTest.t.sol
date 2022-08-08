@@ -10,7 +10,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function _generateBAMMYield(uint256 _yieldAmount, address _user) internal {
         (uint256 ethAmount,) = bammSPVault.getSwapEthAmount(_yieldAmount);
 
-        tip(address(lusdToken), address(_user), lusdToken.balanceOf(address(_user)) + _yieldAmount);
+        deal(address(lusdToken), address(_user), lusdToken.balanceOf(address(_user)) + _yieldAmount);
         vm.deal(address(bammSPVault), ethAmount);
 
         vm.startPrank(_user);
@@ -30,7 +30,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 lusdAmount = 1e25;
         uint256 _3CRVAmount;
         // fund account
-        tip(address(lusdToken), A, lusdAmount);
+        deal(address(lusdToken), A, lusdAmount);
 
         // swap back and forth several times
         for (uint256 i = 0; i < 2; i++){
@@ -188,7 +188,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
     function testFirstChickenInAfterRedemptionAlmostDepletionAndCurveHarvestTransfersToRewardsContract() external {
         uint256 bondAmount1 = 1000e18;
         uint256 bondAmount2 = 100e18;
-        tip(address(lusdToken), A, bondAmount1 + bondAmount2);
+        deal(address(lusdToken), A, bondAmount1 + bondAmount2);
 
         // create bond
         uint256 A_bondID = createBondForUser(A, bondAmount1);
@@ -636,7 +636,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // A creates bond
         uint256 bondAmount = 500_000_000e18; // 500m
 
-        tip(address(lusdToken), A, bondAmount);
+        deal(address(lusdToken), A, bondAmount);
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalSupply();
 
@@ -1289,7 +1289,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // A creates bond
         uint256 bondAmount = 700_000_000e18; // 700m
 
-        tip(address(lusdToken), A, bondAmount);
+        deal(address(lusdToken), A, bondAmount);
         createBondForUser(A, bondAmount);
         uint256 A_bondID = bondNFT.totalSupply();
 
@@ -1784,7 +1784,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // uint256 _depositAmount = 10e18;
 
         // Tip CBM some LUSD
-        tip(address(lusdToken), address(chickenBondManager), _depositAmount);
+        deal(address(lusdToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to Curve, as CBM
         vm.startPrank(address(chickenBondManager));
@@ -1812,7 +1812,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         // uint256 _depositAmount = 10e18;
 
         // Tip CBM some 3CRV
-        tip(address(_3crvToken), address(chickenBondManager), _depositAmount);
+        deal(address(_3crvToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to Curve, as CBM
         //uint256 cbm3CRVBalBeforeDep = _3crvToken.balanceOf(address(chickenBondManager));
@@ -1844,8 +1844,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         uint256 _3crvDepositAmount = curvePool.balances(1) * _depositMagnitude / 1e18;
 
         // Tip CBM some LUSD and 3CRV
-        tip(address(lusdToken), address(chickenBondManager), _lusdDepositAmount);
-        tip(address(_3crvToken), address(chickenBondManager), _3crvDepositAmount);
+        deal(address(lusdToken), address(chickenBondManager), _lusdDepositAmount);
+        deal(address(_3crvToken), address(chickenBondManager), _3crvDepositAmount);
 
         // Artificially deposit LUSD to Curve, as CBM
         vm.startPrank(address(chickenBondManager));
@@ -1878,7 +1878,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         int step;
         while (step < steps) {
             // Tip CBM some LUSD
-            tip(address(lusdToken), address(chickenBondManager), depositAmount);
+            deal(address(lusdToken), address(chickenBondManager), depositAmount);
 
             // Artificially deposit LUSD to Curve, as CBM
             vm.startPrank(address(chickenBondManager));
@@ -1957,7 +1957,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         chickenInForUser(A, A_bondID);
         chickenInForUser(B, B_bondID);
 
-        tip(address(lusdToken), yearnGovernanceAddress, 37e18);
+        deal(address(lusdToken), yearnGovernanceAddress, 37e18);
         vm.startPrank(yearnGovernanceAddress);
         lusdToken.approve(address(chickenBondManager), 37e18);
         vm.stopPrank();
@@ -2019,7 +2019,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         uint256 feeShare = 37e18;
 
-        tip(address(lusdToken), yearnGovernanceAddress, feeShare);
+        deal(address(lusdToken), yearnGovernanceAddress, feeShare);
 
         vm.startPrank(yearnGovernanceAddress);
         chickenBondManager.activateMigration();
@@ -2043,7 +2043,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
 
         uint256 feeShare = 37e18;
 
-        tip(address(lusdToken), yearnGovernanceAddress, feeShare);
+        deal(address(lusdToken), yearnGovernanceAddress, feeShare);
         vm.startPrank(yearnGovernanceAddress);
         lusdToken.approve(address(chickenBondManager), feeShare);
         vm.stopPrank();
@@ -2169,7 +2169,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice before pool manipulation");
         uint256 initialCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
         uint256 _3crvAmount = 2e24; // 2M
-        tip(address(_3crvToken), C, _3crvAmount);
+        deal(address(_3crvToken), C, _3crvAmount);
         uint256 C_3crvBalanceBefore = _3crvToken.balanceOf(C);
         uint256 C_lusdBalanceBefore = lusdToken.balanceOf(C);
         assertGe(C_3crvBalanceBefore, _3crvAmount);
@@ -2354,7 +2354,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         console.log(curvePool.get_dy_underlying(0, 1, 1e18), "curveLUSDSpotPrice before pool manipulation");
         uint256 initialCurvePrice = curvePool.get_dy_underlying(0, 1, 1e18);
         uint256 lusdAmount = 30e24; // 30M
-        tip(address(lusdToken), C, lusdAmount);
+        deal(address(lusdToken), C, lusdAmount);
         uint256 C_lusdBalanceBefore = lusdToken.balanceOf(C);
         uint256 C_3crvBalanceBefore = _3crvToken.balanceOf(C);
         vm.startPrank(C);
@@ -2440,5 +2440,39 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             1e15, // 0.1%
             "Attacker should have the same amount of LUSD"
         );
+    }
+
+    // Curve bLUSD:LUSD pool tests
+
+    function testBLUSDPoolBreaksAfterTotalWithdrawal() public {
+        uint256 amount = 1000e18;
+        uint256 bondID = createBondForUser(A, amount);
+        vm.warp(block.timestamp + 100 days);
+        chickenInForUser(A, bondID);
+
+        deal(address(lusdToken), A, amount);
+        
+        vm.startPrank(A); {
+            lusdToken.approve(address(bLUSDCurvePool), type(uint256).max);
+            bLUSDToken.approve(address(bLUSDCurvePool), type(uint256).max);
+
+            uint256 lp = bLUSDCurvePool.add_liquidity([bLUSDToken.balanceOf(A), lusdToken.balanceOf(A)], 0);
+            bLUSDCurvePool.remove_liquidity(lp, [uint256(0), uint256(0)]);
+
+            lusdToken.transfer(B, lusdToken.balanceOf(A));
+            bLUSDToken.transfer(B, bLUSDToken.balanceOf(A));
+        } vm.stopPrank();
+
+        // Now B can't deposit any more, yikes
+        vm.startPrank(B); {
+            lusdToken.approve(address(bLUSDCurvePool), type(uint256).max);
+            bLUSDToken.approve(address(bLUSDCurvePool), type(uint256).max);
+
+            // Can't inline this into add_liquidity(), because it trips up vm.expectRevert()
+            uint256[2] memory amounts = [bLUSDToken.balanceOf(B), lusdToken.balanceOf(B)];
+
+            vm.expectRevert();
+            bLUSDCurvePool.add_liquidity(amounts, 0);
+        } vm.stopPrank();
     }
 }
