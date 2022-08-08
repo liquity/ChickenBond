@@ -20,6 +20,8 @@ interface ICurvePool is IERC20 {
 
     function balances(uint256 arg0) external view returns (uint256);
 
+    function token() external view returns (address);
+
     function totalSupply() external view returns (uint256);
 
     function get_dy(int128 i,int128 j, uint256 dx) external view returns (uint256);
@@ -29,4 +31,8 @@ interface ICurvePool is IERC20 {
     function get_virtual_price() external view returns (uint256);
 
     function fee() external view returns (uint256);
+
+    function D() external returns (uint256);
+
+    function future_A_gamma_time() external returns (uint256);
 }

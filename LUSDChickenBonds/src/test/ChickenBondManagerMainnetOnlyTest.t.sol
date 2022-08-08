@@ -2457,6 +2457,8 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             bLUSDToken.approve(address(bLUSDCurvePool), type(uint256).max);
 
             uint256 lp = bLUSDCurvePool.add_liquidity([bLUSDToken.balanceOf(A), lusdToken.balanceOf(A)], 0);
+            console.log(lp, "LP");
+            console.log(ERC20(bLUSDCurvePool.token()).totalSupply(), "Curve pool total supply");
             bLUSDCurvePool.remove_liquidity(lp, [uint256(0), uint256(0)]);
 
             lusdToken.transfer(B, lusdToken.balanceOf(A));
@@ -2471,6 +2473,10 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
             // Can't inline this into add_liquidity(), because it trips up vm.expectRevert()
             uint256[2] memory amounts = [bLUSDToken.balanceOf(B), lusdToken.balanceOf(B)];
 
+            console.log(bLUSDCurvePool.D(), "D");
+            console.log(bLUSDCurvePool.future_A_gamma_time(), "future A gamma time");
+            // the problem is that the pool isn’t actually emptied, because Curve pool code subtracts 1
+            // for rounding issues. Therefore old D is not zero (as can be seen in the log above).
             vm.expectRevert();
             bLUSDCurvePool.add_liquidity(amounts, 0);
         } vm.stopPrank();
