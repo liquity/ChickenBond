@@ -62,6 +62,10 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
         return 30e26; // artificial token balances of curve pool (30m for LUSD and 3CRV)
     }
 
+    function token() external view returns (address) {
+        return address(this);
+    }
+
     function totalSupply() public pure override (ICurvePool, ERC20) returns (uint256) {
         return 30e26; // artificial total share token supply balance
     }
@@ -91,6 +95,14 @@ contract MockCurvePool is ERC20, Ownable, ICurvePool {
     }
 
     function fee() external pure returns (uint256) {
+        return 0;
+    }
+
+    function D() external pure returns (uint256) {
+        return 0;
+    }
+
+    function future_A_gamma_time() external pure returns (uint256) {
         return 0;
     }
 }
