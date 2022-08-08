@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "ds-test/test.sol";
-import {stdCheats} from "forge-std/stdlib.sol";
 import "forge-std/Vm.sol";
+import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Accounts.sol";
 import "../../BLUSDToken.sol";
@@ -19,7 +18,7 @@ import "./TestUtils.sol";
 import "forge-std/console.sol";
 
 
-contract BaseTest is DSTest, stdCheats {
+contract BaseTest is Test {
     Accounts accounts;
 
     // Core ChickenBond contracts
@@ -57,8 +56,6 @@ contract BaseTest is DSTest, stdCheats {
 
     uint256 SHIFTER_DELAY;
     uint256 SHIFTER_WINDOW;
-
-    Vm vm = Vm(CHEATCODE_ADDRESS);
 
     uint256 MAX_UINT256 = type(uint256).max;
     uint256 constant SECONDS_IN_ONE_MONTH = 2592000;
@@ -143,7 +140,7 @@ contract BaseTest is DSTest, stdCheats {
     }
 
     function depositLUSDToCurveForUser(address _user, uint256 _lusdDeposit) public {
-        tip(address(lusdToken), _user, _lusdDeposit);
+        deal(address(lusdToken), _user, _lusdDeposit);
         assertGe(lusdToken.balanceOf(_user), _lusdDeposit);
         vm.startPrank(_user);
         lusdToken.approve(address(curvePool), _lusdDeposit);
@@ -186,7 +183,7 @@ contract BaseTest is DSTest, stdCheats {
         if (lusd3CRVExchangeRate > depositThreshold) {return;}
 
         // C makes large 3CRV deposit to Curve, moving Curve spot price above 1.0
-        tip(address(_3crvToken), C, _3crvDeposit);
+        deal(address(_3crvToken), C, _3crvDeposit);
         assertGe(_3crvToken.balanceOf(C), _3crvDeposit);
         vm.startPrank(C);
         _3crvToken.approve(address(curvePool), _3crvDeposit);

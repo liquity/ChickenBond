@@ -46,9 +46,9 @@ contract MainnetTestSetup is BaseTest {
         (A, B, C, D) = (accountsList[0], accountsList[1], accountsList[2], accountsList[3]);
 
         // Give some LUSD to test accounts
-        tip(address(lusdToken), A, 1e24);
-        tip(address(lusdToken), B, 1e24);
-        tip(address(lusdToken), C, 1e24);
+        deal(address(lusdToken), A, 1e24);
+        deal(address(lusdToken), B, 1e24);
+        deal(address(lusdToken), C, 1e24);
 
         // Check accounts are funded
         assertTrue(lusdToken.balanceOf(A) == 1e24);

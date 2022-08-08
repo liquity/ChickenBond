@@ -1,7 +1,7 @@
 pragma solidity ^0.8.10;
 
-import "ds-test/test.sol";
 import "forge-std/Vm.sol";
+import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/utils/Strings.sol";
 import "./TestContracts/TestUtils.sol";
 import "../BondNFT.sol";
@@ -50,9 +50,7 @@ contract DummyChickenBondManager {
     }
 }
 
-contract BondNFTTest is DSTest {
-    Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract BondNFTTest is Test {
     string constant NAME = "name";
     string constant SYMBOL = "symbol";
 

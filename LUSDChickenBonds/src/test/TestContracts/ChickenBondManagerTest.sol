@@ -1651,7 +1651,7 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(chickenBondManager.getTotalAcquiredLUSD(), 0);
 
         // Cheat: tip 5e18 bLUSD to B
-        tip(address(bLUSDToken), B, 5e18);
+        deal(address(bLUSDToken), B, 5e18);
         uint256 B_bLUSDBalance = bLUSDToken.balanceOf(B);
         assertEq(B_bLUSDBalance, 5e18);
 
@@ -1679,7 +1679,7 @@ contract ChickenBondManagerTest is BaseTest {
         _depositAmount = coerce(_depositAmount, 10, 1e27);
 
         // Tip CBM some LUSD
-        tip(address(lusdToken), address(chickenBondManager), _depositAmount);
+        deal(address(lusdToken), address(chickenBondManager), _depositAmount);
 
         // Artificially deposit LUSD to B.Protocol, as CBM
         vm.startPrank(address(chickenBondManager));
@@ -1898,7 +1898,7 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 prevStartTimeDelta = 0;
 
         // This test requires more LUSD than the others
-        tip(address(lusdToken), A, _calcTotalLUSDAmount(_params));
+        deal(address(lusdToken), A, _calcTotalLUSDAmount(_params));
 
         for (uint256 i = 0; i < _params.length; ++i) {
             // Make sure we're not about to go back in time
