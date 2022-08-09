@@ -4,7 +4,6 @@ import { TransactionReceipt, Log } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
 import { ContractTransaction, Overrides } from "@ethersproject/contracts";
-import { Decimal } from "@liquity/lib-base";
 
 import { TypedContract, TypedContractFactory } from "./typing";
 import { fillConfig, LUSDChickenBondConfig } from "./config";
