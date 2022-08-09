@@ -1,6 +1,7 @@
+import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { ContractReceipt, ContractTransaction } from "@ethersproject/contracts";
-import { JsonRpcProvider } from "@ethersproject/providers";
+import { JsonRpcProvider, Web3Provider, ExternalProvider } from "@ethersproject/providers";
 import { Wallet } from "@ethersproject/wallet";
 import { Decimal, Decimalish } from "@liquity/lib-base";
 
@@ -10,6 +11,18 @@ import {
   LUSDChickenBondContracts,
   LUSDChickenBondDeploymentResult
 } from "@liquity/lusd-chicken-bonds-bindings";
+
+import goerli from "@liquity/lusd-chicken-bonds-bindings/deployments/goerli.json";
+
+const localProvider = new JsonRpcProvider("http://localhost:8545");
+
+const localDeployer = new Wallet(
+  // The only initial account on OpenEthereum's dev chain
+  // "0x4d5db4107d237df6a3d58ee5f70ae63d73d7658d4026f2eefd2f204c81682cb7",
+  // Account #1 on Hardhat/Anvil
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+  localProvider
+);
 
 export interface LUSDChickenBondTokenPair {
   LUSD: number;
@@ -44,7 +57,9 @@ export interface LUSDChickenBondBuckets {
 
 export interface LUSDChickenBondGlobalFunctions {
   deploy(): Promise<LUSDChickenBondDeploymentResult>;
-  connect(user: Wallet): LUSDChickenBondContracts;
+  connect(user: Signer): LUSDChickenBondContracts;
+  local(): void;
+  testnet(): void;
 
   tap(): Promise<void>;
   balance(address?: string): Promise<LUSDChickenBondBalances>;
@@ -83,11 +98,23 @@ export interface LUSDChickenBondGlobalFunctions {
   timestamp(): Promise<number>;
 }
 
+export interface EventListener {
+  (...args: any[]): void;
+}
+
+export interface EventEmitter {
+  on(event: string, listener: EventListener): this;
+  removeListener(event: string, listener: EventListener): this;
+}
+
 export interface LUSDChickenBondGlobals extends LUSDChickenBondGlobalFunctions {
   deployment: LUSDChickenBondDeploymentResult;
   contracts: LUSDChickenBondContracts;
-  user: Wallet;
+  user: Signer;
   bondID: number;
+
+  ethereum: ExternalProvider & EventEmitter;
+  _networkChangeListener?: EventListener;
 }
 
 const receipt =
@@ -105,13 +132,13 @@ const numberifyDecimal = (bn: BigNumber) => Number(Decimal.fromBigNumberString(b
 export const getLUSDChickenBondGlobalFunctions = (
   globalObj: LUSDChickenBondGlobals,
   provider: JsonRpcProvider,
-  deployer: Wallet
+  deployer: Signer
 ): LUSDChickenBondGlobalFunctions => ({
   async deploy(): Promise<LUSDChickenBondDeploymentResult> {
     globalObj.deployment = await deployAndSetupContracts(deployer, {
       log: true,
       config: {
-        yearnGovernanceAddress: deployer.address // let us play around with migration ;-)
+        yearnGovernanceAddress: await deployer.getAddress() // let us play around with migration ;-)
       }
     });
 
@@ -130,12 +157,49 @@ export const getLUSDChickenBondGlobalFunctions = (
     return globalObj.contracts;
   },
 
+  local() {
+    installLUSDChickenBonds(globalObj);
+
+    if (globalObj._networkChangeListener) {
+      globalObj.ethereum.removeListener("chainChanged", globalObj._networkChangeListener);
+      delete globalObj._networkChangeListener;
+    }
+  },
+
+  testnet() {
+    const provider = new Web3Provider(globalObj.ethereum);
+    const signer = provider.getSigner();
+    installLUSDChickenBonds(globalObj, provider, signer);
+
+    globalObj.user = signer;
+    globalObj.contracts = connectToContracts(globalObj.user, goerli.addresses);
+
+    provider.getNetwork().then(network => {
+      if (network.chainId !== goerli.chainId) {
+        console.warn("Warning: wallet is set to wrong network (should be Goerli)");
+      }
+    });
+
+    if (globalObj._networkChangeListener) {
+      globalObj.ethereum.removeListener("chainChanged", globalObj._networkChangeListener);
+    }
+
+    globalObj._networkChangeListener = () => {
+      console.info("Network changed");
+      globalObj.testnet();
+    };
+
+    globalObj.ethereum.on("chainChanged", globalObj._networkChangeListener);
+  },
+
   async tap() {
     await receipt(() => globalObj.contracts.lusdToken.tap())();
   },
 
-  async balance(address = globalObj.user.address) {
+  async balance(address) {
     const { lusdToken, bLUSDToken, bLUSDCurveToken } = globalObj.contracts;
+
+    address = address ?? (await globalObj.user.getAddress());
 
     const [LUSD, bLUSD, LP] = await Promise.all([
       lusdToken.balanceOf(address),
@@ -150,10 +214,10 @@ export const getLUSDChickenBondGlobalFunctions = (
     };
   },
 
-  allowance: (
-    spender = globalObj.contracts.chickenBondManager.address,
-    owner = globalObj.user.address
-  ) => globalObj.contracts.lusdToken.allowance(owner, spender).then(numberifyDecimal),
+  async allowance(spender = globalObj.contracts.chickenBondManager.address, owner) {
+    owner = owner ?? (await globalObj.user.getAddress());
+    return globalObj.contracts.lusdToken.allowance(owner, spender).then(numberifyDecimal);
+  },
 
   async send(to: string, amount: Decimalish) {
     await receipt(() => globalObj.contracts.lusdToken.transfer(to, Decimal.from(amount).hex))();
@@ -212,7 +276,10 @@ export const getLUSDChickenBondGlobalFunctions = (
     const { chickenBondManager, bLUSDToken } = globalObj.contracts;
 
     await receipt(async () =>
-      chickenBondManager.redeem(await bLUSDToken.balanceOf(globalObj.user.address), Decimal.ZERO.hex)
+      chickenBondManager.redeem(
+        await bLUSDToken.balanceOf(await globalObj.user.getAddress()),
+        Decimal.ZERO.hex
+      )
     )();
   },
 
@@ -265,7 +332,7 @@ export const getLUSDChickenBondGlobalFunctions = (
     const dBLUSDAmount = bLUSDAmount
       ? Decimal.from(bLUSDAmount)
       : Decimal.fromBigNumberString(
-          (await bLUSDToken.balanceOf(globalObj.user.address)).toHexString()
+          (await bLUSDToken.balanceOf(await globalObj.user.getAddress())).toHexString()
         );
 
     const dLUSDAmount = lusdAmount ? Decimal.from(lusdAmount) : dBLUSDAmount.mul(1.2);
@@ -284,7 +351,7 @@ export const getLUSDChickenBondGlobalFunctions = (
     const dLP = LP
       ? Decimal.from(LP)
       : Decimal.fromBigNumberString(
-          (await bLUSDCurveToken.balanceOf(globalObj.user.address)).toHexString()
+          (await bLUSDCurveToken.balanceOf(await globalObj.user.getAddress())).toHexString()
         );
 
     await bLUSDCurvePool["remove_liquidity(uint256,uint256[2])"](dLP.hex, [0, 0]);
@@ -296,7 +363,7 @@ export const getLUSDChickenBondGlobalFunctions = (
     const dLUSDAmount = amount
       ? Decimal.from(amount)
       : Decimal.fromBigNumberString(
-          (await lusdToken.balanceOf(globalObj.user.address)).toHexString()
+          (await lusdToken.balanceOf(await globalObj.user.getAddress())).toHexString()
         );
 
     await sequence(
@@ -311,7 +378,7 @@ export const getLUSDChickenBondGlobalFunctions = (
     const dBLUSDAmount = amount
       ? Decimal.from(amount)
       : Decimal.fromBigNumberString(
-          (await bLUSDToken.balanceOf(globalObj.user.address)).toHexString()
+          (await bLUSDToken.balanceOf(await globalObj.user.getAddress())).toHexString()
         );
 
     await sequence(
@@ -348,3 +415,15 @@ export const getLUSDChickenBondGlobalFunctions = (
       })
       .then(x => parseInt(x, 16))
 });
+
+export const installLUSDChickenBonds = (
+  globalObj: LUSDChickenBondGlobals,
+  provider: JsonRpcProvider = localProvider,
+  deployer: Signer = localDeployer
+) =>
+  Object.assign(globalObj, {
+    // tinkering with the real Solidity implementation
+    provider,
+    deployer,
+    ...getLUSDChickenBondGlobalFunctions(window, provider, deployer)
+  });

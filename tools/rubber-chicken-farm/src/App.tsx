@@ -1,4 +1,3 @@
-import { JsonRpcProvider } from "@ethersproject/providers";
 import { Wallet } from "@ethersproject/wallet";
 import { Decimal } from "@liquity/lib-base";
 import { lambertW0 } from "lambert-w";
@@ -12,22 +11,12 @@ import { constantFarm } from "./examples/constant";
 import theme from "./theme";
 import { simulationDefaults } from "./knobs";
 import { collectSamples, csv, flatten, lowpass, randomBinomial } from "./utils";
-import { getLUSDChickenBondGlobalFunctions, LUSDChickenBondGlobals } from "./utils/tinker";
+import { installLUSDChickenBonds, LUSDChickenBondGlobals } from "./utils/tinker";
 import { KnobsProvider } from "./context/KnobsProvider";
 import { SimulationProvider } from "./context/SimulationProvider";
 import { Knobs } from "./components/Knobs";
 import { ControlChart } from "./components/ControlChart";
 import { ProtocolChart } from "./components/ProtocolChart";
-
-const provider = new JsonRpcProvider("http://localhost:8545");
-
-const deployer = new Wallet(
-  // The only initial account on OpenEthereum's dev chain
-  // "0x4d5db4107d237df6a3d58ee5f70ae63d73d7658d4026f2eefd2f204c81682cb7",
-  // Account #1 on Hardhat/Anvil
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-  provider
-);
 
 declare global {
   interface Window extends LUSDChickenBondGlobals {}
@@ -52,13 +41,12 @@ Object.assign(window, {
   flatten,
   csv,
 
-  // tinkering with the real Solidity implementation
   Decimal,
-  Wallet,
-  provider,
-  deployer,
-  ...getLUSDChickenBondGlobalFunctions(window, provider, deployer)
+  Wallet
 });
+
+// console interaction with the real Solidity implementation
+installLUSDChickenBonds(window);
 
 const App = () => (
   <ThemeProvider theme={theme}>
