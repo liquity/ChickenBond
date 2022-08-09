@@ -11,8 +11,6 @@ import {
   LUSDChickenBondDeploymentResult
 } from "@liquity/lusd-chicken-bonds-bindings";
 
-const ONE_DAY = 24 * 60 * 60;
-
 export interface LUSDChickenBondTokenPair {
   LUSD: number;
   bLUSD: number;
@@ -80,8 +78,8 @@ export interface LUSDChickenBondGlobalFunctions {
 
   trace(txHash: string): Promise<unknown>;
   warp(timestamp: number): Promise<unknown>;
-  day(k: number): Promise<unknown>;
   mine(): Promise<unknown>;
+  day(k: number): Promise<unknown>;
   timestamp(): Promise<number>;
 }
 
@@ -328,8 +326,13 @@ export const getLUSDChickenBondGlobalFunctions = (
 
   trace: txHash => provider.send("trace_transaction", [txHash]),
   warp: timestamp => provider.send("evm_setNextBlockTimestamp", [timestamp]),
-  day: k => globalObj.warp(globalObj.deployment.manifest.deploymentTimestamp + k * ONE_DAY),
   mine: () => provider.send("evm_mine", []),
+
+  day: k =>
+    globalObj.warp(
+      globalObj.deployment.manifest.deploymentTimestamp +
+        k * globalObj.deployment.config.realSecondsPerFakeDay
+    ),
 
   timestamp: () =>
     provider

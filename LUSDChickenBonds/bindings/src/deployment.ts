@@ -46,6 +46,7 @@ export type LUSDChickenBondDeployedContracts = {
 export interface LUSDChickenBondDeploymentResult {
   deployed: LUSDChickenBondDeployedContracts;
   manifest: LUSDChickenBondDeploymentManifest;
+  config: LUSDChickenBondConfig;
 }
 
 interface NamedFactory<T extends TypedContract, A extends unknown[]> {
@@ -221,16 +222,16 @@ class LUSDChickenBondDeployment {
         "bLUSD_LUSD", // _name
         "bLUSDLUSDC", // _symbol
         bLUSDCurvePoolCoins, // _coins
-        4000, // A
-        Decimal.from(0.000145).hex, // gamma
-        Decimal.from(0.5).div(1e10).hex, // mid_fee (%)
-        Decimal.from(1.0).div(1e10).hex, // out_fee (%)
-        Decimal.from(0.000002).hex, // allowed_extra_profit
-        Decimal.from(0.0023).hex, // fee_gamma
-        Decimal.from(0.000146).hex, // adjustment_step
-        Decimal.from(50).div(1e10).hex, // admin_fee (%)
-        24 * 60 * 60, // ma_half_time
-        Decimal.from(1.2).hex, // initial_price (token1 / token2)
+        params.bLUSDPoolA,
+        params.bLUSDPoolGamma,
+        params.bLUSDPoolMidFee,
+        params.bLUSDPoolOutFee,
+        params.bLUSDPoolAllowedExtraProfit,
+        params.bLUSDPoolFeeGamma,
+        params.bLUSDPoolAdjustmentStep,
+        params.bLUSDPoolAdminFee,
+        params.bLUSDPoolMAHalfTime,
+        params.bLUSDPoolInitialPrice,
         overrides
       ),
       logs => curveFactory.contract.extractEvents(logs, "CryptoPoolDeployed")[0].args.token
@@ -378,7 +379,8 @@ class LUSDChickenBondDeployment {
         chainId: await deployer.getChainId(),
         deploymentTimestamp: deploymentTimestamp.toNumber(),
         startBlock: firstReceipt.blockNumber
-      }
+      },
+      config: this.config
     };
   }
 }

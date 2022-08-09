@@ -1,6 +1,6 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { Decimal } from "@liquity/lib-base";
+import { Decimal, Decimalish } from "@liquity/lib-base";
 
 export interface LUSDChickenBondConfig {
   targetAverageAgeSeconds: BigNumber;
@@ -22,19 +22,35 @@ export interface LUSDChickenBondConfig {
   redemptionFeeBeta: BigNumber;
   redemptionFeeMinuteDecayFactor: BigNumber;
   bondNFTTransferLockoutPeriodSeconds: BigNumber;
+  yearnGovernanceAddress: string;
+
+  bLUSDPoolA: BigNumber;
+  bLUSDPoolGamma: BigNumber;
+  bLUSDPoolMidFee: BigNumber;
+  bLUSDPoolOutFee: BigNumber;
+  bLUSDPoolAllowedExtraProfit: BigNumber;
+  bLUSDPoolFeeGamma: BigNumber;
+  bLUSDPoolAdjustmentStep: BigNumber;
+  bLUSDPoolAdminFee: BigNumber;
+  bLUSDPoolMAHalfTime: BigNumber;
+  bLUSDPoolInitialPrice: BigNumber;
+
+  realSecondsPerFakeDay: number;
   lusdFaucetTapAmount: BigNumber;
   lusdFaucetTapPeriod: BigNumber;
   harvesterBAMMAPR: BigNumber;
   harvesterCurveAPR: BigNumber;
-  yearnGovernanceAddress: string;
 }
 
 const SPEED = 24; // Fake days per real day
 const DAY = BigNumber.from(24 * 60 * 60).div(SPEED);
 const ONE = BigNumber.from(10).pow(18);
 
+const bnFromDecimal = (x: Decimalish) => BigNumber.from(Decimal.from(x).hex);
+const curvePercent = (percentage: number) => bnFromDecimal(percentage).div(1e10);
+
 // Half-life of 12h
-const REDEMPTION_DECAY = Decimal.from(0.5 ** (1 / DAY.div(120).toNumber()));
+const REDEMPTION_MINUTE_DECAY = 0.5 ** (60 / DAY.div(2).toNumber());
 
 export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   targetAverageAgeSeconds: DAY.mul(30),
@@ -54,13 +70,28 @@ export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   minBondAmount: ONE.mul(100),
   nftRandomnessDivisor: ONE.mul(1000),
   redemptionFeeBeta: BigNumber.from(2),
-  redemptionFeeMinuteDecayFactor: BigNumber.from(REDEMPTION_DECAY.hex),
+  redemptionFeeMinuteDecayFactor: bnFromDecimal(REDEMPTION_MINUTE_DECAY),
   bondNFTTransferLockoutPeriodSeconds: DAY,
+  yearnGovernanceAddress: AddressZero,
+
+  // bLUSD:LUSD pool params (Curve v2)
+  bLUSDPoolA: BigNumber.from(400000),
+  bLUSDPoolGamma: bnFromDecimal(0.000145),
+  bLUSDPoolMidFee: curvePercent(0.5),
+  bLUSDPoolOutFee: curvePercent(1.0),
+  bLUSDPoolAllowedExtraProfit: bnFromDecimal(0.000002),
+  bLUSDPoolFeeGamma: bnFromDecimal(0.0023),
+  bLUSDPoolAdjustmentStep: bnFromDecimal(0.000146),
+  bLUSDPoolAdminFee: curvePercent(50),
+  bLUSDPoolMAHalfTime: DAY,
+  bLUSDPoolInitialPrice: bnFromDecimal(1.2), // (coin0 / coin1)
+
+  // Testnet-specific params
+  realSecondsPerFakeDay: DAY.toNumber(),
   lusdFaucetTapAmount: ONE.mul(10000),
   lusdFaucetTapPeriod: DAY,
   harvesterBAMMAPR: ONE.mul(SPEED).div(5),
-  harvesterCurveAPR: ONE.mul(SPEED).div(20),
-  yearnGovernanceAddress: AddressZero
+  harvesterCurveAPR: ONE.mul(SPEED).div(20)
 };
 
 const mapConfig = (
