@@ -22,7 +22,8 @@ MAINNET_CURVE_BASEPOOL_ADDRESS="0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7"
 MAINNET_YEARN_CURVE_VAULT_ADDRESS="0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6"
 MAINNET_YEARN_REGISTRY_ADDRESS="0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804"
 MAINNET_YEARN_GOVERNANCE_ADDRESS="0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"
-MAINNET_CURVE_V2_FACTORY_ADDRESS="0xB9fC157394Af804a3578134A6585C0dc9cc990d4"
+MAINNET_CURVE_V2_FACTORY_ADDRESS="0xF18056Bbd320E96A48e3Fbf8bC061322531aac99"
+MAINNET_CURVE_V2_FACTORY_ADMIN_ADDRESS="0xbabe61887f1de2713c6f97e567623453d3c79f67"
 ZERO_ADDRESS="0x0000000000000000000000000000000000000000"
 
 # Make sure RPC URL is up
@@ -70,35 +71,49 @@ cast call $BLUSD_TOKEN_ADDRESS "owner()(address)" --rpc-url $RPC_URL > /dev/null
 echo -e "Deployed to: $BLUSD_TOKEN_ADDRESS\n"
 
 # Create bLUSD AMM pool
+echo "Creating bLUSD Curve AMM pool (bLUSD/LUSD)..."
+
 BLUSD_AMM_ADDRESS=$(
-  cast call $MAINNET_CURVE_V2_FACTORY_ADDRESS "deploy_plain_pool(string,string,address[4],uint256,uint256,uint256,uint256)(address)" \
+  cast call $MAINNET_CURVE_V2_FACTORY_ADDRESS "deploy_pool(string,string,address[2],uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)(address)" \
   bLUSD_LUSD \
   bLUSDLUSDC \
-  [$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_TOKEN_ADDRESS,$ZERO_ADDRESS,$ZERO_ADDRESS] \
-  1000 \
-  4000000 \
-  1 \
-  1 \
+  "[$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_TOKEN_ADDRESS]" \
+  4000 \
+  145000000000000 \
+  50000000 \
+  100000000 \
+  2000000000000 \
+  2300000000000000 \
+  146000000000000 \
+  5000000000 \
+  86400 \
+  1200000000000000000 \
   --rpc-url $RPC_URL \
   --private-key $DEPLOYER_PRIVATE_KEY
 )
 
-cast send $MAINNET_CURVE_V2_FACTORY_ADDRESS "deploy_plain_pool(string,string,address[4],uint256,uint256,uint256,uint256)(address)" \
+cast send $MAINNET_CURVE_V2_FACTORY_ADDRESS "deploy_pool(string,string,address[2],uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)(address)" \
 bLUSD_LUSD \
 bLUSDLUSDC \
-[$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_TOKEN_ADDRESS,$ZERO_ADDRESS,$ZERO_ADDRESS] \
-1000 \
-4000000 \
-1 \
-1 \
+"[$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_TOKEN_ADDRESS]" \
+4000 \
+145000000000000 \
+50000000 \
+100000000 \
+2000000000000 \
+2300000000000000 \
+146000000000000 \
+5000000000 \
+86400 \
+1200000000000000000 \
 --rpc-url $RPC_URL \
 --private-key $DEPLOYER_PRIVATE_KEY > /dev/null || { 
-  echo -e "\n${RED}Failed to create AMM pool"
+  echo -e "\n${RED}Failed to create bLUSD/LUSD Curve AMM pool"
   exit 1
 }
+echo -e "Deployed to: $BLUSD_AMM_ADDRESS\n"
 
-echo -e "Created Curve AMM pool for LUSD/bLUSD\n"
-
+echo "Creating bLUSD/LUSD staking reward contract (Curve gauge)"
 # Create bLUSD AMM staking reward contract
 BLUSD_AMM_STAKING_ADDRESS=$(
   cast call $MAINNET_CURVE_V2_FACTORY_ADDRESS "deploy_gauge(address)(address)" \
@@ -115,10 +130,10 @@ $BLUSD_AMM_ADDRESS \
   exit 1
 }
 
-echo -e "Created LUSD/bLUSD staking contract (gauge)\n"
+echo -e "Deployed to: $BLUSD_AMM_STAKING_ADDRESS\n"
 
 # Temporary until we have a mainnet LUSD BAMM address
-echo -e "Deploying LUSD BAMM...\n"
+echo "Deploying LUSD BAMM..."
 
 MAINNET_CHAINLINK_ETH_USD_ADDRESS="0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
 MAINNET_CHAINLINK_LUSD_USD_ADDRESS="0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0"
@@ -163,8 +178,10 @@ TARGET_AVERAGE_AGE_SECONDS=2592000                          # 30 days
 ACCRUAL_ADJUSTMENT_PERIOD_SECONDS=86400                     # 1 day
 CHICKEN_IN_AMM_FEE=10000000000000000                        # 1e16 = 1%
 CURVE_DEPOSIT_WITHDRAW_DYDX_THRESHOLD=1000400000000000000   # 10004e14 = 1.0004
-BOOTSTRAP_PERIOD_CHICKEN_IN=604800                          # 7 days
-BOOTSTRAP_PERIOD_REDEEM=604800                              # 7 days
+# BOOTSTRAP_PERIOD_CHICKEN_IN=604800                          # 7 days
+# BOOTSTRAP_PERIOD_REDEEM=604800                              # 7 days
+BOOTSTRAP_PERIOD_CHICKEN_IN=1                          # 7 days
+BOOTSTRAP_PERIOD_REDEEM=1                              # 7 days
 BOOTSTRAP_PERIOD_SHIFT=7776000                              # 90 days
 SHIFTER_DELAY=3600                                          # 1 hour
 SHIFTER_WINDOW=600                                          # 10 minutes
@@ -244,11 +261,20 @@ cast send $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS "setChicken(address)" $CHICKEN_BO
 --private-key $DEPLOYER_PRIVATE_KEY > /dev/null || exit 1
 echo -e "Done.\n"
 
+echo "Adding LUSD reward token for bLUSD/LUSD LPs, and set ChickenBondManager as distributor in Curve gauge..."
+cast rpc "hardhat_impersonateAccount" 0xbabe61887f1de2713c6f97e567623453d3c79f67
+cast send $BLUSD_AMM_STAKING_ADDRESS "add_reward(address,address)" \
+$MAINNET_LUSD_TOKEN_ADDRESS $CHICKEN_BOND_MANAGER_ADDRESS \
+--rpc-url $RPC_URL \
+--from $MAINNET_CURVE_V2_FACTORY_ADMIN_ADDRESS || exit 1
+echo -e "Done.\n"
+
+
 DEPLOYMENT_ADDRESSES=$(printf '{
   "BOND_NFT_ADDRESS": "%s",
   "BLUSD_TOKEN_ADDRESS": "%s",
-  "BLUSD_AMM_STAKING_ADDRESS": "%s",
   "BLUSD_AMM_ADDRESS": "%s",
+  "BLUSD_AMM_STAKING_ADDRESS": "%s",
   "CHICKEN_BOND_MANAGER_ADDRESS": "%s"
 }\n' $BOND_NFT_ADDRESS $BLUSD_TOKEN_ADDRESS $BLUSD_AMM_STAKING_ADDRESS $BLUSD_AMM_ADDRESS $CHICKEN_BOND_MANAGER_ADDRESS)
 
