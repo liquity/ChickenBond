@@ -64,6 +64,8 @@ export interface LUSDChickenBondGlobalFunctions {
   redeem(amount: Decimalish): Promise<void>;
   redeemAll(): Promise<void>;
 
+  migrate(): Promise<void>;
+
   shiftCountdown(): Promise<void>;
   shiftSPToCurve(amount: number): Promise<void>;
   shiftCurveToSP(amount: number): Promise<void>;
@@ -109,10 +111,10 @@ export const getLUSDChickenBondGlobalFunctions = (
 ): LUSDChickenBondGlobalFunctions => ({
   async deploy(): Promise<LUSDChickenBondDeploymentResult> {
     globalObj.deployment = await deployAndSetupContracts(deployer, {
-      log: true
-      // config: {
-      //   yearnGovernanceAddress: deployer.address // let us play around with migration ;-)
-      // }
+      log: true,
+      config: {
+        yearnGovernanceAddress: deployer.address // let us play around with migration ;-)
+      }
     });
 
     globalObj.connect(deployer);
@@ -214,6 +216,10 @@ export const getLUSDChickenBondGlobalFunctions = (
     await receipt(async () =>
       chickenBondManager.redeem(await bLUSDToken.balanceOf(globalObj.user.address), Decimal.ZERO.hex)
     )();
+  },
+
+  async migrate() {
+    await receipt(() => globalObj.contracts.chickenBondManager.activateMigration())();
   },
 
   async shiftCountdown() {
