@@ -4,26 +4,36 @@ import { Signer } from "@ethersproject/abstract-signer";
 
 import bondNFT from "../artifacts/BondNFT.json";
 import chickenBondManager from "../artifacts/ChickenBondManager.json";
-import erc20 from "../artifacts/ERC20.json";
-import lusdTokenTester from "../artifacts/LUSDTokenTester.json";
-import mockBAMMSPVault from "../artifacts/MockBAMMSPVault.json";
-import mockCurvePool from "../artifacts/MockCurvePool.json";
+import erc20Faucet from "../artifacts/ERC20Faucet.json";
+import testnetBAMM from "../artifacts/TestnetBAMM.json";
+import testnetCurvePool from "../artifacts/TestnetCurvePool.json";
+import testnetCurveBasePool from "../artifacts/TestnetCurveBasePool.json";
 import mockYearnRegistry from "../artifacts/MockYearnRegistry.json";
-import mockYearnVault from "../artifacts/MockYearnVault.json";
+import testnetYearnVault from "../artifacts/TestnetYearnVault.json";
 import bLUSDToken from "../artifacts/BLUSDToken.json";
-import mockCurveLiquidityGaugeV4 from "../artifacts/MockCurveLiquidityGaugeV4.json";
+import testnetCurveLiquidityGauge from "../artifacts/TestnetCurveLiquidityGauge.json";
+import prankster from "../artifacts/Prankster.json";
+import curveCryptoSwap2ETH from "../artifacts/CurveCryptoSwap2ETH.json";
+import curveFactory from "../artifacts/CurveFactory.json";
+// import curveLiquidityGauge from "../artifacts/CurveLiquidityGauge.json";
+import curveToken from "../artifacts/CurveToken.json";
 
 import {
   BondNFTFactory,
   ChickenBondManagerFactory,
-  ERC20Factory,
-  LUSDTokenTesterFactory,
-  MockBAMMSPVaultFactory,
-  MockCurvePoolFactory,
+  ERC20FaucetFactory,
+  TestnetBAMMFactory,
+  TestnetCurvePoolFactory,
+  TestnetCurveBasePoolFactory,
   MockYearnRegistryFactory,
-  MockYearnVaultFactory,
+  TestnetYearnVaultFactory,
   BLUSDTokenFactory,
-  MockCurveLiquidityGaugeV4Factory
+  TestnetCurveLiquidityGaugeFactory,
+  PranksterFactory,
+  CurveCryptoSwap2ETHFactory,
+  CurveFactoryFactory,
+  // CurveLiquidityGaugeFactory,
+  CurveTokenFactory
 } from "./generated/types";
 
 import {
@@ -45,28 +55,38 @@ export interface LUSDChickenBondContractFactories {
   };
 
   curvePool: {
-    contractName: "MockCurvePool";
-    factory: MockCurvePoolFactory;
+    contractName: "TestnetCurvePool";
+    factory: TestnetCurvePoolFactory;
+  };
+
+  curveBasePool: {
+    contractName: "TestnetCurveBasePool";
+    factory: TestnetCurveBasePoolFactory;
   };
 
   lusdToken: {
-    contractName: "LUSDTokenTester";
-    factory: LUSDTokenTesterFactory;
+    contractName: "ERC20Faucet";
+    factory: ERC20FaucetFactory;
+  };
+
+  bLUSDCurveToken: {
+    contractName: "CurveToken";
+    factory: CurveTokenFactory;
+  };
+
+  bLUSDCurvePool: {
+    contractName: "CurveCryptoSwap2ETH";
+    factory: CurveCryptoSwap2ETHFactory;
   };
 
   curveLiquidityGauge: {
-    contractName: "MockCurveLiquidityGaugeV4";
-    factory: MockCurveLiquidityGaugeV4Factory;
+    contractName: "TestnetCurveLiquidityGauge";
+    factory: TestnetCurveLiquidityGaugeFactory;
   };
 
   bLUSDToken: {
     contractName: "BLUSDToken";
     factory: BLUSDTokenFactory;
-  };
-
-  uniToken: {
-    contractName: "ERC20";
-    factory: ERC20Factory;
   };
 
   yearnRegistry: {
@@ -75,13 +95,38 @@ export interface LUSDChickenBondContractFactories {
   };
 
   bammSPVault: {
-    contractName: "MockBAMMSPVault";
-    factory: MockBAMMSPVaultFactory;
+    contractName: "TestnetBAMM";
+    factory: TestnetBAMMFactory;
   };
 
   yearnCurveVault: {
-    contractName: "MockYearnVault";
-    factory: MockYearnVaultFactory;
+    contractName: "TestnetYearnVault";
+    factory: TestnetYearnVaultFactory;
+  };
+
+  prankster: {
+    contractName: "Prankster";
+    factory: PranksterFactory;
+  };
+
+  curveCryptoPoolImplementation: {
+    contractName: "CurveCryptoSwap2ETH";
+    factory: CurveCryptoSwap2ETHFactory;
+  };
+
+  curveLiquidityGaugeImplementation: {
+    contractName: "TestnetCurveLiquidityGauge";
+    factory: TestnetCurveLiquidityGaugeFactory;
+  };
+
+  curveTokenImplementation: {
+    contractName: "CurveToken";
+    factory: CurveTokenFactory;
+  };
+
+  curveFactory: {
+    contractName: "CurveFactory";
+    factory: CurveFactoryFactory;
   };
 }
 
@@ -128,14 +173,24 @@ const checkArtifact = <T extends LUSDChickenBondContractName>(
 const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   bondNFT: checkArtifact("BondNFT", bondNFT),
   chickenBondManager: checkArtifact("ChickenBondManager", chickenBondManager),
-  curvePool: checkArtifact("MockCurvePool", mockCurvePool),
-  lusdToken: checkArtifact("LUSDTokenTester", lusdTokenTester),
-  curveLiquidityGauge: checkArtifact("MockCurveLiquidityGaugeV4", mockCurveLiquidityGaugeV4),
+  curvePool: checkArtifact("TestnetCurvePool", testnetCurvePool),
+  curveBasePool: checkArtifact("TestnetCurveBasePool", testnetCurveBasePool),
+  lusdToken: checkArtifact("ERC20Faucet", erc20Faucet),
+  bLUSDCurveToken: checkArtifact("CurveToken", curveToken),
+  bLUSDCurvePool: checkArtifact("CurveCryptoSwap2ETH", curveCryptoSwap2ETH),
+  curveLiquidityGauge: checkArtifact("TestnetCurveLiquidityGauge", testnetCurveLiquidityGauge),
   bLUSDToken: checkArtifact("BLUSDToken", bLUSDToken),
-  uniToken: checkArtifact("ERC20", erc20),
-  yearnCurveVault: checkArtifact("MockYearnVault", mockYearnVault),
-  bammSPVault: checkArtifact("MockBAMMSPVault", mockBAMMSPVault),
-  yearnRegistry: checkArtifact("MockYearnRegistry", mockYearnRegistry)
+  yearnCurveVault: checkArtifact("TestnetYearnVault", testnetYearnVault),
+  bammSPVault: checkArtifact("TestnetBAMM", testnetBAMM),
+  yearnRegistry: checkArtifact("MockYearnRegistry", mockYearnRegistry),
+  prankster: checkArtifact("Prankster", prankster),
+  curveCryptoPoolImplementation: checkArtifact("CurveCryptoSwap2ETH", curveCryptoSwap2ETH),
+  curveLiquidityGaugeImplementation: checkArtifact(
+    "TestnetCurveLiquidityGauge",
+    testnetCurveLiquidityGauge
+  ),
+  curveTokenImplementation: checkArtifact("CurveToken", curveToken),
+  curveFactory: checkArtifact("CurveFactory", curveFactory)
 });
 
 export const mapContracts = <T, U>(

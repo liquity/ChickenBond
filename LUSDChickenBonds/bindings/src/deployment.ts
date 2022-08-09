@@ -1,4 +1,6 @@
-import { TransactionReceipt } from "@ethersproject/abstract-provider";
+import assert from "assert";
+
+import { TransactionReceipt, Log } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
 import { ContractTransaction, Overrides } from "@ethersproject/contracts";
@@ -43,6 +45,7 @@ export type LUSDChickenBondDeployedContracts = {
 export interface LUSDChickenBondDeploymentResult {
   deployed: LUSDChickenBondDeployedContracts;
   manifest: LUSDChickenBondDeploymentManifest;
+  config: LUSDChickenBondConfig;
 }
 
 interface NamedFactory<T extends TypedContract, A extends unknown[]> {
@@ -91,6 +94,33 @@ class LUSDChickenBondDeployment {
     return { contract, receipt };
   }
 
+  private async deployContractViaFactoryContract<T extends TypedContract>(
+    { contractName, factory }: NamedFactory<T, unknown[]>,
+    deployTransactionPromise: Promise<ContractTransaction>,
+    extractDeployedContractAddress: (logs: Log[]) => string
+  ): Promise<DeployedContract<T>> {
+    const { log } = this;
+
+    log(`Deploying ${contractName} via factory ...`);
+    const deployTransaction = await deployTransactionPromise;
+
+    log(`Waiting for transaction ${deployTransaction.hash} ...`);
+    const receipt = await deployTransaction.wait();
+    const contract = factory
+      .connect(this.deployer)
+      .attach(extractDeployedContractAddress(receipt.logs));
+
+    log({
+      contractAddress: contract.address,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toNumber()
+    });
+
+    log();
+
+    return { contract, receipt };
+  }
+
   private async deployContracts(): Promise<LUSDChickenBondDeployedContracts> {
     const {
       factories,
@@ -98,11 +128,38 @@ class LUSDChickenBondDeployment {
       config: { yearnGovernanceAddress, ...params }
     } = this;
 
+    const curveCryptoPoolImplementation = await this.deployContract(
+      factories.curveCryptoPoolImplementation,
+      AddressZero, // _weth
+      overrides
+    );
+
+    const curveLiquidityGaugeImplementation = await this.deployContract(
+      factories.curveLiquidityGaugeImplementation,
+      overrides
+    );
+
+    const curveTokenImplementation = await this.deployContract(
+      factories.curveTokenImplementation,
+      overrides
+    );
+
+    const curveFactory = await this.deployContract(
+      factories.curveFactory,
+      AddressZero, // _fee_receiver
+      curveCryptoPoolImplementation.contract.address,
+      curveTokenImplementation.contract.address,
+      curveLiquidityGaugeImplementation.contract.address,
+      AddressZero, // _weth
+      overrides
+    );
+
     const lusdToken = await this.deployContract(
       factories.lusdToken,
-      AddressZero,
-      AddressZero,
-      AddressZero,
+      "LUSD Stablecoin",
+      "LUSD",
+      params.lusdFaucetTapAmount,
+      params.lusdFaucetTapPeriod,
       overrides
     );
 
@@ -110,15 +167,11 @@ class LUSDChickenBondDeployment {
       factories.curvePool,
       "LUSD-3CRV Pool",
       "LUSD3CRV-f",
+      lusdToken.contract.address,
       overrides
     );
 
-    const curveBasePool = await this.deployContract(
-      factories.curvePool,
-      "3CRV Pool",
-      "3CRV",
-      overrides
-    );
+    const curveBasePool = await this.deployContract(factories.curveBasePool, overrides);
 
     const bammSPVault = await this.deployContract(
       factories.bammSPVault,
@@ -130,6 +183,7 @@ class LUSDChickenBondDeployment {
       factories.yearnCurveVault,
       "Curve LUSD Pool yVault",
       "yvCurve-LUSD",
+      curvePool.contract.address,
       overrides
     );
 
@@ -156,14 +210,50 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const uniToken = await this.deployContract(
-      factories.uniToken,
-      "Uniswap LP Token",
-      "UNI",
-      overrides
+    const bLUSDCurvePoolCoins: [string, string] = [
+      bLUSDToken.contract.address,
+      lusdToken.contract.address
+    ];
+
+    const bLUSDCurveToken = await this.deployContractViaFactoryContract(
+      factories.bLUSDCurveToken,
+      curveFactory.contract.deploy_pool(
+        "bLUSD_LUSD", // _name
+        "bLUSDLUSDC", // _symbol
+        bLUSDCurvePoolCoins, // _coins
+        params.bLUSDPoolA,
+        params.bLUSDPoolGamma,
+        params.bLUSDPoolMidFee,
+        params.bLUSDPoolOutFee,
+        params.bLUSDPoolAllowedExtraProfit,
+        params.bLUSDPoolFeeGamma,
+        params.bLUSDPoolAdjustmentStep,
+        params.bLUSDPoolAdminFee,
+        params.bLUSDPoolMAHalfTime,
+        params.bLUSDPoolInitialPrice,
+        overrides
+      ),
+      logs => curveFactory.contract.extractEvents(logs, "CryptoPoolDeployed")[0].args.token
     );
 
-    const curveLiquidityGauge = await this.deployContract(factories.curveLiquidityGauge, overrides);
+    const bLUSDCurvePoolAddress = await curveFactory.contract[
+      "find_pool_for_coins(address,address)"
+    ](...bLUSDCurvePoolCoins, overrides);
+
+    const bLUSDCurvePool = {
+      contract: factories.bLUSDCurvePool.factory
+        .connect(this.deployer)
+        .attach(bLUSDCurvePoolAddress),
+      receipt: bLUSDCurveToken.receipt
+    };
+
+    assert((await bLUSDCurvePool.contract.token()) === bLUSDCurveToken.contract.address);
+
+    const curveLiquidityGauge = await this.deployContractViaFactoryContract(
+      factories.curveLiquidityGauge,
+      curveFactory.contract.deploy_gauge(bLUSDCurvePoolAddress, overrides),
+      logs => curveFactory.contract.extractEvents(logs, "LiquidityGaugeDeployed")[0].args.gauge
+    );
 
     const chickenBondManager = await this.deployContract(
       factories.chickenBondManager,
@@ -183,17 +273,42 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const prankster = await this.deployContract(
+      factories.prankster,
+      lusdToken.contract.address,
+      [
+        {
+          apr: params.harvesterBAMMAPR,
+          receiver: bammSPVault.contract.address
+        },
+        {
+          apr: params.harvesterCurveAPR,
+          receiver: curvePool.contract.address
+        }
+      ],
+      chickenBondManager.contract.address,
+      curvePool.contract.address,
+      overrides
+    );
+
     return {
+      lusdToken,
+      curvePool,
+      curveBasePool,
       bondNFT,
       chickenBondManager,
-      curvePool,
-      lusdToken,
-      curveLiquidityGauge,
       bLUSDToken,
-      uniToken,
+      bLUSDCurveToken,
+      bLUSDCurvePool,
+      curveLiquidityGauge,
       yearnCurveVault,
       bammSPVault,
-      yearnRegistry
+      yearnRegistry,
+      prankster,
+      curveCryptoPoolImplementation,
+      curveLiquidityGaugeImplementation,
+      curveTokenImplementation,
+      curveFactory
     };
   }
 
@@ -201,14 +316,6 @@ class LUSDChickenBondDeployment {
     const { overrides, log } = this;
 
     const connections: (() => Promise<ContractTransaction>)[] = [
-      () => deployed.curvePool.contract.setAddresses(deployed.lusdToken.contract.address, overrides),
-
-      () =>
-        deployed.yearnCurveVault.contract.setAddresses(
-          deployed.curvePool.contract.address,
-          overrides
-        ),
-
       () =>
         deployed.bondNFT.contract.setAddresses(
           deployed.chickenBondManager.contract.address,
@@ -219,7 +326,28 @@ class LUSDChickenBondDeployment {
         deployed.bLUSDToken.contract.setAddresses(
           deployed.chickenBondManager.contract.address,
           overrides
-        )
+        ),
+
+      () =>
+        deployed.bammSPVault.contract.setChicken(
+          deployed.chickenBondManager.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.lusdToken.contract.transferOwnership(
+          deployed.prankster.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.bammSPVault.contract.transferOwnership(
+          deployed.prankster.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.curvePool.contract.transferOwnership(deployed.prankster.contract.address, overrides)
     ];
 
     for (const [i, connect] of connections.entries()) {
@@ -232,10 +360,6 @@ class LUSDChickenBondDeployment {
   async deployAndSetupContracts(): Promise<LUSDChickenBondDeploymentResult> {
     const { deployer, log } = this;
 
-    if (!deployer.provider) {
-      throw new Error("deployer must have provider");
-    }
-
     const deployed = await this.deployContracts();
 
     log("Connecting contracts...");
@@ -245,16 +369,17 @@ class LUSDChickenBondDeployment {
       a.receipt.blockNumber < b.receipt.blockNumber ? a : b
     );
 
-    const firstDeploymentBlock = await deployer.provider.getBlock(firstReceipt.blockNumber);
+    const deploymentTimestamp = await deployed.chickenBondManager.contract.deploymentTimestamp();
 
     return {
       deployed,
       manifest: {
         addresses: mapContracts<DeployedContract, string>(deployed, x => x.contract.address),
         chainId: await deployer.getChainId(),
-        deploymentTimestamp: firstDeploymentBlock.timestamp,
+        deploymentTimestamp: deploymentTimestamp.toNumber(),
         startBlock: firstReceipt.blockNumber
-      }
+      },
+      config: this.config
     };
   }
 }
