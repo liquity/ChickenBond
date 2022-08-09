@@ -167,15 +167,11 @@ class LUSDChickenBondDeployment {
       factories.curvePool,
       "LUSD-3CRV Pool",
       "LUSD3CRV-f",
+      lusdToken.contract.address,
       overrides
     );
 
-    const curveBasePool = await this.deployContract(
-      factories.curvePool,
-      "3CRV Pool",
-      "3CRV",
-      overrides
-    );
+    const curveBasePool = await this.deployContract(factories.curveBasePool, overrides);
 
     const bammSPVault = await this.deployContract(
       factories.bammSPVault,
@@ -187,6 +183,7 @@ class LUSDChickenBondDeployment {
       factories.yearnCurveVault,
       "Curve LUSD Pool yVault",
       "yvCurve-LUSD",
+      curvePool.contract.address,
       overrides
     );
 
@@ -276,21 +273,28 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const harvester = await this.deployContract(
-      factories.harvester,
+    const prankster = await this.deployContract(
+      factories.prankster,
       lusdToken.contract.address,
       [
         {
           apr: params.harvesterBAMMAPR,
           receiver: bammSPVault.contract.address
+        },
+        {
+          apr: params.harvesterCurveAPR,
+          receiver: curvePool.contract.address
         }
       ],
+      chickenBondManager.contract.address,
+      curvePool.contract.address,
       overrides
     );
 
     return {
       lusdToken,
       curvePool,
+      curveBasePool,
       bondNFT,
       chickenBondManager,
       bLUSDToken,
@@ -300,7 +304,7 @@ class LUSDChickenBondDeployment {
       yearnCurveVault,
       bammSPVault,
       yearnRegistry,
-      harvester,
+      prankster,
       curveCryptoPoolImplementation,
       curveLiquidityGaugeImplementation,
       curveTokenImplementation,
@@ -312,14 +316,6 @@ class LUSDChickenBondDeployment {
     const { overrides, log } = this;
 
     const connections: (() => Promise<ContractTransaction>)[] = [
-      () => deployed.curvePool.contract.setAddresses(deployed.lusdToken.contract.address, overrides),
-
-      () =>
-        deployed.yearnCurveVault.contract.setAddresses(
-          deployed.curvePool.contract.address,
-          overrides
-        ),
-
       () =>
         deployed.bondNFT.contract.setAddresses(
           deployed.chickenBondManager.contract.address,
@@ -340,15 +336,18 @@ class LUSDChickenBondDeployment {
 
       () =>
         deployed.lusdToken.contract.transferOwnership(
-          deployed.harvester.contract.address,
+          deployed.prankster.contract.address,
           overrides
         ),
 
       () =>
         deployed.bammSPVault.contract.transferOwnership(
-          deployed.harvester.contract.address,
+          deployed.prankster.contract.address,
           overrides
-        )
+        ),
+
+      () =>
+        deployed.curvePool.contract.transferOwnership(deployed.prankster.contract.address, overrides)
     ];
 
     for (const [i, connect] of connections.entries()) {

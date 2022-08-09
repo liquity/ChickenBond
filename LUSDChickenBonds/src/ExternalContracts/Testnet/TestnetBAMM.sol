@@ -4,7 +4,8 @@ pragma solidity ^0.8.10;
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "../../Interfaces/IBAMM.sol";
-import "./IYieldReceiver.sol";
+
+import { IYieldReceiver } from "./Harvester.sol";
 
 contract TestnetBAMM is IBAMM, IYieldReceiver, Ownable {
     IERC20 public immutable lusdToken;

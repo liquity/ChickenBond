@@ -1,5 +1,6 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
+import { Decimal } from "@liquity/lib-base";
 
 export interface LUSDChickenBondConfig {
   targetAverageAgeSeconds: BigNumber;
@@ -24,32 +25,41 @@ export interface LUSDChickenBondConfig {
   lusdFaucetTapAmount: BigNumber;
   lusdFaucetTapPeriod: BigNumber;
   harvesterBAMMAPR: BigNumber;
+  harvesterCurveAPR: BigNumber;
   yearnGovernanceAddress: string;
 }
 
+const SPEED = 24; // Fake days per real day
+const DAY = BigNumber.from(24 * 60 * 60).div(SPEED);
+const ONE = BigNumber.from(10).pow(18);
+
+// Half-life of 12h
+const REDEMPTION_DECAY = Decimal.from(0.5 ** (1 / DAY.div(120).toNumber()));
+
 export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
-  targetAverageAgeSeconds: BigNumber.from("2592000"),
-  initialAccrualParameter: BigNumber.from("2592000000000000000000000"),
-  minimumAccrualParameter: BigNumber.from("2592000000000000000000"),
-  accrualAdjustmentRate: BigNumber.from("10000000000000000"),
-  accrualAdjustmentPeriodSeconds: BigNumber.from("86400"),
-  chickenInAMMFee: BigNumber.from("10000000000000000"),
-  curveDepositDydxThreshold: BigNumber.from("1000000000000000000"),
-  curveWithdrawalDxdyThreshold: BigNumber.from("10000000000000000"),
-  bootstrapPeriodChickenIn: BigNumber.from("604800"),
-  bootstrapPeriodRedeem: BigNumber.from("604800"),
-  bootstrapPeriodShift: BigNumber.from("7776000"),
-  shifterDelay: BigNumber.from("3600"),
-  shifterWindow: BigNumber.from("600"),
-  minBLUSDSupply: BigNumber.from("1000000000000000000"),
-  minBondAmount: BigNumber.from("100000000000000000000"),
-  nftRandomnessDivisor: BigNumber.from("1000000000000000000000"),
-  redemptionFeeBeta: BigNumber.from("2"),
-  redemptionFeeMinuteDecayFactor: BigNumber.from("999037758833783000"),
-  bondNFTTransferLockoutPeriodSeconds: BigNumber.from("86400"),
-  lusdFaucetTapAmount: BigNumber.from("100000000000000000000000"),
-  lusdFaucetTapPeriod: BigNumber.from("86400"),
-  harvesterBAMMAPR: BigNumber.from("4800000000000000000"),
+  targetAverageAgeSeconds: DAY.mul(30),
+  initialAccrualParameter: DAY.mul(5).mul(ONE),
+  minimumAccrualParameter: DAY.mul(5).mul(ONE).div(1000),
+  accrualAdjustmentRate: ONE.div(100),
+  accrualAdjustmentPeriodSeconds: DAY,
+  chickenInAMMFee: ONE.div(100),
+  curveDepositDydxThreshold: ONE.sub(1),
+  curveWithdrawalDxdyThreshold: ONE.add(1),
+  bootstrapPeriodChickenIn: DAY.mul(7),
+  bootstrapPeriodRedeem: DAY.mul(7),
+  bootstrapPeriodShift: DAY.mul(90),
+  shifterDelay: BigNumber.from(1),
+  shifterWindow: BigNumber.from(600),
+  minBLUSDSupply: ONE,
+  minBondAmount: ONE.mul(100),
+  nftRandomnessDivisor: ONE.mul(1000),
+  redemptionFeeBeta: BigNumber.from(2),
+  redemptionFeeMinuteDecayFactor: BigNumber.from(REDEMPTION_DECAY.hex),
+  bondNFTTransferLockoutPeriodSeconds: DAY,
+  lusdFaucetTapAmount: ONE.mul(10000),
+  lusdFaucetTapPeriod: DAY,
+  harvesterBAMMAPR: ONE.mul(SPEED).div(5),
+  harvesterCurveAPR: ONE.mul(SPEED).div(20),
   yearnGovernanceAddress: AddressZero
 };
 

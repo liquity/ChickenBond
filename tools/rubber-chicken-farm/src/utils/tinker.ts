@@ -64,6 +64,7 @@ export interface LUSDChickenBondGlobalFunctions {
   redeem(amount: Decimalish): Promise<void>;
   redeemAll(): Promise<void>;
 
+  shiftCountdown(): Promise<void>;
   shiftSPToCurve(amount: number): Promise<void>;
   shiftCurveToSP(amount: number): Promise<void>;
 
@@ -215,22 +216,20 @@ export const getLUSDChickenBondGlobalFunctions = (
     )();
   },
 
-  async shiftSPToCurve(amount) {
-    const { chickenBondManager, curvePool } = globalObj.contracts;
+  async shiftCountdown() {
+    await receipt(() => globalObj.contracts.chickenBondManager.startShifterCountdown())();
+  },
 
-    await sequence(
-      () => curvePool.setNextPrankPrice(Decimal.from(1.01).hex),
-      () => chickenBondManager.shiftLUSDFromSPToCurve(Decimal.from(amount).hex)
-    );
+  async shiftSPToCurve(amount) {
+    await receipt(() =>
+      globalObj.contracts.prankster.shiftLUSDFromSPToCurve(Decimal.from(amount).hex)
+    )();
   },
 
   async shiftCurveToSP(amount) {
-    const { chickenBondManager, curvePool } = globalObj.contracts;
-
-    await sequence(
-      () => curvePool.setNextPrankPrice(Decimal.from(0.99).hex),
-      () => chickenBondManager.shiftLUSDFromCurveToSP(Decimal.from(amount).hex)
-    );
+    await receipt(() =>
+      globalObj.contracts.prankster.shiftLUSDFromCurveToSP(Decimal.from(amount).hex)
+    )();
   },
 
   backingRatio: () =>
@@ -318,7 +317,7 @@ export const getLUSDChickenBondGlobalFunctions = (
   },
 
   async harvest() {
-    await receipt(() => globalObj.contracts.harvester.harvest())();
+    await receipt(() => globalObj.contracts.prankster.harvest())();
   },
 
   trace: txHash => provider.send("trace_transaction", [txHash]),

@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "./IMinter.sol";
-import "./IYieldReceiver.sol";
+interface IMinter {
+    function mint(address _to, uint256 _amount) external;
+}
+
+interface IYieldReceiver {
+    function _getCurrentValue() external view returns (uint256);
+    function _notifyYield(uint256 _amount) external;
+}
 
 contract Harvester {
     struct Target {

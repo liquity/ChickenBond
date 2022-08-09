@@ -7,12 +7,13 @@ import BondNFT from "../../out/BondNFT.sol/BondNFT.json";
 import ChickenBondManager from "../../out/ChickenBondManager.sol/ChickenBondManager.json";
 import ERC20Faucet from "../../out/ERC20Faucet.sol/ERC20Faucet.json";
 import TestnetBAMM from "../../out/TestnetBAMM.sol/TestnetBAMM.json";
-import MockCurvePool from "../../out/MockCurvePool.sol/MockCurvePool.json";
+import TestnetCurvePool from "../../out/TestnetCurvePool.sol/TestnetCurvePool.json";
+import TestnetCurveBasePool from "../../out/TestnetCurveBasePool.sol/TestnetCurveBasePool.json";
 import MockYearnRegistry from "../../out/MockYearnRegistry.sol/MockYearnRegistry.json";
-import MockYearnVault from "../../out/MockYearnVault.sol/MockYearnVault.json";
+import TestnetYearnVault from "../../out/TestnetYearnVault.sol/TestnetYearnVault.json";
 import BLUSDToken from "../../out/BLUSDToken.sol/BLUSDToken.json";
 import TestnetCurveLiquidityGauge from "../../out/TestnetCurveLiquidityGauge.sol/TestnetCurveLiquidityGauge.json";
-import Harvester from "../../out/Harvester.sol/Harvester.json";
+import Prankster from "../../out/Prankster.sol/Prankster.json";
 
 // Curve v2
 import CurveCryptoSwap2ETH from "../curve/CurveCryptoSwap2ETH.json";
@@ -165,12 +166,13 @@ const contractArtifacts = Object.entries({
   ChickenBondManager,
   ERC20Faucet,
   TestnetBAMM,
-  MockCurvePool,
+  TestnetCurvePool,
+  TestnetCurveBasePool,
   MockYearnRegistry,
-  MockYearnVault,
+  TestnetYearnVault,
   BLUSDToken,
   TestnetCurveLiquidityGauge,
-  Harvester
+  Prankster
 });
 
 // XXX Vyper artifacts are different

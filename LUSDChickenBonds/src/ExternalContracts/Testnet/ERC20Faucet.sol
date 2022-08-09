@@ -3,7 +3,8 @@ pragma solidity ^0.8.10;
 
 import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./IMinter.sol";
+
+import { IMinter } from "./Harvester.sol";
 
 contract ERC20Faucet is IMinter, ERC20, Ownable {
     uint256 public immutable tapAmount;
