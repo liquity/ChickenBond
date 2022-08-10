@@ -52,7 +52,7 @@ contract SimpleEggArtwork is IBondNFTArtwork {
             '{',
                 '"name":"LUSD Chicken #', _bondData.tokenID.toString(), '",',
                 '"description":"LUSD Chicken Bonds",',
-                '"image":"data:image/svg+xml;base64,', Base64.encode(_getSVG(_bondData)), '"',
+                '"image":"data:image/svg+xml;base64,', Base64.encode(_getSVG(_bondData)), '",',
                 '"background_color":"0b112f"',
             '}'
         );
