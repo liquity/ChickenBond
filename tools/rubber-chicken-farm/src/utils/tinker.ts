@@ -303,6 +303,7 @@ export const getLUSDChickenBondGlobalFunctions = (
   },
 
   async artwork(bondID) {
+    const scale = 50;
     const expectedUriScheme = "data:image/svg+xml;base64,";
     const metadata = (await globalObj.metadata(bondID)) as any;
     const image = metadata.image as unknown;
@@ -313,12 +314,14 @@ export const getLUSDChickenBondGlobalFunctions = (
 
     console.log(
       "%c ",
-      ` line-height: 420px;
-        padding: 210px 150px;
+      ` display: block;
+        width: ${5.5 * scale}px;
+        height: ${7.5 * scale}px;
+        background-color: #${metadata.background_color ?? "ffffff"};
         background-image: url(${image});
-        background-size: contain;
-        background-position: center center;
-        background-repeat: no-repeat;`
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: ${5 * scale}px ${7 * scale}px`
     );
   },
 
