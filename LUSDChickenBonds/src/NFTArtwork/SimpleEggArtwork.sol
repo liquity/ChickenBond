@@ -122,7 +122,7 @@ contract SimpleEggArtwork is IBondNFTArtwork {
         return abi.encodePacked(
             '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="40px" font-weight="800" transform="translate(205.04 755.68)">BOND AMOUNT</text>',
             '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="64px" font-weight="800" transform="translate(289.63 848.68)">',
-                (_bondData.lusdAmount / 1e18).toString(),
+                ((_bondData.lusdAmount + 0.5e18) / 1e18).toString(),
             '</text>',
             '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="30px" font-weight="800" transform="translate(252.17 950.49)" opacity="0.6">',
                 _getMonthString(DateTime.getMonth(_bondData.startTime)),
