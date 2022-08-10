@@ -194,9 +194,9 @@ export const getLUSDChickenBondGlobalFunctions = (
     globalObj.user = signer;
     globalObj.contracts = connectToContracts(globalObj.user, manifest.addresses);
 
-    provider.getNetwork().then(network => {
-      if (network.chainId !== manifest.chainId) {
-        console.warn("Warning: wallet is set to wrong network (should be Goerli)");
+    provider.getNetwork().then(actualNetwork => {
+      if (actualNetwork.chainId !== manifest.chainId) {
+        console.warn(`Warning: wallet is set to wrong network (should be ${network})`);
       }
     });
 
@@ -206,7 +206,7 @@ export const getLUSDChickenBondGlobalFunctions = (
 
     globalObj._networkChangeListener = () => {
       console.info("Network changed");
-      globalObj.testnet();
+      globalObj.testnet(network);
     };
 
     globalObj.ethereum.on("chainChanged", globalObj._networkChangeListener);
