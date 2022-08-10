@@ -50,10 +50,11 @@ contract SimpleEggArtwork is IBondNFTArtwork {
     function _getMetadataJSON(BondData memory _bondData) internal pure returns (bytes memory) {
         return abi.encodePacked(
             '{',
-				'"name":"LUSD Chicken #', _bondData.tokenID.toString(), '",',
-				'"description":"LUSD Chicken Bonds",',
-				'"image":"data:image/svg+xml;base64,', Base64.encode(_getSVG(_bondData)), '"',
-			'}'
+                '"name":"LUSD Chicken #', _bondData.tokenID.toString(), '",',
+                '"description":"LUSD Chicken Bonds",',
+                '"image":"data:image/svg+xml;base64,', Base64.encode(_getSVG(_bondData)), '"',
+                '"background_color":"0b112f"',
+            '}'
         );
     }
 
