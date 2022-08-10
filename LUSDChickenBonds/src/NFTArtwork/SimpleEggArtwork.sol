@@ -75,10 +75,10 @@ contract SimpleEggArtwork is IBondNFTArtwork {
         revert("SimpleEggArtwork: _month must be within [1, 12]");
     }
 
-    function _getSVGStyle() internal pure returns (bytes memory) {
+    function _getSVGStyle(BondData memory _bondData) internal pure returns (bytes memory) {
         return abi.encodePacked(
             '<style>',
-                '#egg-1 {',
+                '#egg-', _bondData.tokenID.toString(),' {',
                     'animation: shake 3s infinite ease-out;',
                     'transform-origin: 50%;',
                 '}',
@@ -138,7 +138,7 @@ contract SimpleEggArtwork is IBondNFTArtwork {
     function _getSVG(BondData memory _bondData) internal pure returns (bytes memory) {
         return abi.encodePacked(
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 1050">',
-                _getSVGStyle(),
+                _getSVGStyle(_bondData),
                 _getSVGCard(_bondData),
                 _getSVGEgg(_bondData),
                 _getSVGBondData(_bondData),
