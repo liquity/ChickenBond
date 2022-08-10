@@ -8,6 +8,7 @@ import { Decimal, Decimalish } from "@liquity/lib-base";
 import {
   connectToContracts,
   deployAndSetupContracts,
+  deployNFTArtwork,
   LUSDChickenBondContracts,
   LUSDChickenBondDeploymentResult
 } from "@liquity/lusd-chicken-bonds-bindings";
@@ -69,6 +70,7 @@ export interface LUSDChickenBondGlobalFunctions {
 
   bond(bondID?: number): Promise<LUSDChickenBondData>;
   bonds(address?: string): Promise<number[]>;
+  metadata(bondID?: number): Promise<unknown>;
   backingRatio(): Promise<number>;
   buckets(): Promise<LUSDChickenBondBuckets>;
 
@@ -79,6 +81,8 @@ export interface LUSDChickenBondGlobalFunctions {
   redeem(amount: Decimalish): Promise<void>;
   redeemAll(): Promise<void>;
 
+  deployNFTArtwork(): Promise<unknown>;
+  setNFTArtwork(address: string): Promise<void>;
   migrate(): Promise<void>;
 
   shiftCountdown(): Promise<void>;
@@ -274,6 +278,17 @@ export const getLUSDChickenBondGlobalFunctions = (
     );
   },
 
+  async metadata(bondID = globalObj.bondID) {
+    const expectedUriScheme = "data:application/json;base64,";
+    const tokenURI = await globalObj.contracts.bondNFT.tokenURI(bondID);
+
+    if (!tokenURI.startsWith(expectedUriScheme)) {
+      throw new Error("Unexpected tokenURI format");
+    }
+
+    return JSON.parse(atob(tokenURI.slice(expectedUriScheme.length)));
+  },
+
   async chickenIn(bondID = globalObj.bondID) {
     await receipt(() => globalObj.contracts.chickenBondManager.chickenIn(bondID))();
   },
@@ -299,6 +314,12 @@ export const getLUSDChickenBondGlobalFunctions = (
         Decimal.ZERO.hex
       )
     )();
+  },
+
+  deployNFTArtwork: () => deployNFTArtwork(globalObj.user, { log: true }),
+
+  async setNFTArtwork(address: string) {
+    await receipt(() => globalObj.contracts.bondNFT.setArtworkAddress(address))();
   },
 
   async migrate() {
