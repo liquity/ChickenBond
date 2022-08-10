@@ -1,0 +1,25 @@
+{
+  "addresses": {
+    "lusdToken": "0xbEB0f57E13f89ad08F06FEa44d8eA2e74F838Fe6",
+    "curvePool": "0x85ea6C4e3C1d1425e8215B6988e9798BB6a0B526",
+    "curveBasePool": "0xA7a4c4c910A0BA448ba07ac0Ec536F0A91C704A7",
+    "bondNFT": "0x9EA0880F71908fb639C89a76E9A4E2741Dd2Ef5e",
+    "bondNFTArtwork": "0xe4eB6973436a396Aac8A7df05194Edd213974a1b",
+    "chickenBondManager": "0x0C9a65160ee1092b56D5B6C18512282dB9458A11",
+    "bLUSDToken": "0xde3d06fb2cbf2dd114f245693dB7414f58be96fF",
+    "bLUSDCurveToken": "0x11C11dD77bc1756A4f4288Ec4ce2A3Cb6041e345",
+    "bLUSDCurvePool": "0x70e2d08D7A384441556be80B3885E40458e3632D",
+    "curveLiquidityGauge": "0x2b6bC62eC1315D15372F6AEc667A2CD7fC8c3c0A",
+    "yearnCurveVault": "0x9DF752d722BC19AE090Cb7B9ef4e73aCc781599F",
+    "bammSPVault": "0x2865964f3dEcca070e1c885d911C6b9903e40a87",
+    "yearnRegistry": "0x692bB57E41B123bC1bC897B082a4E462A6040E6E",
+    "prankster": "0x750F07A9aaC6adee8299351529df01c857f7E7E0",
+    "curveCryptoPoolImplementation": "0x756eF2448Ed83EDa7EeB6270544e939A85bD82f2",
+    "curveLiquidityGaugeImplementation": "0xd1Aace82B6f8DB6b56f29E336782370Bd363B205",
+    "curveTokenImplementation": "0x799B3dF3e57F44978edC731cA13c03Ca6C48ff85",
+    "curveFactory": "0xB9883575e7906556056b40Dd60C67d1CdE7Eb4B3"
+  },
+  "chainId": 4,
+  "deploymentTimestamp": 1660120033,
+  "startBlock": 11177038
+}

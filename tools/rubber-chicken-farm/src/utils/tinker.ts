@@ -10,10 +10,17 @@ import {
   deployAndSetupContracts,
   deployNFTArtwork,
   LUSDChickenBondContracts,
+  LUSDChickenBondDeploymentManifest,
   LUSDChickenBondDeploymentResult
 } from "@liquity/lusd-chicken-bonds-bindings";
 
 import goerli from "@liquity/lusd-chicken-bonds-bindings/deployments/goerli.json";
+import rinkeby from "@liquity/lusd-chicken-bonds-bindings/deployments/rinkeby.json";
+
+const manifests: { [network: string]: LUSDChickenBondDeploymentManifest } = {
+  goerli,
+  rinkeby
+};
 
 const localProvider = new JsonRpcProvider("http://localhost:8545");
 
@@ -61,7 +68,7 @@ export interface LUSDChickenBondGlobalFunctions {
   deploy(): Promise<LUSDChickenBondDeploymentResult>;
   connect(user: Signer): LUSDChickenBondContracts;
   local(): void;
-  testnet(): void;
+  testnet(network?: string): void;
 
   tap(): Promise<void>;
   balance(address?: string): Promise<LUSDChickenBondBalances>;
@@ -174,16 +181,21 @@ export const getLUSDChickenBondGlobalFunctions = (
     }
   },
 
-  testnet() {
+  testnet(network = "goerli") {
+    if (!(network in manifests)) {
+      throw new Error(`Unsupported network "${network}"`);
+    }
+
+    const manifest = manifests[network];
     const provider = new Web3Provider(globalObj.ethereum);
     const signer = provider.getSigner();
     installLUSDChickenBonds(globalObj, provider, signer);
 
     globalObj.user = signer;
-    globalObj.contracts = connectToContracts(globalObj.user, goerli.addresses);
+    globalObj.contracts = connectToContracts(globalObj.user, manifest.addresses);
 
     provider.getNetwork().then(network => {
-      if (network.chainId !== goerli.chainId) {
+      if (network.chainId !== manifest.chainId) {
         console.warn("Warning: wallet is set to wrong network (should be Goerli)");
       }
     });
