@@ -201,11 +201,13 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const bondNFTArtwork = await this.deployContract(factories.bondNFTArtwork, overrides);
+
     const bondNFT = await this.deployContract(
       factories.bondNFT,
       "LUSDBondNFT",
       "LUSDBOND",
-      AddressZero,
+      bondNFTArtwork.contract.address,
       params.bondNFTTransferLockoutPeriodSeconds,
       overrides
     );
@@ -296,6 +298,7 @@ class LUSDChickenBondDeployment {
       curvePool,
       curveBasePool,
       bondNFT,
+      bondNFTArtwork,
       chickenBondManager,
       bLUSDToken,
       bLUSDCurveToken,
