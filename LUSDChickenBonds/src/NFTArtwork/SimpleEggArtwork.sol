@@ -101,8 +101,8 @@ contract SimpleEggArtwork is IBondNFTArtwork {
         return abi.encodePacked(
             '<rect fill="#fff" mix-blend-mode="color-dodge" width="750" height="1050" rx="37.5"/>',
             '<rect fill="#008bf7" x="30" y="30" width="690" height="990" rx="37.5"/>',
-            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="72px" font-weight="800" transform="translate(266.85 151.52)">LUSD</text>',
-            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="30px" font-weight="800" transform="translate(338.41 204.52)">ID: ',
+            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="72px" font-weight="800" text-anchor="middle" x="50%" y="151">LUSD</text>',
+            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="30px" font-weight="800" text-anchor="middle" x="50%" y="204">ID: ',
                 _bondData.tokenID.toString(),
             '</text>',
             '<ellipse fill="#0a102e" cx="375.25" cy="618.75" rx="100" ry="19"/>'
@@ -121,11 +121,11 @@ contract SimpleEggArtwork is IBondNFTArtwork {
 
     function _getSVGBondData(BondData memory _bondData) internal pure returns (bytes memory) {
         return abi.encodePacked(
-            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="40px" font-weight="800" transform="translate(205.04 755.68)">BOND AMOUNT</text>',
-            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="64px" font-weight="800" transform="translate(289.63 848.68)">',
+            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="40px" font-weight="800" text-anchor="middle" x="50%" y="755">BOND AMOUNT</text>',
+            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="64px" font-weight="800" text-anchor="middle" x="50%" y="848">',
                 ((_bondData.lusdAmount + 0.5e18) / 1e18).toString(),
             '</text>',
-            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="30px" font-weight="800" transform="translate(252.17 950.49)" opacity="0.6">',
+            '<text fill="#fff" font-family="''Arial Black'', Arial" font-size="30px" font-weight="800" text-anchor="middle" x="50%" y="950" opacity="0.6">',
                 _getMonthString(DateTime.getMonth(_bondData.startTime)),
                 ' ',
                 DateTime.getDay(_bondData.startTime).toString(),
