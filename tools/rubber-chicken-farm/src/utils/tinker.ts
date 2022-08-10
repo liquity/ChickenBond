@@ -31,6 +31,7 @@ export interface LUSDChickenBondTokenPair {
 
 export interface LUSDChickenBondBalances extends LUSDChickenBondTokenPair {
   LP: number;
+  bondNFT: number;
 }
 
 const statuses = ["nonExistent", "active", "chickenedOut", "chickenedIn"] as const;
@@ -67,6 +68,7 @@ export interface LUSDChickenBondGlobalFunctions {
   send(to: string, amount: Decimalish): Promise<void>;
 
   bond(bondID?: number): Promise<LUSDChickenBondData>;
+  bonds(address?: string): Promise<number[]>;
   backingRatio(): Promise<number>;
   buckets(): Promise<LUSDChickenBondBuckets>;
 
@@ -127,6 +129,7 @@ const sequence = (
   ...rest: ((prevReceipt: ContractReceipt) => Promise<ContractTransaction>)[]
 ) => rest.map(receipt).reduce((p, f) => p.then(f), receipt(first)());
 
+const numberifyBigNumber = (bn: BigNumber) => bn.toNumber();
 const numberifyDecimal = (bn: BigNumber) => Number(Decimal.fromBigNumberString(bn.toHexString()));
 
 export const getLUSDChickenBondGlobalFunctions = (
@@ -134,7 +137,7 @@ export const getLUSDChickenBondGlobalFunctions = (
   provider: JsonRpcProvider,
   deployer: Signer
 ): LUSDChickenBondGlobalFunctions => ({
-  async deploy(): Promise<LUSDChickenBondDeploymentResult> {
+  async deploy() {
     globalObj.deployment = await deployAndSetupContracts(deployer, {
       log: true,
       config: {
@@ -197,20 +200,22 @@ export const getLUSDChickenBondGlobalFunctions = (
   },
 
   async balance(address) {
-    const { lusdToken, bLUSDToken, bLUSDCurveToken } = globalObj.contracts;
+    const { lusdToken, bLUSDToken, bLUSDCurveToken, bondNFT } = globalObj.contracts;
 
     address = address ?? (await globalObj.user.getAddress());
 
-    const [LUSD, bLUSD, LP] = await Promise.all([
+    const [LUSD, bLUSD, LP, nftCount] = await Promise.all([
       lusdToken.balanceOf(address),
       bLUSDToken.balanceOf(address),
-      bLUSDCurveToken.balanceOf(address)
+      bLUSDCurveToken.balanceOf(address),
+      bondNFT.balanceOf(address)
     ]);
 
     return {
       LUSD: numberifyDecimal(LUSD),
       bLUSD: numberifyDecimal(bLUSD),
-      LP: numberifyDecimal(LP)
+      LP: numberifyDecimal(LP),
+      bondNFT: nftCount.toNumber()
     };
   },
 
@@ -223,20 +228,20 @@ export const getLUSDChickenBondGlobalFunctions = (
     await receipt(() => globalObj.contracts.lusdToken.transfer(to, Decimal.from(amount).hex))();
   },
 
-  async createBond(amount): Promise<number> {
+  async createBond(amount) {
     const amountHex = Decimal.from(amount).hex;
     const { lusdToken, chickenBondManager, bondNFT } = globalObj.contracts;
 
-    await sequence(
+    const receipt = await sequence(
       () => lusdToken.approve(chickenBondManager.address, amountHex),
       () => chickenBondManager.createBond(amountHex)
     );
 
-    const bondID = await bondNFT.totalSupply();
-    return (globalObj.bondID = bondID.toNumber());
+    const [mint] = bondNFT.extractEvents(receipt.logs, "Transfer");
+    return (globalObj.bondID = mint.args.tokenId.toNumber());
   },
 
-  async bond(bondID = globalObj.bondID): Promise<LUSDChickenBondData> {
+  async bond(bondID = globalObj.bondID) {
     const { chickenBondManager } = globalObj.contracts;
 
     const [bondData, accruedBLUSD] = await Promise.all([
@@ -254,6 +259,19 @@ export const getLUSDChickenBondGlobalFunctions = (
       finalHalfDna: bondData.finalHalfDna.toHexString(),
       status: lookupStatus(bondData.status)
     };
+  },
+
+  async bonds(address) {
+    const { bondNFT } = globalObj.contracts;
+
+    const resolvedAddress = address ?? (await globalObj.user.getAddress());
+    const count = await bondNFT.balanceOf(resolvedAddress).then(numberifyBigNumber);
+
+    return Promise.all(
+      [...new Array(count).keys()].map(i =>
+        bondNFT.tokenOfOwnerByIndex(resolvedAddress, i).then(numberifyBigNumber)
+      )
+    );
   },
 
   async chickenIn(bondID = globalObj.bondID) {
@@ -306,7 +324,7 @@ export const getLUSDChickenBondGlobalFunctions = (
   backingRatio: () =>
     globalObj.contracts.chickenBondManager.calcSystemBackingRatio().then(numberifyDecimal),
 
-  async buckets(): Promise<LUSDChickenBondBuckets> {
+  async buckets() {
     const { chickenBondManager } = globalObj.contracts;
 
     const [pendingSP, acquiredSP, acquiredCurve, permanent] = await Promise.all([
