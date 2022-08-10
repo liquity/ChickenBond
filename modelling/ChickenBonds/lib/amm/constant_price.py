@@ -1,6 +1,6 @@
-from lib.amm.amm_interface import *
+from lib.amm.amm_base import *
 
-class ConstantPricePool(AmmInterface):
+class ConstantPricePool(AmmBase):
 
     def get_A_amount_for_liquidity(self, token_B_amount):
         return token_B_amount

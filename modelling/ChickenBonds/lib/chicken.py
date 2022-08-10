@@ -2,7 +2,7 @@ from lib.amm.uniswap import *
 from lib.amm.amm_mock_price import *
 
 class Chicken():
-    def __init__(self, coll_token, token, btkn, pending_account, reserve_account, amm_account, amm_fee, btkn_amm_account, btkn_amm_fee):
+    def __init__(self, coll_token, token, btkn, pending_account, reserve_account, amm_account, amm_fee, btkn_amm_account, btkn_amm_fee, rewards_account, rewards_period):
         self.coll_token = coll_token
         self.token = token
         self.btkn = btkn
@@ -13,7 +13,8 @@ class Chicken():
         self.amm = UniswapPool(amm_account, token, coll_token, amm_fee)
         #self.amm = ConstantPricePool(amm_account, token, btkn, amm_fee)
         #self.amm = StableSwapPool(amm_account, token, btkn, amm_fee, amplification_factor)
-        self.btkn_amm = AmmMockPrice(btkn_amm_account, token, btkn, btkn_amm_fee)
+        #self.btkn_amm = AmmMockPrice(btkn_amm_account, token, btkn, btkn_amm_fee)
+        self.btkn_amm = UniswapPool(btkn_amm_account, token, btkn, btkn_amm_fee, rewards_account, rewards_period)
 
         self.amm_iteration_apr = 0.0
         self.amm_average_apr = 0.0
@@ -32,7 +33,7 @@ class Chicken():
         return self.pending_token_balance() + self.reserve_token_balance()
 
     def get_backing_ratio(self):
-        if self.btkn.total_supply == 0:
+        if self.btkn.total_supply == 0 or self.reserve_token_balance() == 0:
             return 1
         return self.reserve_token_balance() / self.btkn.total_supply
 
@@ -50,9 +51,7 @@ class Chicken():
         user.bond_amount = user.bond_amount - chicken_in_fee_amount
 
         # Transfer chicken in fee amount
-        self.token.transfer(self.pending_account, self.btkn_amm.pool_account, chicken_in_fee_amount)
-        # Account for extra AMM revenue
-        self.btkn_amm.add_rewards(chicken_in_fee_amount, 0)
+        self.token.transfer(self.pending_account, self.btkn_amm.rewards.account, chicken_in_fee_amount)
 
         # Reduce claimable amount proportionally
         claimable_btkn_amount = claimable_btkn_amount * (1 - chicken_in_amm_fee)
@@ -73,6 +72,18 @@ class Chicken():
         user.bond_time = 0
         user.bond_target_profit = 0
         return
+
+    def redeem(self, user, btkn_amount):
+        if btkn_amount == 0 or self.btkn.total_supply == 0:
+            return 0
+        token_amount = self.reserve_token_balance() * btkn_amount / self.btkn.total_supply
+
+        # burn
+        self.btkn.burn(user.account, btkn_amount)
+        # transfer
+        self.token.transfer(self.reserve_account, user.account, btkn_amount)
+
+        return token_amount
 
     """
     def user_total_assets_value(self, user):

@@ -1,8 +1,8 @@
 import math
 import numpy as np
-from lib.amm.amm_interface import *
+from lib.amm.amm_base import *
 
-class StableSwapPool(AmmInterface):
+class StableSwapPool(AmmBase):
     def __init__(self, pool_account, token_A, token_B, fee, amplification_factor):
         super().__init__(pool_account, token_A, token_B, fee)
         self.amplification_factor = amplification_factor

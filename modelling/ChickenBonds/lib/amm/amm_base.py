@@ -1,8 +1,11 @@
 from lib.erc_token import *
+from lib.amm.rewards import *
 
-class AmmInterface():
-    def __init__(self, pool_account, token_A, token_B, fee):
+class AmmBase():
+    def __init__(self, pool_account, token_A, token_B, fee, rewards_account=None, rewards_period=None):
         self.pool_account = pool_account # mimics the address
+        if rewards_account:
+            self.rewards = Rewards(token_A, rewards_account, rewards_period)
         self.token_A = token_A
         self.token_B = token_B
         self.lp_token = Token(token_A.symbol + token_B.symbol)
