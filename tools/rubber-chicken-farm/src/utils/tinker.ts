@@ -71,6 +71,7 @@ export interface LUSDChickenBondGlobalFunctions {
   bond(bondID?: number): Promise<LUSDChickenBondData>;
   bonds(address?: string): Promise<number[]>;
   metadata(bondID?: number): Promise<unknown>;
+  artwork(bondID?: number): Promise<void>;
   backingRatio(): Promise<number>;
   buckets(): Promise<LUSDChickenBondBuckets>;
 
@@ -287,6 +288,26 @@ export const getLUSDChickenBondGlobalFunctions = (
     }
 
     return JSON.parse(atob(tokenURI.slice(expectedUriScheme.length)));
+  },
+
+  async artwork(bondID) {
+    const expectedUriScheme = "data:image/svg+xml;base64,";
+    const metadata = (await globalObj.metadata(bondID)) as any;
+    const image = metadata.image as unknown;
+
+    if (typeof image !== "string" || !image.startsWith(expectedUriScheme)) {
+      throw new Error("Unexpected image format");
+    }
+
+    console.log(
+      "%c ",
+      ` line-height: 420px;
+        padding: 210px 150px;
+        background-image: url(${image});
+        background-size: contain;
+        background-position: center center;
+        background-repeat: no-repeat;`
+    );
   },
 
   async chickenIn(bondID = globalObj.bondID) {
