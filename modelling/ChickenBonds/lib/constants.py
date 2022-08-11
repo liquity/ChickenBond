@@ -31,13 +31,14 @@ BOND_AMOUNT = (100, 1000)               # Random number between 100 and 1,000.
 # -------------- Controller Parameters -------------
 INITIAL_ACCRUAL_PARAM = 8               # "u" in the accrual curve "t / (t + u)". The higher the value, the slower the accrual.
 ACCRUAL_ADJUSTMENT_RATE = 0.01          # Set to non-zero to enable control
-TARGET_AVERAGE_AGE = 60
+TARGET_AVERAGE_AGE = 30
 
-# number of iterations to take the average APR of the AMM
-AMM_APR_PERIOD = 10
-AMM_FEE = 0.3 / 100                      # ToDo
+AMM_APR_PERIOD = 10                     # number of iterations to take the average APR of the AMM
+AMM_FEE = 0.2 / 100                     # ToDo
 MAX_SLIPPAGE = 0.10                     # ToDo
 AMM_YIELD = 0.02                        # ToDo
+REWARDS_PERIOD = 7                      # Time to distribute current rewards
+INITIAL_BTKN_PRICE = 1.5                # Initial price the first user to chicken in and LP to AMM will use
 
 # -------------- Natural Rates ---------------------
 INITIAL_NATURAL_RATE = 0.05             # ToDo
@@ -55,10 +56,10 @@ REDEMPTION_FEE_MINUTE_DECAY_FACTOR = 0.999037758833783000 # Factor by which rede
 MIN_BTKN_SUPPLY = 1                    # Minimum of bTKN left after a redemption
 
 # -------------- Price Parameters ----------------
-# Initial price of sLQTY quoted in LQTY, to make sure bootstrap is profitable
+# Initial price of bLQTY quoted in LQTY, to make sure bootstrap is profitable
 INITIAL_PRICE = 1.2 * (BOOTSTRAP_PERIOD_CHICKEN_IN + INITIAL_ACCRUAL_PARAM) / BOOTSTRAP_PERIOD_CHICKEN_IN
 
-PRICE_PREMIUM = "yield_comparison"      # The estimator of the price premium ("normal_dist","perpetuity","pending_balance","full_balance", "yield_comparison")
+PRICE_PREMIUM = "perpetuity"            # The estimator of the price premium ("normal_dist","perpetuity","pending_balance","full_balance", "yield_comparison")
 PREMIUM_MU = 0.1                        # Expected value of the normal distribution as a fraction of RESERVE token balance
 PREMIUM_SIGMA = 0.1                     # Deviation of the normal distribution as a fraction of the RESERVE token balance
 
@@ -66,4 +67,4 @@ PRICE_VOLATILITY = "None"               # Risk estimator of the price ("None", "
 VOLA_MU = 0                             # Expected value of a normal dist. for the volatility of price
 VOLA_SIGMA = 1                          # Std. deviation of the normal dist of the volatility of the price
 
-TWAP_PERIOD = 20                        # Average price of sLQTY over xx periods
+TWAP_PERIOD = 20                        # Average price of bLQTY over xx periods

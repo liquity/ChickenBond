@@ -19,12 +19,12 @@ class TestChicken:
 
     coll = erc_token.Token('COLL')
     lqty = erc_token.Token('LQTY')
-    slqty = erc_token.Token('sLQTY')
+    blqty = erc_token.Token('bLQTY')
     user = user.User("test_user")
 
     chicken = chicken.Chicken(coll_token=coll,
                               token=lqty,
-                              btkn=slqty,
+                              btkn=blqty,
                               pending_account="Pending",
                               reserve_account="RESERVE",
                               amm_account="AMM",
@@ -89,7 +89,7 @@ class TestChicken:
         self.chicken.token.mint(self.user.account, minting)
         self.chicken.bond(self.user, bonding, 5, 0)
 
-        # Chicken in with claimable sLQTY of 100% bonded LQTY
+        # Chicken in with claimable bLQTY of 100% bonded LQTY
         self.chicken.chicken_in(self.user, bonding)
 
         assert self.chicken.btkn.balance_of(self.user.account) == bonding

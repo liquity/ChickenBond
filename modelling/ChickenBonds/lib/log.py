@@ -10,14 +10,15 @@ def log_system(chicken, tester):
     print("Chicken Bonds state")
     #print(f" - Outstanding debt: {chicken.outstanding_debt:,.2f}")
     print(f" - Pending {token.symbol}:               {pending_bal:,.2f}")
-    print(f" - Reserve {token.symbol}:              {reserve_bal:,.2f}")
+    print(f" - Reserve {token.symbol}:               {reserve_bal:,.2f}")
     print(f" - Permanent (DEX) {token.symbol} value: {amm_value:,.2f}")
     print(f" - {btkn.symbol} supply:               {btkn.total_supply:,.2f}")
     if btkn.total_supply > 0:
-        print(f" - Backing ratio:           {chicken.get_backing_ratio():,.2f}")
+        print(f" - Backing ratio:              {chicken.get_backing_ratio():,.2f}")
 
     print("")
     print(f"Fair price:      {tester.get_fair_price(chicken):,.2f}")
+    print(f"Accrual param:   {tester.accrual_param:,.2f}")
     print(f"Rebond Time:     {tester.get_rebond_time(chicken):,.2f}")
     print(f"Chicken in Time: {tester.get_optimal_apr_chicken_in_time(chicken):,.2f}")
     return
@@ -30,11 +31,13 @@ def log_amm_pool(amm, name):
 
 def log_amm(chicken):
     log_amm_pool(chicken.amm, "AMM")
-    print(f" - AMM APR: {chicken.amm_iteration_apr:.3%}")
     return
 
 def log_btkn_amm(chicken):
     log_amm_pool(chicken.btkn_amm, "bTKN AMM")
+    print(f" - {chicken.btkn_amm.token_A.symbol} Fees: {chicken.btkn_amm.fees_accrued_A:,.2f}")
+    print(f" - {chicken.btkn_amm.token_B.symbol} Fees: {chicken.btkn_amm.fees_accrued_B:,.2f}")
+    print(f" - AMM APR: {chicken.amm_iteration_apr:.3%}")
     return
 
 def log_chick_balances(chicken, chick):
@@ -65,7 +68,7 @@ def log_btkn_balances(chicken, chicks):
     print(f"Total : {total_btkn:,.2f}")
     return
 
-def log_chicks(chicken, chicks, tokens):
+def log_chicks(chicken, chicks):
     for chick in chicks:
         log_chick_balances(chicken, chick)
     return

@@ -40,7 +40,7 @@ class Token():
             # Balance of pools can turn into tiny negative value thanks to floating point arithmetic
             # if everyone withdraws from the pool and the withdrawable amounts are calculated using
             # multiplication / division (e.g. if it involves redistribution).
-            assert self.balances[sender] >= -1e9
+            assert self.balances[sender] >= -1e-9
         except:
             print(f"{self.symbol} token transfer from {sender} to {recipient}")
             print(f"amount: {amount:,}")
