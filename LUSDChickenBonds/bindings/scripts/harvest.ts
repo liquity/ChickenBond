@@ -15,7 +15,15 @@ const provider = new JsonRpcProvider(requireEnv("RPC_URL"));
 const harvester = new Wallet(requireEnv("PRIVATE_KEY"), provider);
 const { prankster } = connectToContracts(harvester, rinkeby.addresses);
 
-prankster.harvest().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+provider
+  .getNetwork()
+  .then(actualNetwork => {
+    if (actualNetwork.chainId !== rinkeby.chainId) {
+      throw new Error("Wrong network (should be Rinkeby)");
+    }
+  })
+  .then(() => prankster.harvest())
+  .catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
