@@ -181,7 +181,7 @@ export const getLUSDChickenBondGlobalFunctions = (
     }
   },
 
-  testnet(network = "goerli") {
+  testnet(network = "rinkeby") {
     if (!(network in manifests)) {
       throw new Error(`Unsupported network "${network}"`);
     }
