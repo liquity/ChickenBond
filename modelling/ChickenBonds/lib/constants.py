@@ -59,7 +59,7 @@ MIN_BTKN_SUPPLY = 1                    # Minimum of bTKN left after a redemption
 # Initial price of bLQTY quoted in LQTY, to make sure bootstrap is profitable
 INITIAL_PRICE = 1.2 * (BOOTSTRAP_PERIOD_CHICKEN_IN + INITIAL_ACCRUAL_PARAM) / BOOTSTRAP_PERIOD_CHICKEN_IN
 
-PRICE_PREMIUM = "perpetuity"            # The estimator of the price premium ("normal_dist","perpetuity","pending_balance","full_balance", "yield_comparison")
+PRICE_PREMIUM = "full_balance"          # The estimator of the price premium ("normal_dist","perpetuity","pending_balance","full_balance", "yield_comparison")
 PREMIUM_MU = 0.1                        # Expected value of the normal distribution as a fraction of RESERVE token balance
 PREMIUM_SIGMA = 0.1                     # Deviation of the normal distribution as a fraction of the RESERVE token balance
 
