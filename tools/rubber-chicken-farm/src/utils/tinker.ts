@@ -8,11 +8,19 @@ import { Decimal, Decimalish } from "@liquity/lib-base";
 import {
   connectToContracts,
   deployAndSetupContracts,
+  deployNFTArtwork,
   LUSDChickenBondContracts,
+  LUSDChickenBondDeploymentManifest,
   LUSDChickenBondDeploymentResult
 } from "@liquity/lusd-chicken-bonds-bindings";
 
 import goerli from "@liquity/lusd-chicken-bonds-bindings/deployments/goerli.json";
+import rinkeby from "@liquity/lusd-chicken-bonds-bindings/deployments/rinkeby.json";
+
+const manifests: { [network: string]: LUSDChickenBondDeploymentManifest } = {
+  goerli,
+  rinkeby
+};
 
 const localProvider = new JsonRpcProvider("http://localhost:8545");
 
@@ -60,7 +68,7 @@ export interface LUSDChickenBondGlobalFunctions {
   deploy(): Promise<LUSDChickenBondDeploymentResult>;
   connect(user: Signer): LUSDChickenBondContracts;
   local(): void;
-  testnet(): void;
+  testnet(network?: string): void;
 
   tap(): Promise<void>;
   balance(address?: string): Promise<LUSDChickenBondBalances>;
@@ -69,6 +77,8 @@ export interface LUSDChickenBondGlobalFunctions {
 
   bond(bondID?: number): Promise<LUSDChickenBondData>;
   bonds(address?: string): Promise<number[]>;
+  metadata(bondID?: number): Promise<unknown>;
+  artwork(bondID?: number): Promise<void>;
   backingRatio(): Promise<number>;
   buckets(): Promise<LUSDChickenBondBuckets>;
 
@@ -79,6 +89,8 @@ export interface LUSDChickenBondGlobalFunctions {
   redeem(amount: Decimalish): Promise<void>;
   redeemAll(): Promise<void>;
 
+  deployNFTArtwork(): Promise<unknown>;
+  setNFTArtwork(address: string): Promise<void>;
   migrate(): Promise<void>;
 
   shiftCountdown(): Promise<void>;
@@ -169,17 +181,22 @@ export const getLUSDChickenBondGlobalFunctions = (
     }
   },
 
-  testnet() {
+  testnet(network = "rinkeby") {
+    if (!(network in manifests)) {
+      throw new Error(`Unsupported network "${network}"`);
+    }
+
+    const manifest = manifests[network];
     const provider = new Web3Provider(globalObj.ethereum);
     const signer = provider.getSigner();
     installLUSDChickenBonds(globalObj, provider, signer);
 
     globalObj.user = signer;
-    globalObj.contracts = connectToContracts(globalObj.user, goerli.addresses);
+    globalObj.contracts = connectToContracts(globalObj.user, manifest.addresses);
 
-    provider.getNetwork().then(network => {
-      if (network.chainId !== goerli.chainId) {
-        console.warn("Warning: wallet is set to wrong network (should be Goerli)");
+    provider.getNetwork().then(actualNetwork => {
+      if (actualNetwork.chainId !== manifest.chainId) {
+        console.warn(`Warning: wallet is set to wrong network (should be ${network})`);
       }
     });
 
@@ -189,7 +206,7 @@ export const getLUSDChickenBondGlobalFunctions = (
 
     globalObj._networkChangeListener = () => {
       console.info("Network changed");
-      globalObj.testnet();
+      globalObj.testnet(network);
     };
 
     globalObj.ethereum.on("chainChanged", globalObj._networkChangeListener);
@@ -274,6 +291,40 @@ export const getLUSDChickenBondGlobalFunctions = (
     );
   },
 
+  async metadata(bondID = globalObj.bondID) {
+    const expectedUriScheme = "data:application/json;base64,";
+    const tokenURI = await globalObj.contracts.bondNFT.tokenURI(bondID);
+
+    if (!tokenURI.startsWith(expectedUriScheme)) {
+      throw new Error("Unexpected tokenURI format");
+    }
+
+    return JSON.parse(atob(tokenURI.slice(expectedUriScheme.length)));
+  },
+
+  async artwork(bondID) {
+    const scale = 50;
+    const expectedUriScheme = "data:image/svg+xml;base64,";
+    const metadata = (await globalObj.metadata(bondID)) as any;
+    const image = metadata.image as unknown;
+
+    if (typeof image !== "string" || !image.startsWith(expectedUriScheme)) {
+      throw new Error("Unexpected image format");
+    }
+
+    console.log(
+      "%c ",
+      ` display: block;
+        width: ${5.5 * scale}px;
+        height: ${7.5 * scale}px;
+        background-color: #${metadata.background_color ?? "ffffff"};
+        background-image: url(${image});
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: ${5 * scale}px ${7 * scale}px`
+    );
+  },
+
   async chickenIn(bondID = globalObj.bondID) {
     await receipt(() => globalObj.contracts.chickenBondManager.chickenIn(bondID))();
   },
@@ -299,6 +350,12 @@ export const getLUSDChickenBondGlobalFunctions = (
         Decimal.ZERO.hex
       )
     )();
+  },
+
+  deployNFTArtwork: () => deployNFTArtwork(globalObj.user, { log: true }),
+
+  async setNFTArtwork(address: string) {
+    await receipt(() => globalObj.contracts.bondNFT.setArtworkAddress(address))();
   },
 
   async migrate() {

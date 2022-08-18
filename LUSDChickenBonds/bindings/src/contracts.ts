@@ -3,6 +3,7 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 
 import bondNFT from "../artifacts/BondNFT.json";
+import simpleEggArtwork from "../artifacts/SimpleEggArtwork.json";
 import chickenBondManager from "../artifacts/ChickenBondManager.json";
 import erc20Faucet from "../artifacts/ERC20Faucet.json";
 import testnetBAMM from "../artifacts/TestnetBAMM.json";
@@ -20,6 +21,7 @@ import curveToken from "../artifacts/CurveToken.json";
 
 import {
   BondNFTFactory,
+  SimpleEggArtworkFactory,
   ChickenBondManagerFactory,
   ERC20FaucetFactory,
   TestnetBAMMFactory,
@@ -47,6 +49,11 @@ export interface LUSDChickenBondContractFactories {
   bondNFT: {
     contractName: "BondNFT";
     factory: BondNFTFactory;
+  };
+
+  bondNFTArtwork: {
+    contractName: "SimpleEggArtwork";
+    factory: SimpleEggArtworkFactory;
   };
 
   chickenBondManager: {
@@ -172,6 +179,7 @@ const checkArtifact = <T extends LUSDChickenBondContractName>(
 
 const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   bondNFT: checkArtifact("BondNFT", bondNFT),
+  bondNFTArtwork: checkArtifact("SimpleEggArtwork", simpleEggArtwork),
   chickenBondManager: checkArtifact("ChickenBondManager", chickenBondManager),
   curvePool: checkArtifact("TestnetCurvePool", testnetCurvePool),
   curveBasePool: checkArtifact("TestnetCurveBasePool", testnetCurveBasePool),

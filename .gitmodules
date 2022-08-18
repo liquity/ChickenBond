@@ -7,3 +7,6 @@
 [submodule "LUSDChickenBonds/lib/b-protocol"]
 	path = LUSDChickenBonds/lib/b-protocol
 	url = https://github.com/backstop-protocol/dev
+[submodule "LUSDChickenBonds/lib/datetime"]
+	path = LUSDChickenBonds/lib/datetime
+	url = https://github.com/bokkypoobah/BokkyPooBahsDateTimeLibrary

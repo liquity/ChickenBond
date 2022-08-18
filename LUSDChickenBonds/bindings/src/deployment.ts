@@ -201,11 +201,13 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const bondNFTArtwork = await this.deployContract(factories.bondNFTArtwork, overrides);
+
     const bondNFT = await this.deployContract(
       factories.bondNFT,
       "LUSDBondNFT",
       "LUSDBOND",
-      AddressZero,
+      bondNFTArtwork.contract.address,
       params.bondNFTTransferLockoutPeriodSeconds,
       overrides
     );
@@ -296,6 +298,7 @@ class LUSDChickenBondDeployment {
       curvePool,
       curveBasePool,
       bondNFT,
+      bondNFTArtwork,
       chickenBondManager,
       bLUSDToken,
       bLUSDCurveToken,
@@ -382,6 +385,10 @@ class LUSDChickenBondDeployment {
       config: this.config
     };
   }
+
+  deployNFTArtwork() {
+    return this.deployContract(this.factories.bondNFTArtwork, this.overrides);
+  }
 }
 
 export const deployAndSetupContracts = async (
@@ -389,3 +396,8 @@ export const deployAndSetupContracts = async (
   params?: Readonly<Partial<LUSDChickenBondDeploymentParams>>
 ): Promise<LUSDChickenBondDeploymentResult> =>
   new LUSDChickenBondDeployment(deployer, params).deployAndSetupContracts();
+
+export const deployNFTArtwork = async (
+  deployer: Signer,
+  params?: Readonly<Partial<Omit<LUSDChickenBondDeploymentParams, "config">>>
+) => new LUSDChickenBondDeployment(deployer, params).deployNFTArtwork();
