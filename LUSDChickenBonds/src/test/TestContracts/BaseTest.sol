@@ -11,7 +11,7 @@ import "./ChickenBondManagerWrap.sol";
 import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/IBAMM.sol";
 import "../../Interfaces/ICurvePool.sol";
-import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
+import "../../Interfaces/ICurveLiquidityGaugeV5.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "./TestUtils.sol";
 
@@ -34,7 +34,7 @@ contract BaseTest is Test {
     IBAMM bammSPVault;
     IYearnVault yearnCurveVault;
     IYearnRegistry yearnRegistry;
-    ICurveLiquidityGaugeV4 curveLiquidityGauge;
+    ICurveLiquidityGaugeV5 curveLiquidityGauge;
 
     address yearnGovernanceAddress;
     address liquitySPAddress;

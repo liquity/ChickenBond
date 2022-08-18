@@ -8,7 +8,7 @@ import "../../ExternalContracts/MockBAMMSPVault.sol";
 import "../../ExternalContracts/MockYearnVault.sol";
 import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
-import  "../../ExternalContracts/MockCurveLiquidityGaugeV4.sol";
+import  "../../ExternalContracts/MockCurveLiquidityGauge.sol";
 import "./LUSDTokenTester.sol";
 
 
@@ -65,7 +65,7 @@ contract DevTestSetup is BaseTest {
         bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0), BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS);
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract
-        curveLiquidityGauge = ICurveLiquidityGaugeV4(address(new MockCurveLiquidityGaugeV4()));
+        curveLiquidityGauge = ICurveLiquidityGaugeV5(address(new MockCurveLiquidityGauge()));
 
         ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
             bondNFTAddress: address(bondNFT),

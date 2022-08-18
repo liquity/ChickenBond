@@ -13,7 +13,7 @@ import "./Interfaces/IYearnVault.sol";
 import "./Interfaces/ICurvePool.sol";
 import "./Interfaces/IYearnRegistry.sol";
 import "./Interfaces/IChickenBondManager.sol";
-import "./Interfaces/ICurveLiquidityGaugeV4.sol";
+import "./Interfaces/ICurveLiquidityGaugeV5.sol";
 
 //import "forge-std/console.sol";
 
@@ -32,7 +32,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     IBAMM immutable public bammSPVault; // B.Protocol Stability Pool vault
     IYearnVault immutable public yearnCurveVault;
     IYearnRegistry immutable public yearnRegistry;
-    ICurveLiquidityGaugeV4 immutable public curveLiquidityGauge;
+    ICurveLiquidityGaugeV5 immutable public curveLiquidityGauge;
 
     address immutable public yearnGovernanceAddress;
 
@@ -209,7 +209,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         accrualAdjustmentMultiplier = 1e18 - _params.accrualAdjustmentRate;
         accrualAdjustmentPeriodSeconds = _params.accrualAdjustmentPeriodSeconds;
 
-        curveLiquidityGauge = ICurveLiquidityGaugeV4(_externalContractAddresses.curveLiquidityGaugeAddress);
+        curveLiquidityGauge = ICurveLiquidityGaugeV5(_externalContractAddresses.curveLiquidityGaugeAddress);
         CHICKEN_IN_AMM_FEE = _params.chickenInAMMFee;
 
         uint256 fee = curvePool.fee(); // This is practically immutable (can only be set once, in `initialize()`)

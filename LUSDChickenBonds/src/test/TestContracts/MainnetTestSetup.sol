@@ -2,10 +2,9 @@
 pragma solidity ^0.8.10;
 
 import "./BaseTest.sol";
-import "../../ExternalContracts/MockYearnVault.sol";
-import "../../ExternalContracts/MockCurvePool.sol";
 import "./Interfaces/ICurveCryptoFactory.sol";
-import "../../Interfaces/ICurveLiquidityGaugeV4.sol";
+import "./Interfaces/ICurveCryptoPool.sol";
+import "../../Interfaces/ICurveLiquidityGaugeV5.sol";
 
 
 contract MainnetTestSetup is BaseTest {
@@ -29,7 +28,9 @@ contract MainnetTestSetup is BaseTest {
     uint256 BOOTSTRAP_PERIOD_REDEEM;
     uint256 BOOTSTRAP_PERIOD_SHIFT;
     uint256 CBMDeploymentTime;
-    ICurvePool bLUSDCurvePool;
+    IERC20 bLUSDCurveToken;
+    ICurveCryptoPool bLUSDCurvePool;
+    address curveFactoryAdmin;
 
     function setUp() public {
         // pinBlock(MAINNET_PINNED_BLOCK);
@@ -92,7 +93,7 @@ contract MainnetTestSetup is BaseTest {
         ICurveCryptoFactory curveFactory = ICurveCryptoFactory(MAINNET_CURVE_V2_FACTORY_ADDRESS);
         address[2] memory bLUSDCurvePoolCoins = [address(bLUSDToken), address(lusdToken)];
 
-        bLUSDCurvePool = ICurvePool(
+        bLUSDCurvePool = ICurveCryptoPool(
             curveFactory.deploy_pool(
                 "bLUSD_LUSD",        // _name
                 "bLUSDLUSDC",        // _symbol
@@ -109,9 +110,10 @@ contract MainnetTestSetup is BaseTest {
                 1.2e18               // initial_price (token1 / token2)
             )
         );
+        bLUSDCurveToken = IERC20(bLUSDCurvePool.token());
 
         address curveLiquidityGaugeAddress = curveFactory.deploy_gauge(address(bLUSDCurvePool));
-        curveLiquidityGauge = ICurveLiquidityGaugeV4(curveLiquidityGaugeAddress);
+        curveLiquidityGauge = ICurveLiquidityGaugeV5(curveLiquidityGaugeAddress);
 
         ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
             bondNFTAddress: address(bondNFT),
@@ -161,7 +163,8 @@ contract MainnetTestSetup is BaseTest {
         CBMDeploymentTime = chickenBondManager.deploymentTimestamp();
 
         // Add LUSD as reward token for Curve Liquidity Gauge, and set ChickenBondManager as distributor
-        vm.startPrank(curveFactory.admin());
+        curveFactoryAdmin = curveFactory.admin();
+        vm.startPrank(curveFactoryAdmin);
         curveLiquidityGauge.add_reward(address(lusdToken), address(chickenBondManager));
         vm.stopPrank();
 
