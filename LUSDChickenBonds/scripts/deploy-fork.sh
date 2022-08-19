@@ -171,8 +171,8 @@ echo -e "Deployed to: $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS\n"
 echo "Deploying ChickenBondManager..."
 
 # ChickenBonds constructor arguments
-INITIAL_ACCRUAL_PARAMETER=2592000000000000000000000         # 30 days * 1e18
-MINIMUM_ACCRUAL_PARAMETER=2592000000000000000000            # 30 days * e18 / 1000
+INITIAL_ACCRUAL_PARAMETER=216000000000000000000000          # 2.5 days * 1e18
+MINIMUM_ACCRUAL_PARAMETER=216000000000000000000             # 2.5 days * 1e18 / 1000
 ACCRUAL_ADJUSTMENT_RATE=10000000000000000                   # 1e16 = 1%
 TARGET_AVERAGE_AGE_SECONDS=2592000                          # 30 days
 ACCRUAL_ADJUSTMENT_PERIOD_SECONDS=86400                     # 1 day
@@ -180,8 +180,8 @@ CHICKEN_IN_AMM_FEE=10000000000000000                        # 1e16 = 1%
 CURVE_DEPOSIT_WITHDRAW_DYDX_THRESHOLD=1000400000000000000   # 10004e14 = 1.0004
 # BOOTSTRAP_PERIOD_CHICKEN_IN=604800                          # 7 days
 # BOOTSTRAP_PERIOD_REDEEM=604800                              # 7 days
-BOOTSTRAP_PERIOD_CHICKEN_IN=1                          # 7 days
-BOOTSTRAP_PERIOD_REDEEM=1                              # 7 days
+BOOTSTRAP_PERIOD_CHICKEN_IN=1                               # 7 days
+BOOTSTRAP_PERIOD_REDEEM=1                                   # 7 days
 BOOTSTRAP_PERIOD_SHIFT=7776000                              # 90 days
 SHIFTER_DELAY=3600                                          # 1 hour
 SHIFTER_WINDOW=600                                          # 10 minutes
@@ -262,11 +262,11 @@ cast send $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS "setChicken(address)" $CHICKEN_BO
 echo -e "Done.\n"
 
 echo "Adding LUSD reward token for bLUSD/LUSD LPs, and set ChickenBondManager as distributor in Curve gauge..."
-cast rpc "hardhat_impersonateAccount" 0xbabe61887f1de2713c6f97e567623453d3c79f67
+cast rpc "hardhat_impersonateAccount" $MAINNET_CURVE_V2_FACTORY_ADMIN_ADDRESS
 cast send $BLUSD_AMM_STAKING_ADDRESS "add_reward(address,address)" \
 $MAINNET_LUSD_TOKEN_ADDRESS $CHICKEN_BOND_MANAGER_ADDRESS \
 --rpc-url $RPC_URL \
---from $MAINNET_CURVE_V2_FACTORY_ADMIN_ADDRESS || exit 1
+--from $MAINNET_CURVE_V2_FACTORY_ADMIN_ADDRESS > /dev/null || exit 1
 echo -e "Done.\n"
 
 
@@ -275,11 +275,24 @@ DEPLOYMENT_ADDRESSES=$(printf '{
   "BLUSD_TOKEN_ADDRESS": "%s",
   "BLUSD_AMM_ADDRESS": "%s",
   "BLUSD_AMM_STAKING_ADDRESS": "%s",
-  "CHICKEN_BOND_MANAGER_ADDRESS": "%s"
-}\n' $BOND_NFT_ADDRESS $BLUSD_TOKEN_ADDRESS $BLUSD_AMM_STAKING_ADDRESS $BLUSD_AMM_ADDRESS $CHICKEN_BOND_MANAGER_ADDRESS)
+  "CHICKEN_BOND_MANAGER_ADDRESS": "%s",
+  "LUSD_OVERRIDE_ADDRESS": null
+}\n' $BOND_NFT_ADDRESS $BLUSD_TOKEN_ADDRESS $BLUSD_AMM_ADDRESS $BLUSD_AMM_STAKING_ADDRESS $CHICKEN_BOND_MANAGER_ADDRESS)
 
 echo -e "${GREEN}Finished.\n"
 echo -e "${DEPLOYMENT_ADDRESSES}\n"
 
 rm -f ../addresses/addresses.json
-echo $DEPLOYMENT_ADDRESSES | python -m json.tool > ../addresses/addresses.json
+
+PYTHON_CMD="python"
+if ! command -v $PYTHON_CMD &> /dev/null
+then
+  PYTHON_CMD="python3"
+  if ! command -v $PYTHON_CMD &> /dev/null
+  then
+    echo "Couldn't find python or python3, do you have it installed under a different alias?"
+    exit
+  fi
+fi
+
+echo $DEPLOYMENT_ADDRESSES | $PYTHON_CMD -m json.tool > ../addresses/addresses.json
