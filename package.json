@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "postinstall": "run-s generate-types compile",
     "compile:lusd": "yarn --cwd lusd compile",
     "deploy-fork:lusd": "yarn --cwd lusd deploy-fork",
     "generate-types:lusd": "yarn --cwd lusd generate-types",
