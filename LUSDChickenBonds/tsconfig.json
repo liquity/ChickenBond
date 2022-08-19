@@ -2,7 +2,7 @@
   "compilerOptions": {
     "declaration": true,
     "target": "es6",
-    "module": "es6",
+    "module": "CommonJS",
     "moduleResolution": "nodenext",
     "strict": true,
     "strictNullChecks": true,

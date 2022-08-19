@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 echo -e "Publishing dist to local store...\n"
 
 # Generate dist output to publish
-yarn prepare-compilations
+yarn prepare-publish
 
 # Publish with ./dist as the root, so consumers don't have to import with "/dist" in the path
 cp ../package.json ../dist

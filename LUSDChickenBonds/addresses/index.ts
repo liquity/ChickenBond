@@ -4,4 +4,5 @@ export {
   BLUSD_TOKEN_ADDRESS,
   BLUSD_AMM_ADDRESS,
   BLUSD_AMM_STAKING_ADDRESS,
+  LUSD_OVERRIDE_ADDRESS,
 } from './addresses.json'
