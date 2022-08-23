@@ -1,3 +1,11 @@
+import {
+  highlightPath,
+  scaleEggPath,
+  scaleCastShadow,
+  selfShadowPath,
+  shellPath
+} from "./eggScaling";
+
 export const solidCardColors = {
   red: "#ea394e",
   green: "#5caa4b",
@@ -71,13 +79,32 @@ export const shellColors = [
   luminous
 ] as ShellColor[];
 
+export const eggScales = {
+  tiny: 0.6,
+  small: 0.8,
+  normal: 1,
+  big: 1.2
+};
+
+export type EggSize = keyof typeof eggScales;
+
+export const eggSizes = Object.keys(eggScales) as EggSize[];
+
 export interface EggArtworkAttributes {
   tokenID: number;
   cardColor: CardColor;
   shellColor: ShellColor;
+  eggSize: EggSize;
 }
 
-export const generateSVG = ({ tokenID, cardColor, shellColor }: EggArtworkAttributes) => /*svg*/ `
+export const generateSVG = ({ tokenID, cardColor, shellColor, eggSize }: EggArtworkAttributes) => {
+  const eggScale = eggScales[eggSize];
+  const castShadowCoords = scaleCastShadow(eggScale).toString();
+  const shellPathData = scaleEggPath(shellPath, eggScale).toString();
+  const highlightPathData = scaleEggPath(highlightPath, eggScale).toString();
+  const selfShadowPathData = scaleEggPath(selfShadowPath, eggScale).toString();
+
+  return /*svg*/ `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 1050">
   <style>
     #cb-egg-${tokenID} .cb-egg path {
@@ -203,7 +230,7 @@ export const generateSVG = ({ tokenID, cardColor, shellColor }: EggArtworkAttrib
     <ellipse
       ${isLuminous(shellColor) ? 'style="mix-blend-mode: luminosity"' : ""}
       fill="#0a102e"
-      cx="375" cy="618.75" rx="100" ry="19"
+      ${castShadowCoords}
     />
 
     <!-- egg -->
@@ -214,36 +241,36 @@ export const generateSVG = ({ tokenID, cardColor, shellColor }: EggArtworkAttrib
             <path
               style="fill: url(#cb-egg-${tokenID}-shell-rainbow-gradient)"
               fill="#fff1cb"
-              d="M239.76,481.87c0,75.6,60.66,136.88,135.49,136.88s135.49-61.28,135.49-136.88S450.08,294.75,375.25,294.75C304.56,294.75,239.76,406.27,239.76,481.87Z"
+              d="${shellPathData}"
             />`
           : isMetallicColor(shellColor)
           ? /*svg*/ `
             <path
               fill="${metallicColors[shellColor].solid}"
-              d="M239.76,481.87c0,75.6,60.66,136.88,135.49,136.88s135.49-61.28,135.49-136.88S450.08,294.75,375.25,294.75C304.56,294.75,239.76,406.27,239.76,481.87Z"
+              d="${shellPathData}"
             />`
           : isLuminous(shellColor) && isMetallicColor(cardColor)
           ? /*svg*/ `
             <path
               fill="${metallicColors[cardColor].solid}"
-              d="M239.76,481.87c0,75.6,60.66,136.88,135.49,136.88s135.49-61.28,135.49-136.88S450.08,294.75,375.25,294.75C304.56,294.75,239.76,406.27,239.76,481.87Z"
+              d="${shellPathData}"
             />`
           : isLuminous(shellColor)
           ? /*svg*/ `
             <path
               style="mix-blend-mode: luminosity"
               fill="#e5eff9"
-              d="M239.76,481.87c0,75.6,60.66,136.88,135.49,136.88s135.49-61.28,135.49-136.88S450.08,294.75,375.25,294.75C304.56,294.75,239.76,406.27,239.76,481.87Z"
+              d="${shellPathData}"
             />`
           : /*svg*/ `
             <path
               fill="${solidShellColors[shellColor]}"
-              d="M239.76,481.87c0,75.6,60.66,136.88,135.49,136.88s135.49-61.28,135.49-136.88S450.08,294.75,375.25,294.75C304.56,294.75,239.76,406.27,239.76,481.87Z"
+              d="${shellPathData}"
             />`
       }
 
-      <path style="mix-blend-mode: soft-light" fill="#fff" d="M298.26,367.33c-10,22.65-9.13,49.22,5.42,60.19,16.26,12.25,39.81,15,61.63-5.22,20.95-19.43,39.13-73.24,2.07-92.5C347.08,319.25,309.31,342.25,298.26,367.33Z"/>
-      <path style="mix-blend-mode: soft-light" fill="#000" d="M443.61,326.7c19.9,34.86,31.91,75.58,31.91,109.2,0,75.6-60.67,136.88-135.5,136.88a134.08,134.08,0,0,1-87.53-32.41C274.2,586.72,320.9,618.78,375,618.78c74.83,0,135.5-61.28,135.5-136.88C510.52,431.58,483.64,365.37,443.61,326.7Z"/>
+      <path style="mix-blend-mode: soft-light" fill="#fff" d="${highlightPathData}"/>
+      <path style="mix-blend-mode: soft-light" fill="#000" d="${selfShadowPathData}"/>
     </g>
 
     <!-- text -->
@@ -253,3 +280,4 @@ export const generateSVG = ({ tokenID, cardColor, shellColor }: EggArtworkAttrib
   </g>
 </svg>
 `;
+};
