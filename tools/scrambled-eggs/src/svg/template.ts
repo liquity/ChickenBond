@@ -69,7 +69,7 @@ export const shellColors = [
   ...Object.keys(metallicColors),
   rainbowColor,
   luminous
-] as CardColor[];
+] as ShellColor[];
 
 export interface EggArtworkAttributes {
   tokenID: number;
@@ -161,21 +161,23 @@ export const generateSVG = ({ tokenID, cardColor, shellColor }: EggArtworkAttrib
   <g id="cb-egg-${tokenID}">
     <!-- border -->
     ${
-      isRainbowColor(cardColor)
-        ? /*svg*/ `<rect style="fill: url(#cb-egg-${tokenID}-card-rainbow-gradient)" width="100%" height="100%" rx="37.5"/>`
-        : !isLuminous(shellColor)
-        ? /*svg*/ `
-          <rect
-            fill="${isMetallicColor(cardColor) ? metallicColors[cardColor].solid : "#fff"}"
-            width="750" height="1050" rx="37.5"
-          />`
+      !isLuminous(shellColor)
+        ? isRainbowColor(cardColor)
+          ? /*svg*/ `<rect style="fill: url(#cb-egg-${tokenID}-card-rainbow-gradient)" width="100%" height="100%" rx="37.5"/>`
+          : /*svg*/ `
+            <rect
+              fill="${isMetallicColor(cardColor) ? metallicColors[cardColor].solid : "#fff"}"
+              width="750" height="1050" rx="37.5"
+            />`
         : ""
     }
 
     <!-- card colour -->
     ${
       isRainbowColor(cardColor)
-        ? /*svg*/ `<rect fill="#000" x="30" y="30" width="690" height="990" rx="37.5" opacity="0.05" />`
+        ? isLuminous(shellColor)
+          ? /*svg*/ `<rect x="30" y="30" width="690" height="990" rx="37.5" style="fill: url(#cb-egg-${tokenID}-card-rainbow-gradient)" />`
+          : /*svg*/ `<rect fill="#000" x="30" y="30" width="690" height="990" rx="37.5" opacity="0.05" />`
         : isCardGradient(cardColor) || isMetallicColor(cardColor)
         ? /*svg*/ `<rect x="30" y="30" width="690" height="990" rx="37.5" style="fill: url(#cb-egg-${tokenID}-card-diagonal-gradient)" />`
         : /*svg*/ `
@@ -204,6 +206,7 @@ export const generateSVG = ({ tokenID, cardColor, shellColor }: EggArtworkAttrib
       cx="375" cy="618.75" rx="100" ry="19"
     />
 
+    <!-- egg -->
     <g class="cb-egg">
       ${
         isRainbowColor(shellColor) || (isLuminous(shellColor) && isRainbowColor(cardColor))
