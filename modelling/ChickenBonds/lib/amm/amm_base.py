@@ -1,8 +1,11 @@
 from lib.erc_token import *
+from lib.amm.rewards import *
 
-class AmmInterface():
-    def __init__(self, pool_account, token_A, token_B, fee):
+class AmmBase():
+    def __init__(self, pool_account, token_A, token_B, fee, rewards_account=None, rewards_period=None):
         self.pool_account = pool_account # mimics the address
+        if rewards_account:
+            self.rewards = Rewards(token_A, rewards_account, rewards_period)
         self.token_A = token_A
         self.token_B = token_B
         self.lp_token = Token(token_A.symbol + token_B.symbol)
@@ -83,14 +86,14 @@ class AmmInterface():
         print(f" liquidity to remove: {liquidity:,.2f}")
         liquidity = min(account_liquidity, liquidity)
 
-        token_A_pol = self.token_A_balance()
-        token_B_pol = self.token_B_balance()
+        token_A_reserve = self.token_A_balance()
+        token_B_reserve = self.token_B_balance()
         # prevent from draining pool to avoid rounding and zero division errors
-        #if token_A_pol < 1000 or token_B_pol < 100:
+        #if token_A_reserve < 1000 or token_B_reserve < 100:
         #    return 0, 0
 
-        token_A_amount = liquidity * token_A_pol / total_liquidity
-        token_B_amount = liquidity * token_B_pol / total_liquidity
+        token_A_amount = liquidity * token_A_reserve / total_liquidity
+        token_B_amount = liquidity * token_B_reserve / total_liquidity
         #print(f"Withdrawing {token_A_amount:,.2f} {self.token_A.symbol}")
         #print(f"Withdrawing {token_B_amount:,.2f} {self.token_B.symbol}")
         self.token_A.transfer(self.pool_account, account, token_A_amount)

@@ -14,9 +14,9 @@ from lib.plots import *
 def deploy():
     coll = Token('ETH')
     lqty = Token('LQTY')
-    slqty = Token('sLQTY')
+    blqty = Token('bLQTY')
 
-    chicken = Chicken(coll, lqty, slqty, "Coop", "POL", "AMM", AMM_FEE, "STOKEN_AMM", AMM_FEE)
+    chicken = Chicken(coll, lqty, blqty, "Pending", "RESERVE", "AMM", AMM_FEE, "bTKN_AMM", AMM_FEE, "Rewards", REWARDS_PERIOD)
 
     chicks = list(map(lambda chick: User(f"chick_{chick:02}"), range(NUM_CHICKS)))
     # Initial CHICK balance
@@ -25,14 +25,6 @@ def deploy():
 
     borrower = User("borrower")
     #lqty.mint(borrower.account, INITIAL_AMOUNT)
-
-    # Add funds to sLQTY AMM pool:
-    whale = User("whale")
-    whale_amount = NUM_CHICKS * INITIAL_AMOUNT * 100000
-    lqty.mint(whale.account, whale_amount)
-    chicken.stoken_amm.add_liquidity_single_A(whale.account, whale_amount, 1)
-    # to be discounted for APR calculation
-    chicken.stoken_amm.set_initial_A_liquidity(whale_amount)
 
     return chicken, chicks, borrower
 
@@ -59,8 +51,11 @@ def main(tester):
     tester.init(chicks)
 
     for iteration in range(ITERATIONS):
+        #print(f"\n  --> Iteration: {iteration}")
         natural_rate = tester.get_natural_rate(natural_rate, iteration)
-        chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(chicken.stoken_amm, accrued_fees_A, accrued_fees_B)
+        chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(
+            chicken.btkn_amm, accrued_fees_A, accrued_fees_B
+        )
         chicken.amm_average_apr = get_amm_average_apr(data, iteration)
         #print(f"AMM iteration APR: {chicken.amm_iteration_apr:.3%}")
         #print(f"AMM average APR: {chicken.amm_average_apr:.3%}")
@@ -74,6 +69,12 @@ def main(tester):
 
         # Users chicken in and out
         tester.update_chicken(chicken, chicks, data, iteration)
+
+        # Arbitrage bTKN
+        tester.arbitrage_btkn(chicken, chicks, iteration)
+
+        # Buy bTKN (speculation is price is low)
+        tester.buy_btkn(chicken, chicks)
 
         # Controller feedback
         avg_age = tester.get_avg_outstanding_bond_age(chicks, iteration)
@@ -123,4 +124,4 @@ def main(tester):
     return
 
 if __name__ == "__main__":
-    main(TesterSimpleToll())
+    main(TesterSimple())

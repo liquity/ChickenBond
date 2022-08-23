@@ -1,21 +1,21 @@
 import math
 import numpy as np
-from lib.amm.amm_interface import *
+from lib.amm.amm_base import *
 
-class StableSwapPool(AmmInterface):
+class StableSwapPool(AmmBase):
     def __init__(self, pool_account, token_A, token_B, fee, amplification_factor):
         super().__init__(pool_account, token_A, token_B, fee)
         self.amplification_factor = amplification_factor
         self.D = 0
 
     def get_A_amount_for_liquidity(self, token_B_amount):
-        token_A_pol = self.token_A_balance()
-        token_B_pol = self.token_B_balance()
-        return token_B_amount * token_A_pol / token_B_pol
+        token_A_reserve = self.token_A_balance()
+        token_B_reserve = self.token_B_balance()
+        return token_B_amount * token_A_reserve / token_B_reserve
     def get_B_amount_for_liquidity(self, token_A_amount):
-        token_A_pol = self.token_A_balance()
-        token_B_pol = self.token_B_balance()
-        return token_A_amount * token_B_pol / token_A_pol
+        token_A_reserve = self.token_A_balance()
+        token_B_reserve = self.token_B_balance()
+        return token_A_amount * token_B_reserve / token_A_reserve
 
     # This is only guaranteed to work if A >= 0.25, as otherwise Q^2+P^3 may be < 0.
     # From: https://en.wikipedia.org/wiki/Cubic_equation#Cardano's_formula
@@ -78,8 +78,8 @@ class StableSwapPool(AmmInterface):
             """
             #assert token_B_amount <= max_token_B_amount
 
-            token_A_pol = self.token_A_balance()
-            liquidity_minted = token_A_amount * total_liquidity / token_A_pol
+            token_A_reserve = self.token_A_balance()
+            liquidity_minted = token_A_amount * total_liquidity / token_A_reserve
 
             self.token_A.transfer(account, self.pool_account, token_A_amount)
             self.token_B.transfer(account, self.pool_account, token_B_amount)
@@ -92,11 +92,11 @@ class StableSwapPool(AmmInterface):
 
     def add_liquidity_single_A(self, account, token_A_amount, max_slippage):
         initial_token_B_balance = self.token_B.balance_of(account)
-        token_A_pol = self.token_A_balance()
-        token_B_pol = self.token_B_balance()
+        token_A_reserve = self.token_A_balance()
+        token_B_reserve = self.token_B_balance()
         # TODO: this is an approximation!
         # Because of that, we lower it by 1%, to avoid errors
-        amount_to_add = token_A_amount * token_A_pol / (token_A_pol + token_B_pol) * 0.99
+        amount_to_add = token_A_amount * token_A_reserve / (token_A_reserve + token_B_reserve) * 0.99
         amount_to_swap = token_A_amount - amount_to_add
         amount_A_max_slippage = self.get_input_A_for_max_slippage(max_slippage, 0, 0)
         """
@@ -154,8 +154,8 @@ class StableSwapPool(AmmInterface):
         print("")
         """
 
-        token_A_amount = self.token_A_balance() - token_A_pol
-        token_B_amount = self.token_B_balance() - token_B_pol
+        token_A_amount = self.token_A_balance() - token_A_reserve
+        token_B_amount = self.token_B_balance() - token_B_reserve
         return token_A_amount, token_B_amount
 
     def remove_liquidity(self, account, liquidity):

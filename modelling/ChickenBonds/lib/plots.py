@@ -31,7 +31,7 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
                 "x": "Outstanding Debt",
                 "stacked_x": f"{start_index + d:03}_O",
                 "amount": data['outstanding_debt'][start_index + d * group],
-                "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
+                "btkn_apr": f"{data['btkn_apr'][start_index + d * group]:.3%}",
                 "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
                 "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
             },
@@ -42,8 +42,8 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
             {
                 "x": "Pending TOKEN",
                 "stacked_x": f"{start_index + d:03}_T",
-                "amount": data['coop_token'][start_index + d * group],
-                "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
+                "amount": data['pending_token'][start_index + d * group],
+                "btkn_apr": f"{data['btkn_apr'][start_index + d * group]:.3%}",
                 "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
                 "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
             },
@@ -51,10 +51,10 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
         )
         new_data = new_data.append(
             {
-                "x": "Acquired TOKEN",
+                "x": "Reserve TOKEN",
                 "stacked_x": f"{start_index + d:03}_T",
-                "amount": data['pol_token'][start_index + d * group],
-                "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
+                "amount": data['reserve_token'][start_index + d * group],
+                "btkn_apr": f"{data['btkn_apr'][start_index + d * group]:.3%}",
                 "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
                 "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
             },
@@ -65,7 +65,7 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
                 "x": "AMM TOKEN",
                 "stacked_x": f"{start_index + d:03}_amm",
                 "amount": data['amm_token'][start_index + d * group],
-                "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
+                "btkn_apr": f"{data['btkn_apr'][start_index + d * group]:.3%}",
                 "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
                 "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
             },
@@ -76,7 +76,7 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
                 "x": "AMM ETH",
                 "stacked_x": f"{start_index + d:03}_amm",
                 "amount": data['amm_coll'][start_index + d * group],
-                "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
+                "btkn_apr": f"{data['btkn_apr'][start_index + d * group]:.3%}",
                 "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
                 "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
             },
@@ -84,10 +84,10 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
         )
         new_data = new_data.append(
             {
-                "x": "sTOKEN supply",
+                "x": "bTKN supply",
                 "stacked_x": f"{start_index + d:03}_sTa",
-                "amount": data['stoken_supply'][start_index + d * group],
-                "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
+                "amount": data['btkn_supply'][start_index + d * group],
+                "btkn_apr": f"{data['btkn_apr'][start_index + d * group]:.3%}",
                 "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
                 "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
             },
@@ -95,10 +95,10 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
         )
         new_data = new_data.append(
             {
-                "x": "sTOKEN value",
+                "x": "bTKN value",
                 "stacked_x": f"{start_index + d:03}_sTv",
-                "amount": data['stoken_supply'][start_index + d * group] * data['stoken_price'][start_index + d * group],
-                "stoken_apr": f"{data['stoken_apr'][start_index + d * group]:.3%}",
+                "amount": data['btkn_supply'][start_index + d * group] * data['btkn_price'][start_index + d * group],
+                "btkn_apr": f"{data['btkn_apr'][start_index + d * group]:.3%}",
                 "amm_apr": f"{data['amm_average_apr'][start_index + d * group]:.3%}",
                 "natural_rate": f"{data['natural_rate'][start_index + d * group]:.3%}",
             },
@@ -119,7 +119,7 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
         color='x',
         color_discrete_sequence=colors,
         labels={'x': 'Variable', 'stacked_x': 'Time'},
-        hover_data=['natural_rate', 'amm_apr', 'stoken_apr'],
+        hover_data=['natural_rate', 'amm_apr', 'btkn_apr'],
     )
 
     # Change the bar mode
@@ -135,7 +135,7 @@ def plot_chicken_state(data, description="", group=7, group_description="Week", 
 
     return
 
-def plot_stoken_price(data, max_value=200, max_time_value=150, description="", group=1, group_description="Day", show=True, save=False, get_prefixes=lambda:None):
+def plot_btkn_price(data, max_value=200, max_time_value=150, description="", group=1, group_description="Day", show=True, save=False, get_prefixes=lambda:None):
     # TODO:
     # "x": start_index + d,
     start_index = data.index[0]
@@ -156,7 +156,7 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
 
         """
         # TWAP
-        twap_price = data['stoken_twap'][start_index + d * group]
+        twap_price = data['btkn_twap'][start_index + d * group]
         twap_price = min(
             twap_price,
             max_value # to avoid “zooming out too much with the initial spike”
@@ -164,7 +164,7 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
         """
 
         # Spot
-        spot_price = data['stoken_price'][start_index + d * group]
+        spot_price = data['btkn_price'][start_index + d * group]
         spot_price = min(
             spot_price,
             max_value # to avoid “zooming out too much with the initial spike”
@@ -195,8 +195,8 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
         # Average outstading bond age
         avg_age.append(data['avg_age'][start_index + d * group])
 
-    #fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - sTOKEN Price")
-    fig = make_subplots(specs=[[{"secondary_y": True}]], subplot_titles=[f"{description} - sTOKEN Price"])
+    #fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - bTKN Price")
+    fig = make_subplots(specs=[[{"secondary_y": True}]], subplot_titles=[f"{description} - bTKN Price"])
 
     fig.add_trace(
         go.Scatter(y=fair_prices, name="Fair Price"),
@@ -229,11 +229,11 @@ def plot_stoken_price(data, max_value=200, max_time_value=150, description="", g
     )
 
     fig.update_xaxes(tick0=0, dtick=len(data.index)//group/20, title_text=group_description)
-    fig.update_yaxes(title_text="sTOKEN Price in TOKEN", secondary_y=False)
+    fig.update_yaxes(title_text="bTKN Price in TOKEN", secondary_y=False)
     fig.update_yaxes(title_text="Rebond time", secondary_y=True)
 
     if show: fig.show()
-    maybe_save(fig, save, get_prefixes, "sTOKEN_price")
+    maybe_save(fig, save, get_prefixes, "bTKN_price")
     return
 
 def append_apr_data(start_index, group, d, data, new_data, min_value, max_value, variable, description):
@@ -265,11 +265,11 @@ def plot_aprs(data, min_value=-10, max_value=20, description="", group=1, group_
     new_data = pd.DataFrame({})
     for d in range(len(data.index) // group):
         new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "natural_rate", "Natural Rate")
-        #new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "stoken_apr", "sTOKEN (spot)")
-        #new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "amm_iteration_apr", "sTOKEN AMM (spot)")
+        #new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "btkn_apr", "bTKN (spot)")
+        #new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "amm_iteration_apr", "bTKN AMM (spot)")
         new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "bonding_apr_twap", "Bonding (avg)")
-        new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "stoken_apr_twap", "sTOKEN (avg)")
-        new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "amm_average_apr", "sTOKEN AMM (avg)")
+        new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "btkn_apr_twap", "bTKN (avg)")
+        new_data = append_apr_data(start_index, group, d, data, new_data, min_value, max_value, "amm_average_apr", "bTKN AMM (avg)")
 
 
     fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - APRs")
@@ -282,7 +282,7 @@ def plot_aprs(data, min_value=-10, max_value=20, description="", group=1, group_
     return
 
 def plot_chicks(data, chicken, chicks, description="", show=True, save=False, get_prefixes=lambda:None):
-    stoken_price = data["stoken_price"][len(data)-1]
+    btkn_price = data["btkn_price"][len(data)-1]
     new_data = pd.DataFrame({
         "x": [],
         "stacked_x": [],
@@ -325,17 +325,17 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
         )
         new_data = new_data.append(
             {
-                "x": "sTOKEN",
+                "x": "bTKN",
                 "stacked_x": chick_name,
-                "amount": chicken.stoken.balance_of(chick.account) * stoken_price,
+                "amount": chicken.btkn.balance_of(chick.account) * btkn_price,
             },
             ignore_index=True
         )
         new_data = new_data.append(
             {
-                "x": "TOKEN/sTOKEN LP tokens",
+                "x": "TOKEN/bTKN LP tokens",
                 "stacked_x": chick_name,
-                "amount": chicken.stoken_amm.get_value_in_token_A_of(chick.account),
+                "amount": chicken.btkn_amm.get_value_in_token_A_of(chick.account),
             },
             ignore_index=True
         )
@@ -384,7 +384,7 @@ def plot_charts(
     if not show and not save:
         return
     plot_chicken_state(data, description, group, group_description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '1'))
-    plot_stoken_price(data, price_max_value, time_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '2'))
+    plot_btkn_price(data, price_max_value, time_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '2'))
     plot_aprs(data, apr_min_value, apr_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '3'))
     plot_chicks(data, chicken, chicks, description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '6'))
     return
