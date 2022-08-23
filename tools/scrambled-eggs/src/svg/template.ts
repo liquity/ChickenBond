@@ -62,8 +62,18 @@ export const luminous = "luminous";
 type Luminous = typeof luminous;
 const isLuminous = (key: string): key is Luminous => key === luminous;
 
+export const solidBorderColors = {
+  white: "#fff",
+  black: "#000"
+};
+
+export type SolidBorderColor = keyof typeof solidBorderColors;
+// const solidBorderColorSet = new Set(Object.keys(solidBorderColors));
+// const isSolidBorderColor = (key: string): key is SolidBorderColor => solidBorderColorSet.has(key);
+
 export type CardColor = SolidCardColor | CardGradient | MetallicColor | RainbowColor;
 export type ShellColor = SolidShellColor | MetallicColor | RainbowColor | Luminous;
+export type BorderColor = SolidBorderColor | MetallicColor | RainbowColor;
 
 export const cardColors = [
   ...Object.keys(solidCardColors),
@@ -79,6 +89,12 @@ export const shellColors = [
   luminous
 ] as ShellColor[];
 
+export const borderColors = [
+  ...Object.keys(solidBorderColors),
+  ...Object.keys(metallicColors),
+  rainbowColor
+] as BorderColor[];
+
 export const eggScales = {
   tiny: 0.6,
   small: 0.8,
@@ -92,12 +108,19 @@ export const eggSizes = Object.keys(eggScales) as EggSize[];
 
 export interface EggArtworkAttributes {
   tokenID: number;
+  borderColor: BorderColor;
   cardColor: CardColor;
   shellColor: ShellColor;
   eggSize: EggSize;
 }
 
-export const generateSVG = ({ tokenID, cardColor, shellColor, eggSize }: EggArtworkAttributes) => {
+export const generateSVG = ({
+  tokenID,
+  borderColor,
+  cardColor,
+  shellColor,
+  eggSize
+}: EggArtworkAttributes) => {
   const eggScale = eggScales[eggSize];
   const castShadowCoords = scaleCastShadow(eggScale).toString();
   const shellPathData = scaleEggPath(shellPath, eggScale).toString();
@@ -125,17 +148,16 @@ export const generateSVG = ({ tokenID, cardColor, shellColor, eggSize }: EggArtw
   </style>
 
   <defs>
+    <!-- diagonal card gradient -->
     ${
       isCardGradient(cardColor)
         ? /*svg*/ `
-          <!-- diagonal card gradient -->
           <linearGradient id="cb-egg-${tokenID}-card-diagonal-gradient" y1="100%" gradientUnits="userSpaceOnUse">
             <stop offset="0" stop-color="${cardGradients[cardColor][0]}"/>
             <stop offset="1" stop-color="${cardGradients[cardColor][1]}"/>
           </linearGradient>`
         : isMetallicColor(cardColor)
         ? /*svg*/ `
-          <!-- diagonal card gradient -->
           <linearGradient id="cb-egg-${tokenID}-card-diagonal-gradient" y1="100%" gradientUnits="userSpaceOnUse">
             <stop offset="0" stop-color="${metallicColors[cardColor].gradient[0]}"/>
             <stop offset="1" stop-color="${metallicColors[cardColor].gradient[1]}"/>
@@ -143,22 +165,22 @@ export const generateSVG = ({ tokenID, cardColor, shellColor, eggSize }: EggArtw
         : ""
     }
 
+    <!-- black radial gradient (spotlight) -->
     ${
       isLuminous(shellColor)
         ? /*svg*/ `
-          <!-- black radial gradient (spotlight) -->
           <radialGradient id="cb-egg-${tokenID}-card-radial-gradient" cx="50%" cy="45%" r="38%" gradientUnits="userSpaceOnUse">
             <stop offset="0" stop-opacity="0"/>
             <stop offset="0.25" stop-opacity="0"/>
-            <stop offset="1" stop-color="#000" stop-opacity="1"/> 
+            <stop offset="1" stop-color="#000" stop-opacity="1"/>
           </radialGradient>`
         : ""
     }
 
+    <!-- rainbow card gradient -->
     ${
-      isRainbowColor(cardColor)
+      isRainbowColor(cardColor) || isRainbowColor(borderColor)
         ? /*svg*/ `
-          <!-- rainbow card gradient -->
           <linearGradient id="cb-egg-${tokenID}-card-rainbow-gradient" y1="100%" gradientUnits="userSpaceOnUse">
             <stop offset="0" stop-color="#93278f"/>
             <stop offset="0.2" stop-color="#662d91"/>
@@ -171,10 +193,10 @@ export const generateSVG = ({ tokenID, cardColor, shellColor, eggSize }: EggArtw
         : ""
     }
 
+    <!-- rainbow shell gradient -->
     ${
       isRainbowColor(shellColor) || (isLuminous(shellColor) && isRainbowColor(cardColor))
         ? /*svg*/ `
-          <!-- rainbow shell gradient -->
           <linearGradient id="cb-egg-${tokenID}-shell-rainbow-gradient" x1="39%" y1="59%" x2="62%" y2="35%" gradientUnits="userSpaceOnUse">
             <stop offset="0" stop-color="#3fa9f5"/>
             <stop offset="0.38" stop-color="#39b54a"/>
@@ -188,23 +210,29 @@ export const generateSVG = ({ tokenID, cardColor, shellColor, eggSize }: EggArtw
   <g id="cb-egg-${tokenID}">
     <!-- border -->
     ${
-      !isLuminous(shellColor)
-        ? isRainbowColor(cardColor)
-          ? /*svg*/ `<rect style="fill: url(#cb-egg-${tokenID}-card-rainbow-gradient)" width="100%" height="100%" rx="37.5"/>`
-          : /*svg*/ `
-            <rect
-              fill="${isMetallicColor(cardColor) ? metallicColors[cardColor].solid : "#fff"}"
-              width="750" height="1050" rx="37.5"
-            />`
-        : ""
+      isLuminous(shellColor) && borderColor === "black"
+        ? "" // We will use the black radial gradient as border (covering the entire card)
+        : isRainbowColor(borderColor)
+        ? /*svg*/ `<rect style="fill: url(#cb-egg-${tokenID}-card-rainbow-gradient)" width="100%" height="100%" rx="37.5"/>`
+        : /*svg*/ `
+          <rect
+            fill="${
+              isMetallicColor(borderColor)
+                ? metallicColors[borderColor].solid
+                : solidBorderColors[borderColor]
+            }"
+            width="750" height="1050" rx="37.5"
+          />`
     }
 
     <!-- card colour -->
     ${
       isRainbowColor(cardColor)
-        ? isLuminous(shellColor)
-          ? /*svg*/ `<rect x="30" y="30" width="690" height="990" rx="37.5" style="fill: url(#cb-egg-${tokenID}-card-rainbow-gradient)" />`
-          : /*svg*/ `<rect fill="#000" x="30" y="30" width="690" height="990" rx="37.5" opacity="0.05" />`
+        ? isRainbowColor(borderColor)
+          ? /*svg*/ `<rect fill="#000" x="30" y="30" width="690" height="990" rx="37.5" opacity="0.05" />`
+          : /*svg*/ `
+            <rect x="30" y="30" width="690" height="990" rx="37.5" style="fill: url(#cb-egg-${tokenID}-card-rainbow-gradient)" />
+            <rect fill="#000" x="30" y="30" width="690" height="990" rx="37.5" opacity="0.05" />`
         : isCardGradient(cardColor) || isMetallicColor(cardColor)
         ? /*svg*/ `<rect x="30" y="30" width="690" height="990" rx="37.5" style="fill: url(#cb-egg-${tokenID}-card-diagonal-gradient)" />`
         : /*svg*/ `
@@ -214,11 +242,14 @@ export const generateSVG = ({ tokenID, cardColor, shellColor, eggSize }: EggArtw
           />`
     }
 
+    <!-- black radial gradient -->
     ${
       isLuminous(shellColor)
-        ? /*svg*/ `
-          <!-- black radial gradient -->
-          <rect width="750" height="1050" rx="37.5" style="mix-blend-mode: hard-light; fill: url(#cb-egg-${tokenID}-card-radial-gradient)"/>`
+        ? borderColor === "black"
+          ? /*svg*/ `
+            <rect width="100%" height="100%" rx="37.5" style="mix-blend-mode: hard-light; fill: url(#cb-egg-${tokenID}-card-radial-gradient)"/>`
+          : /*svg*/ `
+            <rect x="30" y="30" width="690" height="990" rx="37.5" style="mix-blend-mode: hard-light; fill: url(#cb-egg-${tokenID}-card-radial-gradient)"/>`
         : ""
     }
 

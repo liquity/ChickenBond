@@ -3,6 +3,8 @@ import { useState } from "react";
 import { SvgBox } from "./components/SvgBox";
 
 import {
+  BorderColor,
+  borderColors,
   CardColor,
   cardColors,
   EggSize,
@@ -13,15 +15,30 @@ import {
 } from "./svg/template";
 
 export const App: React.FC = () => {
+  const [borderColor, setBorderColor] = useState<BorderColor>("white");
   const [cardColor, setCardColor] = useState<CardColor>("blue");
   const [shellColor, setShellColor] = useState<ShellColor>("off-white");
   const [eggSize, setEggSize] = useState<EggSize>("normal");
-  const svgData = generateSVG({ tokenID: 1234, cardColor, shellColor, eggSize });
+  const svgData = generateSVG({ tokenID: 1234, borderColor, cardColor, shellColor, eggSize });
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       <div style={{ margin: "30px" }}>
         <h1>Scrambled Eggs</h1>
+
+        <div>
+          <label htmlFor="card-color">Border: </label>
+
+          <select
+            id="border-color"
+            value={borderColor}
+            onChange={e => setBorderColor(e.target.value as BorderColor)}
+          >
+            {borderColors.map(color => (
+              <option key={color}>{color}</option>
+            ))}
+          </select>
+        </div>
 
         <div>
           <label htmlFor="card-color">Card: </label>
@@ -70,7 +87,8 @@ export const App: React.FC = () => {
         </div>
 
         <div style={{ marginTop: "20px" }}>
-          Number of variations: {cardColors.length * shellColors.length * eggSizes.length}
+          Number of variations:{" "}
+          {borderColors.length * cardColors.length * shellColors.length * eggSizes.length}
         </div>
       </div>
 
