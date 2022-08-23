@@ -1,12 +1,22 @@
 import { useState } from "react";
 
 import { SvgBox } from "./components/SvgBox";
-import { CardColor, cardColors, generateSVG, ShellColor, shellColors } from "./svg/template";
+
+import {
+  CardColor,
+  cardColors,
+  EggSize,
+  eggSizes,
+  generateSVG,
+  ShellColor,
+  shellColors
+} from "./svg/template";
 
 export const App: React.FC = () => {
   const [cardColor, setCardColor] = useState<CardColor>("blue");
   const [shellColor, setShellColor] = useState<ShellColor>("off-white");
-  const svgData = generateSVG({ tokenID: 1234, cardColor, shellColor });
+  const [eggSize, setEggSize] = useState<EggSize>("normal");
+  const svgData = generateSVG({ tokenID: 1234, cardColor, shellColor, eggSize });
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
@@ -41,12 +51,26 @@ export const App: React.FC = () => {
           </select>
         </div>
 
+        <div>
+          <label htmlFor="egg-size">Size: </label>
+
+          <select
+            id="egg-size"
+            value={eggSize}
+            onChange={e => setEggSize(e.target.value as EggSize)}
+          >
+            {eggSizes.map(size => (
+              <option key={size}>{size}</option>
+            ))}
+          </select>
+        </div>
+
         <div style={{ marginTop: "30px" }}>
           <SvgBox width="250px" height="350px" svgData={svgData} />
         </div>
 
         <div style={{ marginTop: "20px" }}>
-          Number of variations: {cardColors.length * shellColors.length}
+          Number of variations: {cardColors.length * shellColors.length * eggSizes.length}
         </div>
       </div>
 
