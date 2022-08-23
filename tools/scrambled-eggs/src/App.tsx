@@ -6,7 +6,7 @@ import { CardColor, cardColors, generateSVG, ShellColor, shellColors } from "./s
 export const App: React.FC = () => {
   const [cardColor, setCardColor] = useState<CardColor>("blue");
   const [shellColor, setShellColor] = useState<ShellColor>("off-white");
-  const svgData = generateSVG({ cardColor, shellColor });
+  const svgData = generateSVG({ tokenID: 1234, cardColor, shellColor });
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
