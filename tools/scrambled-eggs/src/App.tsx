@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { SvgBox } from "./components/SvgBox";
 
@@ -14,12 +14,22 @@ import {
   shellColors
 } from "./svg/template";
 
+const randInt = (max: number) => Math.floor(max * Math.random());
+const randElem = <T extends unknown>(arr: T[]): T => arr[randInt(arr.length)];
+
 export const App: React.FC = () => {
   const [borderColor, setBorderColor] = useState<BorderColor>("white");
   const [cardColor, setCardColor] = useState<CardColor>("blue");
   const [shellColor, setShellColor] = useState<ShellColor>("off-white");
   const [eggSize, setEggSize] = useState<EggSize>("normal");
   const svgData = generateSVG({ tokenID: 1234, borderColor, cardColor, shellColor, eggSize });
+
+  const randomize = useCallback(() => {
+    setBorderColor(randElem(borderColors));
+    setCardColor(randElem(cardColors));
+    setShellColor(randElem(shellColors));
+    setEggSize(randElem(eggSizes));
+  }, []);
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
@@ -80,6 +90,10 @@ export const App: React.FC = () => {
               <option key={size}>{size}</option>
             ))}
           </select>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center", marginTop: "15px" }}>
+          <button onClick={randomize}>Scramble!</button>
         </div>
 
         <div style={{ marginTop: "30px" }}>
