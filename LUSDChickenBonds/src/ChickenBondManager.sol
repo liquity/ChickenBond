@@ -757,7 +757,14 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         return bondAmountMinusChickenInFee;
     }
 
-    // Internal getter for calculating accrued LUSD based on BondData struct
+    /* _calcAccruedAmount: internal getter for calculating accrued token amount for a given bond. 
+    *
+    * This function is unit-agnostic. It can be used to calculate a bonder's accrrued bLUSD, or the LUSD that that the 
+    * CB system would acquire (i.e. receive to the acquired bucket) if the bond were Chickened In now.
+    *
+    * For the bonder, _capAmount is their bLUSD cap.
+    * For the CB system, _capAmount is the LUSD bond amount (less the Chicken In fee). 
+    */
     function _calcAccruedAmount(uint256 _startTime, uint256 _capAmount, uint256 _accrualParameter) internal view returns (uint256) {
         // All bonds have a non-zero creation timestamp, so return accrued sLQTY 0 if the startTime is 0
         if (_startTime == 0) {return 0;}
