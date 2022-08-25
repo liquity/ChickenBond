@@ -172,6 +172,7 @@ The choice of thresholds ensures that shifting LUSD is profitable for the Chicke
 
 - **Initial bootstrap period**. Both shifters are disabled for an initial period  post-launch (currently set to 90 days - the final value is TBD). As a result, all system funds remain in B.Protocol for this initial period.
 - **bLUSD supply must be > 0**. There must be a non-zero supply of bLUSD for shifters to work.  This ensures that all system funds remain deposited in B.Protocol before the first Chicken In.
+- **Funds deposited in Curve must never exceed the Permanent bucket size**. This guarantees that the system always offers a yield greater than that earned by a pure B.protocol deposit.
 
 ### Shifter countdown period and shifting window
 
