@@ -149,6 +149,9 @@ class TesterSimple(TesterInterface):
     def get_btkn_hodlers(self, chicken, chicks, threshold=0):
         return list(filter(lambda chick: chicken.btkn.balance_of(chick.account) > threshold, chicks))
 
+    def get_lp_hodlers(self, chicken, chicks, threshold=0):
+        return list(filter(lambda chick: chicken.btkn_amm.lp_token.balance_of(chick.account) > threshold, chicks))
+
     #def is_pre_chicken_in_phase(self, chicken, chicks):
         #return len(self.get_btkn_hodlers(chicken, chicks)) == 0
     def is_before_first_chicken_in(self, chicken):
@@ -373,10 +376,18 @@ class TesterSimple(TesterInterface):
         # AMM generated yield
         generated_yield = self.get_yield_amount(chicken.amm.get_value_in_token_A(), self.amm_yield)
 
+        #print(f"generated_yield:      {generated_yield:,.2f}")
         chicken.token.mint(chicken.reserve_account, generated_yield)
-
         # Distribute rewards
-        chicken.btkn_amm.rewards.distribute_yield(1)
+        distributed_amount = chicken.btkn_amm.rewards.distribute_yield(1)
+        #print(f"distributed_amount: {distributed_amount:,.2f}")
+        for chick in self.get_lp_hodlers(chicken, chicks):
+            reward_chick_amount = distributed_amount * chicken.btkn_amm.get_lp_share(chick.account)
+            #print(f"LP share:  {chicken.btkn_amm.get_lp_share(chick.account):.6%}")
+            #print(f"Bal before: {chicken.token.balance_of(chick.account):,.6f}")
+            #print(f"Chick reward: {reward_chick_amount:,.2f}")
+            chicken.token.transfer(chicken.btkn_amm.rewards.account, chick.account, reward_chick_amount)
+            #print(f"Bal after: {chicken.token.balance_of(chick.account):,.6f}")
 
         return
 
