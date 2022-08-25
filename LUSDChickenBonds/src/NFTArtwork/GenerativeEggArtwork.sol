@@ -217,32 +217,52 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         return _getMetadataJSON(bondData);
     }
 
-    function testTokenURI(
-        uint256 _tokenID,
-        uint256 _lusdAmount,
-        uint256 _startTime,
-        BorderColor _borderColor,
-        CardColor _cardColor,
-        ShellColor _shellColor,
-        EggSize _eggSize
-    )
-        external
-        pure
-        returns (string memory)
-    {
-        BondData memory bondData;
-        bondData.tokenID = _tokenID;
-        bondData.lusdAmount = _lusdAmount;
-        bondData.startTime = _startTime;
+    // function testTokenURI(
+    //     uint256 _tokenID,
+    //     uint256 _lusdAmount,
+    //     uint256 _startTime,
+    //     BorderColor _borderColor,
+    //     CardColor _cardColor,
+    //     ShellColor _shellColor,
+    //     EggSize _eggSize
+    // )
+    //     external
+    //     pure
+    //     returns (string memory)
+    // {
+    //     BondData memory bondData;
+    //     bondData.tokenID = _tokenID;
+    //     bondData.lusdAmount = _lusdAmount;
+    //     bondData.startTime = _startTime;
         
-        bondData.borderColor = _borderColor;
-        bondData.cardColor = _cardColor;
-        bondData.shellColor = _shellColor;
-        bondData.eggSize = _eggSize;
+    //     bondData.borderColor = _borderColor;
+    //     bondData.cardColor = _cardColor;
+    //     bondData.shellColor = _shellColor;
+    //     bondData.eggSize = _eggSize;
 
-        _calcDerivedData(bondData);
+    //     _calcDerivedData(bondData);
 
-        return _getMetadataJSON(bondData);
+    //     return _getMetadataJSON(bondData);
+    // }
+
+    function _getMetadataCardAttributes(BondData memory _bondData) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            '{"trait_type":"Border","value":"', _getBorderValue(_bondData.borderColor), '"},',
+            '{"trait_type":"Card","value":"', _getCardValue(_bondData.cardColor), '"},',
+            '{"trait_type":"Shell","value":"', _getShellValue(_bondData.shellColor), '"},',
+            '{"trait_type":"Size","value":"', _getSizeValue(_bondData.eggSize), '"}'
+        );
+    }
+
+    function _getMetadataAttributes(BondData memory _bondData) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            '"attributes":[',
+                '{"display_type":"date","trait_type":"Created","value":', _bondData.startTime.toString(), '},',
+                '{"display_type":"number","trait_type":"Bond Amount","value":', _formatDecimal(_bondData.lusdAmount), '},',
+                '{"trait_type":"Bond Status","value":"', _getBondStatusValue(IChickenBondManager.BondStatus(_bondData.status)), '"},',
+                _getMetadataCardAttributes(_bondData),
+            ']'
+        );
     }
 
     function _getMetadataJSON(BondData memory _bondData) internal pure returns (string memory) {
@@ -255,7 +275,8 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
                             '"name":"LUSD Chicken #', _bondData.tokenID.toString(), '",',
                             '"description":"LUSD Chicken Bonds",',
                             '"image":"data:image/svg+xml;base64,', Base64.encode(_getSVG(_bondData)), '",',
-                            '"background_color":"0b112f"',
+                            '"background_color":"0b112f",',
+                            _getMetadataAttributes(_bondData),
                         '}'
                     )
                 )
@@ -263,20 +284,84 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         );
     }
 
+    function _getBondStatusValue(IChickenBondManager.BondStatus _status) internal pure returns (string memory) {
+        return (
+            _status == IChickenBondManager.BondStatus.chickenedIn  ? "Chickened In"  :
+            _status == IChickenBondManager.BondStatus.chickenedOut ? "Chickened Out" :
+            _status == IChickenBondManager.BondStatus.active       ? "Active"        : ""
+        );
+    }
+
+    function _getBorderValue(BorderColor _border) internal pure returns (string memory) {
+        return (
+            _border == BorderColor.White    ? "White"   :
+            _border == BorderColor.Black    ? "Black"   :
+            _border == BorderColor.Bronze   ? "Bronze"  :
+            _border == BorderColor.Silver   ? "Silver"  :
+            _border == BorderColor.Gold     ? "Gold"    :
+            _border == BorderColor.Rainbow  ? "Rainbow" : ""
+        );
+    }
+
+    function _getCardValue(CardColor _card) internal pure returns (string memory) {
+        return (
+            _card == CardColor.Red        ? "Red"         :
+            _card == CardColor.Green      ? "Green"       :
+            _card == CardColor.Blue       ? "Blue"        :
+            _card == CardColor.Purple     ? "Purple"      :
+            _card == CardColor.Pink       ? "Pink"        :
+            _card == CardColor.YellowPink ? "Yellow-Pink" :
+            _card == CardColor.BlueGreen  ? "Blue-Green"  :
+            _card == CardColor.PinkBlue   ? "Pink-Blue"   :
+            _card == CardColor.RedPurple  ? "Red-Purple"  :
+            _card == CardColor.Bronze     ? "Bronze"      :
+            _card == CardColor.Silver     ? "Silver"      :
+            _card == CardColor.Gold       ? "Gold"        :
+            _card == CardColor.Rainbow    ? "Rainbow"     : ""
+        );
+    }
+
+    function _getShellValue(ShellColor _shell) internal pure returns (string memory) {
+        return (
+            _shell == ShellColor.OffWhite      ? "Off-White"      :
+            _shell == ShellColor.LightBlue     ? "Light Blue"     :
+            _shell == ShellColor.DarkerBlue    ? "Darker Blue"    :
+            _shell == ShellColor.LighterOrange ? "Lighter Orange" :
+            _shell == ShellColor.LightOrange   ? "Light Orange"   :
+            _shell == ShellColor.DarkerOrange  ? "Darker Orange"  :
+            _shell == ShellColor.LightGreen    ? "Light Green"    :
+            _shell == ShellColor.DarkerGreen   ? "Darker Green"   :
+            _shell == ShellColor.Bronze        ? "Bronze"         :
+            _shell == ShellColor.Silver        ? "Silver"         :
+            _shell == ShellColor.Gold          ? "Gold"           :
+            _shell == ShellColor.Rainbow       ? "Rainbow"        :
+            _shell == ShellColor.Luminous      ? "Luminous"       : ""
+        );
+    }
+
+    function _getSizeValue(EggSize _size) internal pure returns (string memory) {
+        return (
+            _size == EggSize.Tiny   ? "Tiny"   :
+            _size == EggSize.Small  ? "Small"  :
+            _size == EggSize.Normal ? "Normal" :
+            _size == EggSize.Big    ? "Big"    : ""
+        );
+    }
+
     function _getMonthString(uint256 _month) internal pure returns (string memory) {
         return (
-            _month ==  1 ? "JANUARY" :
-            _month ==  2 ? "FEBRUARY" :
-            _month ==  3 ? "MARCH" :
-            _month ==  4 ? "APRIL" :
-            _month ==  5 ? "MAY" :
-            _month ==  6 ? "JUNE" :
-            _month ==  7 ? "JULY" :
-            _month ==  8 ? "AUGUST" :
+            _month ==  1 ? "JANUARY"   :
+            _month ==  2 ? "FEBRUARY"  :
+            _month ==  3 ? "MARCH"     :
+            _month ==  4 ? "APRIL"     :
+            _month ==  5 ? "MAY"       :
+            _month ==  6 ? "JUNE"      :
+            _month ==  7 ? "JULY"      :
+            _month ==  8 ? "AUGUST"    :
             _month ==  9 ? "SEPTEMBER" :
-            _month == 10 ? "OCTOBER" :
-            _month == 11 ? "NOVEMBER" :
-            _month == 12 ? "DECEMBER" : ""
+            _month == 10 ? "OCTOBER"   :
+            _month == 11 ? "NOVEMBER"  :
+            _month == 12 ? "DECEMBER"  : ""
         );
     }
 
