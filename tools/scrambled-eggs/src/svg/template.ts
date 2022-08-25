@@ -253,10 +253,6 @@ export const generateSVG = ({
         : ""
     }
 
-    <!-- text -->
-    <text fill="#fff" font-family="'Arial Black', Arial" font-size="72px" font-weight="800" text-anchor="middle" x="50%" y="14%">LUSD</text>
-    <text fill="#fff" font-family="'Arial Black', Arial" font-size="30px" font-weight="800" text-anchor="middle" x="50%" y="19%">ID: ${tokenID}</text>
-
     <!-- shadow below egg -->
     <ellipse
       ${isLuminous(shellColor) ? 'style="mix-blend-mode: luminosity"' : ""}
@@ -271,7 +267,6 @@ export const generateSVG = ({
           ? /*svg*/ `
             <path
               style="fill: url(#cb-egg-${tokenID}-shell-rainbow-gradient)"
-              fill="#fff1cb"
               d="${shellPathData}"
             />`
           : isMetallicColor(shellColor)
@@ -305,6 +300,8 @@ export const generateSVG = ({
     </g>
 
     <!-- text -->
+    <text fill="#fff" font-family="'Arial Black', Arial" font-size="72px" font-weight="800" text-anchor="middle" x="50%" y="14%">LUSD</text>
+    <text fill="#fff" font-family="'Arial Black', Arial" font-size="30px" font-weight="800" text-anchor="middle" x="50%" y="19%">ID: ${tokenID}</text>
     <text fill="#fff" font-family="'Arial Black', Arial" font-size="40px" font-weight="800" text-anchor="middle" x="50%" y="72%">BOND AMOUNT</text>
     <text fill="#fff" font-family="'Arial Black', Arial" font-size="64px" font-weight="800" text-anchor="middle" x="50%" y="81%">1337</text>
     <text fill="#fff" font-family="'Arial Black', Arial" font-size="30px" font-weight="800" text-anchor="middle" x="50%" y="91%" opacity="0.6">JANUARY 1, 1970</text>
