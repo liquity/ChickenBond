@@ -815,14 +815,21 @@ class TesterSimple(TesterInterface):
         for chick in self.get_token_hodlers(chicken, chicks):
             btkn_spot_price = self.get_btkn_spot_price(chicken)
             btkn_fair_price = self.get_fair_price(chicken)
-            #print(f"btkn_spot_price:  {btkn_spot_price:,.6f}")
-            #print(f"btkn_fair_price:  {btkn_fair_price:,.6f}")
-            # TODO: too optimistic?
-            if btkn_spot_price >= 0.9 * btkn_fair_price:
+            btkn_redemption_price = self.get_backing_ratio(chicken)
+            #print(f"btkn_spot_price:        {btkn_spot_price:,.6f}")
+            #print(f"btkn_fair_price:        {btkn_fair_price:,.6f}")
+            #print(f"btkn_redemption_price:  {btkn_redemption_price:,.6f}")
+            arbitrage_premium_percentage = np.random.normal(
+                ARBITRAGE_PREMIUM_PERCENATGE_MEAN,
+                ARBITRAGE_PREMIUM_PERCENATGE_SD
+            )
+            target_price = (1 - arbitrage_premium_percentage) * btkn_redemption_price \
+                + arbitrage_premium_percentage * btkn_fair_price
+            if btkn_spot_price >= target_price:
                 return
 
             tkn_amount = min(
-                chicken.btkn_amm.get_input_A_amount_from_target_price_B(btkn_fair_price),
+                chicken.btkn_amm.get_input_A_amount_from_target_price_B(target_price),
                 chicken.token.balance_of(chick.account)
             )
             #print(f"tkn_amount: {tkn_amount:,.2f}")

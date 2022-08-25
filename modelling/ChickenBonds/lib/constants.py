@@ -55,6 +55,10 @@ REDEMPTION_FEE_BETA = 2                 # Parameter by which to divide the redee
 REDEMPTION_FEE_MINUTE_DECAY_FACTOR = 0.999037758833783000 # Factor by which redemption fee decays (exponentially) every minute
 MIN_BTKN_SUPPLY = 1                    # Minimum of bTKN left after a redemption
 
+# -------------- Arbitrage Parameters ----------------
+ARBITRAGE_PREMIUM_PERCENATGE_MEAN = 0.5 # Percentage of the premium that arbitrageurs will chase, on average
+ARBITRAGE_PREMIUM_PERCENATGE_SD = 0.1
+
 # -------------- Price Parameters ----------------
 # Initial price of bLQTY quoted in LQTY, to make sure bootstrap is profitable
 INITIAL_PRICE = 1.2 * (BOOTSTRAP_PERIOD_CHICKEN_IN + INITIAL_ACCRUAL_PARAM) / BOOTSTRAP_PERIOD_CHICKEN_IN
