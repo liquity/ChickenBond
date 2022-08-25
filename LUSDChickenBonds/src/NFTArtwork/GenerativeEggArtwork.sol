@@ -20,7 +20,8 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         Bronze,
         Silver,
         Gold,
-        Rainbow
+        Rainbow,
+        COUNT
     }
 
     enum CardColor {
@@ -36,7 +37,8 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         Bronze,
         Silver,
         Gold,
-        Rainbow
+        Rainbow,
+        COUNT
     }
 
     enum ShellColor {
@@ -52,7 +54,8 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         Silver,
         Gold,
         Rainbow,
-        Luminous
+        Luminous,
+        COUNT
     }
 
     enum EggSize {
@@ -86,27 +89,42 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         string[2] cardGradient;
     }
 
-    function tokenURI(uint256 _tokenID) external view returns (string memory) {
-        IChickenBondManager chickenBondManager =
-            IChickenBondManagerGetter(msg.sender).chickenBondManager();
+    function _getBorderColor(uint256 rand) internal pure returns (BorderColor) {
+        return BorderColor(rand * uint256(BorderColor.COUNT) / 1e18);
+    }
 
-        BondData memory bondData;
-        bondData.tokenID = _tokenID;
-        (
-            bondData.lusdAmount,
-            bondData.startTime,
-            bondData.endTime,
-            bondData.initialHalfDna,
-            bondData.finalHalfDna,
-            bondData.status
-        ) = chickenBondManager.getBondData(_tokenID);
+    function _getCardColor(uint256 rand) internal pure returns (CardColor) {
+        return CardColor(rand * uint256(CardColor.COUNT) / 1e18);
+    }
 
-        return string(
-            abi.encodePacked(
-                'data:application/json;base64,',
-                Base64.encode(bytes(_getMetadataJSON(bondData)))
-            )
+    function _getShellColor(uint256 rand) internal pure returns (ShellColor) {
+        return ShellColor(rand * uint256(ShellColor.COUNT) / 1e18);
+    }
+
+    function _getEggSize(uint256 lusdAmount) internal pure returns (EggSize) {
+        return (
+            lusdAmount <    1_000e18 ?  EggSize.Tiny   :
+            lusdAmount <   10_000e18 ?  EggSize.Small  :
+            lusdAmount <  100_000e18 ?  EggSize.Normal :
+         /* lusdAmount >= 100_000e18 */ EggSize.Big
         );
+    }
+
+    function _cutDNA(uint256 dna, uint8 startBit, uint8 numBits) internal pure returns (uint256) {
+        uint256 ceil = 1 << numBits;
+        uint256 bits = (dna >> startBit) & (ceil - 1);
+
+        return bits * 1e18 / ceil; // scaled to [0,1) range
+    }
+
+    function _calcAttributes(BondData memory _bondData) internal pure {
+        uint128 dna = _bondData.initialHalfDna;
+
+        _bondData.borderColor = _getBorderColor(_cutDNA(dna,  0, 42));
+        _bondData.cardColor   = _getCardColor  (_cutDNA(dna, 42, 43));
+        _bondData.shellColor  = _getShellColor (_cutDNA(dna, 85, 43));
+
+        _bondData.eggSize = _getEggSize(_bondData.lusdAmount);
     }
 
     function _getSolidBorderColor(BorderColor _color) internal pure returns (string memory) {
@@ -178,6 +196,27 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         (_bondData.hasCardGradient, _bondData.cardGradient) = _getCardGradient(_bondData.cardColor);
     }
 
+    function tokenURI(uint256 _tokenID) external view returns (string memory) {
+        IChickenBondManager chickenBondManager =
+            IChickenBondManagerGetter(msg.sender).chickenBondManager();
+
+        BondData memory bondData;
+        bondData.tokenID = _tokenID;
+        (
+            bondData.lusdAmount,
+            bondData.startTime,
+            bondData.endTime,
+            bondData.initialHalfDna,
+            bondData.finalHalfDna,
+            bondData.status
+        ) = chickenBondManager.getBondData(_tokenID);
+
+        _calcAttributes(bondData);
+        _calcDerivedData(bondData);
+
+        return _getMetadataJSON(bondData);
+    }
+
     function testTokenURI(
         uint256 _tokenID,
         uint256 _lusdAmount,
@@ -203,22 +242,24 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
 
         _calcDerivedData(bondData);
 
+        return _getMetadataJSON(bondData);
+    }
+
+    function _getMetadataJSON(BondData memory _bondData) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
                 'data:application/json;base64,',
-                Base64.encode(bytes(_getMetadataJSON(bondData)))
+                Base64.encode(
+                    abi.encodePacked(
+                        '{',
+                            '"name":"LUSD Chicken #', _bondData.tokenID.toString(), '",',
+                            '"description":"LUSD Chicken Bonds",',
+                            '"image":"data:image/svg+xml;base64,', Base64.encode(_getSVG(_bondData)), '",',
+                            '"background_color":"0b112f"',
+                        '}'
+                    )
+                )
             )
-        );
-    }
-
-    function _getMetadataJSON(BondData memory _bondData) internal pure returns (bytes memory) {
-        return abi.encodePacked(
-            '{',
-                '"name":"LUSD Chicken #', _bondData.tokenID.toString(), '",',
-                '"description":"LUSD Chicken Bonds",',
-                '"image":"data:image/svg+xml;base64,', Base64.encode(_getSVG(_bondData)), '",',
-                '"background_color":"0b112f"',
-            '}'
         );
     }
 
