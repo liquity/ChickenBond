@@ -1,5 +1,7 @@
 from functools import reduce
 
+from lib.utils import *
+
 def log_system(chicken, tester):
     token = chicken.token
     btkn = chicken.btkn
@@ -43,7 +45,7 @@ def log_btkn_amm(chicken):
 def log_chick_balances(chicken, chick):
     token_bal = chicken.token.balance_of(chick.account)
     btkn_bal = chicken.btkn.balance_of(chick.account)
-    btkn_value = chicken.btkn.balance_of(chick.account) * chicken.amm.get_token_B_price()
+    btkn_value = chicken.btkn.balance_of(chick.account) * chicken.btkn_amm.get_token_B_price()
     amm_value = chicken.btkn_amm.get_value_in_token_A_of(chick.account)
     print("")
     print(f"User {chick.account}:")
@@ -73,6 +75,31 @@ def log_chicks(chicken, chicks):
         log_chick_balances(chicken, chick)
     return
 
+def get_subgroup_total_value(chicken, chick_group):
+    return reduce(
+        lambda total, chick: total + get_chick_total_token_value(chicken, chick),
+        chick_group,
+        0
+    )
+
+def log_performance(chicken, chicks):
+    print("")
+    print("Performance")
+    print("")
+    pending_bal = chicken.pending_token_balance()
+    reserve_bal = chicken.reserve_token_balance()
+    amm_value = chicken.amm.get_value_in_token_A_of(chicken.reserve_account)
+    print(f" - Total permament:               {amm_value:,.2f}")
+    print(f" - Permament percentage:          {amm_value / (pending_bal + reserve_bal + amm_value):.3%}")
+    print("")
+    total_rebonders = get_subgroup_total_value(chicken, filter(lambda chick: chick.rebonder, chicks))
+    total_lps = get_subgroup_total_value(chicken, filter(lambda chick: chick.lp, chicks))
+    total_rest = get_subgroup_total_value(chicken, filter(lambda chick: not chick.rebonder and not chick.lp, chicks))
+    print(f" - Rebonders avg gain: {total_rebonders / (NUM_REBONDERS * INITIAL_AMOUNT) - 1 :.3%}")
+    print(f" - LPs avg gain:       {total_lps / (NUM_LPS * INITIAL_AMOUNT) - 1 :.3%}")
+    print(f" - Rest avg gain:      {total_rest / ((NUM_CHICKS - NUM_REBONDERS - NUM_LPS) * INITIAL_AMOUNT) - 1 :.3%}")
+    return
+
 def log_state(chicken, chicks, tester, log_level=1, iteration=0):
     if log_level == 0:
         return
@@ -82,5 +109,6 @@ def log_state(chicken, chicks, tester, log_level=1, iteration=0):
     log_amm(chicken)
     log_btkn_amm(chicken)
     #log_chicks(chicken, chicks)
+    log_performance(chicken, chicks)
     print("")
     return
