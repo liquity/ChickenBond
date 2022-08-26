@@ -103,6 +103,8 @@ class TesterSimple(TesterInterface):
 
         self.rebonders = NUM_REBONDERS
         self.lps = NUM_LPS
+        self.sellers = NUM_SELLERS
+        self.traders = NUM_TRADERS
 
         self.max_slippage = MAX_SLIPPAGE
         self.amm_yield = AMM_YIELD
@@ -112,8 +114,18 @@ class TesterSimple(TesterInterface):
     def init(self, chicks):
         for i in range(self.rebonders):
             chicks[i].rebonder = True
-        for i in range(self.rebonders, self.rebonders + self.lps):
+        start = self.rebonders
+        end = start + self.lps
+        for i in range(start, end):
             chicks[i].lp = True
+        start = end
+        end = start + self.sellers
+        for i in range(start, end):
+            chicks[i].seller = True
+        start = end
+        end = start + self.traders
+        for i in range(start, end):
+            chicks[i].trader = True
 
         return
 
@@ -141,7 +153,7 @@ class TesterSimple(TesterInterface):
 
     def get_available_for_bonding_chicks(self, chicken, chicks):
         return list(
-            filter(lambda chick: chick.bond_amount == 0 and chicken.token.balance_of(chick.account) > 0, chicks))
+            filter(lambda chick: chick.bond_amount == 0 and chicken.token.balance_of(chick.account) > 0 and not chick.trader, chicks))
 
     def get_token_hodlers(self, chicken, chicks, threshold=0):
         return list(filter(lambda chick: chicken.token.balance_of(chick.account) > threshold, chicks))
@@ -151,6 +163,12 @@ class TesterSimple(TesterInterface):
 
     def get_lp_hodlers(self, chicken, chicks, threshold=0):
         return list(filter(lambda chick: chicken.btkn_amm.lp_token.balance_of(chick.account) > threshold, chicks))
+
+    def get_traders_with_token(self, chicken, chicks, threshold=0):
+        return list(filter(lambda chick: chick.trader and chicken.token.balance_of(chick.account) > threshold, chicks))
+
+    def get_traders_with_btkn(self, chicken, chicks, threshold=0):
+        return list(filter(lambda chick: chick.trader and chicken.btkn.balance_of(chick.account) > threshold, chicks))
 
     #def is_pre_chicken_in_phase(self, chicken, chicks):
         #return len(self.get_btkn_hodlers(chicken, chicks)) == 0
@@ -475,8 +493,6 @@ class TesterSimple(TesterInterface):
         #print(f"Bonded Chicks: {len(bonded_chicks)}")
 
         for chick in bonded_chicks:
-            backing_ratio = self.get_backing_ratio(chicken)
-
             # Check if chicken-in conditions are met and eventually chicken-in
             self.chicken_in(chicken, chick, iteration, data)
 
@@ -485,8 +501,6 @@ class TesterSimple(TesterInterface):
         #print(f"Bonded Chicks: {len(bonded_chicks)}")
 
         for chick in bonded_chicks:
-            backing_ratio = self.get_backing_ratio(chicken)
-
             # Check if chicken-in conditions are met and eventually chicken-in
             self.chicken_in(chicken, chick, iteration, data)
 
@@ -724,7 +738,7 @@ class TesterSimple(TesterInterface):
 
         return 1
 
-    def regular_chicken_in(self, chicken, chick, claimable_btkn_amount, iteration):
+    def seller_chicken_in(self, chicken, chick, claimable_btkn_amount, iteration):
         chicken_in_time = self.get_optimal_apr_chicken_in_time(chicken)
         # If the optimal point hasn’t been reached yet
         if iteration - chick.bond_time < chicken_in_time:
@@ -734,8 +748,10 @@ class TesterSimple(TesterInterface):
                 #print(f"time gone:       {iteration - chick.bond_time:,.2f}")
                 return 0
 
-        #print("\n --> Chickening in! (regular)")
+        #print("\n --> Chickening in! (seller)")
         claimable_btkn_amount = chicken.chicken_in(chick, claimable_btkn_amount, self.chicken_in_amm_fee)
+        # Sell obtained bTKN
+        chicken.btkn_amm.swap_B_for_A(chick.account, claimable_btkn_amount)
 
         return 1
 
@@ -773,16 +789,18 @@ class TesterSimple(TesterInterface):
         """
 
         # if for some reason bond amount goes below lower limit, it’s better to do a regular chicken in and start over
-        if chick.rebonder and chick.bond_amount > BOND_AMOUNT[0]:
+        if chick.rebonder:
             # Rebond
             #print("\n \033[33m--> Rebonding!\033[0m")
             new_chicken_in = self.rebond(chicken, chick, claimable_btkn_amount, iteration)
         elif chick.lp:
             #print("\n \033[33m--> LP!\033[0m")
             new_chicken_in = self.lp_chicken_in(chicken, chick, claimable_btkn_amount, iteration)
+        elif chick.seller:
+            #print("\n \033[33m--> seller!\033[0m")
+            new_chicken_in = self.seller_chicken_in(chicken, chick, claimable_btkn_amount, iteration)
         else:
-            #print("\n \033[33m--> regular!\033[0m")
-            new_chicken_in = self.regular_chicken_in(chicken, chick, claimable_btkn_amount, iteration)
+            raise RuntimeError('Unknown chick type!!')
 
         self.chicken_in_counter += new_chicken_in
 
@@ -797,7 +815,7 @@ class TesterSimple(TesterInterface):
         if iteration < BOOTSTRAP_PERIOD_REDEEM:
             return
 
-        for chick in self.get_token_hodlers(chicken, chicks):
+        for chick in self.get_traders_with_token(chicken, chicks):
             btkn_spot_price = self.get_btkn_spot_price(chicken)
             backing_ratio = self.get_backing_ratio(chicken)
             #print(f"btkn_spot_price:  {btkn_spot_price:,.6f}")
@@ -823,7 +841,7 @@ class TesterSimple(TesterInterface):
         if chicken.btkn.total_supply == 0:
             return
 
-        for chick in self.get_token_hodlers(chicken, chicks):
+        for chick in self.get_traders_with_token(chicken, chicks):
             btkn_spot_price = self.get_btkn_spot_price(chicken)
             btkn_fair_price = self.get_fair_price(chicken)
             btkn_redemption_price = self.get_backing_ratio(chicken)

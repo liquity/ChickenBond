@@ -15,8 +15,11 @@ LOG_LEVEL = 0                           # To display logs in console (for now on
 
 # ------------- User and Money --------------------
 NUM_CHICKS =   100
-NUM_REBONDERS = 30     # Number of users that will rebond upon chickening in
-NUM_LPS =       40     # Number of users that will provide liquidity upon chickening in
+NUM_REBONDERS = 25     # Number of users that will rebond upon chickening in
+NUM_LPS =       25     # Number of users that will provide liquidity upon chickening in
+NUM_SELLERS =   25     # Number of users that will sell upon chickening in
+#NUM_TRADERS           # Number of users that will only trade (never bond)
+NUM_TRADERS =   NUM_CHICKS - (NUM_REBONDERS + NUM_LPS + NUM_SELLERS)
 INITIAL_AMOUNT = 10000
 
 # ------------ Bootstrap -----------------

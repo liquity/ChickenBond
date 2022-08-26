@@ -6,6 +6,8 @@ class User():
         self.bond_target_profit = 0
         self.rebonder = False
         self.lp = False
+        self.seller = False
+        self.trader = False
 
     def __str__(self):
         bond_string = ""

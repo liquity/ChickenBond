@@ -75,10 +75,10 @@ def log_chicks(chicken, chicks):
         log_chick_balances(chicken, chick)
     return
 
-def get_subgroup_total_value(chicken, chick_group):
+def get_subgroup_total_value(chicken, chicks, chick_selector):
     return reduce(
         lambda total, chick: total + get_chick_total_token_value(chicken, chick),
-        chick_group,
+        filter(chick_selector, chicks),
         0
     )
 
@@ -92,12 +92,14 @@ def log_performance(chicken, chicks):
     print(f" - Total permament:               {amm_value:,.2f}")
     print(f" - Permament percentage:          {amm_value / (pending_bal + reserve_bal + amm_value):.3%}")
     print("")
-    total_rebonders = get_subgroup_total_value(chicken, filter(lambda chick: chick.rebonder, chicks))
-    total_lps = get_subgroup_total_value(chicken, filter(lambda chick: chick.lp, chicks))
-    total_rest = get_subgroup_total_value(chicken, filter(lambda chick: not chick.rebonder and not chick.lp, chicks))
+    total_rebonders = get_subgroup_total_value(chicken, chicks, lambda chick: chick.rebonder)
+    total_lps = get_subgroup_total_value(chicken, chicks, lambda chick: chick.lp)
+    total_sellers = get_subgroup_total_value(chicken, chicks, lambda chick: chick.seller)
+    total_traders = get_subgroup_total_value(chicken, chicks, lambda chick: chick.trader)
     print(f" - Rebonders avg gain: {total_rebonders / (NUM_REBONDERS * INITIAL_AMOUNT) - 1 :.3%}")
     print(f" - LPs avg gain:       {total_lps / (NUM_LPS * INITIAL_AMOUNT) - 1 :.3%}")
-    print(f" - Rest avg gain:      {total_rest / ((NUM_CHICKS - NUM_REBONDERS - NUM_LPS) * INITIAL_AMOUNT) - 1 :.3%}")
+    print(f" - Sellers avg gain:   {total_sellers / (NUM_SELLERS * INITIAL_AMOUNT) - 1 :.3%}")
+    print(f" - Traders avg gain:   {total_traders / (NUM_TRADERS * INITIAL_AMOUNT) - 1 :.3%}")
     return
 
 def log_state(chicken, chicks, tester, log_level=1, iteration=0):
