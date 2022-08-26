@@ -766,11 +766,22 @@ class TesterSimple(TesterInterface):
         """
 
         if iteration < BOOTSTRAP_PERIOD_CHICKEN_IN:
-            return 0, 0, 0
+            return
 
         claimable_btkn_amount, bond_cap = self.get_claimable_btkn_amount(chicken, chick, iteration)
         if claimable_btkn_amount == 0:
             return
+
+        # make sure at least break even
+        btkn_spot_price = self.get_btkn_spot_price(chicken)
+        if btkn_spot_price > 0 and claimable_btkn_amount * btkn_spot_price <  chick.bond_amount:
+            """
+            print(f"claimable_btkn_amount: {claimable_btkn_amount:,.2f}")
+            print(f"btkn_spot_price: {btkn_spot_price:,.2f}")
+            print(f"chick.bond_amount: {chick.bond_amount:,.2f}")
+            """
+            return
+
         amm_token_amount, amm_coll_amount = self.get_permanent_amm_amounts(chicken, bond_cap, claimable_btkn_amount)
 
         """
@@ -849,11 +860,14 @@ class TesterSimple(TesterInterface):
             #print(f"btkn_fair_price:        {btkn_fair_price:,.6f}")
             #print(f"btkn_redemption_price:  {btkn_redemption_price:,.6f}")
             arbitrage_premium_percentage = np.random.normal(
-                ARBITRAGE_PREMIUM_PERCENATGE_MEAN,
-                ARBITRAGE_PREMIUM_PERCENATGE_SD
+                ARBITRAGE_PREMIUM_PERCENTAGE_MEAN,
+                ARBITRAGE_PREMIUM_PERCENTAGE_SD
             )
-            target_price = (1 - arbitrage_premium_percentage) * btkn_redemption_price \
-                + arbitrage_premium_percentage * btkn_fair_price
+            target_price = min(
+                (1 - arbitrage_premium_percentage) * btkn_redemption_price \
+                + arbitrage_premium_percentage * btkn_fair_price,
+                ARBITRAGE_PRICE_CAP
+            )
             if btkn_spot_price >= target_price:
                 return
 
