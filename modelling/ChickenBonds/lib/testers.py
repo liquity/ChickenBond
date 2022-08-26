@@ -860,13 +860,13 @@ class TesterSimple(TesterInterface):
             #print(f"btkn_fair_price:        {btkn_fair_price:,.6f}")
             #print(f"btkn_redemption_price:  {btkn_redemption_price:,.6f}")
             arbitrage_premium_percentage = np.random.normal(
-                ARBITRAGE_PREMIUM_PERCENTAGE_MEAN,
-                ARBITRAGE_PREMIUM_PERCENTAGE_SD
+                BUY_PREMIUM_PERCENTAGE_MEAN,
+                BUY_PREMIUM_PERCENTAGE_SD
             )
             target_price = min(
                 (1 - arbitrage_premium_percentage) * btkn_redemption_price \
                 + arbitrage_premium_percentage * btkn_fair_price,
-                ARBITRAGE_PRICE_CAP
+                BUY_PRICE_CAP
             )
             if btkn_spot_price >= target_price:
                 return
