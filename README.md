@@ -145,6 +145,19 @@ The following getter functions in the smart contract perform these calculations 
 - `getAcquiredLUSDInSP()`
 - `getAcquiredLUSDInCurve()`
 
+## The First Chicken In
+
+Special logic applies to the First Chicken In.  A "First Chicken In" is defined as a Chicken In which increases the bLUSD supply from zero to non-zero.  Since redemptions always leave non-zero bLUSD in existence, there can only be one first Chicken In.
+
+The following extra logic applies to the first Chicken In:
+
+- It can only be performed after some initial bootstrap period has passed (length TBD)
+- All yield that has accumulated in the acquired bucket is sent as rewards to the staking contract for bLUSD-LUSD AMM LPs.
+- B.Protocol must hold at least as much LUSD as the acquired bucket. This is to ensure that B.Protocol can fully cover the transfer of the acquired bucket to the staking contract. In most cases it will, though after heavy Liquity liquidations it may take some time for B.Protocol to convert the ETH liquidation gains back to LUSD.  In this case, Chicken Bond bonders will just need to wait until the LUSD in B.Protocol has replenished before a First Chicken In is possible.
+
+The special First Chicken In logic only applies in Normal Mode. In Migration Mode, a First Chicken In is no different from a normal Chicken In.
+
+Subsequent Chicken Ins are not subject to the Chicken In bootstrap period.
 
 ## Shifter functions
 
