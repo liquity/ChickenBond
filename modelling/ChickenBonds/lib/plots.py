@@ -295,9 +295,13 @@ def plot_chicks(data, chicken, chicks, description="", show=True, save=False, ge
     for chick in chicks:
         chick_name = chick.account
         if chick.rebonder:
-            chick_name = chick.account.replace('chick', 'rebnd')
+            chick_name = chick.account.replace('chick', 'rebond')
         if chick.lp:
-            chick_name = chick.account.replace('chick', 'liqpr')
+            chick_name = chick.account.replace('chick', 'liq_pr')
+        if chick.seller:
+            chick_name = chick.account.replace('chick', 'seller')
+        if chick.trader:
+            chick_name = chick.account.replace('chick', 'trader')
 
         new_data = new_data.append(
             {

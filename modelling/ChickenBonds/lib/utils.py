@@ -32,8 +32,9 @@ def get_amm_average_apr(data, iteration):
     #print(f"average: {data[iteration - AMM_APR_PERIOD : iteration].mean()['amm_iteration_apr']:,.2f}")
     return data[iteration - AMM_APR_PERIOD : iteration].mean()["amm_iteration_apr"]
 
-def get_chick_total_LQTY_value(chicken, chick):
+def get_chick_total_token_value(chicken, chick):
     token_amount = chicken.token.balance_of(chick.account)
-    btkn_value = chicken.btkn.balance_of(chick.account) * chicken.amm.get_token_B_price()
+    btkn_value = chicken.btkn.balance_of(chick.account) * chicken.btkn_amm.get_token_B_price()
+    amm_value = chicken.btkn_amm.get_value_in_token_A_of(chick.account)
 
-    return token_amount + chick.bond_amount + btkn_value
+    return token_amount + chick.bond_amount + btkn_value + amm_value

@@ -15,8 +15,11 @@ LOG_LEVEL = 0                           # To display logs in console (for now on
 
 # ------------- User and Money --------------------
 NUM_CHICKS =   100
-NUM_REBONDERS = 30     # Number of users that will rebond upon chickening in
-NUM_LPS =       40     # Number of users that will provide liquidity upon chickening in
+NUM_REBONDERS = 25     # Number of users that will rebond upon chickening in
+NUM_LPS =       25     # Number of users that will provide liquidity upon chickening in
+NUM_SELLERS =   25     # Number of users that will sell upon chickening in
+#NUM_TRADERS           # Number of users that will only trade (never bond)
+NUM_TRADERS =   NUM_CHICKS - (NUM_REBONDERS + NUM_LPS + NUM_SELLERS)
 INITIAL_AMOUNT = 10000
 
 # ------------ Bootstrap -----------------
@@ -54,6 +57,11 @@ CHICKEN_IN_AMM_FEE = 10/100             # Tax to be used for bTKN AMM rewards
 REDEMPTION_FEE_BETA = 2                 # Parameter by which to divide the redeemed fraction, in order to calculate the new base rate from a redemption
 REDEMPTION_FEE_MINUTE_DECAY_FACTOR = 0.999037758833783000 # Factor by which redemption fee decays (exponentially) every minute
 MIN_BTKN_SUPPLY = 1                    # Minimum of bTKN left after a redemption
+
+# -------------- Buy bTKN Parameters ----------------
+BUY_PREMIUM_PERCENTAGE_MEAN = 0.5 # Percentage of the premium that arbitrageurs will chase, on average
+BUY_PREMIUM_PERCENTAGE_SD = 0.1   # Standard deviation for arbitrage premium percentage shock
+BUY_PRICE_CAP = INITIAL_BTKN_PRICE * 2 # Max price that arbitrageurs would ever pay
 
 # -------------- Price Parameters ----------------
 # Initial price of bLQTY quoted in LQTY, to make sure bootstrap is profitable

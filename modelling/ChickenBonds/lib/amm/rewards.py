@@ -29,4 +29,4 @@ class Rewards():
 
         self.distributed_amount = self.distributed_amount + amount
 
-        return
+        return amount

@@ -23,16 +23,13 @@ def deploy():
     for chick in chicks:
         lqty.mint(chick.account, INITIAL_AMOUNT)
 
-    borrower = User("borrower")
-    #lqty.mint(borrower.account, INITIAL_AMOUNT)
-
-    return chicken, chicks, borrower
+    return chicken, chicks
 
 def main(tester):
     if not os.path.exists("images"):
         os.mkdir("images")
 
-    chicken, chicks, borrower = deploy()
+    chicken, chicks = deploy()
 
     controller = AsymmetricController(
         adjustment_rate=ACCRUAL_ADJUSTMENT_RATE,
