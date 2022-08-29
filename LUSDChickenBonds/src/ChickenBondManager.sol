@@ -15,7 +15,7 @@ import "./Interfaces/IYearnRegistry.sol";
 import "./Interfaces/IChickenBondManager.sol";
 import "./Interfaces/ICurveLiquidityGaugeV5.sol";
 
-import "forge-std/console.sol";
+// import "forge-std/console.sol";
 
 
 contract ChickenBondManager is ChickenMath, IChickenBondManager {
