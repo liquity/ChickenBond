@@ -108,6 +108,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     */
     bool public migration;
 
+    uint256 countChickenIn;
+    uint256 countChickenOut;
+
     // --- Constants ---
 
     uint256 constant MAX_UINT256 = type(uint256).max;
@@ -292,6 +295,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         idToBondData[_bondID].endTime = block.timestamp;
         idToBondData[_bondID].finalHalfDna = newDna;
 
+        countChickenOut += 1;
+
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
@@ -389,6 +394,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         idToBondData[_bondID].status = BondStatus.chickenedIn;
         idToBondData[_bondID].endTime = block.timestamp;
         idToBondData[_bondID].finalHalfDna = newDna;
+
+        countChickenIn += 1;
 
         // Subtract the bonded amount from the total pending LUSD (and implicitly increase the total acquired LUSD)
         pendingLUSD -= bond.lusdAmount;
@@ -1162,5 +1169,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _pendingLUSD = pendingLUSD;
         _totalAcquiredLUSD = getTotalAcquiredLUSD();
         _permanentLUSD = permanentLUSD;
+    }
+
+    function getOpenBondCount() external view returns (uint256 openBondCount) {
+        return bondNFT.totalSupply() - countChickenIn - countChickenOut;
     }
 }
