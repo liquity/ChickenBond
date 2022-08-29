@@ -24,18 +24,20 @@ contract DevTestSetup is BaseTest {
         LUSDTokenTester mockLUSDToken = new LUSDTokenTester(ZERO_ADDRESS,ZERO_ADDRESS, ZERO_ADDRESS);
         lusdToken = IERC20(address(mockLUSDToken));
 
-        (A, B, C, yearnGovernanceAddress) = (accountsList[0], accountsList[1], accountsList[2], accountsList[9]);
+        (A, B, C, D, yearnGovernanceAddress) = (accountsList[0], accountsList[1], accountsList[2], accountsList[3], accountsList[9]);
 
         // Give some LUSD to test accounts
         uint256 initialLUSDAmount = 2000e18;
         deal(address(lusdToken), A, initialLUSDAmount);
         deal(address(lusdToken), B, initialLUSDAmount);
         deal(address(lusdToken), C, initialLUSDAmount);
+        deal(address(lusdToken), D, initialLUSDAmount);
 
         // Check accounts are funded
         assertEq(lusdToken.balanceOf(A), initialLUSDAmount);
         assertEq(lusdToken.balanceOf(B), initialLUSDAmount);
         assertEq(lusdToken.balanceOf(C), initialLUSDAmount);
+        assertEq(lusdToken.balanceOf(D), initialLUSDAmount);
 
         // Deploy external mock contracts, and assign corresponding interfaces
         MockCurvePool mockCurvePool = new MockCurvePool("LUSD-3CRV Pool", "LUSD3CRV-f");
