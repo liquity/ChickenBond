@@ -89,15 +89,21 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         string[2] cardGradient;
     }
 
+    // Turn the pseudo-random number `rand` -- 18 digit FP in range [0,1) -- into a border color.
     function _getBorderColor(uint256 rand) internal pure returns (BorderColor) {
+        // TODO: more prestigious outcomes should be less probable
         return BorderColor(rand * uint256(BorderColor.COUNT) / 1e18);
     }
 
+    // Turn the pseudo-random number `rand` -- 18 digit FP in range [0,1) -- into a card color.
     function _getCardColor(uint256 rand) internal pure returns (CardColor) {
+        // TODO: more prestigious outcomes should be less probable
         return CardColor(rand * uint256(CardColor.COUNT) / 1e18);
     }
 
+    // Turn the pseudo-random number `rand` -- 18 digit FP in range [0,1) -- into a shell color.
     function _getShellColor(uint256 rand) internal pure returns (ShellColor) {
+        // TODO: more prestigious outcomes should be less probable
         return ShellColor(rand * uint256(ShellColor.COUNT) / 1e18);
     }
 
