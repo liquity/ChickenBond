@@ -71,6 +71,8 @@ contract ChickenBondManagerMainnetGaugeTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
     }
 
+    /*
+      Gauge cannot be killed with the permissionless Gauge Manager Proxy
     function testGaugeContinuesToRewardLUSDAfterKilled() public {
         uint256 generatedLUSDReward1;
         uint256 generatedLUSDReward2;
@@ -89,7 +91,7 @@ contract ChickenBondManagerMainnetGaugeTest is BaseTest, MainnetTestSetup {
         vm.stopPrank();
 
         // Let's suppose the gauge is killed by admins
-        vm.startPrank(curveFactoryAdmin);
+        vm.startPrank(curveGaugeManagerAddress);
         curveLiquidityGauge.set_killed(true);
         vm.stopPrank();
 
@@ -115,6 +117,7 @@ contract ChickenBondManagerMainnetGaugeTest is BaseTest, MainnetTestSetup {
         }
         vm.stopPrank();
     }
+    */
 
     function testRewardsCanStillBeClaimedAfterWithdrawal() public {
         vm.startPrank(A);
