@@ -15,7 +15,7 @@ import "./Interfaces/IYearnRegistry.sol";
 import "./Interfaces/IChickenBondManager.sol";
 import "./Interfaces/ICurveLiquidityGaugeV5.sol";
 
-//import "forge-std/console.sol";
+// import "forge-std/console.sol";
 
 
 contract ChickenBondManager is ChickenMath, IChickenBondManager {
@@ -107,6 +107,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     - Redemption fees are zero
     */
     bool public migration;
+
+    uint256 public countChickenIn;
+    uint256 public countChickenOut;
 
     // --- Constants ---
 
@@ -292,6 +295,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         idToBondData[_bondID].endTime = block.timestamp;
         idToBondData[_bondID].finalHalfDna = newDna;
 
+        countChickenOut += 1;
+
         pendingLUSD -= bond.lusdAmount;
         totalWeightedStartTimes -= bond.lusdAmount * bond.startTime;
 
@@ -389,6 +394,8 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         idToBondData[_bondID].status = BondStatus.chickenedIn;
         idToBondData[_bondID].endTime = block.timestamp;
         idToBondData[_bondID].finalHalfDna = newDna;
+
+        countChickenIn += 1;
 
         // Subtract the bonded amount from the total pending LUSD (and implicitly increase the total acquired LUSD)
         pendingLUSD -= bond.lusdAmount;
@@ -1162,5 +1169,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _pendingLUSD = pendingLUSD;
         _totalAcquiredLUSD = getTotalAcquiredLUSD();
         _permanentLUSD = permanentLUSD;
+    }
+
+    function getOpenBondCount() external view returns (uint256 openBondCount) {
+        return bondNFT.totalSupply() - countChickenIn - countChickenOut;
     }
 }

@@ -50,11 +50,13 @@ contract MainnetTestSetup is BaseTest {
         deal(address(lusdToken), A, 1e24);
         deal(address(lusdToken), B, 1e24);
         deal(address(lusdToken), C, 1e24);
+        deal(address(lusdToken), D, 1e24);
 
         // Check accounts are funded
         assertTrue(lusdToken.balanceOf(A) == 1e24);
         assertTrue(lusdToken.balanceOf(B) == 1e24);
         assertTrue(lusdToken.balanceOf(C) == 1e24);
+         assertTrue(lusdToken.balanceOf(D) == 1e24);
 
         bammSPVault = IBAMM(
             deployCode(
