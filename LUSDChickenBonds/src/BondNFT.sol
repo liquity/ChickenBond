@@ -11,14 +11,24 @@ import "./Interfaces/IBondNFT.sol";
 contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     IChickenBondManager public chickenBondManager;
     IBondNFTArtwork public artwork;
+    ITroveManager public troveManager;
 
     uint256 immutable public transferLockoutPeriodSeconds;
 
     mapping (uint256 => BondExtraData) private idToBondExtraData;
 
-    constructor(string memory name_, string memory symbol_, address _initialArtworkAddress, uint256 _transferLockoutPeriodSeconds) ERC721(name_, symbol_) {
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        address _initialArtworkAddress,
+        uint256 _transferLockoutPeriodSeconds,
+        address _troveManager
+    )
+        ERC721(name_, symbol_)
+    {
         artwork = IBondNFTArtwork(_initialArtworkAddress);
         transferLockoutPeriodSeconds = _transferLockoutPeriodSeconds;
+        troveManager = _troveManager;
     }
 
     function setAddresses(address _chickenBondManagerAddress) external onlyOwner {
@@ -53,13 +63,15 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         return (tokenID, initialHalfDna);
     }
 
-    function setFinalExtraData(address /*_bonder*/, uint256 _tokenID, uint256 _permanentSeed) external returns (uint128) {
+    function setFinalExtraData(address _bonder, uint256 _tokenID, uint256 _permanentSeed) external returns (uint128) {
         requireCallerIsChickenBondsManager();
 
         uint128 newDna = getHalfDna(_tokenID, _permanentSeed);
         idToBondExtraData[_tokenID].finalHalfDna = newDna;
 
-        // TODO: Liquity Data
+        // Liquity Data
+        idToBondExtraData[_tokenID].troveSize = troveManager.getTroveDebt(_bonder);
+
 
         return newDna;
     }

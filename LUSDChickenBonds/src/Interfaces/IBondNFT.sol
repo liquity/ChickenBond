@@ -9,6 +9,7 @@ interface IBondNFT is IERC721Enumerable {
     struct BondExtraData {
         uint128 initialHalfDna;
         uint128 finalHalfDna;
+        uint256 troveSize; // Debt in LUSD
         // TODO: Liquity Data
     }
 
