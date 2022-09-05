@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import "./BaseTest.sol";
 import "./Interfaces/ICurveCryptoFactory.sol";
 import "./Interfaces/ICurveCryptoPool.sol";
+import "./Interfaces/ICurveGaugeManagerProxy.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV5.sol";
 
 
@@ -19,6 +20,7 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_YEARN_REGISTRY_ADDRESS = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
     address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xF18056Bbd320E96A48e3Fbf8bC061322531aac99;
+    address constant MAINNET_CURVE_V2_GAUGE_MANAGER_PROXY_ADDRESS = 0xd05Ad7fb0CDb39AaAA1407564dad0EC78d30d564;
     address constant MAINNET_CHAINLINK_ETH_USD_ADDRESS = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address constant MAINNET_CHAINLINK_LUSD_USD_ADDRESS = 0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0;
     address constant MAINNET_BPROTOCOL_FEE_POOL_ADDRESS = 0x7095F0B91A1010c11820B4E263927835A4CF52c9;
@@ -30,7 +32,7 @@ contract MainnetTestSetup is BaseTest {
     uint256 CBMDeploymentTime;
     IERC20 bLUSDCurveToken;
     ICurveCryptoPool bLUSDCurvePool;
-    address curveFactoryAdmin;
+    address curveGaugeManagerAddress;
 
     function setUp() public {
         // pinBlock(MAINNET_PINNED_BLOCK);
@@ -45,6 +47,7 @@ contract MainnetTestSetup is BaseTest {
         _3crvToken = IERC20(MAINNET_3CRV_TOKEN_ADDRESS);
 
         (A, B, C, D) = (accountsList[0], accountsList[1], accountsList[2], accountsList[3]);
+        curveGaugeManagerAddress = accountsList[8];
 
         // Give some LUSD to test accounts
         deal(address(lusdToken), A, 1e24);
@@ -114,7 +117,8 @@ contract MainnetTestSetup is BaseTest {
         );
         bLUSDCurveToken = IERC20(bLUSDCurvePool.token());
 
-        address curveLiquidityGaugeAddress = curveFactory.deploy_gauge(address(bLUSDCurvePool));
+        ICurveGaugeManagerProxy curveGaugeManagerProxy = ICurveGaugeManagerProxy(MAINNET_CURVE_V2_GAUGE_MANAGER_PROXY_ADDRESS);
+        address curveLiquidityGaugeAddress = curveGaugeManagerProxy.deploy_gauge(address(bLUSDCurvePool), curveGaugeManagerAddress);
         curveLiquidityGauge = ICurveLiquidityGaugeV5(curveLiquidityGaugeAddress);
 
         ChickenBondManager.ExternalAdresses memory externalContractAddresses = ChickenBondManager.ExternalAdresses({
@@ -165,9 +169,8 @@ contract MainnetTestSetup is BaseTest {
         CBMDeploymentTime = chickenBondManager.deploymentTimestamp();
 
         // Add LUSD as reward token for Curve Liquidity Gauge, and set ChickenBondManager as distributor
-        curveFactoryAdmin = curveFactory.admin();
-        vm.startPrank(curveFactoryAdmin);
-        curveLiquidityGauge.add_reward(address(lusdToken), address(chickenBondManager));
+        vm.startPrank(curveGaugeManagerAddress);
+        curveGaugeManagerProxy.add_reward(curveLiquidityGaugeAddress, address(lusdToken), address(chickenBondManager));
         vm.stopPrank();
 
         bondNFT.setAddresses(address(chickenBondManager));

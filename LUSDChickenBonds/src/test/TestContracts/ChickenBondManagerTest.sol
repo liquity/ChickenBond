@@ -2232,7 +2232,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testCICounterDoesntChangeUponBondCreation() public {
         uint256 bondAmount = 100e18;
         uint256 A_bondId = createBondForUser(A, bondAmount);
-        uint256 B_bondId = createBondForUser(B, bondAmount);
+        createBondForUser(B, bondAmount);
 
         vm.warp(block.timestamp + 300 days);
 
@@ -2270,7 +2270,7 @@ contract ChickenBondManagerTest is BaseTest {
     function testCOCounterDoesntChangeUponCI() public {
         uint256 bondAmount = 100e18;
         uint256 A_bondId = createBondForUser(A, bondAmount);
-        uint256 B_bondId = createBondForUser(B, bondAmount);
+        createBondForUser(B, bondAmount);
 
         vm.warp(block.timestamp + 300 days);
 
@@ -2284,8 +2284,8 @@ contract ChickenBondManagerTest is BaseTest {
 
      function testCOCounterDoesntChangeUponBondCreation() public {
         uint256 bondAmount = 100e18;
-        uint256 A_bondId = createBondForUser(A, bondAmount);
-        uint256 B_bondId = createBondForUser(B, bondAmount);
+        createBondForUser(A, bondAmount);
+        createBondForUser(B, bondAmount);
 
         vm.warp(block.timestamp + 300 days);
 
@@ -2310,8 +2310,8 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 A_bondId = createBondForUser(A, bondAmount);
         uint256 B_bondId = createBondForUser(B, bondAmount);
         uint256 C_bondId = createBondForUser(C, bondAmount);
-        uint256 D_bondId = createBondForUser(D, bondAmount);
-       
+        createBondForUser(D, bondAmount);
+
         vm.warp(block.timestamp + 300 days);
 
         // Chicken out 2
@@ -2332,11 +2332,11 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 openBondsCount = chickenBondManager.getOpenBondCount();
         assertEq(openBondsCount, 0);
 
-        uint256 A_bondId = createBondForUser(A, bondAmount);
+        createBondForUser(A, bondAmount);
         openBondsCount = chickenBondManager.getOpenBondCount();
         assertEq(openBondsCount, 1);
 
-        uint256 B_bondId = createBondForUser(B, bondAmount);
+        createBondForUser(B, bondAmount);
         openBondsCount = chickenBondManager.getOpenBondCount();
         assertEq(openBondsCount, 2);
     }
