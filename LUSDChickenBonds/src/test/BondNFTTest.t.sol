@@ -18,7 +18,7 @@ contract DummyArtwork is IBondNFTArtwork {
         prefix = _prefix;
     }
 
-    function tokenURI(uint256 _tokenID) external view returns (string memory) {
+    function tokenURI(uint256 _tokenID, IBondNFT.BondExtraData calldata /*_bondExtraData*/) external view returns (string memory) {
         return string(abi.encodePacked(prefix, _tokenID.toString()));
     }
 }
@@ -30,8 +30,6 @@ contract DummyChickenBondManager {
         uint256 lusdAmount;
         uint256 startTime;
         uint256 endTime;
-        uint128 initialHalfDna;
-        uint128 finalHalfDna;
         uint8 status;
     }
 
@@ -42,7 +40,7 @@ contract DummyChickenBondManager {
     }
 
     function mint(address _bonder) external returns (uint256 bondID) {
-        return bondNFT.mint(_bonder);
+        (bondID,) = bondNFT.mint(_bonder, 0);
     }
 
     function setBondData(uint256 _bondID, BondData calldata _bondData) external {
@@ -71,7 +69,7 @@ contract BondNFTTest is Test {
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), address(this), 1);
-        bondNFT.mint(address(this));
+        bondNFT.mint(address(this), 0);
     }
 
     function testBondNFTTokenURIRevertsWhenTokenDoesNotExist() public {
@@ -83,7 +81,7 @@ contract BondNFTTest is Test {
     function testBondNFTTokenURIIsEmptyWhenArtworkIsZero() public {
         BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
         bondNFT.setAddresses(address(this));
-        bondNFT.mint(address(this));
+        bondNFT.mint(address(this), 0);
 
         string memory tokenURI = bondNFT.tokenURI(1);
         assertEq(tokenURI, "");
@@ -92,7 +90,7 @@ contract BondNFTTest is Test {
     function testBondNFTDelegatesTokenURIWhenArtworkIsNotZero() public {
         BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0);
         bondNFT.setAddresses(address(this));
-        bondNFT.mint(address(this));
+        bondNFT.mint(address(this), 0);
 
         string memory tokenURI = bondNFT.tokenURI(1);
         assertEq(tokenURI, "prefix/1");
@@ -134,8 +132,6 @@ contract BondNFTTest is Test {
                 lusdAmount: 1e18, // doesn't matter
                 startTime: endTime, // doesn't matter, just use same as endTime
                 endTime: endTime,
-                initialHalfDna: 1,
-                finalHalfDna: 1,
                 status: uint8(
                     inOut
                         ? IChickenBondManager.BondStatus.chickenedIn

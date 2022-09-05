@@ -202,7 +202,7 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         (_bondData.hasCardGradient, _bondData.cardGradient) = _getCardGradient(_bondData.cardColor);
     }
 
-    function tokenURI(uint256 _tokenID) external view returns (string memory) {
+    function tokenURI(uint256 _tokenID, IBondNFT.BondExtraData calldata _bondExtraData) external view returns (string memory) {
         IChickenBondManager chickenBondManager =
             IChickenBondManagerGetter(msg.sender).chickenBondManager();
 
@@ -212,10 +212,10 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
             bondData.lusdAmount,
             bondData.startTime,
             bondData.endTime,
-            bondData.initialHalfDna,
-            bondData.finalHalfDna,
             bondData.status
         ) = chickenBondManager.getBondData(_tokenID);
+        bondData.initialHalfDna = _bondExtraData.initialHalfDna;
+        bondData.finalHalfDna = _bondExtraData.finalHalfDna;
 
         _calcAttributes(bondData);
         _calcDerivedData(bondData);
