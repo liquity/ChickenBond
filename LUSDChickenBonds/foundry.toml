@@ -4,4 +4,7 @@ out = 'out'
 libs = ['lib']
 fuzz_runs = 100
 
+# Needed to make `deployCode("BAMM.sol:BAMM", ...)` work in MainnetTestSetup
+fs_permissions = [{ access = "read", path = "out/BAMM.sol/BAMM.json" }]
+
 # See more config options https://github.com/gakonst/foundry/tree/master/config
