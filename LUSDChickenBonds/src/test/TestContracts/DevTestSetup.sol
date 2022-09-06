@@ -10,6 +10,8 @@ import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
 import  "../../ExternalContracts/MockCurveLiquidityGauge.sol";
 import "../../ExternalContracts/MockTroveManager.sol";
+import "../../ExternalContracts/MockLQTYStaking.sol";
+import "../../ExternalContracts/MockPickleJar.sol";
 import "./LUSDTokenTester.sol";
 
 
@@ -65,7 +67,17 @@ contract DevTestSetup is BaseTest {
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract
-        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0), BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS, address(new MockTroveManager()));
+        bondNFT = new BondNFT(
+            "LUSDBondNFT",
+            "LUSDBOND",
+            address(0),
+            BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract
         curveLiquidityGauge = ICurveLiquidityGaugeV5(address(new MockCurveLiquidityGauge()));

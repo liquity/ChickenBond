@@ -6,6 +6,8 @@ import "./TestContracts/TestUtils.sol";
 import "../BondNFT.sol";
 import "../Interfaces/IBondNFTArtwork.sol";
 import "../ExternalContracts/MockTroveManager.sol";
+import "../ExternalContracts/MockLQTYStaking.sol";
+import "../ExternalContracts/MockPickleJar.sol";
 
 import "forge-std/console.sol";
 
@@ -55,7 +57,17 @@ contract BondNFTTest is BaseTest {
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 
     function testBondNFTAddressesCanOnlyBeSetOnce() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         bondNFT.setAddresses(address(0x1337));
         assertEq(address(bondNFT.chickenBondManager()), address(0x1337));
 
@@ -64,7 +76,17 @@ contract BondNFTTest is BaseTest {
     }
 
     function testBondNFTTokenIDsStartAtOne() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         bondNFT.setAddresses(address(this));
 
         vm.expectEmit(true, true, true, true);
@@ -73,13 +95,33 @@ contract BondNFTTest is BaseTest {
     }
 
     function testBondNFTTokenURIRevertsWhenTokenDoesNotExist() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         vm.expectRevert("BondNFT: URI query for nonexistent token");
         bondNFT.tokenURI(1337);
     }
 
     function testBondNFTTokenURIIsEmptyWhenArtworkIsZero() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
 
@@ -88,7 +130,17 @@ contract BondNFTTest is BaseTest {
     }
 
     function testBondNFTDelegatesTokenURIWhenArtworkIsNotZero() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(new DummyArtwork("prefix/")),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
 
@@ -97,14 +149,34 @@ contract BondNFTTest is BaseTest {
     }
 
     function testBondNFTArtworkCannotBeSetBeforeSettingAddresses() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
 
         vm.expectRevert("BondNFT: setAddresses() must be called first");
         bondNFT.setArtworkAddress(address(0x1337));
     }
 
     function testBondNFTArtworkCanBeUpgradedExactlyOnce() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0x1337), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0x1337),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         bondNFT.setAddresses(address(this));
 
         bondNFT.setArtworkAddress(address(0x1337));
@@ -121,7 +193,17 @@ contract BondNFTTest is BaseTest {
         lessThanLockout = coerce(lessThanLockout, 0, lockoutPeriodSeconds - 1);
         moreThanLockout = coerce(moreThanLockout, lockoutPeriodSeconds, 2 * lockoutPeriodSeconds);
 
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0x1337), lockoutPeriodSeconds, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0x1337),
+            lockoutPeriodSeconds,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         DummyChickenBondManager chickenBondManager = new DummyChickenBondManager(bondNFT);
         bondNFT.setAddresses(address(chickenBondManager));
 
@@ -152,7 +234,17 @@ contract BondNFTTest is BaseTest {
     }
 
     function testMintCannotBeCalledDirectly() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(new DummyArtwork("prefix/")),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         bondNFT.setAddresses(address(this));
         vm.startPrank(A);
         vm.expectRevert("BondNFT: Caller must be ChickenBondManager");
@@ -161,7 +253,17 @@ contract BondNFTTest is BaseTest {
     }
 
     function testBondNFTSetFinalDataCannotBeCalledDirectly() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0, address(new MockTroveManager()));
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(new DummyArtwork("prefix/")),
+            0,
+            address(new MockTroveManager()),
+            address(new ERC20("LQTY token", "LQTY")),
+            address(new MockLQTYStaking()),
+            address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+        );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
 

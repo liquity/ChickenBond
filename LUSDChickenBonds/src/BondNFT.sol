@@ -2,8 +2,11 @@
 pragma solidity ^0.8.10;
 
 import "openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./Interfaces/ITroveManager.sol";
+import "./Interfaces/ILQTYStaking.sol";
+import "./Interfaces/IPickleJar.sol";
 import "./Interfaces/IBondNFTArtwork.sol";
 import "./Interfaces/IBondNFT.sol";
 
@@ -13,6 +16,10 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     IChickenBondManager public chickenBondManager;
     IBondNFTArtwork public artwork;
     ITroveManager public troveManager;
+    IERC20 public lqtyToken;
+    ILQTYStaking public lqtyStaking;
+    IPickleJar public pickleLQTYJar;
+    IERC20 public pickleLQTYFarm;
 
     uint256 immutable public transferLockoutPeriodSeconds;
 
@@ -23,14 +30,26 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         string memory symbol_,
         address _initialArtworkAddress,
         uint256 _transferLockoutPeriodSeconds,
-        address _troveManagerAddress
+        address _troveManagerAddress,
+        address _lqtyToken,
+        address _lqtyStaking,
+        address _pickleLQTYJar,
+        address _pickleLQTYFarm
     )
         ERC721(name_, symbol_)
     {
         require(_troveManagerAddress != address(0), "BondNFT: _troveManagerAddress must be non-zero");
+        require(_lqtyToken != address(0), "BondNFT: _lqtyToken must be non-zero");
+        require(_lqtyStaking != address(0), "BondNFT: _lqtyStaking must be non-zero");
+        require(_pickleLQTYJar != address(0), "BondNFT: _pickleLQTYJar must be non-zero");
+        require(_pickleLQTYFarm != address(0), "BondNFT: _pickleLQTYFarm must be non-zero");
         artwork = IBondNFTArtwork(_initialArtworkAddress);
         transferLockoutPeriodSeconds = _transferLockoutPeriodSeconds;
         troveManager = ITroveManager(_troveManagerAddress);
+        lqtyToken = IERC20(_lqtyToken);
+        lqtyStaking = ILQTYStaking(_lqtyStaking);
+        pickleLQTYJar = IPickleJar(_pickleLQTYJar);
+        pickleLQTYFarm = IERC20(_pickleLQTYFarm);
     }
 
     function setAddresses(address _chickenBondManagerAddress) external onlyOwner {
@@ -72,8 +91,15 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         idToBondExtraData[_tokenID].finalHalfDna = newDna;
 
         // Liquity Data
+        // Trove
         idToBondExtraData[_tokenID].troveSize = troveManager.getTroveDebt(_bonder);
-
+        // LQTY
+        uint256 pickleLQTYAmount;
+        if (pickleLQTYJar.totalSupply() > 0) {
+            pickleLQTYAmount = (pickleLQTYJar.balanceOf(_bonder) + pickleLQTYFarm.balanceOf(_bonder)) * pickleLQTYJar.getRatio();
+        }
+        idToBondExtraData[_tokenID].lqtyAmount = lqtyToken.balanceOf(_bonder) + lqtyStaking.stakes(_bonder) + pickleLQTYAmount;
+        // CRV - TODO
 
         return newDna;
     }
