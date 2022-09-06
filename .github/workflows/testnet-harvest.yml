@@ -5,8 +5,8 @@ env:
   FORCE_COLOR: true
 
 on:
-  #schedule:
-  #  - cron: "*/15 * * * *"
+  schedule:
+    - cron: "*/15 * * * *"
 
   push:
     branches: [main]
