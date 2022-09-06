@@ -75,23 +75,25 @@ export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   yearnGovernanceAddress: AddressZero,
 
   // bLUSD:LUSD pool params (Curve v2)
-  bLUSDPoolA: BigNumber.from(400000),
-  bLUSDPoolGamma: bnFromDecimal(0.000145),
-  bLUSDPoolMidFee: curvePercent(0.5),
-  bLUSDPoolOutFee: curvePercent(1.0),
-  bLUSDPoolAllowedExtraProfit: bnFromDecimal(0.000002),
-  bLUSDPoolFeeGamma: bnFromDecimal(0.0023),
-  bLUSDPoolAdjustmentStep: bnFromDecimal(0.000146),
+  // Used the FXS:cvxFXS as a baseline:
+  // https://etherscan.io/address/0xd658a338613198204dca1143ac3f01a722b5d94a#readContract
+  bLUSDPoolA: BigNumber.from(200000000),
+  bLUSDPoolGamma: bnFromDecimal(0.0199),
+  bLUSDPoolMidFee: curvePercent(0.15),
+  bLUSDPoolOutFee: curvePercent(0.3),
+  bLUSDPoolAllowedExtraProfit: bnFromDecimal(0.0000000001),
+  bLUSDPoolFeeGamma: bnFromDecimal(0.005),
+  bLUSDPoolAdjustmentStep: bnFromDecimal(0.0000055),
   bLUSDPoolAdminFee: curvePercent(50),
-  bLUSDPoolMAHalfTime: DAY,
-  bLUSDPoolInitialPrice: bnFromDecimal(1.2), // (coin0 / coin1)
+  bLUSDPoolMAHalfTime: BigNumber.from(600), // seconds
+  bLUSDPoolInitialPrice: bnFromDecimal(1 / 1.3 /* 30% premium */), // (LUSD / bLUSD)
 
   // Testnet-specific params
   realSecondsPerFakeDay: DAY.toNumber(),
   lusdFaucetTapAmount: ONE.mul(10000),
   lusdFaucetTapPeriod: DAY,
-  harvesterBAMMAPR: ONE.mul(SPEED).div(5),
-  harvesterCurveAPR: ONE.mul(SPEED).div(20)
+  harvesterBAMMAPR: ONE.mul(SPEED).div(5), // 20% over 1 fake year
+  harvesterCurveAPR: ONE.mul(SPEED).div(20) // 5% over 1 fake year
 };
 
 const mapConfig = (
