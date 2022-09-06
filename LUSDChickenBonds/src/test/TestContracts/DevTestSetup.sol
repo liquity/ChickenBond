@@ -67,20 +67,24 @@ contract DevTestSetup is BaseTest {
         // Deploy core ChickenBonds system
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
+        BondNFT.ExternalAdresses memory bondNFTExternalContractAddresses = BondNFT.ExternalAdresses({
+            troveManagerAddress: address(new MockTroveManager()),
+            lqtyToken: address(new ERC20("LQTY token", "LQTY")),
+            lqtyStaking: address(new MockLQTYStaking()),
+            pickleLQTYJar: address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            pickleLQTYFarm: address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            curveGaugeController: address(new MockCurveGaugeController()),
+            curveLUSD3CRVGauge: address(0x1337),
+            curveLUSDFRAXGauge: address(0x1337)
+        });
+
         // TODO: choose conventional name and symbol for NFT contract
         bondNFT = new BondNFT(
             "LUSDBondNFT",
             "LUSDBOND",
             address(0),
             BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS,
-            address(new MockTroveManager()),
-            address(new ERC20("LQTY token", "LQTY")),
-            address(new MockLQTYStaking()),
-            address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
-            address(new MockCurveGaugeController()),
-            address(0x1337),
-            address(0x1337)
+            bondNFTExternalContractAddresses
         );
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract

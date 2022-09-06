@@ -29,41 +29,45 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
 
     mapping (uint256 => BondExtraData) private idToBondExtraData;
 
+    struct ExternalAdresses {
+        address troveManagerAddress;
+        address lqtyToken;
+        address lqtyStaking;
+        address pickleLQTYJar;
+        address pickleLQTYFarm;
+        address curveGaugeController;
+        address curveLUSD3CRVGauge;
+        address curveLUSDFRAXGauge;
+    }
+
     constructor(
         string memory name_,
         string memory symbol_,
         address _initialArtworkAddress,
         uint256 _transferLockoutPeriodSeconds,
-        address _troveManagerAddress,
-        address _lqtyToken,
-        address _lqtyStaking,
-        address _pickleLQTYJar,
-        address _pickleLQTYFarm,
-        address _curveGaugeController,
-        address _curveLUSD3CRVGauge,
-        address _curveLUSDFRAXGauge
+        ExternalAdresses memory _externalContractAddresses // to avoid stack too deep issues
     )
         ERC721(name_, symbol_)
     {
-        require(_troveManagerAddress != address(0), "BondNFT: _troveManagerAddress must be non-zero");
-        require(_lqtyToken != address(0), "BondNFT: _lqtyToken must be non-zero");
-        require(_lqtyStaking != address(0), "BondNFT: _lqtyStaking must be non-zero");
-        require(_pickleLQTYJar != address(0), "BondNFT: _pickleLQTYJar must be non-zero");
-        require(_pickleLQTYFarm != address(0), "BondNFT: _pickleLQTYFarm must be non-zero");
-        require(_curveGaugeController != address(0), "BondNFT: _curveGaugeController must be non-zero");
-        require(_curveLUSD3CRVGauge != address(0), "BondNFT: _curveLUSD3CRVGauge must be non-zero");
-        require(_curveLUSDFRAXGauge != address(0), "BondNFT: _curveLUSDFRAXGauge must be non-zero");
+        require(_externalContractAddresses.troveManagerAddress != address(0), "BondNFT: _troveManagerAddress must be non-zero");
+        require(_externalContractAddresses.lqtyToken != address(0), "BondNFT: _lqtyToken must be non-zero");
+        require(_externalContractAddresses.lqtyStaking != address(0), "BondNFT: _lqtyStaking must be non-zero");
+        require(_externalContractAddresses.pickleLQTYJar != address(0), "BondNFT: _pickleLQTYJar must be non-zero");
+        require(_externalContractAddresses.pickleLQTYFarm != address(0), "BondNFT: _pickleLQTYFarm must be non-zero");
+        require(_externalContractAddresses.curveGaugeController != address(0), "BondNFT: _curveGaugeController must be non-zero");
+        require(_externalContractAddresses.curveLUSD3CRVGauge != address(0), "BondNFT: _curveLUSD3CRVGauge must be non-zero");
+        require(_externalContractAddresses.curveLUSDFRAXGauge != address(0), "BondNFT: _curveLUSDFRAXGauge must be non-zero");
 
         artwork = IBondNFTArtwork(_initialArtworkAddress);
         transferLockoutPeriodSeconds = _transferLockoutPeriodSeconds;
-        troveManager = ITroveManager(_troveManagerAddress);
-        lqtyToken = IERC20(_lqtyToken);
-        lqtyStaking = ILQTYStaking(_lqtyStaking);
-        pickleLQTYJar = IPickleJar(_pickleLQTYJar);
-        pickleLQTYFarm = IERC20(_pickleLQTYFarm);
-        curveGaugeController = ICurveGaugeController(_curveGaugeController);
-        curveLUSD3CRVGauge = _curveLUSD3CRVGauge;
-        curveLUSDFRAXGauge = _curveLUSDFRAXGauge;
+        troveManager = ITroveManager(_externalContractAddresses.troveManagerAddress);
+        lqtyToken = IERC20(_externalContractAddresses.lqtyToken);
+        lqtyStaking = ILQTYStaking(_externalContractAddresses.lqtyStaking);
+        pickleLQTYJar = IPickleJar(_externalContractAddresses.pickleLQTYJar);
+        pickleLQTYFarm = IERC20(_externalContractAddresses.pickleLQTYFarm);
+        curveGaugeController = ICurveGaugeController(_externalContractAddresses.curveGaugeController);
+        curveLUSD3CRVGauge = _externalContractAddresses.curveLUSD3CRVGauge;
+        curveLUSDFRAXGauge = _externalContractAddresses.curveLUSDFRAXGauge;
     }
 
     function setAddresses(address _chickenBondManagerAddress) external onlyOwner {
