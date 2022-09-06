@@ -8,6 +8,7 @@ import "../Interfaces/IBondNFTArtwork.sol";
 import "../ExternalContracts/MockTroveManager.sol";
 import "../ExternalContracts/MockLQTYStaking.sol";
 import "../ExternalContracts/MockPickleJar.sol";
+import "../ExternalContracts/MockCurveGaugeController.sol";
 
 import "forge-std/console.sol";
 
@@ -66,7 +67,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         bondNFT.setAddresses(address(0x1337));
         assertEq(address(bondNFT.chickenBondManager()), address(0x1337));
@@ -85,7 +89,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         bondNFT.setAddresses(address(this));
 
@@ -104,7 +111,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         vm.expectRevert("BondNFT: URI query for nonexistent token");
         bondNFT.tokenURI(1337);
@@ -120,7 +130,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
@@ -139,7 +152,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
@@ -158,7 +174,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
 
         vm.expectRevert("BondNFT: setAddresses() must be called first");
@@ -175,7 +194,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         bondNFT.setAddresses(address(this));
 
@@ -202,7 +224,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         DummyChickenBondManager chickenBondManager = new DummyChickenBondManager(bondNFT);
         bondNFT.setAddresses(address(chickenBondManager));
@@ -243,7 +268,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         bondNFT.setAddresses(address(this));
         vm.startPrank(A);
@@ -262,7 +290,10 @@ contract BondNFTTest is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);

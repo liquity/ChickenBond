@@ -12,6 +12,7 @@ import  "../../ExternalContracts/MockCurveLiquidityGauge.sol";
 import "../../ExternalContracts/MockTroveManager.sol";
 import "../../ExternalContracts/MockLQTYStaking.sol";
 import "../../ExternalContracts/MockPickleJar.sol";
+import "../../ExternalContracts/MockCurveGaugeController.sol";
 import "./LUSDTokenTester.sol";
 
 
@@ -76,7 +77,10 @@ contract DevTestSetup is BaseTest {
             address(new ERC20("LQTY token", "LQTY")),
             address(new MockLQTYStaking()),
             address(new MockPickleJar("pickling LQTY", "pLQTY")),
-            address(new ERC20("Pickle Farm LTQY", "pfLQTY"))
+            address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            address(new MockCurveGaugeController()),
+            address(0x1337),
+            address(0x1337)
         );
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract

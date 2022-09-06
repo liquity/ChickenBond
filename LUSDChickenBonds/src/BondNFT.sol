@@ -7,6 +7,7 @@ import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/ILQTYStaking.sol";
 import "./Interfaces/IPickleJar.sol";
+import "./Interfaces/ICurveGaugeController.sol";
 import "./Interfaces/IBondNFTArtwork.sol";
 import "./Interfaces/IBondNFT.sol";
 
@@ -20,6 +21,9 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     ILQTYStaking public lqtyStaking;
     IPickleJar public pickleLQTYJar;
     IERC20 public pickleLQTYFarm;
+    ICurveGaugeController immutable public curveGaugeController;
+    address immutable public curveLUSD3CRVGauge;
+    address immutable public curveLUSDFRAXGauge;
 
     uint256 immutable public transferLockoutPeriodSeconds;
 
@@ -34,7 +38,10 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         address _lqtyToken,
         address _lqtyStaking,
         address _pickleLQTYJar,
-        address _pickleLQTYFarm
+        address _pickleLQTYFarm,
+        address _curveGaugeController,
+        address _curveLUSD3CRVGauge,
+        address _curveLUSDFRAXGauge
     )
         ERC721(name_, symbol_)
     {
@@ -43,6 +50,10 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         require(_lqtyStaking != address(0), "BondNFT: _lqtyStaking must be non-zero");
         require(_pickleLQTYJar != address(0), "BondNFT: _pickleLQTYJar must be non-zero");
         require(_pickleLQTYFarm != address(0), "BondNFT: _pickleLQTYFarm must be non-zero");
+        require(_curveGaugeController != address(0), "BondNFT: _curveGaugeController must be non-zero");
+        require(_curveLUSD3CRVGauge != address(0), "BondNFT: _curveLUSD3CRVGauge must be non-zero");
+        require(_curveLUSDFRAXGauge != address(0), "BondNFT: _curveLUSDFRAXGauge must be non-zero");
+
         artwork = IBondNFTArtwork(_initialArtworkAddress);
         transferLockoutPeriodSeconds = _transferLockoutPeriodSeconds;
         troveManager = ITroveManager(_troveManagerAddress);
@@ -50,6 +61,9 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         lqtyStaking = ILQTYStaking(_lqtyStaking);
         pickleLQTYJar = IPickleJar(_pickleLQTYJar);
         pickleLQTYFarm = IERC20(_pickleLQTYFarm);
+        curveGaugeController = ICurveGaugeController(_curveGaugeController);
+        curveLUSD3CRVGauge = _curveLUSD3CRVGauge;
+        curveLUSDFRAXGauge = _curveLUSDFRAXGauge;
     }
 
     function setAddresses(address _chickenBondManagerAddress) external onlyOwner {
@@ -99,7 +113,10 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
             pickleLQTYAmount = (pickleLQTYJar.balanceOf(_bonder) + pickleLQTYFarm.balanceOf(_bonder)) * pickleLQTYJar.getRatio();
         }
         idToBondExtraData[_tokenID].lqtyAmount = lqtyToken.balanceOf(_bonder) + lqtyStaking.stakes(_bonder) + pickleLQTYAmount;
-        // CRV - TODO
+        // Curve Gauge votes
+        (uint256 curveLUSD3CRVGaugeSlope,,) = curveGaugeController.vote_user_slopes(_bonder, curveLUSD3CRVGauge);
+        (uint256 curveLUSDFRAXGaugeSlope,,) = curveGaugeController.vote_user_slopes(_bonder, curveLUSDFRAXGauge);
+        idToBondExtraData[_tokenID].curveGaugeSlopes = curveLUSD3CRVGaugeSlope + curveLUSDFRAXGaugeSlope;
 
         return newDna;
     }

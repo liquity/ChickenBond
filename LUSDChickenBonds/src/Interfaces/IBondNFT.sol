@@ -9,8 +9,9 @@ interface IBondNFT is IERC721Enumerable {
     struct BondExtraData {
         uint128 initialHalfDna;
         uint128 finalHalfDna;
-        uint256 troveSize;   // Debt in LUSD
-        uint256 lqtyAmount;  // Holding LQTY, staking or deposited into Pickle
+        uint256 troveSize;         // Debt in LUSD
+        uint256 lqtyAmount;        // Holding LQTY, staking or deposited into Pickle
+        uint256 curveGaugeSlopes;  // For 3CRV and Frax pools combined
     }
 
     function mint(address _bonder, uint256 _permanentSeed) external returns (uint256, uint128);
