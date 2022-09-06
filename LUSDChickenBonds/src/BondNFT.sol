@@ -16,11 +16,11 @@ import "./Interfaces/IBondNFT.sol";
 contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     IChickenBondManager public chickenBondManager;
     IBondNFTArtwork public artwork;
-    ITroveManager public troveManager;
-    IERC20 public lqtyToken;
-    ILQTYStaking public lqtyStaking;
-    IPickleJar public pickleLQTYJar;
-    IERC20 public pickleLQTYFarm;
+    ITroveManager immutable public troveManager;
+    IERC20 immutable public lqtyToken;
+    ILQTYStaking immutable public lqtyStaking;
+    IPickleJar immutable public pickleLQTYJar;
+    IERC20 immutable public pickleLQTYFarm;
     ICurveGaugeController immutable public curveGaugeController;
     address immutable public curveLUSD3CRVGauge;
     address immutable public curveLUSDFRAXGauge;
