@@ -150,4 +150,24 @@ contract BondNFTTest is BaseTest {
         bondNFT.transferFrom(address(this), address(0x1337), bondID);
         assertEq(bondNFT.ownerOf(bondID), address(0x1337));
     }
+
+    function testMintCannotBeCalledDirectly() public {
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0, address(new MockTroveManager()));
+        bondNFT.setAddresses(address(this));
+        vm.startPrank(A);
+        vm.expectRevert("BondNFT: Caller must be ChickenBondManager");
+        bondNFT.mint(address(this), 0);
+        vm.stopPrank();
+    }
+
+    function testBondNFTSetFinalDataCannotBeCalledDirectly() public {
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0, address(new MockTroveManager()));
+        bondNFT.setAddresses(address(this));
+        bondNFT.mint(address(this), 0);
+
+        vm.startPrank(A);
+        vm.expectRevert("BondNFT: Caller must be ChickenBondManager");
+        bondNFT.setFinalExtraData(address(this), 1, 0);
+        vm.stopPrank();
+    }
 }
