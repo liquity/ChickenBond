@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import "openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/IBondNFTArtwork.sol";
 import "./Interfaces/IBondNFT.sol";
 
@@ -22,13 +23,14 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         string memory symbol_,
         address _initialArtworkAddress,
         uint256 _transferLockoutPeriodSeconds,
-        address _troveManager
+        address _troveManagerAddress
     )
         ERC721(name_, symbol_)
     {
+        require(_troveManagerAddress != address(0), "BondNFT: _troveManagerAddress must be non-zero");
         artwork = IBondNFTArtwork(_initialArtworkAddress);
         transferLockoutPeriodSeconds = _transferLockoutPeriodSeconds;
-        troveManager = _troveManager;
+        troveManager = ITroveManager(_troveManagerAddress);
     }
 
     function setAddresses(address _chickenBondManagerAddress) external onlyOwner {

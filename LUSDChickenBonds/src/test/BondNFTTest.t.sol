@@ -1,11 +1,11 @@
 pragma solidity ^0.8.10;
 
-import "forge-std/Vm.sol";
-import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/utils/Strings.sol";
+import "./TestContracts/BaseTest.sol";
 import "./TestContracts/TestUtils.sol";
 import "../BondNFT.sol";
 import "../Interfaces/IBondNFTArtwork.sol";
+import "../ExternalContracts/MockTroveManager.sol";
 
 import "forge-std/console.sol";
 
@@ -48,14 +48,14 @@ contract DummyChickenBondManager {
     }
 }
 
-contract BondNFTTest is Test {
+contract BondNFTTest is BaseTest {
     string constant NAME = "name";
     string constant SYMBOL = "symbol";
 
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 
     function testBondNFTAddressesCanOnlyBeSetOnce() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
         bondNFT.setAddresses(address(0x1337));
         assertEq(address(bondNFT.chickenBondManager()), address(0x1337));
 
@@ -64,7 +64,7 @@ contract BondNFTTest is Test {
     }
 
     function testBondNFTTokenIDsStartAtOne() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
         bondNFT.setAddresses(address(this));
 
         vm.expectEmit(true, true, true, true);
@@ -73,13 +73,13 @@ contract BondNFTTest is Test {
     }
 
     function testBondNFTTokenURIRevertsWhenTokenDoesNotExist() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
         vm.expectRevert("BondNFT: URI query for nonexistent token");
         bondNFT.tokenURI(1337);
     }
 
     function testBondNFTTokenURIIsEmptyWhenArtworkIsZero() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
 
@@ -88,7 +88,7 @@ contract BondNFTTest is Test {
     }
 
     function testBondNFTDelegatesTokenURIWhenArtworkIsNotZero() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0);
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0, address(new MockTroveManager()));
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
 
@@ -97,14 +97,14 @@ contract BondNFTTest is Test {
     }
 
     function testBondNFTArtworkCannotBeSetBeforeSettingAddresses() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0, address(new MockTroveManager()));
 
         vm.expectRevert("BondNFT: setAddresses() must be called first");
         bondNFT.setArtworkAddress(address(0x1337));
     }
 
     function testBondNFTArtworkCanBeUpgradedExactlyOnce() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0x1337), 0);
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0x1337), 0, address(new MockTroveManager()));
         bondNFT.setAddresses(address(this));
 
         bondNFT.setArtworkAddress(address(0x1337));
@@ -121,7 +121,7 @@ contract BondNFTTest is Test {
         lessThanLockout = coerce(lessThanLockout, 0, lockoutPeriodSeconds - 1);
         moreThanLockout = coerce(moreThanLockout, lockoutPeriodSeconds, 2 * lockoutPeriodSeconds);
 
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0x1337), lockoutPeriodSeconds);
+        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0x1337), lockoutPeriodSeconds, address(new MockTroveManager()));
         DummyChickenBondManager chickenBondManager = new DummyChickenBondManager(bondNFT);
         bondNFT.setAddresses(address(chickenBondManager));
 

@@ -9,6 +9,7 @@ import "../../ExternalContracts/MockYearnVault.sol";
 import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
 import  "../../ExternalContracts/MockCurveLiquidityGauge.sol";
+import "../../ExternalContracts/MockTroveManager.sol";
 import "./LUSDTokenTester.sol";
 
 
@@ -64,7 +65,7 @@ contract DevTestSetup is BaseTest {
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
         // TODO: choose conventional name and symbol for NFT contract
-        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0), BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS);
+        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0), BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS, address(new MockTroveManager()));
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract
         curveLiquidityGauge = ICurveLiquidityGaugeV5(address(new MockCurveLiquidityGauge()));
