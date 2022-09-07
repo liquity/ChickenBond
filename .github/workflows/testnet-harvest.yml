@@ -5,8 +5,8 @@ env:
   FORCE_COLOR: true
 
 on:
-  #schedule:
-  #  - cron: "*/15 * * * *"
+  schedule:
+    - cron: "*/15 * * * *"
 
   push:
     branches: [main]
@@ -21,7 +21,7 @@ on:
 
 jobs:
   harvest:
-    name: Call harvest on Rinkeby
+    name: Call harvest on testnet
     runs-on: ubuntu-latest
 
     steps:
