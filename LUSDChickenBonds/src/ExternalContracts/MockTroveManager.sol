@@ -6,7 +6,7 @@ import "../Interfaces/ITroveManager.sol";
 contract MockTroveManager is ITroveManager {
     uint256 private mockTroveDebt;
 
-    function setMockTroveDebt(uint256 _mockTroveDebt) external {
+    function setTroveDebt(uint256 _mockTroveDebt) external {
         mockTroveDebt = _mockTroveDebt;
     }
 

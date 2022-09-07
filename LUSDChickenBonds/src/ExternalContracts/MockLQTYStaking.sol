@@ -6,7 +6,7 @@ import "../Interfaces/ILQTYStaking.sol";
 contract MockLQTYStaking is ILQTYStaking {
     uint256 private stake;
 
-    function set(uint256 _stake) external {
+    function setStake(uint256 _stake) external {
         stake = _stake;
     }
 
