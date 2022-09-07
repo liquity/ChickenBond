@@ -25,5 +25,5 @@ interface IBondNFT is IERC721Enumerable {
     function getBondFinalHalfDna(uint128 _tokenID) external view returns (uint128 finalHalfDna);
     function getBondFinalDna(uint256 _tokenID) external view returns (uint256 finalDna);
     function getBondStatus(uint256 _tokenID) external view returns (uint8 status);
-    function getBondExtraData(uint256 _tokenID) external view returns (uint128 initialHalfDna, uint128 finalHalfDna);
+    function getBondExtraData(uint256 _tokenID) external view returns (uint128 initialHalfDna, uint128 finalHalfDna, uint256 troveSize, uint256 lqtyAmount, uint256 curveGaugeSlopes);
 }

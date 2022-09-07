@@ -196,11 +196,19 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         view
         returns (
             uint128 initialHalfDna,
-            uint128 finalHalfDna
-            // TODO: Liquity Data
+            uint128 finalHalfDna,
+            uint256 troveSize,
+            uint256 lqtyAmount,
+            uint256 curveGaugeSlopes
         )
     {
         BondExtraData memory bondExtraData = idToBondExtraData[_tokenID];
-        return (bondExtraData.initialHalfDna, bondExtraData.finalHalfDna);
+        return (
+            bondExtraData.initialHalfDna,
+            bondExtraData.finalHalfDna,
+            bondExtraData.troveSize,
+            bondExtraData.lqtyAmount,
+            bondExtraData.curveGaugeSlopes
+        );
     }
 }
