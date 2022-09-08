@@ -57,8 +57,8 @@ contract BondNFTTest is BaseTest {
 
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 
-    function getExternalAddresses() internal returns (BondNFT.ExternalAdresses memory) {
-         return BondNFT.ExternalAdresses({
+    function getLiquityDataAddresses() internal returns (BondNFT.LiquityDataAddresses memory) {
+         return BondNFT.LiquityDataAddresses({
             troveManagerAddress: address(new MockTroveManager()),
             lqtyToken: address(new ERC20("LQTY token", "LQTY")),
             lqtyStaking: address(new MockLQTYStaking()),
@@ -76,7 +76,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(0),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         bondNFT.setAddresses(address(0x1337));
         assertEq(address(bondNFT.chickenBondManager()), address(0x1337));
@@ -91,7 +91,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(0),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         bondNFT.setAddresses(address(this));
 
@@ -106,7 +106,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(0),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         vm.expectRevert("BondNFT: URI query for nonexistent token");
         bondNFT.tokenURI(1337);
@@ -118,7 +118,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(0),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
@@ -133,7 +133,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(new DummyArtwork("prefix/")),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);
@@ -148,7 +148,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(0),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
 
         vm.expectRevert("BondNFT: setAddresses() must be called first");
@@ -161,7 +161,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(0x1337),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         bondNFT.setAddresses(address(this));
 
@@ -184,7 +184,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(0x1337),
             lockoutPeriodSeconds,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         DummyChickenBondManager chickenBondManager = new DummyChickenBondManager(bondNFT);
         bondNFT.setAddresses(address(chickenBondManager));
@@ -221,7 +221,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(new DummyArtwork("prefix/")),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         bondNFT.setAddresses(address(this));
         vm.startPrank(A);
@@ -236,7 +236,7 @@ contract BondNFTTest is BaseTest {
             SYMBOL,
             address(new DummyArtwork("prefix/")),
             0,
-            getExternalAddresses()
+            getLiquityDataAddresses()
         );
         bondNFT.setAddresses(address(this));
         bondNFT.mint(address(this), 0);

@@ -98,7 +98,7 @@ contract MainnetTestSetup is BaseTest {
         // Deploy core ChickenBonds system
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
-        BondNFT.ExternalAdresses memory bondNFTExternalContractAddresses = BondNFT.ExternalAdresses({
+        BondNFT.LiquityDataAddresses memory liquityDataAddresses = BondNFT.LiquityDataAddresses({
             troveManagerAddress: MAINNET_LIQUITY_TROVE_MANAGER_ADDRESS,
             lqtyToken: MAINNET_LQTY_TOKEN_ADDRESS,
             lqtyStaking: MAINNET_LIQUITY_STAKING_ADDRESS,
@@ -114,7 +114,7 @@ contract MainnetTestSetup is BaseTest {
             "LUSDBOND",
             address(0),
             BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS,
-            bondNFTExternalContractAddresses
+            liquityDataAddresses
         );
 
         // Deploy LUSD/bLUSD AMM Curve V2 pool and LiquidityGauge V4

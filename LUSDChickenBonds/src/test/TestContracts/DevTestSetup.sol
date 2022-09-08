@@ -67,7 +67,7 @@ contract DevTestSetup is BaseTest {
         // Deploy core ChickenBonds system
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
-        BondNFT.ExternalAdresses memory bondNFTExternalContractAddresses = BondNFT.ExternalAdresses({
+        BondNFT.LiquityDataAddresses memory liquityDataAddresses = BondNFT.LiquityDataAddresses({
             troveManagerAddress: address(new MockTroveManager()),
             lqtyToken: address(new ERC20("LQTY token", "LQTY")),
             lqtyStaking: address(new MockLQTYStaking()),
@@ -84,7 +84,7 @@ contract DevTestSetup is BaseTest {
             "LUSDBOND",
             address(0),
             BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS,
-            bondNFTExternalContractAddresses
+            liquityDataAddresses
         );
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract

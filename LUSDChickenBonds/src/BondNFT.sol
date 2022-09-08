@@ -29,7 +29,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
 
     mapping (uint256 => BondExtraData) private idToBondExtraData;
 
-    struct ExternalAdresses {
+    struct LiquityDataAddresses {
         address troveManagerAddress;
         address lqtyToken;
         address lqtyStaking;
@@ -45,29 +45,29 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         string memory symbol_,
         address _initialArtworkAddress,
         uint256 _transferLockoutPeriodSeconds,
-        ExternalAdresses memory _externalContractAddresses // to avoid stack too deep issues
+        LiquityDataAddresses memory _liquityDataAddresses // to avoid stack too deep issues
     )
         ERC721(name_, symbol_)
     {
-        require(_externalContractAddresses.troveManagerAddress != address(0), "BondNFT: _troveManagerAddress must be non-zero");
-        require(_externalContractAddresses.lqtyToken != address(0), "BondNFT: _lqtyToken must be non-zero");
-        require(_externalContractAddresses.lqtyStaking != address(0), "BondNFT: _lqtyStaking must be non-zero");
-        require(_externalContractAddresses.pickleLQTYJar != address(0), "BondNFT: _pickleLQTYJar must be non-zero");
-        require(_externalContractAddresses.pickleLQTYFarm != address(0), "BondNFT: _pickleLQTYFarm must be non-zero");
-        require(_externalContractAddresses.curveGaugeController != address(0), "BondNFT: _curveGaugeController must be non-zero");
-        require(_externalContractAddresses.curveLUSD3CRVGauge != address(0), "BondNFT: _curveLUSD3CRVGauge must be non-zero");
-        require(_externalContractAddresses.curveLUSDFRAXGauge != address(0), "BondNFT: _curveLUSDFRAXGauge must be non-zero");
+        require(_liquityDataAddresses.troveManagerAddress != address(0), "BondNFT: _troveManagerAddress must be non-zero");
+        require(_liquityDataAddresses.lqtyToken != address(0), "BondNFT: _lqtyToken must be non-zero");
+        require(_liquityDataAddresses.lqtyStaking != address(0), "BondNFT: _lqtyStaking must be non-zero");
+        require(_liquityDataAddresses.pickleLQTYJar != address(0), "BondNFT: _pickleLQTYJar must be non-zero");
+        require(_liquityDataAddresses.pickleLQTYFarm != address(0), "BondNFT: _pickleLQTYFarm must be non-zero");
+        require(_liquityDataAddresses.curveGaugeController != address(0), "BondNFT: _curveGaugeController must be non-zero");
+        require(_liquityDataAddresses.curveLUSD3CRVGauge != address(0), "BondNFT: _curveLUSD3CRVGauge must be non-zero");
+        require(_liquityDataAddresses.curveLUSDFRAXGauge != address(0), "BondNFT: _curveLUSDFRAXGauge must be non-zero");
 
         artwork = IBondNFTArtwork(_initialArtworkAddress);
         transferLockoutPeriodSeconds = _transferLockoutPeriodSeconds;
-        troveManager = ITroveManager(_externalContractAddresses.troveManagerAddress);
-        lqtyToken = IERC20(_externalContractAddresses.lqtyToken);
-        lqtyStaking = ILQTYStaking(_externalContractAddresses.lqtyStaking);
-        pickleLQTYJar = IPickleJar(_externalContractAddresses.pickleLQTYJar);
-        pickleLQTYFarm = IERC20(_externalContractAddresses.pickleLQTYFarm);
-        curveGaugeController = ICurveGaugeController(_externalContractAddresses.curveGaugeController);
-        curveLUSD3CRVGauge = _externalContractAddresses.curveLUSD3CRVGauge;
-        curveLUSDFRAXGauge = _externalContractAddresses.curveLUSDFRAXGauge;
+        troveManager = ITroveManager(_liquityDataAddresses.troveManagerAddress);
+        lqtyToken = IERC20(_liquityDataAddresses.lqtyToken);
+        lqtyStaking = ILQTYStaking(_liquityDataAddresses.lqtyStaking);
+        pickleLQTYJar = IPickleJar(_liquityDataAddresses.pickleLQTYJar);
+        pickleLQTYFarm = IERC20(_liquityDataAddresses.pickleLQTYFarm);
+        curveGaugeController = ICurveGaugeController(_liquityDataAddresses.curveGaugeController);
+        curveLUSD3CRVGauge = _liquityDataAddresses.curveLUSD3CRVGauge;
+        curveLUSDFRAXGauge = _liquityDataAddresses.curveLUSDFRAXGauge;
     }
 
     function setAddresses(address _chickenBondManagerAddress) external onlyOwner {
