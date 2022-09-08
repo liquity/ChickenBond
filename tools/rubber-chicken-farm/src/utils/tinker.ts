@@ -52,8 +52,6 @@ export interface LUSDChickenBondData extends LUSDChickenBondTokenPair {
   bondID: number;
   startTime: number;
   endTime: number;
-  initialHalfDna: string;
-  finalHalfDna: string;
   status: LUSDChickenBondStatus;
 }
 
@@ -272,8 +270,6 @@ export const getLUSDChickenBondGlobalFunctions = (
       bLUSD: numberifyDecimal(accruedBLUSD),
       startTime: bondData.startTime.toNumber(),
       endTime: bondData.endTime.toNumber(),
-      initialHalfDna: bondData.initialHalfDna.toHexString(),
-      finalHalfDna: bondData.finalHalfDna.toHexString(),
       status: lookupStatus(bondData.status)
     };
   },

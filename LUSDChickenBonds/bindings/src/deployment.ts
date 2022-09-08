@@ -203,12 +203,52 @@ class LUSDChickenBondDeployment {
 
     const bondNFTArtwork = await this.deployContract(factories.bondNFTArtwork, overrides);
 
+    const troveManager = await this.deployContract(factories.troveManager, overrides);
+
+    const lqtyToken = await this.deployContract(
+      factories.lqtyToken,
+      "LQTY token",
+      "LQTY",
+      overrides
+    );
+
+    const lqtyStaking = await this.deployContract(factories.lqtyStaking, overrides);
+
+    const pickleLQTYJar = await this.deployContract(
+      factories.pickleLQTYJar,
+      "pickling LQTY",
+      "pLQTY",
+      overrides
+    );
+
+    const pickleLQTYFarm = await this.deployContract(
+      factories.pickleLQTYFarm,
+      "Pickle Farm LTQY",
+      "pfLQTY",
+      overrides
+    );
+
+    const curveGaugeController = await this.deployContract(
+      factories.curveGaugeController,
+      overrides
+    );
+
     const bondNFT = await this.deployContract(
       factories.bondNFT,
       "LUSDBondNFT",
       "LUSDBOND",
       bondNFTArtwork.contract.address,
       params.bondNFTTransferLockoutPeriodSeconds,
+      {
+        troveManagerAddress: troveManager.contract.address,
+        lqtyToken: lqtyToken.contract.address,
+        lqtyStaking: lqtyStaking.contract.address,
+        pickleLQTYJar: pickleLQTYJar.contract.address,
+        pickleLQTYFarm: pickleLQTYFarm.contract.address,
+        curveGaugeController: curveGaugeController.contract.address,
+        curveLUSD3CRVGauge: "0x1337133713371337133713371337133713371337",
+        curveLUSDFRAXGauge: "0x1337133713371337133713371337133713371337"
+      },
       overrides
     );
 
@@ -308,6 +348,12 @@ class LUSDChickenBondDeployment {
       bammSPVault,
       yearnRegistry,
       prankster,
+      troveManager,
+      lqtyToken,
+      lqtyStaking,
+      pickleLQTYJar,
+      pickleLQTYFarm,
+      curveGaugeController,
       curveCryptoPoolImplementation,
       curveLiquidityGaugeImplementation,
       curveTokenImplementation,

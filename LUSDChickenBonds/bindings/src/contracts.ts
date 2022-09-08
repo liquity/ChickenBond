@@ -14,6 +14,11 @@ import testnetYearnVault from "../artifacts/TestnetYearnVault.json";
 import bLUSDToken from "../artifacts/BLUSDToken.json";
 import testnetCurveLiquidityGauge from "../artifacts/TestnetCurveLiquidityGauge.json";
 import prankster from "../artifacts/Prankster.json";
+import erc20 from "../artifacts/ERC20.json";
+import mockTroveManager from "../artifacts/MockTroveManager.json";
+import mockLQTYStaking from "../artifacts/MockLQTYStaking.json";
+import mockPickleJar from "../artifacts/MockPickleJar.json";
+import mockCurveGaugeController from "../artifacts/MockCurveGaugeController.json";
 import curveCryptoSwap2ETH from "../artifacts/CurveCryptoSwap2ETH.json";
 import curveFactory from "../artifacts/CurveFactory.json";
 // import curveLiquidityGauge from "../artifacts/CurveLiquidityGauge.json";
@@ -32,6 +37,11 @@ import {
   BLUSDTokenFactory,
   TestnetCurveLiquidityGaugeFactory,
   PranksterFactory,
+  MockTroveManagerFactory,
+  ERC20Factory,
+  MockLQTYStakingFactory,
+  MockPickleJarFactory,
+  MockCurveGaugeControllerFactory,
   CurveCryptoSwap2ETHFactory,
   CurveFactoryFactory,
   // CurveLiquidityGaugeFactory,
@@ -116,6 +126,36 @@ export interface LUSDChickenBondContractFactories {
     factory: PranksterFactory;
   };
 
+  troveManager: {
+    contractName: "MockTroveManager";
+    factory: MockTroveManagerFactory;
+  };
+
+  lqtyToken: {
+    contractName: "ERC20";
+    factory: ERC20Factory;
+  };
+
+  lqtyStaking: {
+    contractName: "MockLQTYStaking";
+    factory: MockLQTYStakingFactory;
+  };
+
+  pickleLQTYJar: {
+    contractName: "MockPickleJar";
+    factory: MockPickleJarFactory;
+  };
+
+  pickleLQTYFarm: {
+    contractName: "ERC20";
+    factory: ERC20Factory;
+  };
+
+  curveGaugeController: {
+    contractName: "MockCurveGaugeController";
+    factory: MockCurveGaugeControllerFactory;
+  };
+
   curveCryptoPoolImplementation: {
     contractName: "CurveCryptoSwap2ETH";
     factory: CurveCryptoSwap2ETHFactory;
@@ -192,6 +232,12 @@ const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   bammSPVault: checkArtifact("TestnetBAMM", testnetBAMM),
   yearnRegistry: checkArtifact("MockYearnRegistry", mockYearnRegistry),
   prankster: checkArtifact("Prankster", prankster),
+  troveManager: checkArtifact("MockTroveManager", mockTroveManager),
+  lqtyToken: checkArtifact("ERC20", erc20),
+  lqtyStaking: checkArtifact("MockLQTYStaking", mockLQTYStaking),
+  pickleLQTYJar: checkArtifact("MockPickleJar", mockPickleJar),
+  pickleLQTYFarm: checkArtifact("ERC20", erc20),
+  curveGaugeController: checkArtifact("MockCurveGaugeController", mockCurveGaugeController),
   curveCryptoPoolImplementation: checkArtifact("CurveCryptoSwap2ETH", curveCryptoSwap2ETH),
   curveLiquidityGaugeImplementation: checkArtifact(
     "TestnetCurveLiquidityGauge",
