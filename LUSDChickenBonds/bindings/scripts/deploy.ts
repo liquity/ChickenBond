@@ -79,7 +79,14 @@ const main = async () => {
   const deployer = await getDeployer();
   console.log();
 
-  const deployment = await deployAndSetupContracts(deployer, { log: true });
+  const deployment = await deployAndSetupContracts(deployer, {
+    log: true,
+    config: {
+      // This will let us test migration on testnet
+      yearnGovernanceAddress: deployer.address
+    }
+  });
+
   console.log();
   console.log("Deployment succeeded! Manifest:");
   console.log(deployment.manifest);
