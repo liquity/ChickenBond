@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import "openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/ILQTYStaking.sol";
 import "./Interfaces/IPickleJar.sol";
@@ -85,7 +86,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         renounceOwnership();
     }
 
-    function mint(address _bonder, uint256 _permanentSeed) external returns (uint256, uint128) {
+    function mint(address _bonder, uint256 _permanentSeed) external returns (uint256, uint80) {
         requireCallerIsChickenBondsManager();
 
         // We actually increase totalSupply in `ERC721Enumerable._beforeTokenTransfer` when we `_mint`.
@@ -93,7 +94,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
 
         //Record first half of DNA
         BondExtraData memory bondExtraData;
-        uint128 initialHalfDna = getHalfDna(tokenID, _permanentSeed);
+        uint80 initialHalfDna = getHalfDna(tokenID, _permanentSeed);
         bondExtraData.initialHalfDna = initialHalfDna;
         idToBondExtraData[tokenID] = bondExtraData;
 
@@ -102,34 +103,40 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         return (tokenID, initialHalfDna);
     }
 
-    function setFinalExtraData(address _bonder, uint256 _tokenID, uint256 _permanentSeed) external returns (uint128) {
+    function _uint256ToUint32(uint256 _inputAmount) internal pure returns (uint32) {
+        return uint32(Math.min(_inputAmount / 1e18, type(uint32).max));
+    }
+
+    function setFinalExtraData(address _bonder, uint256 _tokenID, uint256 _permanentSeed) external returns (uint80) {
         requireCallerIsChickenBondsManager();
 
-        uint128 newDna = getHalfDna(_tokenID, _permanentSeed);
+        uint80 newDna = getHalfDna(_tokenID, _permanentSeed);
         idToBondExtraData[_tokenID].finalHalfDna = newDna;
 
         // Liquity Data
         // Trove
-        idToBondExtraData[_tokenID].troveSize = troveManager.getTroveDebt(_bonder);
+        idToBondExtraData[_tokenID].troveSize = _uint256ToUint32(troveManager.getTroveDebt(_bonder));
         // LQTY
         uint256 pickleLQTYAmount;
         if (pickleLQTYJar.totalSupply() > 0) {
             pickleLQTYAmount = (pickleLQTYJar.balanceOf(_bonder) + pickleLQTYFarm.balanceOf(_bonder)) * pickleLQTYJar.getRatio();
         }
-        idToBondExtraData[_tokenID].lqtyAmount = lqtyToken.balanceOf(_bonder) + lqtyStaking.stakes(_bonder) + pickleLQTYAmount;
+        idToBondExtraData[_tokenID].lqtyAmount = _uint256ToUint32(
+            lqtyToken.balanceOf(_bonder) + lqtyStaking.stakes(_bonder) + pickleLQTYAmount
+        );
         // Curve Gauge votes
         (uint256 curveLUSD3CRVGaugeSlope,,) = curveGaugeController.vote_user_slopes(_bonder, curveLUSD3CRVGauge);
         (uint256 curveLUSDFRAXGaugeSlope,,) = curveGaugeController.vote_user_slopes(_bonder, curveLUSDFRAXGauge);
-        idToBondExtraData[_tokenID].curveGaugeSlopes = curveLUSD3CRVGaugeSlope + curveLUSDFRAXGaugeSlope;
+        idToBondExtraData[_tokenID].curveGaugeSlopes = _uint256ToUint32(curveLUSD3CRVGaugeSlope + curveLUSDFRAXGaugeSlope);
 
         return newDna;
     }
 
-    function getHalfDna(uint256 _tokenID, uint256 _permanentSeed) internal view returns (uint128) {
-        return uint128(
+    function getHalfDna(uint256 _tokenID, uint256 _permanentSeed) internal view returns (uint80) {
+        return uint80(
             uint256(
                 keccak256(abi.encode(_tokenID, block.timestamp, _permanentSeed))
-            ) >> 128
+            ) >> 176 // 256 - 80
         );
     }
 
@@ -170,7 +177,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         (,, endTime,) = chickenBondManager.getBondData(_tokenID);
     }
 
-    function getBondInitialHalfDna(uint256 _tokenID) external view returns (uint128 initialHalfDna) {
+    function getBondInitialHalfDna(uint256 _tokenID) external view returns (uint80 initialHalfDna) {
         return idToBondExtraData[_tokenID].initialHalfDna;
     }
 
@@ -178,7 +185,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         return uint256(idToBondExtraData[_tokenID].initialHalfDna);
     }
 
-    function getBondFinalHalfDna(uint128 _tokenID) external view returns (uint128 finalHalfDna) {
+    function getBondFinalHalfDna(uint256 _tokenID) external view returns (uint80 finalHalfDna) {
         return idToBondExtraData[_tokenID].finalHalfDna;
     }
 
@@ -195,11 +202,11 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         external
         view
         returns (
-            uint128 initialHalfDna,
-            uint128 finalHalfDna,
-            uint256 troveSize,
-            uint256 lqtyAmount,
-            uint256 curveGaugeSlopes
+            uint80 initialHalfDna,
+            uint80 finalHalfDna,
+            uint32 troveSize,
+            uint32 lqtyAmount,
+            uint32 curveGaugeSlopes
         )
     {
         BondExtraData memory bondExtraData = idToBondExtraData[_tokenID];
