@@ -133,11 +133,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     }
 
     function getHalfDna(uint256 _tokenID, uint256 _permanentSeed) internal view returns (uint80) {
-        return uint80(
-            uint256(
-                keccak256(abi.encode(_tokenID, block.timestamp, _permanentSeed))
-            ) >> 176 // 256 - 80
-        );
+        return uint80(uint256(keccak256(abi.encode(_tokenID, block.timestamp, _permanentSeed))));
     }
 
     function requireCallerIsChickenBondsManager() internal view {
