@@ -179,7 +179,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     event BaseRedemptionRateUpdated(uint256 _baseRedemptionRate);
     event LastRedemptionTimeUpdated(uint256 _lastRedemptionFeeOpTime);
-    event BondCreated(address indexed bonder, uint256 bondId, uint256 amount, uint128 bondInitialHalfDna);
+    event BondCreated(address indexed bonder, uint256 bondId, uint256 amount, uint80 bondInitialHalfDna);
     event BondClaimed(
         address indexed bonder,
         uint256 bondId,
@@ -188,9 +188,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 lusdSurplus,
         uint256 chickenInFeeAmount,
         bool migration,
-        uint128 bondFinalHalfDna
+        uint80 bondFinalHalfDna
     );
-    event BondCancelled(address indexed bonder, uint256 bondId, uint256 principalLusdAmount, uint256 minLusdAmount, uint256 withdrawnLusdAmount, uint128 bondFinalHalfDna);
+    event BondCancelled(address indexed bonder, uint256 bondId, uint256 principalLusdAmount, uint256 minLusdAmount, uint256 withdrawnLusdAmount, uint80 bondFinalHalfDna);
     event BLUSDRedeemed(address indexed redeemer, uint256 bLusdAmount, uint256 minLusdAmount, uint256 lusdAmount, uint256 yTokens, uint256 redemptionFee);
     event MigrationTriggered(uint256 previousPermanentLUSD);
 
@@ -267,7 +267,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _updateAccrualParameter();
 
         // Mint the bond NFT to the caller and get the bond ID
-        (uint256 bondID, uint128 initialHalfDna) = bondNFT.mint(msg.sender, permanentLUSD / NFT_RANDOMNESS_DIVISOR);
+        (uint256 bondID, uint80 initialHalfDna) = bondNFT.mint(msg.sender, permanentLUSD / NFT_RANDOMNESS_DIVISOR);
 
         //Record the user’s bond data: bond_amount and start_time
         BondData memory bondData;
@@ -299,7 +299,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         idToBondData[_bondID].status = BondStatus.chickenedOut;
         idToBondData[_bondID].endTime = block.timestamp;
-        uint128 newDna = bondNFT.setFinalExtraData(msg.sender, _bondID, permanentLUSD / NFT_RANDOMNESS_DIVISOR);
+        uint80 newDna = bondNFT.setFinalExtraData(msg.sender, _bondID, permanentLUSD / NFT_RANDOMNESS_DIVISOR);
 
         countChickenOut += 1;
 
@@ -398,7 +398,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
         idToBondData[_bondID].status = BondStatus.chickenedIn;
         idToBondData[_bondID].endTime = block.timestamp;
-        uint128 newDna = bondNFT.setFinalExtraData(msg.sender, _bondID, permanentLUSD / NFT_RANDOMNESS_DIVISOR);
+        uint80 newDna = bondNFT.setFinalExtraData(msg.sender, _bondID, permanentLUSD / NFT_RANDOMNESS_DIVISOR);
 
         countChickenIn += 1;
 

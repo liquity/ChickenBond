@@ -385,13 +385,13 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         uint256 bondID = createBondForUser(A, bondAmount);
 
         (
-            uint128 bdInitialHalfDna,
-            uint128 bdFinalHalfDna,
+            uint80 bdInitialHalfDna,
+            uint80 bdFinalHalfDna,
             uint256 bdTroveSize,
             uint256 bdLQTYAmount,
             uint256 bdCurveGaugeSlopes
         ) = bondNFT.getBondExtraData(bondID);
-        uint128 initialHalfDna = bdInitialHalfDna;
+        uint80 initialHalfDna = bdInitialHalfDna;
         assertGt(bdInitialHalfDna, 0);
         assertEq(bdFinalHalfDna, 0);
         assertEq(bdTroveSize, 0);

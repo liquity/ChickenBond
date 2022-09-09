@@ -206,8 +206,8 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(B_bondStatus, uint8(IChickenBondManager.BondStatus.nonExistent));
 
         (
-            uint128 B_bondInitialHalfDna,
-            uint128 B_bondFinalHalfDna,
+            uint80 B_bondInitialHalfDna,
+            uint80 B_bondFinalHalfDna,
             uint256 B_troveSize,
             uint256 B_lqtyAmount,
             uint256 B_curveGaugeSlopes
@@ -498,13 +498,13 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bdEndTime, 0);
 
         (
-            uint128 bdInitialHalfDna,
-            uint128 bdFinalHalfDna,
+            uint80 bdInitialHalfDna,
+            uint80 bdFinalHalfDna,
             uint256 bdTroveSize,
             uint256 bdLQTYAmount,
             uint256 bdCurveGaugeSlopes
         ) = bondNFT.getBondExtraData(bondID);
-        uint128 initialHalfDna = bdInitialHalfDna;
+        uint80 initialHalfDna = bdInitialHalfDna;
         assertGt(bdInitialHalfDna, 0);
         assertEq(bdFinalHalfDna, 0);
         assertEq(bdTroveSize, 0);
@@ -1059,13 +1059,13 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.active));
 
         (
-            uint128 bdInitialHalfDna,
-            uint128 bdFinalHalfDna,
+            uint80 bdInitialHalfDna,
+            uint80 bdFinalHalfDna,
             uint256 bdTroveSize,
             uint256 bdLQTYAmount,
             uint256 bdCurveGaugeSlopes
         ) = bondNFT.getBondExtraData(bondID);
-        uint128 initialHalfDna = bdInitialHalfDna;
+        uint80 initialHalfDna = bdInitialHalfDna;
         assertGt(bdInitialHalfDna, 0);
         assertEq(bdFinalHalfDna, 0);
         assertEq(bdTroveSize, 0);
