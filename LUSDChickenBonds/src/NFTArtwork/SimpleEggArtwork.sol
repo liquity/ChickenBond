@@ -15,8 +15,8 @@ contract SimpleEggArtwork is IBondNFTArtwork {
         uint256 lusdAmount;
         uint256 startTime;
         uint256 endTime;
-        uint128 initialHalfDna;
-        uint128 finalHalfDna;
+        uint80 initialHalfDna;
+        uint80 finalHalfDna;
         uint8 status;
     }
 

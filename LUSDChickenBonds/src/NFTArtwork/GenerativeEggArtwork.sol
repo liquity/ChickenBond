@@ -70,8 +70,8 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         uint256 lusdAmount;
         uint256 startTime;
         uint256 endTime;
-        uint128 initialHalfDna;
-        uint128 finalHalfDna;
+        uint80 initialHalfDna;
+        uint80 finalHalfDna;
         uint8 status;
 
         // Attributes derived from the DNA
@@ -124,11 +124,11 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
     }
 
     function _calcAttributes(BondData memory _bondData) internal pure {
-        uint128 dna = _bondData.initialHalfDna;
+        uint80 dna = _bondData.initialHalfDna;
 
-        _bondData.borderColor = _getBorderColor(_cutDNA(dna,  0, 42));
-        _bondData.cardColor   = _getCardColor  (_cutDNA(dna, 42, 43));
-        _bondData.shellColor  = _getShellColor (_cutDNA(dna, 85, 43));
+        _bondData.borderColor = _getBorderColor(_cutDNA(dna,  0, 26));
+        _bondData.cardColor   = _getCardColor  (_cutDNA(dna, 26, 27));
+        _bondData.shellColor  = _getShellColor (_cutDNA(dna, 53, 27));
 
         _bondData.eggSize = _getEggSize(_bondData.lusdAmount);
     }
