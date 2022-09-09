@@ -15,6 +15,8 @@ import "./Interfaces/IBondNFT.sol";
 //import "forge-std/console.sol";
 
 contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
+    uint256 public constant CURVE_GAUGE_SLOPES_PRECISION = 1e9; // The minimum slope to get extra weight 1e-9
+
     IChickenBondManager public chickenBondManager;
     IBondNFTArtwork public artwork;
     ITroveManager immutable public troveManager;
@@ -127,7 +129,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
         // Curve Gauge votes
         (uint256 curveLUSD3CRVGaugeSlope,,) = curveGaugeController.vote_user_slopes(_bonder, curveLUSD3CRVGauge);
         (uint256 curveLUSDFRAXGaugeSlope,,) = curveGaugeController.vote_user_slopes(_bonder, curveLUSDFRAXGauge);
-        idToBondExtraData[_tokenID].curveGaugeSlopes = _uint256ToUint32(curveLUSD3CRVGaugeSlope + curveLUSDFRAXGaugeSlope);
+        idToBondExtraData[_tokenID].curveGaugeSlopes = _uint256ToUint32((curveLUSD3CRVGaugeSlope + curveLUSDFRAXGaugeSlope) * CURVE_GAUGE_SLOPES_PRECISION);
 
         return newDna;
     }

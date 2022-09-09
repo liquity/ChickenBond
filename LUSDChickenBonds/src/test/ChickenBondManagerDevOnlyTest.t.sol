@@ -401,7 +401,7 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         // set mock values
         uint256 mockTroveDebt = 1e18;
         uint256 mockLQTYAmount = 2e18;
-        uint256 mockCurveGaugeSlopes = 3e18;
+        uint256 mockCurveGaugeSlopes = 3e15;
         MockTroveManager(address(bondNFT.troveManager())).setTroveDebt(mockTroveDebt);
         MockLQTYStaking(address(bondNFT.lqtyStaking())).setStake(mockLQTYAmount);
         MockCurveGaugeController(address(bondNFT.curveGaugeController())).setSlope(mockCurveGaugeSlopes);
@@ -416,6 +416,6 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         assert(bdFinalHalfDna != bdInitialHalfDna);
         assertEq(bdTroveSize, mockTroveDebt / 1e18);
         assertEq(bdLQTYAmount, mockLQTYAmount / 1e18);
-        assertEq(bdCurveGaugeSlopes, 2 * mockCurveGaugeSlopes / 1e18); // It calls the controller twice, for 3CRV and FRAX
+        assertEq(bdCurveGaugeSlopes, 2 * mockCurveGaugeSlopes / 1e9); // It calls the controller twice, for 3CRV and FRAX
     }
 }
