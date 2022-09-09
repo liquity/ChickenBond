@@ -1080,14 +1080,14 @@ contract ChickenBondManagerTest is BaseTest {
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
         // stack too deep, hardcoding it
-        //uint256 accruedBLUSD = chickenBondManager.calcAccruedBLUSD(bondID);
+        //uint256 accruedBLUSD = chickenBondManager.calcAccruedBLUSD(bondID) / 1e18;
         //console.log(chickenBondManager.calcAccruedBLUSD(bondID), "accrued bLUSD");
         chickenInForUser(A, bondID);
 
         (bdLUSDAmount, bdClaimedBLUSD, bdStartTime, bdEndTime, bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdLUSDAmount, bondAmount);
         //assertEq(bdClaimedBLUSD, accruedBLUSD);
-        assertEq(bdClaimedBLUSD, 18729729729729729729);
+        assertEq(bdClaimedBLUSD, 18);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, block.timestamp);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedIn));

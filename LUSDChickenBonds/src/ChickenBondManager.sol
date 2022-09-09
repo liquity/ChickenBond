@@ -82,9 +82,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     struct BondData {
         uint256 lusdAmount;
-        uint256 claimedBLUSD;
-        uint256 startTime;
-        uint256 endTime; // Timestamp of chicken in/out event
+        uint64 claimedBLUSD; // In BLUSD units without decimals
+        uint64 startTime;
+        uint64 endTime; // Timestamp of chicken in/out event
         BondStatus status;
     }
 
@@ -273,7 +273,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         //Record the user’s bond data: bond_amount and start_time
         BondData memory bondData;
         bondData.lusdAmount = _lusdAmount;
-        bondData.startTime = block.timestamp;
+        bondData.startTime = uint64(block.timestamp);
         bondData.status = BondStatus.active;
         idToBondData[bondID] = bondData;
 
@@ -299,7 +299,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         _updateAccrualParameter();
 
         idToBondData[_bondID].status = BondStatus.chickenedOut;
-        idToBondData[_bondID].endTime = block.timestamp;
+        idToBondData[_bondID].endTime = uint64(block.timestamp);
         uint80 newDna = bondNFT.setFinalExtraData(msg.sender, _bondID, permanentLUSD / NFT_RANDOMNESS_DIVISOR);
 
         countChickenOut += 1;
@@ -397,9 +397,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         uint256 backingRatio = _calcSystemBackingRatioFromBAMMValue(bammLUSDValue);
         uint256 accruedBLUSD = lusdToAcquire * 1e18 / backingRatio;
 
-        idToBondData[_bondID].claimedBLUSD = accruedBLUSD;
+        idToBondData[_bondID].claimedBLUSD = uint64(Math.min(accruedBLUSD / 1e18, type(uint64).max)); // to units and uint64
         idToBondData[_bondID].status = BondStatus.chickenedIn;
-        idToBondData[_bondID].endTime = block.timestamp;
+        idToBondData[_bondID].endTime = uint64(block.timestamp);
         uint80 newDna = bondNFT.setFinalExtraData(msg.sender, _bondID, permanentLUSD / NFT_RANDOMNESS_DIVISOR);
 
         countChickenIn += 1;
@@ -965,9 +965,9 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         view
         returns (
             uint256 lusdAmount,
-            uint256 claimedBLUSD,
-            uint256 startTime,
-            uint256 endTime,
+            uint64 claimedBLUSD,
+            uint64 startTime,
+            uint64 endTime,
             uint8 status
         )
     {
