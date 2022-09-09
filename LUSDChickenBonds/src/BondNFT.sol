@@ -151,7 +151,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     // Prevent transfers for a period of time after chickening in or out
     function _beforeTokenTransfer(address _from, address _to, uint256 _tokenID) internal virtual override {
         if (_from != address(0)) {
-            (,, uint256 endTime, uint8 status) = chickenBondManager.getBondData(_tokenID);
+            (,,, uint256 endTime, uint8 status) = chickenBondManager.getBondData(_tokenID);
 
             require(
                 status == uint8(IChickenBondManager.BondStatus.active) ||
@@ -164,15 +164,19 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     }
 
     function getBondAmount(uint256 _tokenID) external view returns (uint256 amount) {
-        (amount,,,) = chickenBondManager.getBondData(_tokenID);
+        (amount,,,,) = chickenBondManager.getBondData(_tokenID);
+    }
+
+    function getBondClaimedBLUSD(uint256 _tokenID) external view returns (uint256 claimedBLUSD) {
+        (,claimedBLUSD,,,) = chickenBondManager.getBondData(_tokenID);
     }
 
     function getBondStartTime(uint256 _tokenID) external view returns (uint256 startTime) {
-        (,startTime,,) = chickenBondManager.getBondData(_tokenID);
+        (,,startTime,,) = chickenBondManager.getBondData(_tokenID);
     }
 
     function getBondEndTime(uint256 _tokenID) external view returns (uint256 endTime) {
-        (,, endTime,) = chickenBondManager.getBondData(_tokenID);
+        (,,, endTime,) = chickenBondManager.getBondData(_tokenID);
     }
 
     function getBondInitialHalfDna(uint256 _tokenID) external view returns (uint80 initialHalfDna) {
@@ -193,7 +197,7 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     }
 
     function getBondStatus(uint256 _tokenID) external view returns (uint8 status) {
-        (,,, status) = chickenBondManager.getBondData(_tokenID);
+        (,,,, status) = chickenBondManager.getBondData(_tokenID);
     }
 
     function getBondExtraData(uint256 _tokenID)

@@ -68,6 +68,7 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
     struct BondData {
         uint256 tokenID;
         uint256 lusdAmount;
+        uint256 claimedBLUSD;
         uint256 startTime;
         uint256 endTime;
         uint80 initialHalfDna;
@@ -210,6 +211,7 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         bondData.tokenID = _tokenID;
         (
             bondData.lusdAmount,
+            bondData.claimedBLUSD,
             bondData.startTime,
             bondData.endTime,
             bondData.status
