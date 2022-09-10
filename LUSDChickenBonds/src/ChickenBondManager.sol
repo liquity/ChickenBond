@@ -195,6 +195,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     event BondCancelled(address indexed bonder, uint256 bondId, uint256 principalLusdAmount, uint256 minLusdAmount, uint256 withdrawnLusdAmount, uint128 bondFinalHalfDna);
     event BLUSDRedeemed(address indexed redeemer, uint256 bLusdAmount, uint256 minLusdAmount, uint256 lusdAmount, uint256 yTokens, uint256 redemptionFee);
     event MigrationTriggered(uint256 previousPermanentLUSD);
+    event AccrualParameterUpdated(uint256 accrualParameter);
 
     // --- Constructor ---
 
@@ -892,6 +893,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
             if (updatedAccrualParameter != storedAccrualParameter) {
                 accrualParameter = updatedAccrualParameter;
+                emit AccrualParameterUpdated(updatedAccrualParameter);
             }
         }
 
