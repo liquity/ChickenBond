@@ -6,57 +6,15 @@ import "openzeppelin-contracts/contracts/utils/Strings.sol";
 import { BokkyPooBahsDateTimeLibrary as DateTime } from "datetime/contracts/BokkyPooBahsDateTimeLibrary.sol";
 import "../Interfaces/IBondNFTArtwork.sol";
 import "../Interfaces/IChickenBondManager.sol";
+import "./EggTraitWeights.sol";
+
 
 interface IChickenBondManagerGetter {
     function chickenBondManager() external view returns (IChickenBondManager);
 }
 
-contract GenerativeEggArtwork is IBondNFTArtwork {
+contract GenerativeEggArtwork is EggTraitWeights, IBondNFTArtwork {
     using Strings for uint256;
-
-    enum BorderColor {
-        White,
-        Black,
-        Bronze,
-        Silver,
-        Gold,
-        Rainbow,
-        COUNT
-    }
-
-    enum CardColor {
-        Red,
-        Green,
-        Blue,
-        Purple,
-        Pink,
-        YellowPink,
-        BlueGreen,
-        PinkBlue,
-        RedPurple,
-        Bronze,
-        Silver,
-        Gold,
-        Rainbow,
-        COUNT
-    }
-
-    enum ShellColor {
-        OffWhite,
-        LightBlue,
-        DarkerBlue,
-        LighterOrange,
-        LightOrange,
-        DarkerOrange,
-        LightGreen,
-        DarkerGreen,
-        Bronze,
-        Silver,
-        Gold,
-        Rainbow,
-        Luminous,
-        COUNT
-    }
 
     enum EggSize {
         Tiny,
@@ -90,24 +48,6 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         string[2] cardGradient;
     }
 
-    // Turn the pseudo-random number `rand` -- 18 digit FP in range [0,1) -- into a border color.
-    function _getBorderColor(uint256 rand) internal pure returns (BorderColor) {
-        // TODO: more prestigious outcomes should be less probable
-        return BorderColor(rand * uint256(BorderColor.COUNT) / 1e18);
-    }
-
-    // Turn the pseudo-random number `rand` -- 18 digit FP in range [0,1) -- into a card color.
-    function _getCardColor(uint256 rand) internal pure returns (CardColor) {
-        // TODO: more prestigious outcomes should be less probable
-        return CardColor(rand * uint256(CardColor.COUNT) / 1e18);
-    }
-
-    // Turn the pseudo-random number `rand` -- 18 digit FP in range [0,1) -- into a shell color.
-    function _getShellColor(uint256 rand) internal pure returns (ShellColor) {
-        // TODO: more prestigious outcomes should be less probable
-        return ShellColor(rand * uint256(ShellColor.COUNT) / 1e18);
-    }
-
     function _getEggSize(uint256 lusdAmount) internal pure returns (EggSize) {
         return (
             lusdAmount <    1_000e18 ?  EggSize.Tiny   :
@@ -124,12 +64,12 @@ contract GenerativeEggArtwork is IBondNFTArtwork {
         return bits * 1e18 / ceil; // scaled to [0,1) range
     }
 
-    function _calcAttributes(BondData memory _bondData) internal pure {
+    function _calcAttributes(BondData memory _bondData) internal view {
         uint80 dna = _bondData.initialHalfDna;
 
         _bondData.borderColor = _getBorderColor(_cutDNA(dna,  0, 26));
-        _bondData.cardColor   = _getCardColor  (_cutDNA(dna, 26, 27));
-        _bondData.shellColor  = _getShellColor (_cutDNA(dna, 53, 27));
+        _bondData.cardColor   = _getCardColor  (_cutDNA(dna, 26, 27), _bondData.borderColor);
+        _bondData.shellColor  = _getShellColor (_cutDNA(dna, 53, 27), _bondData.borderColor);
 
         _bondData.eggSize = _getEggSize(_bondData.lusdAmount);
     }
