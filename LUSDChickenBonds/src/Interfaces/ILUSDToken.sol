@@ -21,4 +21,14 @@ interface ILUSDToken is IERC20 {
     function sendToPool(address _sender,  address poolAddress, uint256 _amount) external;
 
     function returnFromPool(address poolAddress, address user, uint256 _amount ) external;
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
 }

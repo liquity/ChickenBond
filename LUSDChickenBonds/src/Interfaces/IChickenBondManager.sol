@@ -24,6 +24,14 @@ interface IChickenBondManager {
     function INDEX_OF_LUSD_TOKEN_IN_CURVE_POOL() external pure returns (int128);
 
     function createBond(uint256 _lusdAmount) external returns (uint256);
+    function createBondWithPermit(
+        address owner, 
+        uint256 amount, 
+        uint256 deadline, 
+        uint8 v, 
+        bytes32 r, 
+        bytes32 s
+    ) external  returns (uint256);
     function chickenOut(uint256 _bondID, uint256 _minLUSD) external;
     function chickenIn(uint256 _bondID) external;
     function redeem(uint256 _bLUSDToRedeem, uint256 _minLUSDFromBAMMSPVault) external returns (uint256, uint256);

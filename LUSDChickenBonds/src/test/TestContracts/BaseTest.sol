@@ -12,6 +12,7 @@ import "../../Interfaces/IYearnVault.sol";
 import "../../Interfaces/IBAMM.sol";
 import "../../Interfaces/ICurvePool.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV5.sol";
+import "./Interfaces/IERC20Permit.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "./TestUtils.sol";
 
@@ -27,7 +28,7 @@ contract BaseTest is Test {
     BLUSDToken bLUSDToken;
 
     // Integrations
-    IERC20 lusdToken;
+    IERC20Permit lusdToken;
     IERC20 _3crvToken;
     ICurvePool curvePool;
     ICurvePool curveBasePool;
