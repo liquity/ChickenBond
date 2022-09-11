@@ -1742,6 +1742,8 @@ contract ChickenBondManagerTest is BaseTest {
         assertEqDecimal(accrualParameter, INITIAL_ACCRUAL_PARAMETER, 18);
     }
 
+    event AccrualParameterUpdated(uint256);
+
     function testControllerDoesAdjustWhenAgeOfSingleBondIsAboveTarget(uint256 _interval) public {
         uint256 interval = coerce(
             _interval,
@@ -1751,6 +1753,9 @@ contract ChickenBondManagerTest is BaseTest {
 
         uint256 bondID = createBondForUser(A, 100e18);
         vm.warp(block.timestamp + interval);
+
+        vm.expectEmit(false, false, false, false);
+        emit AccrualParameterUpdated(0x1337); // param doesn't matter since we're not checking data
         chickenInForUser(A, bondID);
 
         uint256 accrualParameter = chickenBondManager.accrualParameter();
