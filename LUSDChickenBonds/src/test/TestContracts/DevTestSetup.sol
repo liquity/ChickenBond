@@ -22,7 +22,7 @@ contract DevTestSetup is BaseTest {
 
         // Deploy a mock token then assign its interface
         LUSDTokenTester mockLUSDToken = new LUSDTokenTester(ZERO_ADDRESS,ZERO_ADDRESS, ZERO_ADDRESS);
-        lusdToken = IERC20(address(mockLUSDToken));
+        lusdToken = IERC20Permit(address(mockLUSDToken));
 
         (A, B, C, D, yearnGovernanceAddress) = (accountsList[0], accountsList[1], accountsList[2], accountsList[3], accountsList[9]);
 

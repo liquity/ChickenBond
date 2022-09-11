@@ -42,7 +42,7 @@ contract MainnetTestSetup is BaseTest {
         createAccounts();
 
         // Grab deployed mainnet LUSDToken
-        lusdToken = IERC20(MAINNET_LUSD_TOKEN_ADDRESS);
+        lusdToken = IERC20Permit(MAINNET_LUSD_TOKEN_ADDRESS);
 
         _3crvToken = IERC20(MAINNET_3CRV_TOKEN_ADDRESS);
 

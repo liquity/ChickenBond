@@ -261,7 +261,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
 
     // --- User-facing functions ---
 
-    function createBond(uint256 _lusdAmount) external returns (uint256) {
+    function createBond(uint256 _lusdAmount) public returns (uint256) {
         _requireNonZeroAmount(_lusdAmount);
         _requireMinBond(_lusdAmount);
         _requireMigrationNotActive();
@@ -290,6 +290,18 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         emit BondCreated(msg.sender, bondID, _lusdAmount, bondData.initialHalfDna);
 
         return bondID;
+    }
+
+    function createBondWithPermit(
+        address owner, 
+        uint256 amount, 
+        uint256 deadline, 
+        uint8 v, 
+        bytes32 r, 
+        bytes32 s
+    ) external returns (uint256) {
+        lusdToken.permit(owner, address(this), amount, deadline, v, r, s);
+        return createBond(amount);
     }
 
     function chickenOut(uint256 _bondID, uint256 _minLUSD) external {
