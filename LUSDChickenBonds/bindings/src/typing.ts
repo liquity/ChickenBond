@@ -12,8 +12,14 @@ import {
   PopulatedTransaction
 } from "@ethersproject/contracts";
 
-export interface TypedLogDescription<T = unknown> extends Omit<LogDescription, "args"> {
-  readonly args: Readonly<T>;
+export interface TypedLogDescription<T = unknown> {
+  blockNumber: number;
+  blockHash: string;
+  transactionIndex: number;
+  transactionHash: string;
+  logIndex: number;
+  contractAddress: string;
+  args: T;
 }
 
 // Remove type-unsafe "buckets of functions"
@@ -53,8 +59,17 @@ export class ContractWithEventParsing extends BaseContract {
   extractEvents(logs: Log[], name: string): TypedLogDescription[] {
     return logs
       .filter(log => log.address === this.address)
-      .map(log => this.interface.parseLog(log))
-      .filter(e => e.name === name);
+      .map(log => ({ log, parsedLog: this.interface.parseLog(log) }))
+      .filter(({ parsedLog }) => parsedLog.name === name)
+      .map(({ log, parsedLog }) => ({
+        blockNumber: log.blockNumber,
+        blockHash: log.blockHash,
+        transactionIndex: log.transactionIndex,
+        transactionHash: log.transactionHash,
+        logIndex: log.logIndex,
+        contractAddress: this.address,
+        args: parsedLog.args
+      }));
   }
 }
 
