@@ -74,13 +74,14 @@ contract EggTraitWeights {
                 borderColor == BorderColor.Gold ? uint256(CardColor.Gold) :
                 uint256(CardColor.Rainbow);
             uint256 originalWeight = cardWeights[selectedCardColor];
+            uint256 finalWeight = originalWeight * 2;
             // As we are going to duplicate the original weight of the selected color,
             // we reduce that extra amount from all other weights, proportionally,
             // so we keep the total of 100%
             for (uint256 i = 0; i < cardWeightsCached.length; i++) {
-                cardWeightsCached[i] = cardWeights[i] * (1e18 - originalWeight) / 1e18;
+                cardWeightsCached[i] = cardWeights[i] * (1e18 - finalWeight) / (1e18 - originalWeight);
             }
-            cardWeightsCached[selectedCardColor] = originalWeight * 2;
+            cardWeightsCached[selectedCardColor] = finalWeight;
         } else {
             for (uint256 i = 0; i < cardWeightsCached.length; i++) {
                 cardWeightsCached[i] = cardWeights[i];
@@ -133,13 +134,14 @@ contract EggTraitWeights {
                 borderColor == BorderColor.Gold ? uint256(ShellColor.Gold) :
                 uint256(ShellColor.Rainbow);
             uint256 originalWeight = shellWeights[selectedShellColor];
+            uint256 finalWeight = originalWeight * 2;
             // As we are going to duplicate the original weight of the selected color,
             // we reduce that extra amount from all other weights, proportionally,
             // so we keep the total of 100%
             for (uint256 i = 0; i < shellWeightsCached.length; i++) {
-                shellWeightsCached[i] = shellWeights[i] * (1e18 - originalWeight) / 1e18;
+                shellWeightsCached[i] = shellWeights[i] * (1e18 - finalWeight) / (1e18 - originalWeight);
             }
-            shellWeightsCached[selectedShellColor] = originalWeight * 2;
+            shellWeightsCached[selectedShellColor] = finalWeight;
         } else {
             for (uint256 i = 0; i < shellWeightsCached.length; i++) {
                 shellWeightsCached[i] = shellWeights[i];
