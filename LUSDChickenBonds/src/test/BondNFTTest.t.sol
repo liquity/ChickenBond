@@ -31,8 +31,9 @@ contract DummyChickenBondManager {
 
     struct BondData {
         uint256 lusdAmount;
-        uint256 startTime;
-        uint256 endTime;
+        uint64 claimedBLUSD;
+        uint64 startTime;
+        uint64 endTime;
         uint8 status;
     }
 
@@ -194,8 +195,9 @@ contract BondNFTTest is BaseTest {
             bondID,
             DummyChickenBondManager.BondData({
                 lusdAmount: 1e18, // doesn't matter
-                startTime: endTime, // doesn't matter, just use same as endTime
-                endTime: endTime,
+                claimedBLUSD: 0, // doesn't matter
+                startTime: uint64(endTime), // doesn't matter, just use same as endTime
+                endTime: uint64(endTime),
                 status: uint8(
                     inOut
                         ? IChickenBondManager.BondStatus.chickenedIn

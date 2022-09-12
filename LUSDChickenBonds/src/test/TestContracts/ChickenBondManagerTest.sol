@@ -119,7 +119,7 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(C, MIN_BOND_AMOUNT + 25e18);
 
         uint256 bondID_C = bondNFT.totalSupply();
-        (, uint256 bondStartTime_C,,) = chickenBondManager.getBondData(bondID_C);
+        (,, uint256 bondStartTime_C,,) = chickenBondManager.getBondData(bondID_C);
 
         // assertEq(bondedLUSD_C, 25e18);
         assertEq(bondStartTime_C, block.timestamp);
@@ -148,8 +148,9 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 600);
 
         uint256 bondID_C = bondNFT.totalSupply();
-        (uint256 bondedLUSD_C, uint256 bondStartTime_C,,) = chickenBondManager.getBondData(bondID_C);
+        (uint256 bondedLUSD_C, uint256 claimedBLUSD_C, uint256 bondStartTime_C,,) = chickenBondManager.getBondData(bondID_C);
         assertEq(bondedLUSD_C, MIN_BOND_AMOUNT + 25e18);
+        assertEq(claimedBLUSD_C, 0);
         assertEq(bondStartTime_C, block.timestamp - 600);
     }
 
@@ -199,8 +200,9 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(A, MIN_BOND_AMOUNT);
 
         // Confirm bond data for bond #2 is 0
-        (uint256 B_bondedLUSD, uint256 B_bondStartTime,, uint8 B_bondStatus) = chickenBondManager.getBondData(2);
+        (uint256 B_bondedLUSD, uint256 B_claimedBLUSD, uint256 B_bondStartTime,, uint8 B_bondStatus) = chickenBondManager.getBondData(2);
         assertEq(B_bondedLUSD, 0);
+        assertEq(B_claimedBLUSD, 0);
         assertEq(B_bondStartTime, 0);
         assertEq(B_bondStatus, uint8(IChickenBondManager.BondStatus.nonExistent));
 
@@ -223,8 +225,9 @@ contract ChickenBondManagerTest is BaseTest {
         createBondForUser(B, MIN_BOND_AMOUNT);
 
         // Check bonded amount and bond start time are now recorded for B's bond
-        (B_bondedLUSD, B_bondStartTime,, B_bondStatus) = chickenBondManager.getBondData(2);
+        (B_bondedLUSD, B_claimedBLUSD, B_bondStartTime,, B_bondStatus) = chickenBondManager.getBondData(2);
         assertEq(B_bondedLUSD, MIN_BOND_AMOUNT);
+        assertEq(B_claimedBLUSD, 0);
         assertEq(B_bondStartTime, currentTime);
         assertEq(B_bondStatus, uint8(IChickenBondManager.BondStatus.active));
 
@@ -490,9 +493,10 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 expectedStartTime = block.timestamp;
         uint256 bondID = createBondForUser(A, bondAmount);
 
-        (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
+        (uint256 bdLUSDAmount, uint256 bdClaimedBLUSD, uint256 bdStartTime, uint256 bdEndTime, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.active));
         assertEq(bdLUSDAmount, bondAmount);
+        assertEq(bdClaimedBLUSD, 0);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, 0);
 
@@ -513,8 +517,9 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 600);
         chickenOutForUser(A, bondID);
 
-        (bdLUSDAmount, bdStartTime, bdEndTime, bdStatus) = chickenBondManager.getBondData(bondID);
+        (bdLUSDAmount, bdClaimedBLUSD, bdStartTime, bdEndTime, bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdLUSDAmount, bondAmount);
+        assertEq(bdClaimedBLUSD, 0);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, block.timestamp);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedOut));
@@ -1051,8 +1056,9 @@ contract ChickenBondManagerTest is BaseTest {
         uint256 expectedStartTime = block.timestamp;
         uint256 bondID = createBondForUser(A, bondAmount);
 
-        (uint256 bdLUSDAmount, uint256 bdStartTime, uint256 bdEndTime, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
+        (uint256 bdLUSDAmount, uint256 bdClaimedBLUSD, uint256 bdStartTime, uint256 bdEndTime, uint8 bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdLUSDAmount, bondAmount);
+        assertEq(bdClaimedBLUSD, 0);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, 0);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.active));
@@ -1072,10 +1078,15 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(bdCurveGaugeSlopes, 0);
 
         vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        // stack too deep, hardcoding it
+        //uint256 accruedBLUSD = chickenBondManager.calcAccruedBLUSD(bondID) / 1e18;
+        //console.log(chickenBondManager.calcAccruedBLUSD(bondID), "accrued bLUSD");
         chickenInForUser(A, bondID);
 
-        (bdLUSDAmount, bdStartTime, bdEndTime, bdStatus) = chickenBondManager.getBondData(bondID);
+        (bdLUSDAmount, bdClaimedBLUSD, bdStartTime, bdEndTime, bdStatus) = chickenBondManager.getBondData(bondID);
         assertEq(bdLUSDAmount, bondAmount);
+        //assertEq(bdClaimedBLUSD, accruedBLUSD);
+        assertEq(bdClaimedBLUSD, 18);
         assertEq(bdStartTime, expectedStartTime);
         assertEq(bdEndTime, block.timestamp);
         assertEq(bdStatus, uint8(IChickenBondManager.BondStatus.chickenedIn));
