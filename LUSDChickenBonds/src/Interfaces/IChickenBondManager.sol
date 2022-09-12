@@ -38,7 +38,7 @@ interface IChickenBondManager {
 
     // getters
     function calcRedemptionFeePercentage(uint256 _fractionOfBLUSDToRedeem) external view returns (uint256);
-    function getBondData(uint256 _bondID) external view returns (uint256 lusdAmount, uint256 startTime, uint256 endTime, uint128 initialHalfDna, uint128 finalHalfDna, uint8 status);
+    function getBondData(uint256 _bondID) external view returns (uint256 lusdAmount, uint256 startTime, uint256 endTime, uint8 status);
     function getLUSDToAcquire(uint256 _bondID) external view returns (uint256);
     function calcAccruedBLUSD(uint256 _bondID) external view returns (uint256);
     function calcBondBLUSDCap(uint256 _bondID) external view returns (uint256);

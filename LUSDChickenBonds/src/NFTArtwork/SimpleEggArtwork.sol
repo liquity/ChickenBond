@@ -7,10 +7,6 @@ import { BokkyPooBahsDateTimeLibrary as DateTime } from "datetime/contracts/Bokk
 import "../Interfaces/IBondNFTArtwork.sol";
 import "../Interfaces/IChickenBondManager.sol";
 
-interface IChickenBondManagerGetter {
-    function chickenBondManager() external view returns (IChickenBondManager);
-}
-
 contract SimpleEggArtwork is IBondNFTArtwork {
     using Strings for uint256;
 
@@ -19,14 +15,14 @@ contract SimpleEggArtwork is IBondNFTArtwork {
         uint256 lusdAmount;
         uint256 startTime;
         uint256 endTime;
-        uint128 initialHalfDna;
-        uint128 finalHalfDna;
+        uint80 initialHalfDna;
+        uint80 finalHalfDna;
         uint8 status;
     }
 
-    function tokenURI(uint256 _tokenID) external view returns (string memory) {
+    function tokenURI(uint256 _tokenID, IBondNFT.BondExtraData calldata _bondExtraData) external view returns (string memory) {
         IChickenBondManager chickenBondManager =
-            IChickenBondManagerGetter(msg.sender).chickenBondManager();
+            IBondNFT(msg.sender).chickenBondManager();
 
         BondData memory bondData;
         bondData.tokenID = _tokenID;
@@ -34,10 +30,10 @@ contract SimpleEggArtwork is IBondNFTArtwork {
             bondData.lusdAmount,
             bondData.startTime,
             bondData.endTime,
-            bondData.initialHalfDna,
-            bondData.finalHalfDna,
             bondData.status
         ) = chickenBondManager.getBondData(_tokenID);
+        bondData.initialHalfDna = _bondExtraData.initialHalfDna;
+        bondData.finalHalfDna = _bondExtraData.finalHalfDna;
 
         return string(
             abi.encodePacked(

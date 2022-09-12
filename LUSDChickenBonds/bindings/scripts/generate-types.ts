@@ -15,6 +15,11 @@ import TestnetYearnVault from "../../out/TestnetYearnVault.sol/TestnetYearnVault
 import BLUSDToken from "../../out/BLUSDToken.sol/BLUSDToken.json";
 import TestnetCurveLiquidityGauge from "../../out/TestnetCurveLiquidityGauge.sol/TestnetCurveLiquidityGauge.json";
 import Prankster from "../../out/Prankster.sol/Prankster.json";
+import ERC20 from "../../out/ERC20.sol/ERC20.json";
+import MockTroveManager from "../../out/MockTroveManager.sol/MockTroveManager.json";
+import MockLQTYStaking from "../../out/MockLQTYStaking.sol/MockLQTYStaking.json";
+import MockPickleJar from "../../out/MockPickleJar.sol/MockPickleJar.json";
+import MockCurveGaugeController from "../../out/MockCurveGaugeController.sol/MockCurveGaugeController.json";
 
 // Curve v2
 import CurveCryptoSwap2ETH from "../curve/CurveCryptoSwap2ETH.json";
@@ -174,7 +179,12 @@ const contractArtifacts = Object.entries({
   TestnetYearnVault,
   BLUSDToken,
   TestnetCurveLiquidityGauge,
-  Prankster
+  Prankster,
+  ERC20,
+  MockTroveManager,
+  MockLQTYStaking,
+  MockPickleJar,
+  MockCurveGaugeController
 });
 
 // XXX Vyper artifacts are different

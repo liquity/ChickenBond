@@ -1,11 +1,14 @@
 pragma solidity ^0.8.10;
 
-import "forge-std/Vm.sol";
-import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/utils/Strings.sol";
+import "./TestContracts/BaseTest.sol";
 import "./TestContracts/TestUtils.sol";
 import "../BondNFT.sol";
 import "../Interfaces/IBondNFTArtwork.sol";
+import "../ExternalContracts/MockTroveManager.sol";
+import "../ExternalContracts/MockLQTYStaking.sol";
+import "../ExternalContracts/MockPickleJar.sol";
+import "../ExternalContracts/MockCurveGaugeController.sol";
 
 import "forge-std/console.sol";
 
@@ -18,7 +21,7 @@ contract DummyArtwork is IBondNFTArtwork {
         prefix = _prefix;
     }
 
-    function tokenURI(uint256 _tokenID) external view returns (string memory) {
+    function tokenURI(uint256 _tokenID, IBondNFT.BondExtraData calldata /*_bondExtraData*/) external view returns (string memory) {
         return string(abi.encodePacked(prefix, _tokenID.toString()));
     }
 }
@@ -30,8 +33,6 @@ contract DummyChickenBondManager {
         uint256 lusdAmount;
         uint256 startTime;
         uint256 endTime;
-        uint128 initialHalfDna;
-        uint128 finalHalfDna;
         uint8 status;
     }
 
@@ -42,7 +43,7 @@ contract DummyChickenBondManager {
     }
 
     function mint(address _bonder) external returns (uint256 bondID) {
-        return bondNFT.mint(_bonder);
+        (bondID,) = bondNFT.mint(_bonder, 0);
     }
 
     function setBondData(uint256 _bondID, BondData calldata _bondData) external {
@@ -50,14 +51,33 @@ contract DummyChickenBondManager {
     }
 }
 
-contract BondNFTTest is Test {
+contract BondNFTTest is BaseTest {
     string constant NAME = "name";
     string constant SYMBOL = "symbol";
 
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 
+    function getLiquityDataAddresses() internal returns (BondNFT.LiquityDataAddresses memory) {
+         return BondNFT.LiquityDataAddresses({
+            troveManagerAddress: address(new MockTroveManager()),
+            lqtyToken: address(new ERC20("LQTY token", "LQTY")),
+            lqtyStaking: address(new MockLQTYStaking()),
+            pickleLQTYJar: address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            pickleLQTYFarm: address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            curveGaugeController: address(new MockCurveGaugeController()),
+            curveLUSD3CRVGauge: address(0x1337),
+            curveLUSDFRAXGauge: address(0x1337)
+        });
+    }
+
     function testBondNFTAddressesCanOnlyBeSetOnce() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            getLiquityDataAddresses()
+        );
         bondNFT.setAddresses(address(0x1337));
         assertEq(address(bondNFT.chickenBondManager()), address(0x1337));
 
@@ -66,47 +86,83 @@ contract BondNFTTest is Test {
     }
 
     function testBondNFTTokenIDsStartAtOne() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            getLiquityDataAddresses()
+        );
         bondNFT.setAddresses(address(this));
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), address(this), 1);
-        bondNFT.mint(address(this));
+        bondNFT.mint(address(this), 0);
     }
 
     function testBondNFTTokenURIRevertsWhenTokenDoesNotExist() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            getLiquityDataAddresses()
+        );
         vm.expectRevert("BondNFT: URI query for nonexistent token");
         bondNFT.tokenURI(1337);
     }
 
     function testBondNFTTokenURIIsEmptyWhenArtworkIsZero() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            getLiquityDataAddresses()
+        );
         bondNFT.setAddresses(address(this));
-        bondNFT.mint(address(this));
+        bondNFT.mint(address(this), 0);
 
         string memory tokenURI = bondNFT.tokenURI(1);
         assertEq(tokenURI, "");
     }
 
     function testBondNFTDelegatesTokenURIWhenArtworkIsNotZero() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(new DummyArtwork("prefix/")), 0);
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(new DummyArtwork("prefix/")),
+            0,
+            getLiquityDataAddresses()
+        );
         bondNFT.setAddresses(address(this));
-        bondNFT.mint(address(this));
+        bondNFT.mint(address(this), 0);
 
         string memory tokenURI = bondNFT.tokenURI(1);
         assertEq(tokenURI, "prefix/1");
     }
 
     function testBondNFTArtworkCannotBeSetBeforeSettingAddresses() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0), 0);
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0),
+            0,
+            getLiquityDataAddresses()
+        );
 
         vm.expectRevert("BondNFT: setAddresses() must be called first");
         bondNFT.setArtworkAddress(address(0x1337));
     }
 
     function testBondNFTArtworkCanBeUpgradedExactlyOnce() public {
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0x1337), 0);
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0x1337),
+            0,
+            getLiquityDataAddresses()
+        );
         bondNFT.setAddresses(address(this));
 
         bondNFT.setArtworkAddress(address(0x1337));
@@ -123,7 +179,13 @@ contract BondNFTTest is Test {
         lessThanLockout = coerce(lessThanLockout, 0, lockoutPeriodSeconds - 1);
         moreThanLockout = coerce(moreThanLockout, lockoutPeriodSeconds, 2 * lockoutPeriodSeconds);
 
-        BondNFT bondNFT = new BondNFT(NAME, SYMBOL, address(0x1337), lockoutPeriodSeconds);
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(0x1337),
+            lockoutPeriodSeconds,
+            getLiquityDataAddresses()
+        );
         DummyChickenBondManager chickenBondManager = new DummyChickenBondManager(bondNFT);
         bondNFT.setAddresses(address(chickenBondManager));
 
@@ -134,8 +196,6 @@ contract BondNFTTest is Test {
                 lusdAmount: 1e18, // doesn't matter
                 startTime: endTime, // doesn't matter, just use same as endTime
                 endTime: endTime,
-                initialHalfDna: 1,
-                finalHalfDna: 1,
                 status: uint8(
                     inOut
                         ? IChickenBondManager.BondStatus.chickenedIn
@@ -153,5 +213,37 @@ contract BondNFTTest is Test {
 
         bondNFT.transferFrom(address(this), address(0x1337), bondID);
         assertEq(bondNFT.ownerOf(bondID), address(0x1337));
+    }
+
+    function testMintCannotBeCalledDirectly() public {
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(new DummyArtwork("prefix/")),
+            0,
+            getLiquityDataAddresses()
+        );
+        bondNFT.setAddresses(address(this));
+        vm.startPrank(A);
+        vm.expectRevert("BondNFT: Caller must be ChickenBondManager");
+        bondNFT.mint(address(this), 0);
+        vm.stopPrank();
+    }
+
+    function testBondNFTSetFinalDataCannotBeCalledDirectly() public {
+        BondNFT bondNFT = new BondNFT(
+            NAME,
+            SYMBOL,
+            address(new DummyArtwork("prefix/")),
+            0,
+            getLiquityDataAddresses()
+        );
+        bondNFT.setAddresses(address(this));
+        bondNFT.mint(address(this), 0);
+
+        vm.startPrank(A);
+        vm.expectRevert("BondNFT: Caller must be ChickenBondManager");
+        bondNFT.setFinalExtraData(address(this), 1, 0);
+        vm.stopPrank();
     }
 }

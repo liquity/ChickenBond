@@ -379,4 +379,43 @@ contract ChickenBondManagerDevOnlyTest is BaseTest, DevTestSetup {
         chickenBondManager.redeem(A_bLUSDBalance - MIN_BLUSD_SUPPLY, leftInBAMMSPVault);
         vm.stopPrank();
     }
+
+    function testLiquityExtraData() public {
+        uint256 bondAmount = 100e18;
+        uint256 bondID = createBondForUser(A, bondAmount);
+
+        (
+            uint80 bdInitialHalfDna,
+            uint80 bdFinalHalfDna,
+            uint256 bdTroveSize,
+            uint256 bdLQTYAmount,
+            uint256 bdCurveGaugeSlopes
+        ) = bondNFT.getBondExtraData(bondID);
+        uint80 initialHalfDna = bdInitialHalfDna;
+        assertGt(bdInitialHalfDna, 0);
+        assertEq(bdFinalHalfDna, 0);
+        assertEq(bdTroveSize, 0);
+        assertEq(bdLQTYAmount, 0);
+        assertEq(bdCurveGaugeSlopes, 0);
+
+        // set mock values
+        uint256 mockTroveDebt = 1e18;
+        uint256 mockLQTYAmount = 2e18;
+        uint256 mockCurveGaugeSlopes = 3e15;
+        MockTroveManager(address(bondNFT.troveManager())).setTroveDebt(mockTroveDebt);
+        MockLQTYStaking(address(bondNFT.lqtyStaking())).setStake(mockLQTYAmount);
+        MockCurveGaugeController(address(bondNFT.curveGaugeController())).setSlope(mockCurveGaugeSlopes);
+
+        vm.warp(block.timestamp + chickenBondManager.BOOTSTRAP_PERIOD_CHICKEN_IN());
+        chickenInForUser(A, bondID);
+
+        (bdInitialHalfDna, bdFinalHalfDna, bdTroveSize, bdLQTYAmount, bdCurveGaugeSlopes) = bondNFT.getBondExtraData(bondID);
+        assertGt(bdInitialHalfDna, 0);
+        assertGt(bdFinalHalfDna, 0);
+        assertEq(bdInitialHalfDna, initialHalfDna);
+        assert(bdFinalHalfDna != bdInitialHalfDna);
+        assertEq(bdTroveSize, mockTroveDebt / 1e18);
+        assertEq(bdLQTYAmount, mockLQTYAmount / 1e18);
+        assertEq(bdCurveGaugeSlopes, 2 * mockCurveGaugeSlopes / 1e9); // It calls the controller twice, for 3CRV and FRAX
+    }
 }

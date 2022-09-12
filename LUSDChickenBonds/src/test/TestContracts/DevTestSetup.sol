@@ -9,6 +9,10 @@ import "../../ExternalContracts/MockYearnVault.sol";
 import "../../ExternalContracts/MockYearnRegistry.sol";
 import  "../../ExternalContracts/MockCurvePool.sol";
 import  "../../ExternalContracts/MockCurveLiquidityGauge.sol";
+import "../../ExternalContracts/MockTroveManager.sol";
+import "../../ExternalContracts/MockLQTYStaking.sol";
+import "../../ExternalContracts/MockPickleJar.sol";
+import "../../ExternalContracts/MockCurveGaugeController.sol";
 import "./LUSDTokenTester.sol";
 
 
@@ -63,8 +67,25 @@ contract DevTestSetup is BaseTest {
         // Deploy core ChickenBonds system
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
+        BondNFT.LiquityDataAddresses memory liquityDataAddresses = BondNFT.LiquityDataAddresses({
+            troveManagerAddress: address(new MockTroveManager()),
+            lqtyToken: address(new ERC20("LQTY token", "LQTY")),
+            lqtyStaking: address(new MockLQTYStaking()),
+            pickleLQTYJar: address(new MockPickleJar("pickling LQTY", "pLQTY")),
+            pickleLQTYFarm: address(new ERC20("Pickle Farm LTQY", "pfLQTY")),
+            curveGaugeController: address(new MockCurveGaugeController()),
+            curveLUSD3CRVGauge: address(0x1337),
+            curveLUSDFRAXGauge: address(0x1337)
+        });
+
         // TODO: choose conventional name and symbol for NFT contract
-        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0), BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS);
+        bondNFT = new BondNFT(
+            "LUSDBondNFT",
+            "LUSDBOND",
+            address(0),
+            BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS,
+            liquityDataAddresses
+        );
 
         // Deploy LUSD/bLUSD AMM LP Rewards contract
         curveLiquidityGauge = ICurveLiquidityGaugeV5(address(new MockCurveLiquidityGauge()));

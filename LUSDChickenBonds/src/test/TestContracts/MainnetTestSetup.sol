@@ -13,6 +13,10 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_LUSD_TOKEN_ADDRESS = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address constant MAINNET_LQTY_TOKEN_ADDRESS = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
     address constant MAINNET_LIQUITY_SP_ADDRESS = 0x66017D22b0f8556afDd19FC67041899Eb65a21bb;
+    address constant MAINNET_LIQUITY_TROVE_MANAGER_ADDRESS = 0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2;
+    address constant MAINNET_LIQUITY_STAKING_ADDRESS = 0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d;
+    address constant MAINNET_PICKLE_LQTY_JAR_ADDRESS = 0x65B2532474f717D5A8ba38078B78106D56118bbb;
+    address constant MAINNET_PICKLE_LQTY_FARM_ADDRESS = 0xA7BC844a76e727Ec5250f3849148c21F4b43CeEA;
     address constant MAINNET_3CRV_TOKEN_ADDRESS = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
     address constant MAINNET_YEARN_CURVE_VAULT_ADDRESS = 0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6;
     address constant MAINNET_CURVE_POOL_ADDRESS = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
@@ -21,6 +25,9 @@ contract MainnetTestSetup is BaseTest {
     address constant MAINNET_YEARN_GOVERNANCE_ADDRESS = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
     address constant MAINNET_CURVE_V2_FACTORY_ADDRESS = 0xF18056Bbd320E96A48e3Fbf8bC061322531aac99;
     address constant MAINNET_CURVE_V2_GAUGE_MANAGER_PROXY_ADDRESS = 0xd05Ad7fb0CDb39AaAA1407564dad0EC78d30d564;
+    address constant MAINNET_CURVE_GAUGE_CONTROLLER = 0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB;
+    address constant MAINNET_CURVE_GAUGE_LUSD_3CRV = 0x9B8519A9a00100720CCdC8a120fBeD319cA47a14;
+    address constant MAINNET_CURVE_GAUGE_LUSD_FRAX = 0x389Fc079a15354E9cbcE8258433CC0F85B755A42;
     address constant MAINNET_CHAINLINK_ETH_USD_ADDRESS = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address constant MAINNET_CHAINLINK_LUSD_USD_ADDRESS = 0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0;
     address constant MAINNET_BPROTOCOL_FEE_POOL_ADDRESS = 0x7095F0B91A1010c11820B4E263927835A4CF52c9;
@@ -91,8 +98,24 @@ contract MainnetTestSetup is BaseTest {
         // Deploy core ChickenBonds system
         bLUSDToken = new BLUSDToken("bLUSDToken", "BLUSD");
 
+        BondNFT.LiquityDataAddresses memory liquityDataAddresses = BondNFT.LiquityDataAddresses({
+            troveManagerAddress: MAINNET_LIQUITY_TROVE_MANAGER_ADDRESS,
+            lqtyToken: MAINNET_LQTY_TOKEN_ADDRESS,
+            lqtyStaking: MAINNET_LIQUITY_STAKING_ADDRESS,
+            pickleLQTYJar: MAINNET_PICKLE_LQTY_JAR_ADDRESS,
+            pickleLQTYFarm: MAINNET_PICKLE_LQTY_FARM_ADDRESS,
+            curveGaugeController: MAINNET_CURVE_GAUGE_CONTROLLER,
+            curveLUSD3CRVGauge: MAINNET_CURVE_GAUGE_LUSD_3CRV,
+            curveLUSDFRAXGauge: MAINNET_CURVE_GAUGE_LUSD_FRAX
+        });
         // TODO: choose conventional name and symbol for NFT contract
-        bondNFT = new BondNFT("LUSDBondNFT", "LUSDBOND", address(0), BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS);
+        bondNFT = new BondNFT(
+            "LUSDBondNFT",
+            "LUSDBOND",
+            address(0),
+            BOND_NFT_TRANSFER_LOCKOUT_PERIOD_SECONDS,
+            liquityDataAddresses
+        );
 
         // Deploy LUSD/bLUSD AMM Curve V2 pool and LiquidityGauge V4
         ICurveCryptoFactory curveFactory = ICurveCryptoFactory(MAINNET_CURVE_V2_FACTORY_ADDRESS);
