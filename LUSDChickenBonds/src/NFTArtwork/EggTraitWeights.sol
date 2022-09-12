@@ -68,11 +68,19 @@ contract EggTraitWeights {
             borderColor == BorderColor.Gold   ||
             borderColor == BorderColor.Rainbow
         ) {
-            uint256 originalWeight = cardWeights[uint256(borderColor)];
+            uint256 selectedCardColor =
+                borderColor == BorderColor.Bronze ? uint256(CardColor.Bronze) :
+                borderColor == BorderColor.Silver ? uint256(CardColor.Silver) :
+                borderColor == BorderColor.Gold ? uint256(CardColor.Gold) :
+                uint256(CardColor.Rainbow);
+            uint256 originalWeight = cardWeights[selectedCardColor];
+            // As we are going to duplicate the original weight of the selected color,
+            // we reduce that extra amount from all other weights, proportionally,
+            // so we keep the total of 100%
             for (uint256 i = 0; i < cardWeightsCached.length; i++) {
                 cardWeightsCached[i] = cardWeights[i] * (1e18 - originalWeight) / 1e18;
             }
-            cardWeightsCached[uint256(borderColor)] = originalWeight * 2;
+            cardWeightsCached[selectedCardColor] = originalWeight * 2;
         } else {
             for (uint256 i = 0; i < cardWeightsCached.length; i++) {
                 cardWeightsCached[i] = cardWeights[i];
@@ -119,11 +127,19 @@ contract EggTraitWeights {
             borderColor == BorderColor.Gold   ||
             borderColor == BorderColor.Rainbow
         ) {
-            uint256 originalWeight = shellWeights[uint256(borderColor)];
+            uint256 selectedShellColor =
+                borderColor == BorderColor.Bronze ? uint256(ShellColor.Bronze) :
+                borderColor == BorderColor.Silver ? uint256(ShellColor.Silver) :
+                borderColor == BorderColor.Gold ? uint256(ShellColor.Gold) :
+                uint256(ShellColor.Rainbow);
+            uint256 originalWeight = shellWeights[selectedShellColor];
+            // As we are going to duplicate the original weight of the selected color,
+            // we reduce that extra amount from all other weights, proportionally,
+            // so we keep the total of 100%
             for (uint256 i = 0; i < shellWeightsCached.length; i++) {
                 shellWeightsCached[i] = shellWeights[i] * (1e18 - originalWeight) / 1e18;
             }
-            shellWeightsCached[uint256(borderColor)] = originalWeight * 2;
+            shellWeightsCached[selectedShellColor] = originalWeight * 2;
         } else {
             for (uint256 i = 0; i < shellWeightsCached.length; i++) {
                 shellWeightsCached[i] = shellWeights[i];
