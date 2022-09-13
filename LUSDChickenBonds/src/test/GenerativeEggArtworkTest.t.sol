@@ -111,5 +111,270 @@ contract GenerativeEggArworkTest is BaseTest {
         shellWeightsExpected = [uint256(107179e12), 87692e12, 87692e12, 97436e12, 97436e12, 97436e12, 97436e12, 97436e12, 73077e12, 58462e12, 38974e12, 5e16, 9744e12];
         _checkWeights(shellWeights, shellWeightsExpected);
     }
-    // TODO: add checks for certain `rand` values for `_getBorderColor`, `_getCardColor` and `_getShellColor`
+
+    function testGetBorderColor() public {
+        GenerativeEggArtworkWrap generativeEggArtwork = new GenerativeEggArtworkWrap();
+
+        // White
+        assertEq(uint256(generativeEggArtwork.getBorderColor(0)), uint256(EggTraitWeights.BorderColor.White), "Border color should be white");
+        assertEq(uint256(generativeEggArtwork.getBorderColor(29999999e10)), uint256(EggTraitWeights.BorderColor.White), "Border color should be white");
+
+        // Black
+        assertEq(uint256(generativeEggArtwork.getBorderColor(30e16)), uint256(EggTraitWeights.BorderColor.Black), "Border color should be black");
+        assertEq(uint256(generativeEggArtwork.getBorderColor(59999999e10)), uint256(EggTraitWeights.BorderColor.Black), "Border color should be black");
+
+        // Bronze
+        assertEq(uint256(generativeEggArtwork.getBorderColor(60e16)), uint256(EggTraitWeights.BorderColor.Bronze), "Border color should be bronze");
+        assertEq(uint256(generativeEggArtwork.getBorderColor(74999999e10)), uint256(EggTraitWeights.BorderColor.Bronze), "Border color should be bronze");
+
+        // Silver
+        assertEq(uint256(generativeEggArtwork.getBorderColor(75e16)), uint256(EggTraitWeights.BorderColor.Silver), "Border color should be silver");
+        assertEq(uint256(generativeEggArtwork.getBorderColor(86999999e10)), uint256(EggTraitWeights.BorderColor.Silver), "Border color should be silver");
+
+        // Gold
+        assertEq(uint256(generativeEggArtwork.getBorderColor(87e16)), uint256(EggTraitWeights.BorderColor.Gold), "Border color should be gold");
+        assertEq(uint256(generativeEggArtwork.getBorderColor(94999999e10)), uint256(EggTraitWeights.BorderColor.Gold), "Border color should be gold");
+
+        // Rainbow
+        assertEq(uint256(generativeEggArtwork.getBorderColor(95e16)), uint256(EggTraitWeights.BorderColor.Rainbow), "Border color should be rainbow");
+        assertEq(uint256(generativeEggArtwork.getBorderColor(99999999e10)), uint256(EggTraitWeights.BorderColor.Rainbow), "Border color should be rainbow");
+    }
+
+    function testGetCardColor() public {
+        GenerativeEggArtworkWrap generativeEggArtwork = new GenerativeEggArtworkWrap();
+
+        // Border color non special
+
+        // Red
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(0, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.CardColor.Red),
+            "Card color should be red"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(11999999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.CardColor.Red),
+            "Card color should be red"
+        );
+
+        // Green
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(12e16, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.CardColor.Green),
+            "Card color should be green"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(23999999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.CardColor.Green),
+            "Card color should be green"
+        );
+
+        // (...)
+        // Gold
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(95e16, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.CardColor.Gold),
+            "Card color should be gold"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(97999999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.CardColor.Gold),
+            "Card color should be gold"
+        );
+
+        // Rainbow
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(98e16, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.CardColor.Rainbow),
+            "Card color should be rainbow"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(99999999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.CardColor.Rainbow),
+            "Card color should be rainbow"
+        );
+
+        // (...)
+        // Border color rainbow
+
+        // Red
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(0, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.CardColor.Red),
+            "Card color should be red"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(11755102e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.CardColor.Red),
+            "Card color should be red"
+        );
+
+        // Green
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(11755103e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.CardColor.Green),
+            "Card color should be green"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(23510204e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.CardColor.Green),
+            "Card color should be green"
+        );
+
+        // (...)
+        // Gold
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(93061225e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.CardColor.Gold),
+            "Card color should be gold"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(95999999e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.CardColor.Gold),
+            "Card color should be gold"
+        );
+
+        // Rainbow
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(96e16, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.CardColor.Rainbow),
+            "Card color should be rainbow"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getCardColor(99999999e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.CardColor.Rainbow),
+            "Card color should be rainbow"
+        );
+    }
+
+    function testGetShellColor() public {
+        GenerativeEggArtworkWrap generativeEggArtwork = new GenerativeEggArtworkWrap();
+
+        // Border color non special
+
+        // OffWhite
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(0, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.OffWhite),
+            "Shell color should be OffWhite"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(10999999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.OffWhite),
+            "Shell color should be OffWhite"
+        );
+
+        // LightBlue
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(11e16, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.LightBlue),
+            "Shell color should be LightBlue"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(19999999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.LightBlue),
+            "Shell color should be LightBlue"
+        );
+
+        // (...)
+        // Gold
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(925e15, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.Gold),
+            "Shell color should be gold"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(95599999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.Gold),
+            "Shell color should be gold"
+        );
+
+        // Rainbow
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(965e15, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.Rainbow),
+            "Shell color should be rainbow"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(98999999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.Rainbow),
+            "Shell color should be rainbow"
+        );
+
+        // Luminous
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(99e16, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.Luminous),
+            "Shell color should be luminous"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(99999999e10, EggTraitWeights.BorderColor.White)),
+            uint256(EggTraitWeights.ShellColor.Luminous),
+            "Shell color should be luminous"
+        );
+
+        // (...)
+        // Border color rainbow
+
+        // OffWhite
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(0, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.OffWhite),
+            "Shell color should be OffWhite"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(10717948e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.OffWhite),
+            "Shell color should be OffWhite"
+        );
+
+        // LightBlue
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(10717949e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.LightBlue),
+            "Shell color should be LightBlue"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(19487179e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.LightBlue),
+            "Shell color should be LightBlue"
+        );
+
+        // (...)
+        // Gold
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(90128206e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.Gold),
+            "Shell color should be gold"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(94025641e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.Gold),
+            "Shell color should be gold"
+        );
+
+        // Rainbow
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(94025642e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.Rainbow),
+            "Shell color should be rainbow l2"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(99025640e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.Rainbow),
+            "Shell color should be rainbow"
+        );
+
+        // Luminous
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(99025641e16, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.Luminous),
+            "Shell color should be luminous"
+        );
+        assertEq(
+            uint256(generativeEggArtwork.getShellColor(99999999e10, EggTraitWeights.BorderColor.Rainbow)),
+            uint256(EggTraitWeights.ShellColor.Luminous),
+            "Shell color should be luminous"
+        );
+    }
 }
