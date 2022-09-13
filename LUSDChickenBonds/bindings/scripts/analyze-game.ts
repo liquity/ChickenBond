@@ -132,67 +132,25 @@ provider.chainId = goerli.chainId;
 const { lusdToken, bLUSDToken, bLUSDCurveToken, bondNFT, chickenBondManager, bLUSDCurvePool } =
   connectToContracts(provider, goerli.addresses);
 
-const main = async () => {
-  const lusdTransfers = await provider
-    .getLogs({ ...lusdToken.filters.Transfer(), fromBlock, toBlock })
-    .then(logs => lusdToken.extractEvents(logs, "Transfer"))
-    .then(toEnumerable);
+const getLpTokenPrice = (
+  curvePoolLUSDBalance: number,
+  curvePoolBLUSDBalance: number,
+  lpTotalSupply: number,
+  bLUSDPrice: number
+) => (curvePoolLUSDBalance + curvePoolBLUSDBalance * bLUSDPrice) / lpTotalSupply;
 
-  const bLUSDTransfers = await provider
-    .getLogs({ ...bLUSDToken.filters.Transfer(), fromBlock, toBlock })
-    .then(logs => bLUSDToken.extractEvents(logs, "Transfer"))
-    .then(toEnumerable);
 
-  const lpTokenTransfers = await provider
-    .getLogs({ ...bLUSDCurveToken.filters.Transfer(), fromBlock, toBlock })
-    .then(logs => bLUSDCurveToken.extractEvents(logs, "Transfer"))
-    .then(toEnumerable);
-
-  const [
-    tapAmount,
-    bondSupply,
-    bLUSDPrice,
-    lpTokenPrice,
-    backingRatio,
-    pendingLUSD,
-    acquiredLUSD,
-    permanentLUSD
-  ] = await Promise.all([
-    lusdToken.tapAmount({ blockTag: toBlock }).then(numberify),
-    bondNFT.totalSupply({ blockTag: toBlock }),
-    bLUSDCurvePool
-      .price_oracle({ blockTag: toBlock })
-      .then(numberify)
-      .then(x => 1 / x),
-    bLUSDCurvePool.lp_price({ blockTag: toBlock }).then(numberify),
-    chickenBondManager.calcSystemBackingRatio({ blockTag: toBlock }).then(numberify),
-    chickenBondManager.getPendingLUSD({ blockTag: toBlock }).then(numberify),
-    chickenBondManager.getTotalAcquiredLUSD({ blockTag: toBlock }).then(numberify),
-    chickenBondManager.getPermanentLUSD({ blockTag: toBlock }).then(numberify)
-  ]);
-
-  const bonds = await Promise.all(
-    [...new Array(bondSupply.toNumber()).keys()]
-      .map(i => i + 1)
-      .map(tokenID =>
-        Promise.all([
-          bondNFT.ownerOf(tokenID, { blockTag: toBlock }),
-          chickenBondManager.getBondData(tokenID, { blockTag: toBlock }),
-          chickenBondManager.calcAccruedBLUSD(tokenID, { blockTag: toBlock })
-        ]).then(([bonder, bondData, accruedBLUSD]) => ({
-          tokenID,
-          bonder,
-          active: bondData.status === BondStatus.Active ? 1 : 0,
-          chickenedIn: bondData.status === BondStatus.ChickenedIn ? 1 : 0,
-          chickenedOut: bondData.status === BondStatus.ChickenedOut ? 1 : 0,
-          pendingLUSDValue:
-            bondData.status === BondStatus.Active
-              ? Math.max(numberify(bondData.lusdAmount), numberify(accruedBLUSD) * bLUSDPrice)
-              : 0
-        }))
-      )
-  );
-
+const calculatePortfolios = (
+  bonds: { tokenID: number; bonder: string; active: number; chickenedIn: number; chickenedOut: number; bondAmount: number; accruedBLUSD: number; }[],
+  mints: IEnumerable<{ minter: string; count: number; }>,
+  bLUSDPrice: number,
+  lpTokenPrice: number,
+  suffix: string,
+  tapAmount: number,
+  lusdBalances: IEnumerable<{ holder: string; balance: number; }>,
+  bLUSDBalances: IEnumerable<{ holder: string; balance: number; }>,
+  lpTokenBalances: IEnumerable<{ holder: string; balance: number; }>,
+) => {
   const bonders = Enumerable.from(bonds).groupBy(
     x => x.bonder,
     id,
@@ -202,32 +160,11 @@ const main = async () => {
       numActiveBonds: x.sum(x => x.active),
       numChickenedInBonds: x.sum(x => x.chickenedIn),
       numChickenedOutBonds: x.sum(x => x.chickenedOut),
-      pendingLUSDValue: x.sum(x => x.pendingLUSDValue)
+      pendingLUSDValue: x.sum(x => x.active
+        ? Math.max(x.bondAmount, x.accruedBLUSD * bLUSDPrice)
+        : 0)
     })
   );
-
-  const lusdBalances = getBalances(lusdTransfers);
-  const bLUSDBalances = getBalances(bLUSDTransfers);
-
-  const lpTokenBalances = getBalances(
-    lpTokenTransfers.select(({ args }) => ({
-      args: {
-        // Some elbow grease needed
-        from: args._from,
-        to: args._to,
-        value: args._value
-      }
-    }))
-  );
-
-  const mints = lusdTransfers
-    .select(x => x.args)
-    .where(x => x.from === AddressZero)
-    .groupBy(
-      x => x.to,
-      id,
-      (minter, mint) => ({ minter, count: mint.count() })
-    );
 
   const portfolios = bonders
     .join(
@@ -275,7 +212,149 @@ const main = async () => {
     }))
     .orderByDescending(x => x.totalLUSDValue);
 
-  toCsv(portfolios.toArray(), "tmp/portfolios.csv");
+  toCsv(portfolios.toArray(), `tmp/portfolios_${suffix}.csv`);
+};
+
+const main = async () => {
+  const lusdTransfers = await provider
+    .getLogs({ ...lusdToken.filters.Transfer(), fromBlock, toBlock })
+    .then(logs => lusdToken.extractEvents(logs, "Transfer"))
+    .then(toEnumerable);
+
+  const bLUSDTransfers = await provider
+    .getLogs({ ...bLUSDToken.filters.Transfer(), fromBlock, toBlock })
+    .then(logs => bLUSDToken.extractEvents(logs, "Transfer"))
+    .then(toEnumerable);
+
+  const lpTokenTransfers = await provider
+    .getLogs({ ...bLUSDCurveToken.filters.Transfer(), fromBlock, toBlock })
+    .then(logs => bLUSDCurveToken.extractEvents(logs, "Transfer"))
+    .then(toEnumerable);
+
+  const [
+    tapAmount,
+    bondSupply,
+    bLUSDOraclePrice,
+    bLUSDSpotPrice,
+    lpTokenPoolPrice,
+    backingRatio,
+    pendingLUSD,
+    acquiredLUSD,
+    permanentLUSD
+  ] = await Promise.all([
+    lusdToken.tapAmount({ blockTag: toBlock }).then(numberify),
+    bondNFT.totalSupply({ blockTag: toBlock }),
+    bLUSDCurvePool
+      .price_oracle({ blockTag: toBlock })
+      .then(numberify)
+      .then(x => 1 / x),
+    bLUSDCurvePool
+      .get_dy(0, 1, Decimal.ONE.hex, { blockTag: toBlock })
+      .then(numberify)
+      .then(x => 1 / x),
+    bLUSDCurvePool.lp_price({ blockTag: toBlock }).then(numberify),
+    chickenBondManager.calcSystemBackingRatio({ blockTag: toBlock }).then(numberify),
+    chickenBondManager.getPendingLUSD({ blockTag: toBlock }).then(numberify),
+    chickenBondManager.getTotalAcquiredLUSD({ blockTag: toBlock }).then(numberify),
+    chickenBondManager.getPermanentLUSD({ blockTag: toBlock }).then(numberify)
+  ]);
+
+  const bonds = await Promise.all(
+    [...new Array(bondSupply.toNumber()).keys()]
+      .map(i => i + 1)
+      .map(tokenID =>
+        Promise.all([
+          bondNFT.ownerOf(tokenID, { blockTag: toBlock }),
+          chickenBondManager.getBondData(tokenID, { blockTag: toBlock }),
+          chickenBondManager.calcAccruedBLUSD(tokenID, { blockTag: toBlock })
+        ]).then(([bonder, bondData, accruedBLUSD]) => ({
+          tokenID,
+          bonder,
+          active: bondData.status === BondStatus.Active ? 1 : 0,
+          chickenedIn: bondData.status === BondStatus.ChickenedIn ? 1 : 0,
+          chickenedOut: bondData.status === BondStatus.ChickenedOut ? 1 : 0,
+          bondAmount: numberify(bondData.lusdAmount),
+          accruedBLUSD: numberify(accruedBLUSD)
+        }))
+      )
+  );
+
+  const lusdBalances = getBalances(lusdTransfers);
+  const bLUSDBalances = getBalances(bLUSDTransfers);
+
+  const lpTokenBalances = getBalances(
+    lpTokenTransfers.select(({ args }) => ({
+      args: {
+        // Some elbow grease needed
+        from: args._from,
+        to: args._to,
+        value: args._value
+      }
+    }))
+  );
+
+  const mints = lusdTransfers
+    .select(x => x.args)
+    .where(x => x.from === AddressZero)
+    .groupBy(
+      x => x.to,
+      id,
+      (minter, mint) => ({ minter, count: mint.count() })
+    );
+
+  const curvePoolLUSDBalance = await lusdToken.balanceOf(bLUSDCurvePool.address ,{ blockTag: toBlock }).then(numberify)
+  const curvePoolBLUSDBalance = await bLUSDToken.balanceOf(bLUSDCurvePool.address ,{ blockTag: toBlock }).then(numberify)
+  const lpTotalSupply = await bLUSDCurveToken.totalSupply({ blockTag: toBlock }).then(numberify)
+
+  const lpTokenOraclePrice = getLpTokenPrice(curvePoolLUSDBalance, curvePoolBLUSDBalance, lpTotalSupply, bLUSDOraclePrice);
+  const lpTokenSpotPrice = getLpTokenPrice(curvePoolLUSDBalance, curvePoolBLUSDBalance, lpTotalSupply, bLUSDSpotPrice);
+  const lpTokenRedemptionPrice = getLpTokenPrice(curvePoolLUSDBalance, curvePoolBLUSDBalance, lpTotalSupply, backingRatio);
+
+  calculatePortfolios(
+    bonds,
+    mints,
+    bLUSDOraclePrice,
+    lpTokenPoolPrice,
+    "original",
+    tapAmount,
+    lusdBalances,
+    bLUSDBalances,
+    lpTokenBalances
+  );
+
+  calculatePortfolios(
+    bonds,
+    mints,
+    bLUSDOraclePrice,
+    lpTokenOraclePrice,
+    "oracle",
+    tapAmount,
+    lusdBalances,
+    bLUSDBalances,
+    lpTokenBalances
+  );
+  calculatePortfolios(
+    bonds,
+    mints,
+    bLUSDSpotPrice,
+    lpTokenSpotPrice,
+    "spot",
+    tapAmount,
+    lusdBalances,
+    bLUSDBalances,
+    lpTokenBalances
+  );
+  calculatePortfolios(
+    bonds,
+    mints,
+    backingRatio,
+    lpTokenRedemptionPrice,
+    "redemption",
+    tapAmount,
+    lusdBalances,
+    bLUSDBalances,
+    lpTokenBalances
+  );
 
   const contractLUSDBalances = Enumerable.from(goerli.addresses)
     .select(x => ({
@@ -332,21 +411,27 @@ const main = async () => {
       bLUSDBalance: x.bLUSDBalance
     }));
 
-  toCsv(contractBalances.toArray(), "tmp/contracts.csv");
+  toCsv(contractBalances.toArray(), `tmp/contracts.csv`);
 
   fs.writeFileSync(
     "tmp/stats.csv",
     Object.entries({
-      bLUSDPrice,
-      lpTokenPrice,
+      bLUSDOraclePrice,
+      bLUSDSpotPrice,
+      lpTokenPoolPrice,
+      lpTokenOraclePrice,
+      lpTokenSpotPrice,
+      lpTokenRedemptionPrice,
       backingRatio,
       pendingLUSD,
       acquiredLUSD,
-      permanentLUSD
+      permanentLUSD,
+      lpTotalSupply
     })
       .map(row => row.join(","))
       .join("\n")
   );
+
 };
 
 main().catch(err => {
