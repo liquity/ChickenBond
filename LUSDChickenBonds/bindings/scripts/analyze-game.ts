@@ -168,10 +168,16 @@ const calculatePortfolios = (
 
   const portfolios = bonders
     .join(
+      mints,
+      x => x.bonder,
+      mint => mint.minter,
+      (x, mint) => ({ ...x, tapCount: mint.count })
+    )
+    .join(
       lusdBalances,
       x => x.bonder,
       lusd => lusd.holder,
-      (x, lusd) => ({ ...x, lusdBalance: lusd.balance })
+      (x, lusd) => ({ ...x, lusdBalance: lusd.balance - (x.tapCount - 1) * tapAmount /* no cheating */})
     )
     .groupJoin(
       bLUSDBalances,
@@ -195,20 +201,13 @@ const calculatePortfolios = (
           .select(lpTokenBalance => ({ ...x, lpTokenBalance }))
     )
     .selectMany(id)
-    .join(
-      mints,
-      x => x.bonder,
-      mint => mint.minter,
-      (x, mint) => ({ ...x, tapCount: mint.count })
-    )
     .select(x => ({
       ...x,
       totalLUSDValue:
         x.lusdBalance +
         x.pendingLUSDValue +
         x.bLUSDBalance * bLUSDPrice +
-        x.lpTokenBalance * lpTokenPrice -
-        (x.tapCount - 1) * tapAmount // no cheating
+        x.lpTokenBalance * lpTokenPrice
     }))
     .orderByDescending(x => x.totalLUSDValue);
 
