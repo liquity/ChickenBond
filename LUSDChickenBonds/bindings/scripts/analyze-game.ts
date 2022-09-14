@@ -249,8 +249,7 @@ const main = async () => {
       .then(x => 1 / x),
     bLUSDCurvePool
       .get_dy(0, 1, Decimal.ONE.hex, { blockTag: toBlock })
-      .then(numberify)
-      .then(x => 1 / x),
+      .then(numberify),
     bLUSDCurvePool.lp_price({ blockTag: toBlock }).then(numberify),
     chickenBondManager.calcSystemBackingRatio({ blockTag: toBlock }).then(numberify),
     chickenBondManager.getPendingLUSD({ blockTag: toBlock }).then(numberify),
