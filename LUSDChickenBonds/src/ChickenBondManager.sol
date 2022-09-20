@@ -299,7 +299,10 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         bytes32 r, 
         bytes32 s
     ) external returns (uint256) {
-        lusdToken.permit(owner, address(this), amount, deadline, v, r, s);
+        // LCB-10: don't call permit if the user already has the required amount permitted
+        if (lusdToken.allowance(owner, address(this)) < amount) {
+            lusdToken.permit(owner, address(this), amount, deadline, v, r, s);
+        }
         return createBond(amount);
     }
 

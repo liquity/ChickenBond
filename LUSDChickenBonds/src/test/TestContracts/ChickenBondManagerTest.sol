@@ -2483,4 +2483,43 @@ contract ChickenBondManagerTest is BaseTest {
 
         assertEq(activeBondsAfter, activeBondsBefore + 1);
     }
+
+    function testCreateBondWithPermitStillSucceedsAfterSignatureFrontrun() public {
+        uint256 bondAmount = 100e18;
+        uint256 activeBondsBefore = chickenBondManager.getOpenBondCount();
+        address owner = accountsList[0];
+        address spender = address(chickenBondManager);
+        uint256 deadline = block.timestamp + 100;
+        uint256 nonce = lusdToken.nonces(owner);
+
+        bytes32 permitStructHash = keccak256(
+            abi.encode(
+                lusdToken.permitTypeHash(),
+                owner,
+                spender,
+                bondAmount,
+                nonce,
+                deadline
+            )
+        );
+
+        bytes32 permitDigest = keccak256(
+            abi.encodePacked("\x19\x01", lusdToken.domainSeparator(), permitStructHash)
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(accounts.accountsPks(0), permitDigest);
+        
+        // Frontrun the owner's createBondWithPermit txn and use their signature to try and block
+        // the createBondWithPermit txn from succeeding
+        address notOwner = accountsList[1];
+        vm.prank(notOwner);
+        lusdToken.permit(owner, spender, bondAmount, deadline, v, r, s);
+
+        vm.prank(owner);
+        chickenBondManager.createBondWithPermit(owner, bondAmount, deadline, v, r, s);
+        
+        uint256 activeBondsAfter = chickenBondManager.getOpenBondCount();
+
+        assertEq(activeBondsAfter, activeBondsBefore + 1);
+    }
 }
