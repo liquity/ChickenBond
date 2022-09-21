@@ -2451,12 +2451,8 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(openBondsCount, 0);
     }
 
-    function testCreateBondWithPermit() public {
-        uint256 bondAmount = 100e18;
-        uint256 activeBondsBefore = chickenBondManager.getOpenBondCount();
-        address owner = accountsList[0];
+    function _createPermitSignature(address owner, uint256 bondAmount, uint256 deadline) internal returns (uint8, bytes32, bytes32) {
         address spender = address(chickenBondManager);
-        uint256 deadline = block.timestamp + 100;
         uint256 nonce = lusdToken.nonces(owner);
 
         bytes32 permitStructHash = keccak256(
@@ -2475,51 +2471,92 @@ contract ChickenBondManagerTest is BaseTest {
         );
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(accounts.accountsPks(0), permitDigest);
-        
+
+        return (v, r, s);
+    }
+
+    function _createBondWithPermit(address owner, uint256 bondAmount, uint256 deadline) internal returns (uint256) {
+        (uint8 v, bytes32 r, bytes32 s) = _createPermitSignature(owner, bondAmount, deadline);
         vm.prank(owner);
         chickenBondManager.createBondWithPermit(owner, bondAmount, deadline, v, r, s);
-        
+        vm.stopPrank();
+
+        uint256 bondID = bondNFT.totalSupply();
+        return bondID;
+    }
+
+    function testCreateBondWithPermit() public {
+        address owner = accountsList[0];
+        uint256 bondAmount = 100e18;
+        uint256 deadline = block.timestamp + 100;
+
+        uint256 activeBondsBefore = chickenBondManager.getOpenBondCount();
+        _createBondWithPermit(owner, bondAmount, deadline);
         uint256 activeBondsAfter = chickenBondManager.getOpenBondCount();
 
         assertEq(activeBondsAfter, activeBondsBefore + 1);
     }
 
     function testCreateBondWithPermitStillSucceedsAfterSignatureFrontrun() public {
-        uint256 bondAmount = 100e18;
-        uint256 activeBondsBefore = chickenBondManager.getOpenBondCount();
         address owner = accountsList[0];
-        address spender = address(chickenBondManager);
+        uint256 bondAmount = 100e18;
         uint256 deadline = block.timestamp + 100;
-        uint256 nonce = lusdToken.nonces(owner);
 
-        bytes32 permitStructHash = keccak256(
-            abi.encode(
-                lusdToken.permitTypeHash(),
-                owner,
-                spender,
-                bondAmount,
-                nonce,
-                deadline
-            )
-        );
+        uint256 activeBondsBefore = chickenBondManager.getOpenBondCount();
 
-        bytes32 permitDigest = keccak256(
-            abi.encodePacked("\x19\x01", lusdToken.domainSeparator(), permitStructHash)
-        );
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(accounts.accountsPks(0), permitDigest);
-        
         // Frontrun the owner's createBondWithPermit txn and use their signature to try and block
         // the createBondWithPermit txn from succeeding
+        (uint8 v, bytes32 r, bytes32 s) = _createPermitSignature(owner, bondAmount, deadline);
         address notOwner = accountsList[1];
+        assertEq(lusdToken.allowance(owner, address(chickenBondManager)), 0, "Initial allowance should be zero");
         vm.prank(notOwner);
-        lusdToken.permit(owner, spender, bondAmount, deadline, v, r, s);
+        lusdToken.permit(owner, address(chickenBondManager), bondAmount, deadline, v, r, s);
+        vm.stopPrank();
+        assertEq(lusdToken.allowance(owner, address(chickenBondManager)), bondAmount, "Allowance after permit should be bond amount");
 
-        vm.prank(owner);
-        chickenBondManager.createBondWithPermit(owner, bondAmount, deadline, v, r, s);
-        
+        _createBondWithPermit(owner, bondAmount, deadline);
         uint256 activeBondsAfter = chickenBondManager.getOpenBondCount();
 
         assertEq(activeBondsAfter, activeBondsBefore + 1);
+    }
+
+    function testCreateBondWithPermitCanChickenOut() public {
+        address owner = accountsList[0];
+        uint256 bondAmount = 100e18;
+        uint256 deadline = block.timestamp + 100;
+
+        uint256 bondID = _createBondWithPermit(owner, bondAmount, deadline);
+        assertEq(chickenBondManager.getOpenBondCount(), 1);
+
+        vm.warp(block.timestamp + 30 days);
+        vm.prank(owner);
+        chickenBondManager.chickenOut(bondID, 0);
+        vm.stopPrank();
+
+        assertEq(chickenBondManager.getOpenBondCount(), 0);
+    }
+
+    function testCreateBondWithPermitCanChickenIn() public {
+        address owner = accountsList[0];
+        uint256 bondAmount = 100e18;
+        uint256 deadline = block.timestamp + 100;
+
+        uint256 bondID = _createBondWithPermit(owner, bondAmount, deadline);
+        assertEq(chickenBondManager.getOpenBondCount(), 1);
+
+        vm.warp(block.timestamp + 30 days);
+        // Check bLUSD balance is zero
+        uint256 bLUSDBalance = bLUSDToken.balanceOf(owner);
+        assertEq(bLUSDBalance, 0);
+
+        vm.prank(owner);
+        chickenBondManager.chickenIn(bondID);
+        vm.stopPrank();
+
+        // Check bLUSD balance is not zero
+        bLUSDBalance = bLUSDToken.balanceOf(owner);
+        assertGt(bLUSDBalance, 0);
+
+        assertEq(chickenBondManager.getOpenBondCount(), 0);
     }
 }
