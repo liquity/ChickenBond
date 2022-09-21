@@ -2479,7 +2479,6 @@ contract ChickenBondManagerTest is BaseTest {
         (uint8 v, bytes32 r, bytes32 s) = _createPermitSignature(owner, bondAmount, deadline);
         vm.prank(owner);
         chickenBondManager.createBondWithPermit(owner, bondAmount, deadline, v, r, s);
-        vm.stopPrank();
 
         uint256 bondID = bondNFT.totalSupply();
         return bondID;
@@ -2511,7 +2510,6 @@ contract ChickenBondManagerTest is BaseTest {
         assertEq(lusdToken.allowance(owner, address(chickenBondManager)), 0, "Initial allowance should be zero");
         vm.prank(notOwner);
         lusdToken.permit(owner, address(chickenBondManager), bondAmount, deadline, v, r, s);
-        vm.stopPrank();
         assertEq(lusdToken.allowance(owner, address(chickenBondManager)), bondAmount, "Allowance after permit should be bond amount");
 
         _createBondWithPermit(owner, bondAmount, deadline);
@@ -2531,7 +2529,6 @@ contract ChickenBondManagerTest is BaseTest {
         vm.warp(block.timestamp + 30 days);
         vm.prank(owner);
         chickenBondManager.chickenOut(bondID, 0);
-        vm.stopPrank();
 
         assertEq(chickenBondManager.getOpenBondCount(), 0);
     }
@@ -2551,7 +2548,6 @@ contract ChickenBondManagerTest is BaseTest {
 
         vm.prank(owner);
         chickenBondManager.chickenIn(bondID);
-        vm.stopPrank();
 
         // Check bLUSD balance is not zero
         bLUSDBalance = bLUSDToken.balanceOf(owner);
