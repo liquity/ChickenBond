@@ -15,6 +15,7 @@ import TestnetYearnVault from "../../out/TestnetYearnVault.sol/TestnetYearnVault
 import BLUSDToken from "../../out/BLUSDToken.sol/BLUSDToken.json";
 import TestnetCurveLiquidityGauge from "../../out/TestnetCurveLiquidityGauge.sol/TestnetCurveLiquidityGauge.json";
 import Prankster from "../../out/Prankster.sol/Prankster.json";
+import Underling from "../../out/Underling.sol/Underling.json";
 import ERC20 from "../../out/ERC20.sol/ERC20.json";
 import MockTroveManager from "../../out/MockTroveManager.sol/MockTroveManager.json";
 import MockLQTYStaking from "../../out/MockLQTYStaking.sol/MockLQTYStaking.json";
@@ -180,6 +181,7 @@ const contractArtifacts = Object.entries({
   BLUSDToken,
   TestnetCurveLiquidityGauge,
   Prankster,
+  Underling,
   ERC20,
   MockTroveManager,
   MockLQTYStaking,

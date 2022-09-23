@@ -31,7 +31,11 @@ contract ERC20Faucet is IMinter, ERC20, Ownable {
     }
 
     function _requireNotRecentlyTapped() internal view returns (uint256 timeNow) {
-        timeNow = block.timestamp / tapPeriod;
-        require(timeNow > lastTapped[msg.sender], "ERC20Faucet: must wait before tapping again");
+        timeNow = block.timestamp;
+
+        require(
+            timeNow >= lastTapped[msg.sender] + tapPeriod,
+            "ERC20Faucet: must wait before tapping again"
+        );
     }
 }

@@ -6,7 +6,9 @@ import { Wallet } from "@ethersproject/wallet";
 import { Decimal, Decimalish } from "@liquity/lib-base";
 
 import {
+  ChickenBondManager,
   connectToContracts,
+  CurveCryptoSwap2ETH,
   deployAndSetupContracts,
   deployNFTArtwork,
   LUSDChickenBondContracts,
@@ -102,6 +104,9 @@ export interface LUSDChickenBondGlobalFunctions {
   swapBLUSD(amount?: number): Promise<void>;
 
   harvest(): Promise<void>;
+  spawn(n: number): Promise<void>;
+  whip(nOrIndices: number | number[]): Promise<void>;
+  numUnderlings(): Promise<number>;
 
   trace(txHash: string): Promise<unknown>;
   warp(timestamp: number): Promise<unknown>;
@@ -141,6 +146,45 @@ const sequence = (
 
 const numberifyBigNumber = (bn: BigNumber) => bn.toNumber();
 const numberifyDecimal = (bn: BigNumber) => Number(Decimal.fromBigNumberString(bn.toHexString()));
+
+const getMarketPrice = async (bLUSDCurvePool: CurveCryptoSwap2ETH) => {
+  try {
+    return numberifyDecimal(await bLUSDCurvePool.get_dy(0, 1, Decimal.ONE.hex));
+  } catch {
+    return 1 / numberifyDecimal(await bLUSDCurvePool.price_oracle());
+  }
+};
+
+const getSqrtEffLambda = async (
+  bLUSDCurvePool: CurveCryptoSwap2ETH,
+  chickenBondManager: ChickenBondManager
+) => {
+  const [marketPrice, redemptionPrice, chickenInFee] = await Promise.all([
+    getMarketPrice(bLUSDCurvePool),
+    chickenBondManager.calcSystemBackingRatio().then(numberifyDecimal),
+    chickenBondManager.CHICKEN_IN_AMM_FEE().then(numberifyDecimal)
+  ]);
+
+  const lambda = marketPrice / redemptionPrice;
+  const effLambda = lambda * (1 - chickenInFee);
+
+  return Math.sqrt(effLambda);
+};
+
+const randInt = (ceil: number) => Math.floor(ceil * Math.random());
+
+const permute = (n: number) => {
+  const arr = [...new Array<number>(n).keys()];
+
+  for (let i = 0; i < n - 1; i++) {
+    const j = i + randInt(n - i);
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+
+  return arr;
+};
 
 export const getLUSDChickenBondGlobalFunctions = (
   globalObj: LUSDChickenBondGlobals,
@@ -395,7 +439,8 @@ export const getLUSDChickenBondGlobalFunctions = (
     };
   },
 
-  spot: () => globalObj.contracts.bLUSDCurvePool.get_dy(0, 1, 1).then(numberifyDecimal),
+  spot: () =>
+    globalObj.contracts.bLUSDCurvePool.get_dy(0, 1, Decimal.ONE.hex).then(numberifyDecimal),
 
   async deposit(bLUSDAmount, lusdAmount) {
     const { lusdToken, bLUSDToken, bLUSDCurvePool } = globalObj.contracts;
@@ -461,6 +506,37 @@ export const getLUSDChickenBondGlobalFunctions = (
   async harvest() {
     await receipt(() => globalObj.contracts.prankster.harvest())();
   },
+
+  async spawn(n) {
+    const tx = await receipt(() => globalObj.contracts.prankster.spawn(n))();
+    console.log("gas used:", tx.gasUsed.toNumber());
+  },
+
+  async whip(nOrIndices) {
+    const { bLUSDCurvePool, chickenBondManager, prankster } = globalObj.contracts;
+
+    const [numUnderlings, sqrtEffLambda] = await Promise.all([
+      prankster.numUnderlings(),
+      getSqrtEffLambda(bLUSDCurvePool, chickenBondManager)
+    ]);
+
+    const indices =
+      typeof nOrIndices === "number"
+        ? permute(numUnderlings.toNumber()).slice(0, nOrIndices)
+        : nOrIndices;
+
+    // const gasEstimate = await prankster.estimateGas.whip(indices, Decimal.from(sqrtEffLambda).hex);
+
+    const tx = await receipt(() =>
+      prankster.whip(indices, Decimal.from(sqrtEffLambda).hex, {
+        gasLimit: 8000000
+      })
+    )();
+
+    console.log("gas used:", tx.gasUsed.toNumber(), "tx:", tx.transactionHash);
+  },
+
+  numUnderlings: () => globalObj.contracts.prankster.numUnderlings().then(numberifyBigNumber),
 
   trace: txHash => provider.send("trace_transaction", [txHash]),
   warp: timestamp => provider.send("evm_setNextBlockTimestamp", [timestamp]),

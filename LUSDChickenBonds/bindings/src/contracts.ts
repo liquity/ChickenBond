@@ -14,6 +14,7 @@ import testnetYearnVault from "../artifacts/TestnetYearnVault.json";
 import bLUSDToken from "../artifacts/BLUSDToken.json";
 import testnetCurveLiquidityGauge from "../artifacts/TestnetCurveLiquidityGauge.json";
 import prankster from "../artifacts/Prankster.json";
+import underling from "../artifacts/Underling.json";
 import erc20 from "../artifacts/ERC20.json";
 import mockTroveManager from "../artifacts/MockTroveManager.json";
 import mockLQTYStaking from "../artifacts/MockLQTYStaking.json";
@@ -37,6 +38,7 @@ import {
   BLUSDTokenFactory,
   TestnetCurveLiquidityGaugeFactory,
   PranksterFactory,
+  UnderlingFactory,
   MockTroveManagerFactory,
   ERC20Factory,
   MockLQTYStakingFactory,
@@ -124,6 +126,11 @@ export interface LUSDChickenBondContractFactories {
   prankster: {
     contractName: "Prankster";
     factory: PranksterFactory;
+  };
+
+  underlingPrototype: {
+    contractName: "Underling";
+    factory: UnderlingFactory;
   };
 
   troveManager: {
@@ -232,6 +239,7 @@ const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   bammSPVault: checkArtifact("TestnetBAMM", testnetBAMM),
   yearnRegistry: checkArtifact("MockYearnRegistry", mockYearnRegistry),
   prankster: checkArtifact("Prankster", prankster),
+  underlingPrototype: checkArtifact("Underling", underling),
   troveManager: checkArtifact("MockTroveManager", mockTroveManager),
   lqtyToken: checkArtifact("ERC20", erc20),
   lqtyStaking: checkArtifact("MockLQTYStaking", mockLQTYStaking),
