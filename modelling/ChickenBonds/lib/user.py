@@ -8,6 +8,7 @@ class User():
         self.lp = False
         self.seller = False
         self.trader = False
+        self.buy_price = 0
 
     def __str__(self):
         bond_string = ""

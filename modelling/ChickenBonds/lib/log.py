@@ -20,7 +20,7 @@ def log_system(chicken, tester):
 
     print("")
     print(f"Fair price:      {tester.get_fair_price(chicken):,.2f}")
-    print(f"Accrual param:   {tester.accrual_param:,.2f}")
+    print(f"Accrual param:   {tester.accrual_param:,.6f}")
     print(f"Rebond Time:     {tester.get_rebond_time(chicken):,.2f}")
     print(f"Chicken in Time: {tester.get_optimal_apr_chicken_in_time(chicken):,.2f}")
     return
@@ -39,6 +39,7 @@ def log_btkn_amm(chicken):
     log_amm_pool(chicken.btkn_amm, "bTKN AMM")
     print(f" - {chicken.btkn_amm.token_A.symbol} Fees: {chicken.btkn_amm.fees_accrued_A:,.2f}")
     print(f" - {chicken.btkn_amm.token_B.symbol} Fees: {chicken.btkn_amm.fees_accrued_B:,.2f}")
+    print(f" - {chicken.btkn_amm.lp_token.symbol} Fees: {chicken.btkn_amm.fees_accrued_LP:,.2f}")
     print(f" - AMM APR: {chicken.amm_iteration_apr:.3%}")
     return
 
@@ -100,6 +101,24 @@ def log_performance(chicken, chicks):
     print(f" - LPs avg gain:       {total_lps / (NUM_LPS * INITIAL_AMOUNT) - 1 :.3%}")
     print(f" - Sellers avg gain:   {total_sellers / (NUM_SELLERS * INITIAL_AMOUNT) - 1 :.3%}")
     print(f" - Traders avg gain:   {total_traders / (NUM_TRADERS * INITIAL_AMOUNT) - 1 :.3%}")
+
+    # Total LQTY
+    total_lqty = reduce(
+        lambda total, chick: total + chicken.token.balance_of(chick.account),
+        chicks,
+        0
+    )
+    total_lqty += chicken.pending_token_balance()
+    total_lqty += chicken.reserve_token_balance()
+    total_lqty += chicken.amm.get_value_in_token_A_of(chicken.reserve_account)
+    total_lqty += chicken.token.balance_of(chicken.btkn_amm.pool_account)
+    total_lqty += chicken.token.balance_of(chicken.btkn_amm.rewards.account)
+    print("")
+    print(f" - Total LQTY:         {total_lqty:,.2f}")
+    #print(f" - Yield generated:    {total_lqty / (NUM_CHICKS * INITIAL_AMOUNT) - 1:.3%}")
+
+
+
     return
 
 def log_state(chicken, chicks, tester, log_level=1, iteration=0):
@@ -108,7 +127,7 @@ def log_state(chicken, chicks, tester, log_level=1, iteration=0):
     print(f"\n\033[31m  --> Iteration {iteration}")
     print("  -------------------\033[0m\n")
     log_system(chicken, tester)
-    log_amm(chicken)
+    #log_amm(chicken)
     log_btkn_amm(chicken)
     #log_chicks(chicken, chicks)
     log_performance(chicken, chicks)

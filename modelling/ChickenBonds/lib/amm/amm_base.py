@@ -13,6 +13,8 @@ class AmmBase():
         self.fee = fee
         self.fees_accrued_A = 0.0
         self.fees_accrued_B = 0.0
+        self.fees_accrued_LP = 0.0
+        self.block_timestamp = 0 # for AMM time weighted oracle
 
     def __str__(self):
         return f"\n - {self.token_A.symbol} amount: {self.token_A.balance_of(self.pool_account):,.2f}" + \
@@ -59,6 +61,11 @@ class AmmBase():
         A_balance = self.token_A_balance_of(account)
         B_balance = self.token_B_balance_of(account)
         return self.convert_to_B(A_balance, B_balance)
+    def get_lp_value_in_token_A(self, lp_amount):
+        if self.get_total_liquidity() == 0:
+            return 0
+        A_value = self.get_value_in_token_A()
+        return A_value * lp_amount / self.get_total_liquidity()
 
     def token_A_to_liquidity(self, amount):
         return amount * self.get_total_liquidity() / self.token_A_balance()
@@ -252,3 +259,7 @@ class AmmBase():
 
     def get_accrued_fees_in_token_B(self):
         return self.convert_to_B(self.fees_accrued_A, self.fees_accrued_B)
+
+    # for AMM time weighted oracle
+    def set_block_timestamp(self, iteration):
+        self.block_timestamp = iteration * 86400
