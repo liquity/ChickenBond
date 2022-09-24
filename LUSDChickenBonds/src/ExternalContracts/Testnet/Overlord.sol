@@ -118,8 +118,8 @@ contract Overlord {
                     } else if (m < 5) { // 4 in 20 (20%)
                         _addLiquidity(underling);
                     } else {
-                        // "Only" tolerate 5% slippage (LOL)
-                        _sellBLUSD(underling, _startingPrice * 95 / 100);
+                        // Only tolerate 1% slippage
+                        _sellBLUSD(underling, _startingPrice * 99 / 100);
                     }
 
                     _createBond(underling);
@@ -132,8 +132,9 @@ contract Overlord {
     }
 
     function _createBond(Underling _underling) internal {
-        uint256 minLUSDAmount = chickenBondManager.MIN_BOND_AMOUNT();
         uint256 lusdBalance = lusdToken.balanceOf(address(_underling));
+        uint256 minLUSDAmount = chickenBondManager.MIN_BOND_AMOUNT();
+        uint256 maxLUSDAmount = Math.max(lusdBalance / 2, minLUSDAmount);
 
         if (lusdBalance < minLUSDAmount) {
             return;
@@ -145,19 +146,28 @@ contract Overlord {
             _underling
         )));
 
+
         uint256 lusdAmount =
             minLUSDAmount +
-            (lusdBalance - minLUSDAmount) * uint128(rand) / type(uint128).max;
+            (maxLUSDAmount - minLUSDAmount) * uint128(rand) / type(uint128).max;
 
         _underling.createBond(lusdAmount);
     }
 
     function _addLiquidity(Underling _underling) internal {
         uint256 bLUSDBalance = bLUSDToken.balanceOf(address(_underling));
-        uint256 balancedLUSD = bLUSDBalance * bLUSDCurvePool.price_scale() / 1e18;
-        uint256 clampedLUSD = Math.min(balancedLUSD, lusdToken.balanceOf(address(_underling)));
+        uint256 lusdBalance = lusdToken.balanceOf(address(_underling));
+        uint256 priceScale = bLUSDCurvePool.price_scale();
+        uint256 balancedLUSD = bLUSDBalance * 1e18 / priceScale;
 
-        try _underling.addLiquidity(bLUSDBalance, clampedLUSD) {} catch {}
+        if (balancedLUSD <= lusdBalance) {
+            try _underling.addLiquidity(bLUSDBalance, balancedLUSD) {} catch {}
+        } else {
+            // balancedLUSD > lusdBalance
+            // => bLUSDBalance * 1e18 / priceScale > lusdBalance
+            // => bLUSDBalance > lusdBalance * priceScale / 1e18
+            try _underling.addLiquidity(lusdBalance * priceScale / 1e18, lusdBalance) {} catch {}
+        }
     }
 
     function _sellBLUSD(Underling _underling, uint256 _minExchangeRate) internal {
