@@ -77,7 +77,10 @@ const main = async () => {
   await prankster.whip(
     permute(numUnderlings.toNumber()).slice(0, 10),
     Decimal.from(sqrtEffLambda).hex,
-    { nonce: txCount + 1 }
+    {
+      gasLimit: 8000000,
+      nonce: txCount + 1
+    }
   );
 };
 
