@@ -112,24 +112,30 @@ contract BondNFT is ERC721Enumerable, Ownable, IBondNFT {
     function setFinalExtraData(address _bonder, uint256 _tokenID, uint256 _permanentSeed) external returns (uint80) {
         requireCallerIsChickenBondsManager();
 
+        // let’s build the struct first in memory
+        BondExtraData memory tmpBondExtraData = idToBondExtraData[_tokenID];
+
         uint80 newDna = getHalfDna(_tokenID, _permanentSeed);
-        idToBondExtraData[_tokenID].finalHalfDna = newDna;
+        tmpBondExtraData.finalHalfDna = newDna;
 
         // Liquity Data
         // Trove
-        idToBondExtraData[_tokenID].troveSize = _uint256ToUint32(troveManager.getTroveDebt(_bonder));
+        tmpBondExtraData.troveSize = _uint256ToUint32(troveManager.getTroveDebt(_bonder));
         // LQTY
         uint256 pickleLQTYAmount;
         if (pickleLQTYJar.totalSupply() > 0) {
             pickleLQTYAmount = (pickleLQTYJar.balanceOf(_bonder) + pickleLQTYFarm.balanceOf(_bonder)) * pickleLQTYJar.getRatio();
         }
-        idToBondExtraData[_tokenID].lqtyAmount = _uint256ToUint32(
+        tmpBondExtraData.lqtyAmount = _uint256ToUint32(
             lqtyToken.balanceOf(_bonder) + lqtyStaking.stakes(_bonder) + pickleLQTYAmount
         );
         // Curve Gauge votes
         (uint256 curveLUSD3CRVGaugeSlope,,) = curveGaugeController.vote_user_slopes(_bonder, curveLUSD3CRVGauge);
         (uint256 curveLUSDFRAXGaugeSlope,,) = curveGaugeController.vote_user_slopes(_bonder, curveLUSDFRAXGauge);
-        idToBondExtraData[_tokenID].curveGaugeSlopes = _uint256ToUint32((curveLUSD3CRVGaugeSlope + curveLUSDFRAXGaugeSlope) * CURVE_GAUGE_SLOPES_PRECISION);
+        tmpBondExtraData.curveGaugeSlopes = _uint256ToUint32((curveLUSD3CRVGaugeSlope + curveLUSDFRAXGaugeSlope) * CURVE_GAUGE_SLOPES_PRECISION);
+
+        // finally copy from memory to storage
+        idToBondExtraData[_tokenID] = tmpBondExtraData;
 
         return newDna;
     }
