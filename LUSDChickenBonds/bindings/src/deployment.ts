@@ -315,21 +315,36 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const underlingPrototype = await this.deployContract(
+      factories.underlingPrototype,
+      chickenBondManager.contract.address,
+      lusdToken.contract.address,
+      bLUSDToken.contract.address,
+      bLUSDCurvePoolAddress,
+      overrides
+    );
+
     const prankster = await this.deployContract(
       factories.prankster,
-      lusdToken.contract.address,
-      [
-        {
-          apr: params.harvesterBAMMAPR,
-          receiver: bammSPVault.contract.address
-        },
-        {
-          apr: params.harvesterCurveAPR,
-          receiver: curvePool.contract.address
-        }
-      ],
-      chickenBondManager.contract.address,
-      curvePool.contract.address,
+      {
+        yieldTargets: [
+          {
+            apr: params.harvesterBAMMAPR,
+            receiver: bammSPVault.contract.address
+          },
+          {
+            apr: params.harvesterCurveAPR,
+            receiver: curvePool.contract.address
+          }
+        ],
+        underlingPrototype: underlingPrototype.contract.address,
+        curvePoolAddress: curvePool.contract.address,
+        lusdTokenAddress: lusdToken.contract.address,
+        bLUSDTokenAddress: bLUSDToken.contract.address,
+        chickenBondManagerAddress: chickenBondManager.contract.address,
+        bondNFTAddress: bondNFT.contract.address,
+        bLUSDCurvePoolAddress: bLUSDCurvePoolAddress
+      },
       overrides
     );
 
@@ -348,6 +363,7 @@ class LUSDChickenBondDeployment {
       bammSPVault,
       yearnRegistry,
       prankster,
+      underlingPrototype,
       troveManager,
       lqtyToken,
       lqtyStaking,

@@ -55,11 +55,11 @@ const REDEMPTION_MINUTE_DECAY = 0.5 ** (60 / DAY.div(2).toNumber());
 
 export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   targetAverageAgeSeconds: DAY.mul(24),
-  initialAccrualParameter: DAY.mul(10).mul(ONE),
-  minimumAccrualParameter: DAY.mul(10).mul(ONE).div(1000),
+  initialAccrualParameter: DAY.mul(7).mul(ONE),
+  minimumAccrualParameter: DAY.mul(7).mul(ONE).div(1000),
   accrualAdjustmentRate: ONE.div(100),
   accrualAdjustmentPeriodSeconds: DAY,
-  chickenInAMMFee: ONE.div(10),
+  chickenInAMMFee: ONE.div(20),
   curveDepositDydxThreshold: ONE,
   curveWithdrawalDxdyThreshold: ONE,
   bootstrapPeriodChickenIn: DAY.mul(24),
@@ -76,18 +76,16 @@ export const defaultConfig: Readonly<LUSDChickenBondConfig> = {
   yearnGovernanceAddress: AddressZero,
 
   // bLUSD:LUSD pool params (Curve v2)
-  // Used the FXS:cvxFXS as a baseline:
-  // https://etherscan.io/address/0xd658a338613198204dca1143ac3f01a722b5d94a#readContract
-  bLUSDPoolA: BigNumber.from(200000000),
-  bLUSDPoolGamma: bnFromDecimal(0.0199),
-  bLUSDPoolMidFee: curvePercent(0.15),
-  bLUSDPoolOutFee: curvePercent(0.3),
-  bLUSDPoolAllowedExtraProfit: bnFromDecimal(0.0000000001),
-  bLUSDPoolFeeGamma: bnFromDecimal(0.005),
-  bLUSDPoolAdjustmentStep: bnFromDecimal(0.0000055),
+  bLUSDPoolA: BigNumber.from(400000),
+  bLUSDPoolGamma: bnFromDecimal(0.000145),
+  bLUSDPoolMidFee: curvePercent(0.26),
+  bLUSDPoolOutFee: curvePercent(0.45),
+  bLUSDPoolAllowedExtraProfit: bnFromDecimal(0.000002),
+  bLUSDPoolFeeGamma: bnFromDecimal(0.00023),
+  bLUSDPoolAdjustmentStep: bnFromDecimal(0.000146),
   bLUSDPoolAdminFee: curvePercent(50),
-  bLUSDPoolMAHalfTime: BigNumber.from(600), // seconds
-  bLUSDPoolInitialPrice: bnFromDecimal(1 / 2), // (LUSD price / bLUSD price)
+  bLUSDPoolMAHalfTime: BigNumber.from(600).div(SPEED), // seconds
+  bLUSDPoolInitialPrice: bnFromDecimal(1 / 1.5), // (LUSD price / bLUSD price)
 
   // Testnet-specific params
   realSecondsPerFakeDay: DAY.toNumber(),
