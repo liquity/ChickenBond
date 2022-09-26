@@ -38,7 +38,7 @@ jobs:
         run: >-
           forge test
           -vvv
-          --match-contract '(ChickenBondManagerDev|BondNFT)'
+          --match-contract '(ChickenBondManagerDev|BondNFT|GenerativeEggArtwork)'
 
   mainnet-test:
     name: Mainnet tests
