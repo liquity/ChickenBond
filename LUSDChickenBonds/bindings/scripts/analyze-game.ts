@@ -132,6 +132,88 @@ provider.chainId = goerli.chainId;
 const { lusdToken, bLUSDToken, bLUSDCurveToken, bondNFT, chickenBondManager, bLUSDCurvePool } =
   connectToContracts(provider, goerli.addresses);
 
+const getLpTokenPrice = (
+  curvePoolLUSDBalance: number,
+  curvePoolBLUSDBalance: number,
+  lpTotalSupply: number,
+  bLUSDPrice: number
+) => (curvePoolLUSDBalance + curvePoolBLUSDBalance * bLUSDPrice) / lpTotalSupply;
+
+
+const calculatePortfolios = (
+  bonds: { tokenID: number; bonder: string; active: number; chickenedIn: number; chickenedOut: number; bondAmount: number; accruedBLUSD: number; }[],
+  mints: IEnumerable<{ minter: string; count: number; }>,
+  bLUSDPrice: number,
+  lpTokenPrice: number,
+  suffix: string,
+  tapAmount: number,
+  lusdBalances: IEnumerable<{ holder: string; balance: number; }>,
+  bLUSDBalances: IEnumerable<{ holder: string; balance: number; }>,
+  lpTokenBalances: IEnumerable<{ holder: string; balance: number; }>,
+) => {
+  const bonders = Enumerable.from(bonds).groupBy(
+    x => x.bonder,
+    id,
+    (bonder, x) => ({
+      bonder,
+      numBonds: x.count(),
+      numActiveBonds: x.sum(x => x.active),
+      numChickenedInBonds: x.sum(x => x.chickenedIn),
+      numChickenedOutBonds: x.sum(x => x.chickenedOut),
+      pendingLUSDValue: x.sum(x => x.active
+        ? Math.max(x.bondAmount, x.accruedBLUSD * bLUSDPrice)
+        : 0)
+    })
+  );
+
+  const portfolios = bonders
+    .join(
+      mints,
+      x => x.bonder,
+      mint => mint.minter,
+      (x, mint) => ({ ...x, tapCount: mint.count })
+    )
+    .join(
+      lusdBalances,
+      x => x.bonder,
+      lusd => lusd.holder,
+      (x, lusd) => ({ ...x, lusdBalance: lusd.balance - (x.tapCount - 1) * tapAmount /* no cheating */})
+    )
+    .groupJoin(
+      bLUSDBalances,
+      x => x.bonder,
+      bLUSD => bLUSD.holder,
+      (x, bLUSD) =>
+        bLUSD
+          .select(bLUSD => bLUSD.balance)
+          .defaultIfEmpty(0)
+          .select(bLUSDBalance => ({ ...x, bLUSDBalance }))
+    )
+    .selectMany(id)
+    .groupJoin(
+      lpTokenBalances,
+      x => x.bonder,
+      lpToken => lpToken.holder,
+      (x, lpToken) =>
+        lpToken
+          .select(lpToken => lpToken.balance)
+          .defaultIfEmpty(0)
+          .select(lpTokenBalance => ({ ...x, lpTokenBalance }))
+    )
+    .selectMany(id)
+    .select(x => ({
+      ...x,
+      totalLUSDValue:
+        x.lusdBalance +
+        x.pendingLUSDValue +
+        x.bLUSDBalance * bLUSDPrice +
+        x.lpTokenBalance * lpTokenPrice
+    }))
+    .orderByDescending(x => x.totalLUSDValue);
+
+  toCsv(portfolios.toArray(), `tmp/portfolios_${suffix}.csv`);
+};
+
 const main = async () => {
   const lusdTransfers = await provider
     .getLogs({ ...lusdToken.filters.Transfer(), fromBlock, toBlock })
@@ -151,8 +233,9 @@ const main = async () => {
   const [
     tapAmount,
     bondSupply,
-    bLUSDPrice,
-    lpTokenPrice,
+    bLUSDOraclePrice,
+    bLUSDSpotPrice,
+    lpTokenPoolPrice,
     backingRatio,
     pendingLUSD,
     acquiredLUSD,
@@ -164,6 +247,9 @@ const main = async () => {
       .price_oracle({ blockTag: toBlock })
       .then(numberify)
       .then(x => 1 / x),
+    bLUSDCurvePool
+      .get_dy(0, 1, Decimal.ONE.hex, { blockTag: toBlock })
+      .then(numberify),
     bLUSDCurvePool.lp_price({ blockTag: toBlock }).then(numberify),
     chickenBondManager.calcSystemBackingRatio({ blockTag: toBlock }).then(numberify),
     chickenBondManager.getPendingLUSD({ blockTag: toBlock }).then(numberify),
@@ -185,25 +271,10 @@ const main = async () => {
           active: bondData.status === BondStatus.Active ? 1 : 0,
           chickenedIn: bondData.status === BondStatus.ChickenedIn ? 1 : 0,
           chickenedOut: bondData.status === BondStatus.ChickenedOut ? 1 : 0,
-          pendingLUSDValue:
-            bondData.status === BondStatus.Active
-              ? Math.max(numberify(bondData.lusdAmount), numberify(accruedBLUSD) * bLUSDPrice)
-              : 0
+          bondAmount: numberify(bondData.lusdAmount),
+          accruedBLUSD: numberify(accruedBLUSD)
         }))
       )
-  );
-
-  const bonders = Enumerable.from(bonds).groupBy(
-    x => x.bonder,
-    id,
-    (bonder, x) => ({
-      bonder,
-      numBonds: x.count(),
-      numActiveBonds: x.sum(x => x.active),
-      numChickenedInBonds: x.sum(x => x.chickenedIn),
-      numChickenedOutBonds: x.sum(x => x.chickenedOut),
-      pendingLUSDValue: x.sum(x => x.pendingLUSDValue)
-    })
   );
 
   const lusdBalances = getBalances(lusdTransfers);
@@ -229,53 +300,59 @@ const main = async () => {
       (minter, mint) => ({ minter, count: mint.count() })
     );
 
-  const portfolios = bonders
-    .join(
-      lusdBalances,
-      x => x.bonder,
-      lusd => lusd.holder,
-      (x, lusd) => ({ ...x, lusdBalance: lusd.balance })
-    )
-    .groupJoin(
-      bLUSDBalances,
-      x => x.bonder,
-      bLUSD => bLUSD.holder,
-      (x, bLUSD) =>
-        bLUSD
-          .select(bLUSD => bLUSD.balance)
-          .defaultIfEmpty(0)
-          .select(bLUSDBalance => ({ ...x, bLUSDBalance }))
-    )
-    .selectMany(id)
-    .groupJoin(
-      lpTokenBalances,
-      x => x.bonder,
-      lpToken => lpToken.holder,
-      (x, lpToken) =>
-        lpToken
-          .select(lpToken => lpToken.balance)
-          .defaultIfEmpty(0)
-          .select(lpTokenBalance => ({ ...x, lpTokenBalance }))
-    )
-    .selectMany(id)
-    .join(
-      mints,
-      x => x.bonder,
-      mint => mint.minter,
-      (x, mint) => ({ ...x, tapCount: mint.count })
-    )
-    .select(x => ({
-      ...x,
-      totalLUSDValue:
-        x.lusdBalance +
-        x.pendingLUSDValue +
-        x.bLUSDBalance * bLUSDPrice +
-        x.lpTokenBalance * lpTokenPrice -
-        (x.tapCount - 1) * tapAmount // no cheating
-    }))
-    .orderByDescending(x => x.totalLUSDValue);
+  const curvePoolLUSDBalance = await lusdToken.balanceOf(bLUSDCurvePool.address ,{ blockTag: toBlock }).then(numberify)
+  const curvePoolBLUSDBalance = await bLUSDToken.balanceOf(bLUSDCurvePool.address ,{ blockTag: toBlock }).then(numberify)
+  const lpTotalSupply = await bLUSDCurveToken.totalSupply({ blockTag: toBlock }).then(numberify)
 
-  toCsv(portfolios.toArray(), "tmp/portfolios.csv");
+  const lpTokenOraclePrice = getLpTokenPrice(curvePoolLUSDBalance, curvePoolBLUSDBalance, lpTotalSupply, bLUSDOraclePrice);
+  const lpTokenSpotPrice = getLpTokenPrice(curvePoolLUSDBalance, curvePoolBLUSDBalance, lpTotalSupply, bLUSDSpotPrice);
+  const lpTokenRedemptionPrice = getLpTokenPrice(curvePoolLUSDBalance, curvePoolBLUSDBalance, lpTotalSupply, backingRatio);
+
+  calculatePortfolios(
+    bonds,
+    mints,
+    bLUSDOraclePrice,
+    lpTokenPoolPrice,
+    "original",
+    tapAmount,
+    lusdBalances,
+    bLUSDBalances,
+    lpTokenBalances
+  );
+
+  calculatePortfolios(
+    bonds,
+    mints,
+    bLUSDOraclePrice,
+    lpTokenOraclePrice,
+    "oracle",
+    tapAmount,
+    lusdBalances,
+    bLUSDBalances,
+    lpTokenBalances
+  );
+  calculatePortfolios(
+    bonds,
+    mints,
+    bLUSDSpotPrice,
+    lpTokenSpotPrice,
+    "spot",
+    tapAmount,
+    lusdBalances,
+    bLUSDBalances,
+    lpTokenBalances
+  );
+  calculatePortfolios(
+    bonds,
+    mints,
+    backingRatio,
+    lpTokenRedemptionPrice,
+    "redemption",
+    tapAmount,
+    lusdBalances,
+    bLUSDBalances,
+    lpTokenBalances
+  );
 
   const contractLUSDBalances = Enumerable.from(goerli.addresses)
     .select(x => ({
@@ -332,21 +409,27 @@ const main = async () => {
       bLUSDBalance: x.bLUSDBalance
     }));
 
-  toCsv(contractBalances.toArray(), "tmp/contracts.csv");
+  toCsv(contractBalances.toArray(), `tmp/contracts.csv`);
 
   fs.writeFileSync(
     "tmp/stats.csv",
     Object.entries({
-      bLUSDPrice,
-      lpTokenPrice,
+      bLUSDOraclePrice,
+      bLUSDSpotPrice,
+      lpTokenPoolPrice,
+      lpTokenOraclePrice,
+      lpTokenSpotPrice,
+      lpTokenRedemptionPrice,
       backingRatio,
       pendingLUSD,
       acquiredLUSD,
-      permanentLUSD
+      permanentLUSD,
+      lpTotalSupply
     })
       .map(row => row.join(","))
       .join("\n")
   );
+
 };
 
 main().catch(err => {
