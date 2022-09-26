@@ -3,3 +3,4 @@
 /artifacts
 /src/generated
 /tmp
+.env
