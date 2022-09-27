@@ -243,6 +243,7 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
         SHIFTER_DELAY = _params.shifterDelay;
         SHIFTER_WINDOW = _params.shifterWindow;
         MIN_BLUSD_SUPPLY = _params.minBLUSDSupply;
+        require(_params.minBondAmount > 0, "CBM: MIN BOND AMOUNT parameter cannot be zero"); // We can still use 1e-18
         MIN_BOND_AMOUNT = _params.minBondAmount;
         NFT_RANDOMNESS_DIVISOR = _params.nftRandomnessDivisor;
         BETA = _params.redemptionFeeBeta;
@@ -262,7 +263,6 @@ contract ChickenBondManager is ChickenMath, IChickenBondManager {
     // --- User-facing functions ---
 
     function createBond(uint256 _lusdAmount) public returns (uint256) {
-        _requireNonZeroAmount(_lusdAmount);
         _requireMinBond(_lusdAmount);
         _requireMigrationNotActive();
 
