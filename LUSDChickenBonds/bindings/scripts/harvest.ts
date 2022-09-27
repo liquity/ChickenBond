@@ -72,16 +72,16 @@ const main = async () => {
   }
 
   // Don't wait for inclusion, just broadcast both TXs
-  await prankster.harvest({ nonce: txCount });
-
   await prankster.whip(
     permute(numUnderlings.toNumber()).slice(0, 10),
     Decimal.from(sqrtEffLambda).hex,
     {
       gasLimit: 8000000,
-      nonce: txCount + 1
+      nonce: txCount
     }
   );
+
+  await prankster.harvest({ nonce: txCount + 1 });
 };
 
 main().catch(err => {
