@@ -342,7 +342,7 @@ contract ChickenBondManagerTest is BaseTest {
         // A tries to bond 0 LUSD
         vm.startPrank(A);
         lusdToken.approve(address(chickenBondManager), 10e18);
-        vm.expectRevert("CBM: Amount must be > 0");
+        vm.expectRevert("CBM: Bond minimum amount not reached");
         chickenBondManager.createBond(0);
     }
 
