@@ -9,6 +9,8 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 RESET_COLOR='\033[0m'
 
+ZERO_ADDRESS=0x0000000000000000000000000000000000000000
+
 # Script arguments - can also be set as env variables (arguments take precedence over env)
 #  - 1) Ethereum RPC URL
 #  - 2) Deployer private key
@@ -185,6 +187,18 @@ cast_send_wrapper() {
     echo ""
 }
 
+# 1: target contract
+# 2: function signature
+# 3: function arguments
+cast_call_wrapper() {
+    set +e
+    CALL_RESULT=$(cast call $1 $2 $3 \
+         --rpc-url $ETH_RPC_URL \
+         --private-key $DEPLOYER_PRIVATE_KEY)
+    CALL_STATUS=$?
+    set -e
+}
+
 # --- Deployments ---
 
 # Deploy BLUSDToken contract
@@ -282,8 +296,20 @@ cast_send_wrapper \
     "add_reward(address,address,address)" \
     "$BLUSD_AMM_STAKING_ADDRESS $MAINNET_LUSD_TOKEN_ADDRESS $CHICKEN_BOND_MANAGER_ADDRESS"
 
-echo "Connecting ChickenBondManager to BAMM..."
-cast_send_wrapper $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS "setChicken(address)" "$CHICKEN_BOND_MANAGER_ADDRESS"
+echo "Checking if BAMM is already initialized..."
+cast_call_wrapper $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS "chicken()(address)" ""
+if [[ $CALL_STATUS == 0 && $CALL_RESULT == $ZERO_ADDRESS ]]; then
+    echo "Checking if we are owner of BAMM..."
+    cast_call_wrapper $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS "isOwner()(bool)" ""
+    if [[ $CALL_STATUS == 0 && $CALL_RESULT == true ]]; then
+        echo "Connecting ChickenBondManager to BAMM..."
+        cast_send_wrapper $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS "setChicken(address)" "$CHICKEN_BOND_MANAGER_ADDRESS"
+    else
+        echo -e "Not owning B.AMM. Skipping connection to CBM..."
+    fi
+else
+    echo -e "B.AMM already connected to CBM. Skipping..."
+fi
 
 echo -e "${GREEN}Finished.\n"
 echo -e "${RESET_COLOR}"
