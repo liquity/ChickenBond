@@ -45,7 +45,7 @@ contract ChickenBondManagerMainnetOnlyTest is BaseTest, MainnetTestSetup {
         _generateCurveRevenue();
 
         // harvest from both strategies in the vault
-        for (uint256 i = 0; i < 2; i++) {
+        for (uint256 i = 1; i < 2; i++) {
             // get strategy
             address strategy = yearnCurveVault.withdrawalQueue(i);
             // get keeper
