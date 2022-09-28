@@ -96,26 +96,14 @@ DEPLOYMENT_ADDRESSES=''
 deploy_contract() {
     echo "Deploying $1..."
 
-    if [[ -z $2 ]]; then
-        # TODO make it work for non zero args:
-        # ${2:+"--constructor-args $2"}
-        RESULT=$(
-            forge create ./src/$5$1.sol:$1 \
-                  --private-key $DEPLOYER_PRIVATE_KEY \
-                  --rpc-url $ETH_RPC_URL \
-                  ${PRIORITY_GAS_PRICE:+--priority-gas-price $PRIORITY_GAS_PRICE} \
-                  ${ETHERSCAN_API_KEY:+--etherscan-api-key $ETHERSCAN_API_KEY --verify}
-              )
-    else
-        RESULT=$(
-            forge create ./src/$5$1.sol:$1 \
-                  --private-key $DEPLOYER_PRIVATE_KEY \
-                  --rpc-url $ETH_RPC_URL \
-                  ${PRIORITY_GAS_PRICE:+--priority-gas-price $PRIORITY_GAS_PRICE} \
-                  ${ETHERSCAN_API_KEY:+--etherscan-api-key $ETHERSCAN_API_KEY --verify} \
-                  --constructor-args $2
-              )
-    fi
+    RESULT=$(
+        forge create "./src/$5$1.sol:$1" \
+              --private-key $DEPLOYER_PRIVATE_KEY \
+              --rpc-url $ETH_RPC_URL \
+              ${PRIORITY_GAS_PRICE:+--priority-gas-price $PRIORITY_GAS_PRICE} \
+              ${ETHERSCAN_API_KEY:+--etherscan-api-key $ETHERSCAN_API_KEY --verify} \
+              ${2:+--constructor-args $2}
+          )
 
     DEPLOYED_ADDRESS=$(echo $RESULT | sed -nr 's/.* Deployed to: (0x\w+) .*$/\1/p')
     TX_HASH=$(echo $RESULT | sed -nr 's/.* Transaction hash: (0x\w+)$/\1/p')
@@ -126,10 +114,13 @@ deploy_contract() {
     GAS_USED=$(echo $RECEIPT | sed -nr 's/.* gasUsed ([0-9]+) .*$/\1/p')
 
     # Check deployment
-    cast call $DEPLOYED_ADDRESS $3 --rpc-url $ETH_RPC_URL > /dev/null || {
-        echo -e "\n${RED}Failed to deploy $1 contract."
-        exit 1
-    }
+    if [[ ! -z $3 ]]; then
+        echo cast call $DEPLOYED_ADDRESS $3 --rpc-url $ETH_RPC_URL
+        cast call $DEPLOYED_ADDRESS $3 --rpc-url $ETH_RPC_URL > /dev/null || {
+            echo -e "\n${RED}Failed to deploy $1 contract."
+            exit 1
+        }
+    fi
 
     DEPLOYMENT_ADDRESSES="$DEPLOYMENT_ADDRESSES \"$4\": \"$DEPLOYED_ADDRESS\","
 
@@ -203,22 +194,8 @@ deploy_contract "BLUSDToken" "$constructor_args" "owner()(address)" "BLUSD_TOKEN
 BLUSD_TOKEN_ADDRESS=$DEPLOYED_ADDRESS
 
 # Deploy Egg NFT artwork
-
-# TODO!
-
-#deploy_contract "GenerativeEggArtwork" "" "owner()(address)" "BOND_NFT_INITIAL_ARTWORK_ADDRESS" "NFTArtwork/"
-#BOND_NFT_INITIAL_ARTWORK_ADDRESS=$DEPLOYED_ADDRESS
-
-RESULT=$(forge create ./src/NFTArtwork/GenerativeEggArtwork.sol:GenerativeEggArtwork --private-key $DEPLOYER_PRIVATE_KEY --rpc-url $ETH_RPC_URL ${PRIORITY_GAS_PRICE:+--priority-gas-price $PRIORITY_GAS_PRICE} ${ETHERSCAN_API_KEY:+--etherscan-api-key $ETHERSCAN_API_KEY --verify})
-BOND_NFT_INITIAL_ARTWORK_ADDRESS=$(echo $RESULT | sed -nr 's/.* Deployed to: (0x\w+) .*$/\1/p')
-DEPLOYMENT_ADDRESSES="$DEPLOYMENT_ADDRESSES \"BOND_NFT_INITIAL_ARTWORK_ADDRESS\": \"$BOND_NFT_INITIAL_ARTWORK_ADDRESS\","
-TX_HASH=$(echo $RESULT | sed -nr 's/.* Transaction hash: (0x\w+)$/\1/p')
-RECEIPT=$(cast receipt $TX_HASH)
-GAS_USED=$(echo $RECEIPT | sed -nr 's/.* gasUsed ([0-9]+) .*$/\1/p')
-echo -e Artwork address: $BOND_NFT_INITIAL_ARTWORK_ADDRESS
-echo -e "Tx hash: $TX_HASH"
-echo -e "Gas used: $GAS_USED"
-echo ""
+deploy_contract "GenerativeEggArtwork" "" "" "BOND_NFT_INITIAL_ARTWORK_ADDRESS" "NFTArtwork/"
+BOND_NFT_INITIAL_ARTWORK_ADDRESS=$DEPLOYED_ADDRESS
 
 # Deploy BondNFT contract
 LIQUITY_DATA_ADDRESSES="(\
