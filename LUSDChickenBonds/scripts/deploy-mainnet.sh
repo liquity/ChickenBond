@@ -11,6 +11,9 @@ RESET_COLOR='\033[0m'
 
 ZERO_ADDRESS=0x0000000000000000000000000000000000000000
 
+ENV_FILE="config/.env"
+[[ -f $ENV_FILE ]] && source $ENV_FILE
+
 # Script arguments - can also be set as env variables (arguments take precedence over env)
 #  - 1) Ethereum RPC URL
 #  - 2) Deployer private key
