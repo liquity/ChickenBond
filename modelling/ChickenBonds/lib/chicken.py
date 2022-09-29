@@ -111,11 +111,13 @@ class Chicken():
         if btkn_amount == 0 or self.btkn.total_supply == 0:
             return 0
         token_amount = self.reserve_token_balance() * btkn_amount / self.btkn.total_supply
+        #print(f"[redeem] token amount: {token_amount:,.2f}")
+        #print(f"[redeem] bTKN amount:  {btkn_amount:,.2f}")
 
         # burn
         self.btkn.burn(user.account, btkn_amount)
         # transfer
-        self.token.transfer(self.reserve_account, user.account, btkn_amount)
+        self.token.transfer(self.reserve_account, user.account, token_amount)
 
         return token_amount
 
