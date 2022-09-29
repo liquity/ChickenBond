@@ -16,7 +16,24 @@ def deploy():
     lqty = Token('LQTY')
     blqty = Token('bLQTY')
 
-    chicken = Chicken(coll, lqty, blqty, "Pending", "RESERVE", "AMM", AMM_FEE, "bTKN_AMM", AMM_FEE, "Rewards", REWARDS_PERIOD)
+    chicken = Chicken(
+        coll, lqty, blqty,
+        "Pending", "RESERVE",
+        "AMM", AMM_FEE,
+        "bTKN_AMM", AMM_FEE,
+        "Rewards", REWARDS_PERIOD,
+        # Curve V2:
+        CURVE_V2_A,
+        CURVE_V2_GAMMA,
+        CURVE_V2_MID_FEE,
+        CURVE_V2_OUT_FEE,
+        CURVE_V2_ALLOWED_EXTRA_PROFIT,
+        CURVE_V2_FEE_GAMMA,
+        CURVE_V2_ADJUSTMENT_STEP,
+        CURVE_V2_ADMIN_FEE,
+        CURVE_V2_MA_HALF_TIME,
+        CURVE_V2_INITIAL_PRICE
+    )
 
     chicks = list(map(lambda chick: User(f"chick_{chick:02}"), range(NUM_CHICKS)))
     # Initial CHICK balance
@@ -29,6 +46,8 @@ def main(tester):
     if not os.path.exists("images"):
         os.mkdir("images")
 
+    #print(f"alpha: {INITIAL_ACCRUAL_PARAM}")
+
     chicken, chicks = deploy()
 
     controller = AsymmetricController(
@@ -40,6 +59,7 @@ def main(tester):
     natural_rate = INITIAL_NATURAL_RATE
     accrued_fees_A = 0
     accrued_fees_B = 0
+    accrued_fees_LP = 0
 
     print(f"\n  --> Model: {tester.name}")
     print('  ------------------------------------------------------\n')
@@ -49,9 +69,12 @@ def main(tester):
 
     for iteration in range(ITERATIONS):
         #print(f"\n  --> Iteration: {iteration}")
+
+        chicken.btkn_amm.set_block_timestamp(iteration)
+
         natural_rate = tester.get_natural_rate(natural_rate, iteration)
-        chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B = get_amm_iteration_apr(
-            chicken.btkn_amm, accrued_fees_A, accrued_fees_B
+        chicken.amm_iteration_apr, accrued_fees_A, accrued_fees_B, accrued_fees_LP = get_amm_iteration_apr(
+            chicken.btkn_amm, accrued_fees_A, accrued_fees_B, accrued_fees_LP
         )
         chicken.amm_average_apr = get_amm_average_apr(data, iteration)
         #print(f"AMM iteration APR: {chicken.amm_iteration_apr:.3%}")
@@ -65,13 +88,16 @@ def main(tester):
         tester.bond(chicken, chicks, iteration)
 
         # Users chicken in and out
-        tester.update_chicken(chicken, chicks, data, iteration)
+        tester.update_chicken(chicken, chicks, data, iteration, LOG_LEVEL > 0)
 
         # Arbitrage bTKN
-        tester.arbitrage_btkn(chicken, chicks, iteration)
+        tester.arbitrage_btkn(chicken, chicks, iteration, LOG_LEVEL > 0)
 
-        # Buy bTKN (speculation is price is low)
-        tester.buy_btkn(chicken, chicks)
+        # Buy bTKN (speculation if price is low)
+        tester.buy_btkn(chicken, chicks, LOG_LEVEL > 0)
+
+        # Sell bTKN (speculation if they are making gains)
+        tester.sell_btkn(chicken, chicks, LOG_LEVEL > 0)
 
         # Controller feedback
         avg_age = tester.get_avg_outstanding_bond_age(chicks, iteration)
@@ -91,6 +117,8 @@ def main(tester):
         data = data.append(new_row, ignore_index=True)
 
         if PLOTS_INTERVAL[1] > 0 and iteration >= PLOTS_INTERVAL[1]:
+            break
+        if chicken.btkn_amm.get_token_B_price() > 100:
             break
 
     plot_interval = PLOTS_INTERVAL[:]

@@ -1,8 +1,26 @@
 from lib.amm.uniswap import *
-from lib.amm.amm_mock_price import *
+from lib.amm.curvev2 import *
 
 class Chicken():
-    def __init__(self, coll_token, token, btkn, pending_account, reserve_account, amm_account, amm_fee, btkn_amm_account, btkn_amm_fee, rewards_account, rewards_period):
+    def __init__(
+            self,
+            coll_token, token, btkn,
+            pending_account, reserve_account,
+            amm_account, amm_fee,
+            btkn_amm_account, btkn_amm_fee,
+            rewards_account, rewards_period,
+            # Curve V2:
+            A,
+            gamma,
+            mid_fee,
+            out_fee,
+            allowed_extra_profit,
+            fee_gamma,
+            adjustment_step,
+            admin_fee,
+            ma_half_time,
+            initial_price
+    ):
         self.coll_token = coll_token
         self.token = token
         self.btkn = btkn
@@ -14,7 +32,22 @@ class Chicken():
         #self.amm = ConstantPricePool(amm_account, token, btkn, amm_fee)
         #self.amm = StableSwapPool(amm_account, token, btkn, amm_fee, amplification_factor)
         #self.btkn_amm = AmmMockPrice(btkn_amm_account, token, btkn, btkn_amm_fee)
-        self.btkn_amm = UniswapPool(btkn_amm_account, token, btkn, btkn_amm_fee, rewards_account, rewards_period)
+        #self.btkn_amm = UniswapPool(btkn_amm_account, token, btkn, btkn_amm_fee, rewards_account, rewards_period)
+        self.btkn_amm = CurveV2Pool(
+            btkn_amm_account,
+            token, btkn,
+            rewards_account, rewards_period,
+            A,
+            gamma,
+            mid_fee,
+            out_fee,
+            allowed_extra_profit,
+            fee_gamma,
+            adjustment_step,
+            admin_fee,
+            ma_half_time,
+            initial_price
+        )
 
         self.amm_iteration_apr = 0.0
         self.amm_average_apr = 0.0
@@ -51,7 +84,8 @@ class Chicken():
         user.bond_amount = user.bond_amount - chicken_in_fee_amount
 
         # Transfer chicken in fee amount
-        self.token.transfer(self.pending_account, self.btkn_amm.rewards.account, chicken_in_fee_amount)
+        if hasattr(self.btkn_amm, "rewards"):
+            self.token.transfer(self.pending_account, self.btkn_amm.rewards.account, chicken_in_fee_amount)
 
         # Reduce claimable amount proportionally
         claimable_btkn_amount = claimable_btkn_amount * (1 - chicken_in_amm_fee)
@@ -77,11 +111,13 @@ class Chicken():
         if btkn_amount == 0 or self.btkn.total_supply == 0:
             return 0
         token_amount = self.reserve_token_balance() * btkn_amount / self.btkn.total_supply
+        #print(f"[redeem] token amount: {token_amount:,.2f}")
+        #print(f"[redeem] bTKN amount:  {btkn_amount:,.2f}")
 
         # burn
         self.btkn.burn(user.account, btkn_amount)
         # transfer
-        self.token.transfer(self.reserve_account, user.account, btkn_amount)
+        self.token.transfer(self.reserve_account, user.account, token_amount)
 
         return token_amount
 
