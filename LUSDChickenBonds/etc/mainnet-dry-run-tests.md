@@ -10,6 +10,27 @@
     "CHICKEN_BOND_MANAGER_ADDRESS": "0x89058630b53228aDCC77690586cFb3C74F08803C"
 }
 ```
+# Deployment transactions
+
+[bLUSD token](https://etherscan.io/tx/0xd91dbd25e042cfc0e696c97ef5804daca210a84f5efd504667a8738c7b4200f6)
+
+[Egg NFT artwork](https://etherscan.io/tx/0x1c0e5b0c382a3e0b51da78d43c2eba6ef19e6335ecc98f74936a1347e9a3d3b2)
+
+[BondNFT](https://etherscan.io/tx/0xbf96fbf9e1cc7b6c51c9312c230ab1c8f04c8f51a41df98f4c25ba403005f944)
+
+[bLUSD/LUSD Curve pool](https://etherscan.io/tx/0x122fdfa62f3e097e106995ec430671f1a064e645959de3a8d71c01f241a4574b)
+
+[bLUSD/LUSD Gauge](https://etherscan.io/tx/0xaf07a32220f00356d1618a8c6360d5a7a6d25bdc29ba1cd0f8d8a21bea18b713)
+
+[ChickenBondManager](https://etherscan.io/tx/0x56f088f6737acbb158d9609563144090c51c8781cc1f9c807a1c06265e2767cd)
+
+[Connect BondNFT to ChickenBondManager](https://etherscan.io/tx/0xc4251d2694b70f54d6655a3fdfb2c6efe2bd6f0fcff87d409b13e3f6b951dcf8)
+
+[Connect bLUSD to ChickenBondManager](https://etherscan.io/tx/0x878af4938b53de72d5c9083664abad2c002164bf58051ebc63661cc50581b6d2)
+
+[Add reward to Gauge](https://etherscan.io/tx/0xd01058df8f293d989a9718265dca699ef7f2070f4ec836029a2e3ae5b721d07d)
+
+[Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/0xe5375bafd8dce35541228ae14e0f209164eeb9eed9160984b799d3055e822b13)
 
 # Tests
 
