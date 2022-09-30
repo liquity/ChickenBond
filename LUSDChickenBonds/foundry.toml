@@ -9,4 +9,6 @@ optimizer_runs = 500
 # Needed to make `deployCode("BAMM.sol:BAMM", ...)` work in MainnetTestSetup
 fs_permissions = [{ access = "read", path = "out/BAMM.sol/BAMM.json" }]
 
+gas_reports = ["ChickenBondManager", "ChickenBondManagerWrap"]
+
 # See more config options https://github.com/gakonst/foundry/tree/master/config
