@@ -52,7 +52,9 @@ enum BondStatus {
 }
 
 const fromBlock = manifest.startBlock;
-const toBlock = "latest";
+const toBlock = 7680311;
+const speed = 24;
+const oneWeek = (7 * 24 * 60 * 60) / speed;
 
 // const contractAddresses = new Set(Object.values(goerli.addresses));
 
@@ -110,67 +112,39 @@ const getBalances = (
     );
 };
 
-// const getBalanceHistories = (
-//   transfers: IEnumerable<{
-//     blockNumber: number;
-//     args: {
-//       from: string;
-//       to: string;
-//       value: BigNumber;
-//     };
-//   }>
-// ) => {
-//   const t = transfers
-//     .select(x => ({
-//       block: x.blockNumber,
-//       from: x.args.from,
-//       to: x.args.to,
-//       value: numberify(x.args.value)
-//     }))
-//     .orderBy(x => x.block);
+const distributeLPReward = (
+  currLPReward: number,
+  prevRemainingLPReward: number,
+  prevLPRewardAllocations: Partial<Record<string, number>>,
+  prevLPShares: Partial<Record<string, number>>,
+  timeSinceLastReward: number
+) => {
+  const rewardPaidOut = (prevRemainingLPReward * Math.min(timeSinceLastReward, oneWeek)) / oneWeek;
 
-//   return t
-//     .select(x => ({
-//       block: x.block,
-//       holder: x.from,
-//       balanceChange: -x.value
-//     }))
-//     .merge(
-//       t.select(x => ({
-//         block: x.block,
-//         holder: x.to,
-//         balanceChange: x.value
-//       }))
-//     )
-//     .groupBy(
-//       x => x.holder,
-//       id,
-//       (holder, x) =>
-//         x.groupBy(
-//           x => x.block,
-//           x => x.balanceChange,
-//           (block, balanceChange) => ({
-//             block,
-//             holder,
-//             balanceChange: balanceChange.sum()
-//           })
-//         )
-//     ).toArray();
-// };
+  return {
+    lpRewardAllocations: Object.fromEntries(
+      Object.entries(prevLPShares).map(([address, prevLPShare]) => [
+        address,
+        (prevLPRewardAllocations[address] ?? 0) + (prevLPShare ?? 0) * rewardPaidOut
+      ])
+    ),
+    remainingLPReward: prevRemainingLPReward - rewardPaidOut + currLPReward
+  };
+};
 
 const rpcUrl: string = process.env.RPC_URL || panic("No RPC_URL in env");
 const provider = new BatchedJsonRpcProvider(rpcUrl);
 provider.chainId = manifest.chainId;
 
-const { lusdToken, bLUSDToken, bLUSDCurveToken, bondNFT, chickenBondManager, bLUSDCurvePool } =
-  connectToContracts(provider, manifest.addresses);
-
-const getLpTokenProportionalWithdrawalValue = (
-  curvePoolLUSDBalance: number,
-  curvePoolBLUSDBalance: number,
-  lpTotalSupply: number,
-  bLUSDPrice: number
-) => (curvePoolLUSDBalance + curvePoolBLUSDBalance * bLUSDPrice) / lpTotalSupply;
+const {
+  lusdToken,
+  bLUSDToken,
+  bLUSDCurveToken,
+  bondNFT,
+  chickenBondManager,
+  bLUSDCurvePool,
+  curveLiquidityGauge
+} = connectToContracts(provider, manifest.addresses);
 
 const main = async () => {
   const lusdTransfers = await provider
@@ -190,6 +164,7 @@ const main = async () => {
 
   const [
     tapAmount,
+    bLUSDSupply,
     bondSupply,
     bLUSDOraclePrice,
     bLUSDSpotPrice,
@@ -202,7 +177,8 @@ const main = async () => {
     acquiredLUSD,
     permanentLUSD
   ] = await Promise.all([
-    lusdToken.tapAmount({ blockTag: toBlock }).then(numberify),
+    lusdToken.tapAmount({ blockTag: toBlock }),
+    bLUSDToken.totalSupply({ blockTag: toBlock }).then(numberify),
     bondNFT.totalSupply({ blockTag: toBlock }),
     bLUSDCurvePool
       .price_oracle({ blockTag: toBlock })
@@ -253,37 +229,127 @@ const main = async () => {
     }))
   );
 
-  const mints = lusdTransfers
-    .select(x => x.args)
-    .where(x => x.from === AddressZero)
-    .groupBy(
-      x => x.to,
-      id,
-      (minter, mint) => ({ minter, count: mint.count() })
+  const lpShares = lpTokenTransfers
+    .select(x => ({
+      block: x.blockNumber,
+      index: x.logIndex,
+      from: x.args._from,
+      to: x.args._to,
+      value: numberify(x.args._value)
+    }))
+    .where(x => x.value !== 0)
+    .scan(
+      {
+        block: 0,
+        index: 0,
+        lpSupply: 0,
+        lpBalances: {} as Partial<Record<string, number>>
+      },
+      ({ lpSupply, lpBalances }, { block, index, ...x }) => ({
+        block,
+        index,
+        lpSupply:
+          lpSupply + (x.from === AddressZero ? x.value : x.to === AddressZero ? -x.value : 0),
+        lpBalances: {
+          ...lpBalances,
+          ...(x.from !== AddressZero ? { [x.from]: (lpBalances[x.from] ?? 0) - x.value } : {}),
+          ...(x.to !== AddressZero ? { [x.to]: (lpBalances[x.to] ?? 0) + x.value } : {})
+        }
+      })
+    )
+    .select(({ lpSupply, lpBalances, ...x }) => ({
+      ...x,
+      lpShares: Object.fromEntries(
+        Object.entries(lpBalances).map(([address, balance]) => [address, (balance ?? 0) / lpSupply])
+      ) as Partial<Record<string, number>>
+    }));
+
+  const lpRewards = lusdTransfers
+    .where(
+      x => x.args.from === chickenBondManager.address && x.args.to === curveLiquidityGauge.address
+    )
+    .select(x => ({
+      block: x.blockNumber,
+      index: x.logIndex,
+      lpReward: numberify(x.args.value)
+    }));
+
+  const blocks = lpShares
+    .select(x => x.block)
+    .union(lpRewards.select(x => x.block))
+    .toArray();
+
+  const blockTimestamps = await Promise.all(blocks.map(block => provider.getBlock(block)))
+    .then(blocks => blocks.map(block => ({ block: block.number, timestamp: block.timestamp })))
+    .then(toEnumerable);
+
+  const {
+    lpRewardAllocations,
+    remainingLPReward,
+    lpShares: finalLPShares
+  } = (
+    lpShares as IEnumerable<{
+      block: number;
+      index: number;
+      lpShares?: Partial<Record<string, number>>;
+      lpReward?: number;
+    }>
+  )
+    .concat(lpRewards)
+    .orderBy(x => x.block)
+    .thenBy(x => x.index)
+    .join(
+      blockTimestamps,
+      x => x.block,
+      block => block.block,
+      (x, { timestamp }) => ({ ...x, timestamp })
+    )
+    .aggregate(
+      {
+        timestamp: 0,
+        lpShares: {} as Partial<Record<string, number>>,
+        lpRewardAllocations: {} as Partial<Record<string, number>>,
+        remainingLPReward: 0
+      },
+      (prev, curr) => ({
+        timestamp: curr.timestamp,
+        lpShares: curr.lpShares ?? prev.lpShares,
+
+        ...distributeLPReward(
+          curr.lpReward ?? 0,
+          prev.remainingLPReward,
+          prev.lpRewardAllocations,
+          prev.lpShares,
+          curr.timestamp - prev.timestamp
+        )
+      })
     );
 
-  const bonders = Enumerable.from(bonds)
-    .groupBy(
-      x => x.bonder,
+  const players = lusdTransfers
+    .where(x => x.args.from === AddressZero && x.args.value.eq(tapAmount))
+    .select(x => x.args.to)
+    .groupJoin(
+      Enumerable.from(bonds),
       id,
-      (bonder, x) => ({
-        bonder,
-        numBonds: x.count(),
-        numActiveBonds: x.sum(x => x.active),
-        numChickenedInBonds: x.sum(x => x.chickenedIn),
-        numChickenedOutBonds: x.sum(x => x.chickenedOut),
-        activeBonds: x.where(x => !!x.active)
+      x => x.bonder,
+      (player, bonds) => ({
+        player,
+        numBonds: bonds.count(),
+        numActiveBonds: bonds.sum(x => x.active),
+        numChickenedInBonds: bonds.sum(x => x.chickenedIn),
+        numChickenedOutBonds: bonds.sum(x => x.chickenedOut),
+        activeBonds: bonds.where(x => !!x.active)
       })
     )
     .join(
       lusdBalances,
-      x => x.bonder,
+      x => x.player,
       lusd => lusd.holder,
       (x, lusd) => ({ ...x, lusdBalance: lusd.balance })
     )
     .groupJoin(
       bLUSDBalances,
-      x => x.bonder,
+      x => x.player,
       bLUSD => bLUSD.holder,
       (x, bLUSD) =>
         bLUSD
@@ -294,7 +360,7 @@ const main = async () => {
     .selectMany(id)
     .groupJoin(
       lpTokenBalances,
-      x => x.bonder,
+      x => x.player,
       lpToken => lpToken.holder,
       (x, lpToken) =>
         lpToken
@@ -303,36 +369,14 @@ const main = async () => {
           .select(lpTokenBalance => ({ ...x, lpTokenBalance }))
     )
     .selectMany(id)
-    .join(
-      mints,
-      x => x.bonder,
-      mint => mint.minter,
-      (x, mint) => ({ ...x, tapCount: mint.count })
-    );
-
-  const lpTokenOraclePrice = getLpTokenProportionalWithdrawalValue(
-    curvePoolLUSDBalance,
-    curvePoolBLUSDBalance,
-    lpTotalSupply,
-    bLUSDOraclePrice
-  );
-
-  const lpTokenSpotPrice = getLpTokenProportionalWithdrawalValue(
-    curvePoolLUSDBalance,
-    curvePoolBLUSDBalance,
-    lpTotalSupply,
-    bLUSDSpotPrice
-  );
-
-  const lpTokenRedemptionPrice = getLpTokenProportionalWithdrawalValue(
-    curvePoolLUSDBalance,
-    curvePoolBLUSDBalance,
-    lpTotalSupply,
-    backingRatio
-  );
+    .select(x => ({
+      ...x,
+      lpReward:
+        (lpRewardAllocations[x.player] ?? 0) + (finalLPShares[x.player] ?? 0) * remainingLPReward
+    }));
 
   const calculatePortfolios = (suffix: string, bLUSDPrice: number, lpTokenPrice: number) => {
-    const portfolios = bonders
+    const portfolios = players
       .select(({ activeBonds, ...x }) => ({
         ...x,
         pendingLUSDValue: activeBonds.sum(x => Math.max(x.bondAmount, x.accruedBLUSD * bLUSDPrice))
@@ -343,17 +387,29 @@ const main = async () => {
           x.lusdBalance +
           x.pendingLUSDValue +
           x.bLUSDBalance * bLUSDPrice +
-          x.lpTokenBalance * lpTokenPrice -
-          (x.tapCount - 1) * tapAmount // no cheating
+          x.lpTokenBalance * lpTokenPrice +
+          x.lpReward
       }))
       .orderByDescending(x => x.totalLUSDValue);
 
     toCsv(portfolios.toArray(), `tmp/portfolios_${suffix}.csv`);
   };
 
-  calculatePortfolios("original", bLUSDOraclePrice, lpTokenPoolPrice * bLUSDOraclePrice);
+  const bLUSDMigrationPrice = (acquiredLUSD + permanentLUSD) / bLUSDSupply;
+  const lpTokenOriginalPrice = lpTokenPoolPrice * bLUSDOraclePrice;
+
+  const getLpTokenProportionalWithdrawalValue = (bLUSDPrice: number) =>
+    (curvePoolLUSDBalance + curvePoolBLUSDBalance * bLUSDPrice) / lpTotalSupply;
+
+  const lpTokenOraclePrice = getLpTokenProportionalWithdrawalValue(bLUSDOraclePrice);
+  const lpTokenSpotPrice = getLpTokenProportionalWithdrawalValue(bLUSDSpotPrice);
+  const lpTokenMigrationPrice = getLpTokenProportionalWithdrawalValue(bLUSDMigrationPrice);
+  const lpTokenRedemptionPrice = getLpTokenProportionalWithdrawalValue(backingRatio);
+
+  calculatePortfolios("original", bLUSDOraclePrice, lpTokenOriginalPrice);
   calculatePortfolios("oracle", bLUSDOraclePrice, lpTokenOraclePrice);
   calculatePortfolios("spot", bLUSDSpotPrice, lpTokenSpotPrice);
+  calculatePortfolios("migration", bLUSDMigrationPrice, lpTokenMigrationPrice);
   calculatePortfolios("redemption", backingRatio, lpTokenRedemptionPrice);
 
   const contractLUSDBalances = Enumerable.from(manifest.addresses)
@@ -418,9 +474,10 @@ const main = async () => {
     Object.entries({
       bLUSDOraclePrice,
       bLUSDSpotPrice,
-      lpTokenPoolPrice,
+      lpTokenOriginalPrice,
       lpTokenOraclePrice,
       lpTokenSpotPrice,
+      lpTokenMigrationPrice,
       lpTokenRedemptionPrice,
       backingRatio,
       pendingLUSD,
