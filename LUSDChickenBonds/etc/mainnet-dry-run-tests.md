@@ -76,5 +76,10 @@
 
 [Deposit LP tokens to Gauge](https://etherscan.io/tx/0x58b4c63f70b076ae44fdbaaa4b1d01dbf5c6258355972de0997e27528ee84bd2)
 
+Earning rewards from Gauge:
+
+![Screenshot_20220930_183354](https://user-images.githubusercontent.com/701095/193317481-00cda2a9-9cf8-4a8b-a9e6-213ac0e0d26a.png)
+
+
 TODO:
 migration
