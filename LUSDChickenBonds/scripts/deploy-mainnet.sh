@@ -72,6 +72,9 @@ echo CONFIG_FILE: $CONFIG_FILE
 echo OUTPUT_FILE: $OUTPUT_FILE
 echo ""
 
+read -p "Do you want to proceed? (y/n) " proceed
+[[ $proceed == "y" ]] || exit 1
+
 # Load addresses and constructor arguments
 source $CONFIG_FILE
 
