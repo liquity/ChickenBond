@@ -283,11 +283,7 @@ const main = async () => {
     .then(blocks => blocks.map(block => ({ block: block.number, timestamp: block.timestamp })))
     .then(toEnumerable);
 
-  const {
-    lpRewardAllocations,
-    remainingLPReward,
-    lpShares: finalLPShares
-  } = (
+  const { lpRewardAllocations, remainingLPReward } = (
     lpShares as IEnumerable<{
       block: number;
       index: number;
@@ -371,8 +367,7 @@ const main = async () => {
     .selectMany(id)
     .select(x => ({
       ...x,
-      lpReward:
-        (lpRewardAllocations[x.player] ?? 0) + (finalLPShares[x.player] ?? 0) * remainingLPReward
+      lpReward: lpRewardAllocations[x.player] ?? 0
     }));
 
   const calculatePortfolios = (suffix: string, bLUSDPrice: number, lpTokenPrice: number) => {
@@ -390,7 +385,21 @@ const main = async () => {
           x.lpTokenBalance * lpTokenPrice +
           x.lpReward
       }))
-      .orderByDescending(x => x.totalLUSDValue);
+      .orderByDescending(x => x.totalLUSDValue)
+      .select(x => ({
+        // Reorder columns
+        player: x.player,
+        numBonds: x.numBonds,
+        numActiveBonds: x.numActiveBonds,
+        numChickenedInBonds: x.numChickenedInBonds,
+        numChickenedOutBonds: x.numChickenedOutBonds,
+        totalLUSDValue: x.totalLUSDValue,
+        pendingLUSDValue: x.pendingLUSDValue,
+        lusdBalance: x.lusdBalance,
+        bLUSDBalance: x.bLUSDBalance,
+        lpTokenBalance: x.lpTokenBalance,
+        lpReward: x.lpReward
+      }));
 
     toCsv(portfolios.toArray(), `tmp/portfolios_${suffix}.csv`);
   };
@@ -483,7 +492,8 @@ const main = async () => {
       pendingLUSD,
       acquiredLUSD,
       permanentLUSD,
-      lpTotalSupply
+      lpTotalSupply,
+      remainingLPReward
     })
       .map(row => row.join(","))
       .join("\n")
