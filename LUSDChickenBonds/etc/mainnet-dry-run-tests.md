@@ -5,9 +5,9 @@
     "BLUSD_LUSD_AMM_ADDRESS": "0xec5ffef96c3EdEdE587DB2efA3ab4Deec414cE8F",
     "BLUSD_LUSD_LP_TOKEN": "0xE9Af51E6591992de6976cCcbB902D096776E9be4",
     "BLUSD_LUSD_AMM_STAKING_ADDRESS": "0x79DbB869e4f00821927785D21315219Edb016082",
-    "BLUSD_3POOL_AMM_ADDRESS": "0x52F05C70d86662204C7222C35000747b177C393a",
-    "BLUSD_3POOL_LP_TOKEN": "0xB85E0C55e86803B9D15e67BEaDbB66510D4d3317",
-    "BLUSD_3POOL_AMM_STAKING_ADDRESS": "0x2620Ea805fb2C0adfc505967A8860eE30Fd01754",
+    "BLUSD_3CRV_AMM_ADDRESS": "0x52F05C70d86662204C7222C35000747b177C393a",
+    "BLUSD_3CRV_LP_TOKEN": "0xB85E0C55e86803B9D15e67BEaDbB66510D4d3317",
+    "BLUSD_3CRV_AMM_STAKING_ADDRESS": "0x2620Ea805fb2C0adfc505967A8860eE30Fd01754",
     "BLUSD_TOKEN_ADDRESS": "0x76F7774139bf0097d2882C41AF5A37717e3641A7",
     "BOND_NFT_ADDRESS": "0xf80678718187a9e29E63A1f5Af61369ecc8a8a0C",
     "BOND_NFT_INITIAL_ARTWORK_ADDRESS": "0xfDF1468A6b04307927D83dEf4106dd64839b353b",
@@ -24,13 +24,17 @@
 
 [bLUSD/LUSD Curve pool](https://etherscan.io/tx/0x122fdfa62f3e097e106995ec430671f1a064e645959de3a8d71c01f241a4574b)
 
+[bLUSD/LUSD pool in Curve](https://curve.fi/factory-crypto/120)
+
 [bLUSD/LUSD Gauge](https://etherscan.io/tx/0xaf07a32220f00356d1618a8c6360d5a7a6d25bdc29ba1cd0f8d8a21bea18b713)
 
-[bLUSD/3pool Curve pool](https://etherscan.io/tx/0xc7a627a9c86a9490a9f79e381f423a240f3505beabbf47d9af58e93173c15ac0)
+[bLUSD/3CRV Curve pool](https://etherscan.io/tx/0xc7a627a9c86a9490a9f79e381f423a240f3505beabbf47d9af58e93173c15ac0)
 
-[bLUSD/3pool Gauge](https://etherscan.io/tx/0x8b6327c89b8abdd381b70bd1ca32584e666588311ef7a71e24d58e8be4009573)
+[bLUSD/3CRV pool in Curve](https://curve.fi/factory-crypto/121)
 
-(Note: bLUSD/3pool is not connected, as LUSD one is, to ChickenBondManager, so it’s not getting rewards)
+[bLUSD/3CRV Gauge](https://etherscan.io/tx/0x8b6327c89b8abdd381b70bd1ca32584e666588311ef7a71e24d58e8be4009573)
+
+(Note: bLUSD/3CRV is not connected, as LUSD one is, to ChickenBondManager, so it’s not getting rewards)
 
 [ChickenBondManager](https://etherscan.io/tx/0x56f088f6737acbb158d9609563144090c51c8781cc1f9c807a1c06265e2767cd)
 
@@ -40,7 +44,7 @@
 
 [Add reward to LUSD Gauge](https://etherscan.io/tx/0xd01058df8f293d989a9718265dca699ef7f2070f4ec836029a2e3ae5b721d07d)
 
-[Add reward to 3pool Gauge](https://etherscan.io/tx/0x445bf355cbe342723e876bd3fdac7c8546dc5820e5ce5fc87a395f95aacd09b1)
+[Add reward to 3CRV Gauge](https://etherscan.io/tx/0x445bf355cbe342723e876bd3fdac7c8546dc5820e5ce5fc87a395f95aacd09b1)
 
 [Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/0xe5375bafd8dce35541228ae14e0f209164eeb9eed9160984b799d3055e822b13)
 
@@ -74,12 +78,34 @@
 
 [Add liquidity to bLUSD/LUSD pool](https://etherscan.io/tx/0xc0ee0a518fd024f527c59223883dcb1a7abf0544e2a0429974161715ccaadebd)
 
-[Deposit LP tokens to Gauge](https://etherscan.io/tx/0x58b4c63f70b076ae44fdbaaa4b1d01dbf5c6258355972de0997e27528ee84bd2)
+[Deposit LP tokens to bLUSD/LUSD Gauge](https://etherscan.io/tx/0x58b4c63f70b076ae44fdbaaa4b1d01dbf5c6258355972de0997e27528ee84bd2)
 
 Earning rewards from Gauge:
 
 ![Screenshot_20220930_183354](https://user-images.githubusercontent.com/701095/193317481-00cda2a9-9cf8-4a8b-a9e6-213ac0e0d26a.png)
 
+[Withdraw LP tokens from bLUSD/LUSD Gauge](https://etherscan.io/tx/0x0e16b7f71904872ad61aa540da8e12895d5f1b9158b92e0b27e3dfea4460971b)
 
-TODO:
-migration
+[Remove liquidity from bLUSD/LUSD pool](https://etherscan.io/tx/0x47064cdbc7d8a952c788773e1558e4164a926df852b23e9beca43232c43d6383)
+
+[Add liquidity to bLUSD/3CRV pool](https://etherscan.io/tx/0x8a8bc52cbfc2c85d27b70de65fee37f93ea12c3a86d0350824acda07ed8953de)
+
+[Deposit LP tokens to bLUSD/3CRV Gauge](https://etherscan.io/tx/0x0d5a8bfad2b4a8666c16dea55c3cd7f7dc3438074407181727ccb4ae195597c4)
+
+[Activate migration](https://etherscan.io/tx/0x5e4f02def161ac4414bfe4884e766fa970f9261785ee34d2f795df59513197c7)
+
+[Cannot activate migration twice](https://etherscan.io/tx/0x5bf3f4a40ba21ba19a815ff34f6d68ecb57f28a219e88d871972c93fda761634)
+
+[Redemption after migration](https://etherscan.io/tx/0x052cd3b89d48ac0d00aa0b07b5e6010628344d4335509aa60b39f05037524bc9)
+
+[Swap LUSD to bLUSD through 3CRV](https://etherscan.io/tx/0x9688d2212586ccfcc00991096cd7fdf03f870abbdc7211c1bfc136594a9b5247)
+
+[Swap bLUSD to LUSD through 3CRV](https://etherscan.io/tx/0xbbfad68f42a881c860b64becafead7e6fa77d087492e0831a9ca7c66a68758fb)
+
+[Withdraw LP tokens from bLUSD/3CRV Gauge](https://etherscan.io/tx/0x5dc0b08796d268306bd68c081a631c4d32125e62fab409e8f19d219075aacecc)
+
+[Remove liquidity from bLUSD/3CRV pool](https://etherscan.io/tx/0x78d8b1437a5e0b1b7b061424f82f9a77ca3da77d8b8960447beec2e79d5b27f1)
+
+[Withdraw from Yearn Curve vault after migration](https://etherscan.io/tx/0x99a62ffb15734b3efa7bb364bf7933c91b50997cfae0670b37ca7765807fc142)
+
+[Withdraw form Curve pool after migration](https://etherscan.io/tx/0x26982cd473a121d571db4f2e63047fa09499fa4f7f9c531c01693a80305effb8)
