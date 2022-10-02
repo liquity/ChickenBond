@@ -27,6 +27,7 @@ import CurveCryptoSwap2ETH from "../curve/CurveCryptoSwap2ETH.json";
 import CurveToken from "../curve/CurveTokenV5.json";
 import CurveFactory from "../curve/Factory.json";
 // import CurveLiquidityGauge from "../curve/LiquidityGauge.json";
+import CurveRegistrySwaps from "../curve/Swaps.json";
 
 type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
@@ -194,7 +195,8 @@ const curveV2Artifacts = Object.entries({
   CurveToken,
   CurveCryptoSwap2ETH,
   // CurveLiquidityGauge,
-  CurveFactory
+  CurveFactory,
+  CurveRegistrySwaps
 }) as [string, { abi: Writable<JsonFragment>[]; bytecode: string }][];
 
 const contracts = [...contractArtifacts, ...curveV2Artifacts].map(([contractName, { abi }]) => ({
