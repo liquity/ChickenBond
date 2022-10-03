@@ -166,3 +166,18 @@ Earning rewards from Gauge:
 [Create bond (with permit) 4](https://etherscan.io/tx/0x72f383f3c1cf339417540d83f0dfa8f611be82cb15df2cfef41ae5ef5e96ba9e)
 
 [Chicken out bond id 4 (still bootstrap period)](https://etherscan.io/tx/0xf7e7f2a9320d8dfbe1a5284ca3f1f3fff26189a0ef14bd13fba3f54adc56e918)
+
+[Add liquidity to bLUSD/LUSD-3CRV pool](https://etherscan.io/tx/0xd5a526aff91ef6266d6db9856963e162347285862bd5791335a283de5cd3917c)
+
+[Deposit LP tokens to bLUSD/LUSD-3CRV Gauge](https://etherscan.io/tx/0x93e725e1509023b7bd019166dba182563f75bcdd7a1dce822d0b00bf400d8016)
+
+Earning rewards from Gauge:
+
+<img width="394" alt="image" src="https://user-images.githubusercontent.com/701095/193554028-c39ac357-498b-4bcf-ab5d-5860b74bbadf.png">
+
+[Swap LUSD to bLUSD using the frontend](https://etherscan.io/tx/0x1559b1dc1af77b12460f57c0282aaae1d9c113c34e5e221c63170c29c359d79c)
+
+[Swap bLUSD to LUSD using the frontend](https://etherscan.io/tx/0xfa32eed1f37ec78e04e77cf98b1b767d958bb8aa314916685208b7b76ab6df28)
+
+
+
