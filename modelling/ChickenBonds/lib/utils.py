@@ -41,3 +41,4 @@ def get_chick_total_token_value(chicken, chick):
     amm_value = chicken.btkn_amm.get_value_in_token_A_of(chick.account)
 
     return token_amount + chick.bond_amount + btkn_value + amm_value
+

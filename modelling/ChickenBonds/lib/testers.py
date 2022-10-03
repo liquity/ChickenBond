@@ -76,6 +76,8 @@ class TesterInterface():
         pass
     def sell_btkn(self, chicken, chicks, debug):
         pass
+    def get_btkn_amm_slippage(self, chicken):
+        pass
 
 class TesterSimple(TesterInterface):
     def __init__(self):
@@ -876,7 +878,7 @@ class TesterSimple(TesterInterface):
             # redeem bTKN
             redemption_amount = chicken.redeem(chick, btkn_amount)
 
-            if debug:
+            if debug or redemption_amount < tkn_amount:
                 print(f"redemption_amount: {redemption_amount:,.6f}")
                 print(f"tkn_amount: {tkn_amount:,.6f}")
             assert redemption_amount >= tkn_amount
@@ -924,6 +926,7 @@ class TesterSimple(TesterInterface):
         if chicken.btkn.total_supply == 0:
             return
         if debug:
+            print("")
             print(" -- buy_btkn")
 
         for chick in self.get_traders_with_token(chicken, chicks):
@@ -970,6 +973,10 @@ class TesterSimple(TesterInterface):
                 print(f"Obtained bTKN: {btkn_amount:,.2f}")
                 print(f"new buy price: {chick.buy_price:,.2f}")
                 print(chicken.btkn_amm)
+
+        if debug:
+            print(f"Final spot price after buy: {self.get_btkn_spot_price(chicken):,.6f}")
+
         return
 
     def sell_btkn(self, chicken, chicks, debug=False):
@@ -1013,3 +1020,16 @@ class TesterSimple(TesterInterface):
             if debug:
                 print(chicken.btkn_amm)
         return
+
+    def get_btkn_amm_slippage(self, chicken, debug=False):
+        btkn_amount = chicken.btkn_amm.token_B_balance() * FRACTION_TO_SWAP
+        token_amount = chicken.btkn_amm.token_A_balance() * FRACTION_TO_SWAP
+
+        sell_slippage = chicken.btkn_amm.get_slippage_from_input_B(btkn_amount, debug)
+        try:
+            buy_slippage = chicken.btkn_amm.get_slippage_from_input_A(token_amount, debug)
+        except:
+            print("Didn’t converge trying to get slippage")
+            buy_slippage = 0.3
+
+        return sell_slippage, buy_slippage

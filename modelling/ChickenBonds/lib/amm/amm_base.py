@@ -248,6 +248,12 @@ class AmmBase():
     def get_output_B_for_max_slippage(self, slippage, token_A_offset, token_B_offset):
         pass
 
+    def get_slippage_from_input_A(self, input_amount, debug):
+        pass
+
+    def get_slippage_from_input_B(self, input_amount, debug):
+        pass
+
     def get_token_A_ownership(self, account):
         return self.token_A_balance() * self.get_liquidity(account) / self.lp_token.total_supply
 
