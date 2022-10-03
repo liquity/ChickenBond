@@ -62,6 +62,7 @@ while getopts ":r:k:e:g:c:o:" options; do
 done
 
 DEPLOYER_ADDRESS=$(cast wallet address --private-key $DEPLOYER_PRIVATE_KEY | cut -d" " -f2)
+ETHERSCAN_TX_BASE_URL="https://etherscan.io/tx/"
 
 echo ETH_RPC_URL: $ETH_RPC_URL
 #echo DEPLOYER_PRIVATE_KEY: $DEPLOYER_PRIVATE_KEY
@@ -84,14 +85,8 @@ cast client --rpc-url $ETH_RPC_URL > /dev/null || {
   exit 1
 }
 
-# Make sure B.AMM address is set
-[[ -z $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS ]] && {
-    echo -e "\n${RED}Missing B.AMM address!\n"
-    exit 1
-}
-
-
 DEPLOYMENT_ADDRESSES=''
+DEPLOYMENT_TXS=''
 
 # --- Helper functions ---
 
@@ -123,7 +118,6 @@ deploy_contract() {
 
     # Check deployment
     if [[ ! -z $3 ]]; then
-        echo cast call $DEPLOYED_ADDRESS $3 --rpc-url $ETH_RPC_URL
         cast call $DEPLOYED_ADDRESS $3 --rpc-url $ETH_RPC_URL > /dev/null || {
             echo -e "\n${RED}Failed to deploy $1 contract."
             exit 1
@@ -131,6 +125,7 @@ deploy_contract() {
     fi
 
     DEPLOYMENT_ADDRESSES="$DEPLOYMENT_ADDRESSES \"$4\": \"$DEPLOYED_ADDRESS\","
+    DEPLOYMENT_TXS="$DEPLOYMENT_TXS \n[${4%_ADDRESS}](${ETHERSCAN_TX_BASE_URL}${TX_HASH})\n"
 
     echo -e "Deployed to: $DEPLOYED_ADDRESS"
     echo -e "Tx hash: $TX_HASH"
@@ -166,6 +161,7 @@ deploy_from_factory() {
     [[ -z $TX_HASH ]] && { echo -e "\n${RED}Failed to deploy $5.";  exit 1; }
 
     DEPLOYMENT_ADDRESSES="$DEPLOYMENT_ADDRESSES \"$4\": \"$DEPLOYED_ADDRESS\","
+    DEPLOYMENT_TXS="$DEPLOYMENT_TXS \n[${4%_ADDRESS}](${ETHERSCAN_TX_BASE_URL}${TX_HASH})\n"
 
     echo -e "Deployed to: $DEPLOYED_ADDRESS"
     echo -e "Tx hash: $TX_HASH"
@@ -207,6 +203,27 @@ cast_call_wrapper() {
 
 # --- Deployments ---
 
+# Make sure B.AMM address is set
+if [[ -z $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS ]]; then
+    read -p "Missing B.AMM. Do you want to deploy it? (y/n) " proceed
+    [[ $proceed == "y" ]] || {
+        echo -e "\n${RED}Missing B.AMM address!\n"
+        exit 1
+    }
+    # Deploy B.AMM
+    constructor_args="$MAINNET_CHAINLINK_ETH_USD_ADDRESS \
+          $MAINNET_CHAINLINK_LUSD_USD_ADDRESS \
+          $MAINNET_LIQUITY_SP_ADDRESS \
+          $MAINNET_LUSD_TOKEN_ADDRESS \
+          $MAINNET_LQTY_TOKEN_ADDRESS \
+          400 \
+          $MAINNET_BPROTOCOL_FEE_POOL_ADDRESS \
+          $ZERO_ADDRESS \
+          0"
+    deploy_contract "BAMM" "$constructor_args" "owner()(address)" "BAMM_ADDRESS" "../lib/b-protocol/packages/contracts/contracts/B.Protocol/"
+    MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS=$DEPLOYED_ADDRESS
+fi
+
 # Deploy BLUSDToken contract
 constructor_args="$BLUSD_NAME $BLUSD_SYMBOL"
 deploy_contract "BLUSDToken" "$constructor_args" "owner()(address)" "BLUSD_TOKEN_ADDRESS"
@@ -228,7 +245,7 @@ deploy_contract "BondNFT" "$constructor_args" "owner()(address)" "BOND_NFT_ADDRE
 BOND_NFT_ADDRESS=$DEPLOYED_ADDRESS
 
 # Create bLUSD AMM pool
-deployment_arguments="$CURVE_V2_NAME $CURVE_V2_SYMBOL [$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_TOKEN_ADDRESS] \
+deployment_arguments="$CURVE_V2_NAME $CURVE_V2_SYMBOL [$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_3CRV_TOKEN_ADDRESS] \
 $CURVE_V2_A $CURVE_V2_GAMMA $CURVE_V2_MID_FEE $CURVE_V2_OUT_FEE $CURVE_V2_ALLOWED_EXTRA_PROFIT $CURVE_V2_FEE_GAMMA \
 $CURVE_V2_ADJUSTMENT_STEP $CURVE_V2_ADMIN_FEE $CURVE_V2_MA_HALF_TIME $CURVE_V2_INITIAL_PRICE"
 deploy_from_factory \
@@ -236,7 +253,7 @@ deploy_from_factory \
     "deploy_pool(string,string,address[2],uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)(address)" \
     "$deployment_arguments" \
     "BLUSD_AMM_ADDRESS" \
-    "bLUSD/LUSD Curve AMM pool"
+    "bLUSD/LUSD-3CRV Curve AMM pool"
 
 BLUSD_AMM_ADDRESS=$DEPLOYED_ADDRESS
 
@@ -247,7 +264,7 @@ deploy_from_factory \
     "deploy_gauge(address,address)(address)" \
     "$deployment_arguments" \
     "BLUSD_AMM_STAKING_ADDRESS" \
-    "bLUSD/LUSD staking reward contract (Curve gauge)"
+    "bLUSD/LUSD-3CRV staking reward contract (Curve gauge)"
 
 BLUSD_AMM_STAKING_ADDRESS=$DEPLOYED_ADDRESS
 
@@ -319,6 +336,8 @@ fi
 
 echo -e "${GREEN}Finished.\n"
 echo -e "${RESET_COLOR}"
+
+echo -e $DEPLOYMENT_TXS
 
 # Finish and save deployment addresses json
 DEPLOYMENT_ADDRESSES="{${DEPLOYMENT_ADDRESSES::-1}}"
