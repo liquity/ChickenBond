@@ -11,7 +11,7 @@ def state_to_row(
         data,
         iteration
 ):
-    sell_slippage, buy_slippage = tester.get_btkn_amm_slippage(chicken)
+    sell_slippage, buy_slippage = tester.get_btkn_amm_slippage(chicken, debug=False)
 
     return {
         "amm_token": chicken.amm.token_A_balance(),

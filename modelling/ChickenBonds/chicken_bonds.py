@@ -119,6 +119,7 @@ def main(tester):
         if PLOTS_INTERVAL[1] > 0 and iteration >= PLOTS_INTERVAL[1]:
             break
         if chicken.btkn_amm.get_token_B_price() > 100:
+            print(f"Price too high!: {chicken.btkn_amm.get_token_B_price():,.2f}")
             break
 
     plot_interval = PLOTS_INTERVAL[:]

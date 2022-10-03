@@ -512,6 +512,7 @@ class CurveV2Pool(AmmBase):
         for i in range(N_COINS):
             #self.balances[i] = ERC20(_coins[i]).balanceOf(self)
             if abs(self.balances[i] - self.coins[i].balance_of(self.pool_account)) > 1e-5:
+                print("Balances mismatch:")
                 print(f"real balance[{i}]: {self.balances[i]:,.2f}")
                 print(f"int balance[{i}]:  {self.coins[i].balance_of(self.pool_account):,.2f}")
             self.balances[i] = self.coins[i].balance_of(self.pool_account)
@@ -697,7 +698,7 @@ class CurveV2Pool(AmmBase):
     # modifies self.balances
     # calls self.tweak_price
     def _exchange(self, sender: address, i: uint256, j: uint256, dx: uint256, min_dy: uint256,
-                  receiver: address) -> (uint256, uint256):
+                  receiver: address, debug=False) -> (uint256, uint256):
         #print(f"_exchange({i}, {j}, {dx:,.6f}, {min_dy:,.2f})")
         assert not self.is_killed  # dev: the pool is killed
         assert i != j  # dev: coin index out of range
@@ -707,11 +708,10 @@ class CurveV2Pool(AmmBase):
 
         A_gamma: List[float] = self._A_gamma()
         xp: uint256_N_COINS = self.balances.copy()
-        """
-        print(f"xp[0]: {xp[0]:,.6f}")
-        print(f"xp[1]: {xp[1]:,.6f}")
-        print(f"dx: {dx:,.6f}")
-        """
+        if debug:
+            print(f"xp[0]: {xp[0]:,.6f}")
+            print(f"xp[1]: {xp[1]:,.6f}")
+            print(f"dx: {dx:,.6f}")
         p: uint256 = 0
         dy: uint256 = 0
 
@@ -750,11 +750,10 @@ class CurveV2Pool(AmmBase):
         #dy = xp[j] - self.newton_y_bigint(A_gamma[0], A_gamma[1], xp.copy(), self.D, j)
         n = self.newton_y_bigint(A_gamma[0], A_gamma[1], xp.copy(), self.D, j)
         dy = xp[j] - n
-        """
-        print(f"xp[j]: {xp[j]:,.2f}")
-        print(f"n: {n:,.2f}")
-        print(f"dy: {dy:,.2f}")
-        """
+        if debug:
+            print(f"xp[j]: {xp[j]:,.2f}")
+            print(f"n: {n:,.2f}")
+            print(f"dy: {dy:,.2f}")
         # Not defining new "y" here to have less variables / make subsequent calls cheaper
         xp[j] -= dy
         dy -= 1
@@ -765,16 +764,16 @@ class CurveV2Pool(AmmBase):
 
         #dy -= self._fee(xp) * dy
         fee_amount = self._fee(xp) * dy
-        """
-        print(f"dy: {dy:,.6f}")
-        print(f"fee: {self._fee(xp):,.6f}")
-        print(f"fee amt: fee_amount:,.6f}")
-        """
+        if debug:
+            print(f"dy: {dy:,.6f}")
+            print(f"fee: {self._fee(xp):,.6f}")
+            print(f"fee amt: {fee_amount:,.6f}")
         dy -= fee_amount
         if dy < 0:
             return 0, 0
-        #print(f"dy: {dy:,.6f}")
-        #print(f"min dy: {min_dy:,.6f}")
+        if debug:
+            print(f"dy: {dy:,.6f}")
+            print(f"min dy: {min_dy:,.6f}")
         assert dy >= min_dy, "Slippage"
         y -= dy
 
@@ -1112,6 +1111,69 @@ class CurveV2Pool(AmmBase):
 
         return dy
 
+    def save_state(self):
+        state = {}
+        state["balances"] = self.balances.copy()
+        state["price_scale"] = self.price_scale
+        state["D"] = self.D
+        state["last_prices"] = self.last_prices
+        state["_price_oracle"] = self._price_oracle
+        state["xcp_profit"] = self.xcp_profit
+        state["not_adjusted"] = self.not_adjusted
+        state["virtual_price"] = self.virtual_price
+        state["xcp_profit_a"] = self.xcp_profit_a
+
+        return state
+
+    def revert_state(self, state, debug=False):
+        if debug:
+            #"""
+            print(f"self.balances[0]: {self.balances[0]:,.2f}")
+            print(f"balances[0]: {balances[0]:,.2f}")
+            print(f"self.balances[1]: {self.balances[1]:,.2f}")
+            print(f"balances[1]: {balances[1]:,.2f}")
+            print(f"self.price_scale: {self.price_scale:,.2f}")
+            print(f"price_scale: {price_scale:,.2f}")
+            print(f"self.D: {self.D:,.2f}")
+            print(f"D: {D:,.2f}")
+            print(f"self.last_prices: {self.last_prices:,.2f}")
+            print(f"last_prices: {last_prices:,.2f}")
+            print(f"self._price_oracle: {self._price_oracle:,.2f}")
+            print(f"_price_oracle: {_price_oracle:,.2f}")
+            print(f"self.xcp_profit: {self.xcp_profit:,.2f}")
+            print(f"xcp_profit: {xcp_profit:,.2f}")
+            print(f"self.not_adjusted: {self.not_adjusted:,.2f}")
+            print(f"not_adjusted: {not_adjusted:,.2f}")
+            print(f"self.virtual_price: {self.virtual_price:,.2f}")
+            print(f"virtual_price: {virtual_price:,.2f}")
+            print(f"self.xcp_profit_a: {self.xcp_profit_a:,.2f}")
+            print(f"xcp_profit_a: {xcp_profit_a:,.2f}")
+            #"""
+        self.balances[0] = state["balances"][0]
+        self.balances[1] = state["balances"][1]
+        self.price_scale = state["price_scale"]
+        self.D = state["D"]
+        self.last_prices = state["last_prices"]
+        self._price_oracle = state["_price_oracle"]
+        self.xcp_profit = state["xcp_profit"]
+        self.not_adjusted = state["not_adjusted"]
+        self.virtual_price = state["virtual_price"]
+        self.xcp_profit_a = state["xcp_profit_a"]
+
+        return
+
+    def undo_transfers(self, dx, dy, output_amount):
+        # Undo transfers
+        if dx > 0:
+            self.coins[0].transfer(self.pool_account, TMP_ACCOUNT, dx)
+            self.coins[1].transfer(TMP_ACCOUNT, self.pool_account, output_amount)
+        if dy > 0:
+            self.coins[1].transfer(self.pool_account, TMP_ACCOUNT, dy)
+            self.coins[0].transfer(TMP_ACCOUNT, self.pool_account, output_amount)
+            self.coins[1].burn(TMP_ACCOUNT, dy)
+
+        return
+
     # dx is always token A (LUSD), never B (bLUSD), no matter what the order of i,j is
     def get_spot_price(self, i, j, dx = 0, dy = 0, debug=False):
         # A good trade off to reduce both slippage and error due to Newton method (2% of the balance in the pool):
@@ -1124,15 +1186,7 @@ class CurveV2Pool(AmmBase):
         assert dx == 0 or dy == 0
         # Save state
         if dx > 0 or dy > 0:
-            balances = self.balances.copy()
-            price_scale = self.price_scale
-            D = self.D
-            last_prices = self.last_prices
-            _price_oracle = self._price_oracle
-            xcp_profit = self.xcp_profit
-            not_adjusted = self.not_adjusted
-            virtual_price = self.virtual_price
-            xcp_profit_a = self.xcp_profit_a
+            state = self.save_state()
 
         price_before = self.get_dy(i, j, sample_amount) / sample_amount
         if debug:
@@ -1163,48 +1217,10 @@ class CurveV2Pool(AmmBase):
 
         if dx > 0 or dy > 0:
             # undo state
-            if debug:
-                #"""
-                print(f"self.balances[0]: {self.balances[0]:,.2f}")
-                print(f"balances[0]: {balances[0]:,.2f}")
-                print(f"self.balances[1]: {self.balances[1]:,.2f}")
-                print(f"balances[1]: {balances[1]:,.2f}")
-                print(f"self.price_scale: {self.price_scale:,.2f}")
-                print(f"price_scale: {price_scale:,.2f}")
-                print(f"self.D: {self.D:,.2f}")
-                print(f"D: {D:,.2f}")
-                print(f"self.last_prices: {self.last_prices:,.2f}")
-                print(f"last_prices: {last_prices:,.2f}")
-                print(f"self._price_oracle: {self._price_oracle:,.2f}")
-                print(f"_price_oracle: {_price_oracle:,.2f}")
-                print(f"self.xcp_profit: {self.xcp_profit:,.2f}")
-                print(f"xcp_profit: {xcp_profit:,.2f}")
-                print(f"self.not_adjusted: {self.not_adjusted:,.2f}")
-                print(f"not_adjusted: {not_adjusted:,.2f}")
-                print(f"self.virtual_price: {self.virtual_price:,.2f}")
-                print(f"virtual_price: {virtual_price:,.2f}")
-                print(f"self.xcp_profit_a: {self.xcp_profit_a:,.2f}")
-                print(f"xcp_profit_a: {xcp_profit_a:,.2f}")
-                #"""
-            self.balances[0] = balances[0]
-            self.balances[1] = balances[1]
-            self.price_scale = price_scale
-            self.D = D
-            self.last_prices = last_prices
-            self._price_oracle = _price_oracle
-            self.xcp_profit = xcp_profit
-            self.not_adjusted = not_adjusted
-            self.virtual_price = virtual_price
-            self.xcp_profit_a = xcp_profit_a
+            self.revert_state(state)
+            # Undo transfers
+            self.undo_transfers(dx, dy, output_amount)
 
-        # Undo transfers
-        if dx > 0:
-            self.coins[0].transfer(self.pool_account, TMP_ACCOUNT, dx)
-            self.coins[1].transfer(TMP_ACCOUNT, self.pool_account, output_amount)
-        if dy > 0:
-            self.coins[1].transfer(self.pool_account, TMP_ACCOUNT, dy)
-            self.coins[0].transfer(TMP_ACCOUNT, self.pool_account, output_amount)
-            self.coins[1].burn(TMP_ACCOUNT, dy)
 
         price_after = self.get_dy(i, j, sample_amount) / sample_amount
         if debug:
@@ -1273,21 +1289,31 @@ class CurveV2Pool(AmmBase):
             print(f"initial_price: {initial_price:,.2f}")
             print(f"input_amount:  {input_amount:,.2f}")
 
+        # Save state
+        state = self.save_state()
+
         if i > j:
             dx = 0
             dy = input_amount
+            # we need to mint bLUSD to simulate exchange!
+            self.coins[1].mint(TMP_ACCOUNT, dy)
+            output_amount, _ = self._exchange(TMP_ACCOUNT, 1, 0, dy, 0, TMP_ACCOUNT, debug)
         else:
             dx = input_amount
             dy = 0
-        new_price = self.get_spot_price(i, j, dx, dy)
-        if i > j:
-            slippage = 1 - new_price / initial_price
-        else:
-            slippage = 1 - initial_price / new_price
+            output_amount, _ = self._exchange(TMP_ACCOUNT, 0, 1, dx, 0, TMP_ACCOUNT, debug)
+
+        if debug:
+            print(f"output_amount (dy): {output_amount:,.6f}")
+
+        slippage = 1 - output_amount / (input_amount * initial_price)
+
+        # Undo state
+        self.revert_state(state)
+        self.undo_transfers(dx, dy, output_amount)
 
         if debug:
             print(f"\033[92m -- get_slippage_from_input ({i}, {j}) (cont)\033[0m")
-            print(f"new price: {new_price:,.2f}")
             print(f"slippage: {slippage:.3%}")
 
         return slippage
