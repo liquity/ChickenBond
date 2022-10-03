@@ -62,6 +62,7 @@ while getopts ":r:k:e:g:c:o:" options; do
 done
 
 DEPLOYER_ADDRESS=$(cast wallet address --private-key $DEPLOYER_PRIVATE_KEY | cut -d" " -f2)
+ETHERSCAN_TX_BASE_URL="https://etherscan.io/tx/"
 
 echo ETH_RPC_URL: $ETH_RPC_URL
 #echo DEPLOYER_PRIVATE_KEY: $DEPLOYER_PRIVATE_KEY
@@ -85,6 +86,7 @@ cast client --rpc-url $ETH_RPC_URL > /dev/null || {
 }
 
 DEPLOYMENT_ADDRESSES=''
+DEPLOYMENT_TXS=''
 
 # --- Helper functions ---
 
@@ -123,6 +125,7 @@ deploy_contract() {
     fi
 
     DEPLOYMENT_ADDRESSES="$DEPLOYMENT_ADDRESSES \"$4\": \"$DEPLOYED_ADDRESS\","
+    DEPLOYMENT_TXS="$DEPLOYMENT_TXS \n[${4%_ADDRESS}](${ETHERSCAN_TX_BASE_URL}${TX_HASH})\n"
 
     echo -e "Deployed to: $DEPLOYED_ADDRESS"
     echo -e "Tx hash: $TX_HASH"
@@ -158,6 +161,7 @@ deploy_from_factory() {
     [[ -z $TX_HASH ]] && { echo -e "\n${RED}Failed to deploy $5.";  exit 1; }
 
     DEPLOYMENT_ADDRESSES="$DEPLOYMENT_ADDRESSES \"$4\": \"$DEPLOYED_ADDRESS\","
+    DEPLOYMENT_TXS="$DEPLOYMENT_TXS \n[${4%_ADDRESS}](${ETHERSCAN_TX_BASE_URL}${TX_HASH})\n"
 
     echo -e "Deployed to: $DEPLOYED_ADDRESS"
     echo -e "Tx hash: $TX_HASH"
@@ -332,6 +336,8 @@ fi
 
 echo -e "${GREEN}Finished.\n"
 echo -e "${RESET_COLOR}"
+
+echo -e $DEPLOYMENT_TXS
 
 # Finish and save deployment addresses json
 DEPLOYMENT_ADDRESSES="{${DEPLOYMENT_ADDRESSES::-1}}"
