@@ -1280,7 +1280,10 @@ class CurveV2Pool(AmmBase):
             dx = input_amount
             dy = 0
         new_price = self.get_spot_price(i, j, dx, dy)
-        slippage = 1 - new_price / initial_price
+        if i > j:
+            slippage = 1 - new_price / initial_price
+        else:
+            slippage = 1 - initial_price / new_price
 
         if debug:
             print(f"\033[92m -- get_slippage_from_input ({i}, {j}) (cont)\033[0m")
@@ -1288,6 +1291,18 @@ class CurveV2Pool(AmmBase):
             print(f"slippage: {slippage:.3%}")
 
         return slippage
+
+    def get_slippage_from_input_A(self, input_amount, debug=False):
+        initial_price = self.get_token_A_price()
+        if initial_price == 0:
+            return 0
+        return self.get_slippage_from_input(initial_price, 0, 1, input_amount, debug)
+
+    def get_slippage_from_input_B(self, input_amount, debug=False):
+        initial_price = self.get_token_B_price()
+        if initial_price == 0:
+            return 0
+        return self.get_slippage_from_input(initial_price, 1, 0, input_amount, debug)
 
     def get_input_for_max_slippage(self, initial_price, max_slippage, i, j, debug):
         input_amount = self.balances[i] / 5

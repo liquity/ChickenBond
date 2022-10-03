@@ -76,6 +76,8 @@ class TesterInterface():
         pass
     def sell_btkn(self, chicken, chicks, debug):
         pass
+    def get_btkn_amm_slippage(self, chicken):
+        pass
 
 class TesterSimple(TesterInterface):
     def __init__(self):
@@ -1013,3 +1015,12 @@ class TesterSimple(TesterInterface):
             if debug:
                 print(chicken.btkn_amm)
         return
+
+    def get_btkn_amm_slippage(self, chicken):
+        btkn_amount = chicken.btkn_amm.token_B_balance() * FRACTION_TO_SWAP
+        token_amount = chicken.btkn_amm.token_A_balance() * FRACTION_TO_SWAP
+
+        sell_slippage = chicken.btkn_amm.get_slippage_from_input_B(btkn_amount, debug=False)
+        buy_slippage = chicken.btkn_amm.get_slippage_from_input_A(token_amount, debug=False)
+
+        return sell_slippage, buy_slippage

@@ -71,6 +71,8 @@ CURVE_V2_MA_HALF_TIME = 25
 CURVE_V2_INITIAL_PRICE = INITIAL_BTKN_PRICE
 #"""
 
+FRACTION_TO_SWAP = 0.1 # 10%            # Fraction of token funds in pool to use for slippage measures
+
 # -------------- Controller Parameters -------------
 ACCRUAL_ADJUSTMENT_RATE = 0.01          # Set to non-zero to enable control
 TARGET_AVERAGE_AGE = 30

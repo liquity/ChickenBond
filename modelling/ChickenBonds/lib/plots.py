@@ -281,6 +281,40 @@ def plot_aprs(data, min_value=-10, max_value=20, description="", group=1, group_
     maybe_save(fig, save, get_prefixes, "APRs")
     return
 
+def plot_slippage(data, description="", group=1, group_description="Day", show=True, save=False, get_prefixes=lambda:None
+):
+    #print(data['edebt_price'])
+    start_index = data.index[0]
+
+    new_data = pd.DataFrame({})
+    for d in range(len(data.index) // group):
+        new_data = new_data.append(
+            {
+                "x": d,
+                "y": data["sell_slippage"][start_index + d * group] * 100,
+                "var": "Sell bTKN"
+            },
+            ignore_index=True
+        )
+        new_data = new_data.append(
+            {
+                "x": d,
+                "y": data["buy_slippage"][start_index + d * group] * 100,
+                "var": "Buy bTKN"
+            },
+            ignore_index=True
+        )
+
+
+    fig = px.line(new_data, x="x", y="y", color="var", title=f"{description} - Slippage")
+
+    fig.update_xaxes(tick0=0, dtick=len(data.index)//group/20, title_text=group_description)
+    fig.update_yaxes(title_text="Slippage %")
+
+    if show: fig.show()
+    maybe_save(fig, save, get_prefixes, "slippage")
+    return
+
 def plot_chicks(data, chicken, chicks, description="", show=True, save=False, get_prefixes=lambda:None):
     btkn_price = data["btkn_price"][len(data)-1]
     new_data = pd.DataFrame({
@@ -390,5 +424,6 @@ def plot_charts(
     plot_chicken_state(data, description, group, group_description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '1'))
     plot_btkn_price(data, price_max_value, time_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '2'))
     plot_aprs(data, apr_min_value, apr_max_value, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '3'))
+    plot_slippage(data, description, show=show, save=save, get_prefixes=get_prefixes_getter(global_prefix, tester_prefixes_getter, '3'))
     plot_chicks(data, chicken, chicks, description, show, save, get_prefixes_getter(global_prefix, tester_prefixes_getter, '6'))
     return
