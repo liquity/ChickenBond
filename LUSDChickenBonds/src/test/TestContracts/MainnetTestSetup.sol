@@ -174,8 +174,10 @@ contract MainnetTestSetup is BaseTest {
             minBLUSDSupply: 1e18,
             minBondAmount: 100e18,
             nftRandomnessDivisor: 1000e18,
-            redemptionFeeBeta: 2,
-            redemptionFeeMinuteDecayFactor: 999037758833783000 // Half-life of 12h
+            //redemptionFeeBeta: 2,
+            //redemptionFeeMinuteDecayFactor: 999037758833783000 // Half-life of 12h
+            redemptionFeeBeta: type(uint256).max,  // This will make division zero
+            redemptionFeeMinuteDecayFactor: 0 // decPow will always return 0 for base 0 => decayFactor = 0 => decayed base = 0
         });
 
         chickenBondManager = new ChickenBondManagerWrap(externalContractAddresses, params);
