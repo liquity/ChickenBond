@@ -109,7 +109,7 @@ deploy_contract() {
           )
 
     DEPLOYED_ADDRESS=$(echo $RESULT | sed -nr 's/.* Deployed to: (0x\w+) .*$/\1/p')
-    TX_HASH=$(echo $RESULT | sed -nr 's/.* Transaction hash: (0x\w+)$/\1/p')
+    TX_HASH=$(echo $RESULT | sed -nr 's/.* Transaction hash: (0x\w+).*$/\1/p')
 
     [[ -z $DEPLOYED_ADDRESS ]] && { echo -e "\n${RED}Failed to deploy $1 contract.";  exit 1; }
 
