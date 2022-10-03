@@ -84,13 +84,6 @@ cast client --rpc-url $ETH_RPC_URL > /dev/null || {
   exit 1
 }
 
-# Make sure B.AMM address is set
-[[ -z $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS ]] && {
-    echo -e "\n${RED}Missing B.AMM address!\n"
-    exit 1
-}
-
-
 DEPLOYMENT_ADDRESSES=''
 
 # --- Helper functions ---
@@ -205,6 +198,27 @@ cast_call_wrapper() {
 }
 
 # --- Deployments ---
+
+# Make sure B.AMM address is set
+if [[ -z $MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS ]]; then
+    read -p "Missing B.AMM. Do you want to deploy it? (y/n) " proceed
+    [[ $proceed == "y" ]] || {
+        echo -e "\n${RED}Missing B.AMM address!\n"
+        exit 1
+    }
+    # Deploy B.AMM
+    constructor_args="$MAINNET_CHAINLINK_ETH_USD_ADDRESS \
+          $MAINNET_CHAINLINK_LUSD_USD_ADDRESS \
+          $MAINNET_LIQUITY_SP_ADDRESS \
+          $MAINNET_LUSD_TOKEN_ADDRESS \
+          $MAINNET_LQTY_TOKEN_ADDRESS \
+          400 \
+          $MAINNET_BPROTOCOL_FEE_POOL_ADDRESS \
+          $ZERO_ADDRESS \
+          0"
+    deploy_contract "BAMM" "$constructor_args" "owner()(address)" "BAMM_ADDRESS" "../lib/b-protocol/packages/contracts/contracts/B.Protocol/"
+    MAINNET_BPROTOCOL_LUSD_BAMM_ADDRESS=$DEPLOYED_ADDRESS
+fi
 
 # Deploy BLUSDToken contract
 constructor_args="$BLUSD_NAME $BLUSD_SYMBOL"
