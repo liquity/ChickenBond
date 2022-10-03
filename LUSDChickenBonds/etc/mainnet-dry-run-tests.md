@@ -1,4 +1,6 @@
-# Deployment addresses
+# First deployment, with bLUSD/LUSD AMM (2022-09-28)
+
+## Deployment addresses
 
 ```
 {
@@ -14,7 +16,8 @@
     "CHICKEN_BOND_MANAGER_ADDRESS": "0x89058630b53228aDCC77690586cFb3C74F08803C"
 }
 ```
-# Deployment transactions
+
+## Deployment transactions
 
 [bLUSD token](https://etherscan.io/tx/0xd91dbd25e042cfc0e696c97ef5804daca210a84f5efd504667a8738c7b4200f6)
 
@@ -48,7 +51,7 @@
 
 [Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/0xe5375bafd8dce35541228ae14e0f209164eeb9eed9160984b799d3055e822b13)
 
-# Tests
+## Tests
 
 [Create bond 1](https://etherscan.io/tx/0xecdbeba69e4bfc278b41bccaa7759e38e613dcd31a17e2b8b50af0e420cc5ec2)
 
@@ -109,3 +112,36 @@ Earning rewards from Gauge:
 [Withdraw from Yearn Curve vault after migration](https://etherscan.io/tx/0x99a62ffb15734b3efa7bb364bf7933c91b50997cfae0670b37ca7765807fc142)
 
 [Withdraw form Curve pool after migration](https://etherscan.io/tx/0x26982cd473a121d571db4f2e63047fa09499fa4f7f9c531c01693a80305effb8)
+
+# Second deployment, with bLUSD/LUSD-3CRV AMM (2022-10-03)
+
+## Deployment addresses
+
+```
+```
+
+## Deployment transactions
+
+[bLUSD token](0x9925bda8d02f75d7267b253230cb103f1b2176ffd89fd751e1da395faaecbd09)
+
+[Egg NFT artwork](0x9d6cec701106205d2446fa88a6afdfea4bd86ab67f4bd853e81b09edb5d01512)
+
+[BondNFT](0xccdf3c74893f187f38337a660001a632c9bed9760f862df8b7e8d2c3733d2e09)
+
+[bLUSD/LUSD-3CRV Curve pool](0xc01b38bc02fde63589f9a884f498b242e44686d3b00619dcd89449698d88687f)
+
+[bLUSD/LUSD-3CRV pool in Curve]()
+
+[bLUSD/LUSD-3CRV Gauge](0x172a873f1e8756224ef74cb31df972ae6dd1b3f522c8b5a23a65404d03c6c14a)
+
+[ChickenBondManager](0x5c577fa5a7a1041e0141da225264b45eaf2b112b4ba8de0497c7794c2313d913)
+
+[Connect BondNFT to ChickenBondManager](0xfd79a4b4748a5683c2d3cfefecb65ff4f6f3717cae1c7c2e26309815000d167b)
+
+[Connect bLUSD to ChickenBondManager](0x6fb32f0b644f8b3e87cbdfae16df17944687b0fe69b71af81efa1b24990569b9)
+
+[Add reward to LUSD-3CRV Gauge](0x4b9d2d62664b563c129d59619bd75349ff981416c1623dd5ab1a1e2cd7698554)
+
+[Connect B.AMM to ChickenBondManager]()
+
+## Tests

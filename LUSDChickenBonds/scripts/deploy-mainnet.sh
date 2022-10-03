@@ -123,7 +123,6 @@ deploy_contract() {
 
     # Check deployment
     if [[ ! -z $3 ]]; then
-        echo cast call $DEPLOYED_ADDRESS $3 --rpc-url $ETH_RPC_URL
         cast call $DEPLOYED_ADDRESS $3 --rpc-url $ETH_RPC_URL > /dev/null || {
             echo -e "\n${RED}Failed to deploy $1 contract."
             exit 1
@@ -228,7 +227,7 @@ deploy_contract "BondNFT" "$constructor_args" "owner()(address)" "BOND_NFT_ADDRE
 BOND_NFT_ADDRESS=$DEPLOYED_ADDRESS
 
 # Create bLUSD AMM pool
-deployment_arguments="$CURVE_V2_NAME $CURVE_V2_SYMBOL [$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_TOKEN_ADDRESS] \
+deployment_arguments="$CURVE_V2_NAME $CURVE_V2_SYMBOL [$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_3CRV_TOKEN_ADDRESS] \
 $CURVE_V2_A $CURVE_V2_GAMMA $CURVE_V2_MID_FEE $CURVE_V2_OUT_FEE $CURVE_V2_ALLOWED_EXTRA_PROFIT $CURVE_V2_FEE_GAMMA \
 $CURVE_V2_ADJUSTMENT_STEP $CURVE_V2_ADMIN_FEE $CURVE_V2_MA_HALF_TIME $CURVE_V2_INITIAL_PRICE"
 deploy_from_factory \
@@ -236,7 +235,7 @@ deploy_from_factory \
     "deploy_pool(string,string,address[2],uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)(address)" \
     "$deployment_arguments" \
     "BLUSD_AMM_ADDRESS" \
-    "bLUSD/LUSD Curve AMM pool"
+    "bLUSD/LUSD-3CRV Curve AMM pool"
 
 BLUSD_AMM_ADDRESS=$DEPLOYED_ADDRESS
 
@@ -247,7 +246,7 @@ deploy_from_factory \
     "deploy_gauge(address,address)(address)" \
     "$deployment_arguments" \
     "BLUSD_AMM_STAKING_ADDRESS" \
-    "bLUSD/LUSD staking reward contract (Curve gauge)"
+    "bLUSD/LUSD-3CRV staking reward contract (Curve gauge)"
 
 BLUSD_AMM_STAKING_ADDRESS=$DEPLOYED_ADDRESS
 
