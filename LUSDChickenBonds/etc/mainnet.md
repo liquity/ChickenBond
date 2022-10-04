@@ -2,44 +2,49 @@
 
 ```
 {
-    "BLUSD_AMM_ADDRESS": "0x9735d6530b0609bA8340Ecf61FEaCD922468c1e1",
-    "BLUSD_AMM_LP_TOKEN": "0xa1F14d9B4ECb5730E59F419a26Ee3ec56D14Fb6C",
-    "BLUSD_AMM_STAKING_ADDRESS": "0x009644832140FeD8B3B2B40405612F0C06AB3917",
-    "BLUSD_TOKEN_ADDRESS": "0x20658291677a29EFddfd0E303f8b23113d837cC7",
-    "BOND_NFT_ADDRESS": "0xc96265c8748C8361D77fE99D42Ae78aAe63995a6",
-    "BOND_NFT_INITIAL_ARTWORK_ADDRESS": "0x743377926033CaD0770e0f2b0d4cD33D7430fD56",
-    "CHICKEN_BOND_MANAGER_ADDRESS": "0xB8643Df25B6614eBD9E03144d12F53994e40E770"
+    "BLUSD_AMM_ADDRESS": "0x74ED5d42203806c8CDCf2F04Ca5F60DC777b901c",
+    "BLUSD_AMM_STAKING_ADDRESS": "0xdA0DD1798BE66E17d5aB1Dc476302b56689C2DB4",
+    "BLUSD_TOKEN_ADDRESS": "0xB9D7DdDca9a4AC480991865EfEf82E01273F79C3",
+    "BOND_NFT_ADDRESS": "0xa8384862219188a8f03c144953Cf21fc124029Ee",
+    "BOND_NFT_INITIAL_ARTWORK_ADDRESS": "0x91678E87e220855cb4Ec169AbDC9E7B5f3dC0187",
+    "CHICKEN_BOND_MANAGER_ADDRESS": "0x57619FE9C539f890b19c61812226F9703ce37137"
 }
 ```
 
 # Deployment transactions
 
-[bLUSD token](https://etherscan.io/tx/0xa48cc5c712d6a4829a0fd6a5e23f81ce3e625641d7da597a14241c38606305cf)
+[BLUSD_TOKEN](https://etherscan.io/tx/0xcc0e959020e90656955484e2b8255998cba31c541a23597facc72ca294f50485)
 
-[Egg NFT artwork](https://etherscan.io/tx/0x00117a17df419b47a793f210f2c5ff63149531c405eaaf957a2d7f2c94ec3326)
+[BOND_NFT_INITIAL_ARTWORK](https://etherscan.io/tx/0xa7ae25decd9a7fa5119e399343bf6ab853110cc9f5a09e0f586585e885685799)
 
-[BondNFT](https://etherscan.io/tx/0xe0f93bb1b8ac13a5e23095e0cad51ff24b5570a3c0320dc7283a60079fff6961)
+[BOND_NFT](https://etherscan.io/tx/0xb625c698465abcceeb966ccc0e974a8b8cccd58d869484e88b6e8a97c4a46258)
 
-[bLUSD/LUSD-3CRV Curve pool](https://etherscan.io/tx/0xb454af5059170bc1dceeb64d7c230c31bbc4022ebd77e829fc32f0142b9b501b)
+[bLUSD/LUSD-3CRV Curve pool](https://etherscan.io/tx/0x8f6a30c59642deea7ba52c90bd656fa260de1c23f088c624b599c5a028a50f99)
 
-[bLUSD/LUSD-3CRV pool in Curve](https://curve.fi/factory-crypto/133)
+[bLUSD/LUSD-3CRV pool in Curve](https://curve.fi/factory-crypto/134)
 
-[bLUSD/LUSD-3CRV Gauge](https://etherscan.io/tx/0xcc43a5635272ced68a9ca81b0bba7aa3a74785d4234a3e3037a3b8e01f662428)
+[bLUSD/LUSD-3CRV Gauge](https://etherscan.io/tx/0x7cbc4f3d66680a7b42760722523e0cf4afd576803941ee4aacf9f96ee6051674)
 
-[ChickenBondManager](https://etherscan.io/tx/0x81561a840bda9a9624c55e9ecbd896fc6331a069840fe3bf65e6b78dd79df283)
+[CHICKEN_BOND_MANAGER](https://etherscan.io/tx/0x356cf19c225a795eb07ba89af273b1603cecd69909308933cc58695c6b1c90c0)
 
-[Connect BondNFT to ChickenBondManager](https://etherscan.io/tx/0xd7f03e49feae24eacffe0add8b60f0fcaa4518e83ec431e174192a55e9a5b4c3)
 
-[Connect bLUSD to ChickenBondManager](https://etherscan.io/tx/0xde8c32a9b42ae6a3f9eccf281271a1e1966daab0aebbb03b7daa8dc1466666d8)
 
-[Add reward to LUSD-3CRV Gauge](https://etherscan.io/tx/0x443ddcd85aedc899ada4641c52689978d8db102dee5a62ed7976ff0e343b1d65)
+[Connect BondNFT to ChickenBondManager](https://etherscan.io/tx/0x557f40e638945bdb9d95e71c6206142ec404d365e61c091ba7fbdd21501f7bbb)
 
-[Failed bond creation before B.AMM connection](https://etherscan.io/tx/0x9f79ecdd0e2ebae55ccb1c0c3bc9c54fb9a6def515ef7b0723807a0af842937a)
+[Connect bLUSD to ChickenBondManager](https://etherscan.io/tx/0xf52b48cf1001d764af0375263524b6e3f789db3cb919945912127c34a458fa1b)
 
-[Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/https://etherscan.io/tx/0x72cca31519be9561f75aeb1da1d21f6ac1822004454cbee02acaebb12bbb4be8)
+[Add reward to LUSD-3CRV Gauge](https://etherscan.io/tx/0x387962eb8c53d5c2d4d16bbbc6d5960884bf02dd822f94152821c7108a72e0cb)
+
+[Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/0x50eb4e127b2dd5a506b7ffaabcf85f40ca7e31dbce3a2f861b63ce3492e80d0d)
 
 # Tests
 
-[Failed bond creation before B.AMM connection](https://etherscan.io/tx/0x9f79ecdd0e2ebae55ccb1c0c3bc9c54fb9a6def515ef7b0723807a0af842937a)
+[Create bond 1](https://etherscan.io/tx/0xc4d2af59d1d0fe68cd269c208a4b97afde7d4b3a73dae04d0a03f67d913f9025)
 
-[Create bond](https://etherscan.io/tx/0x858c2893de37d9ddf7973debb69cba11a0f9f529bd7848d1c9f39e4672efa232)
+[Create bond 2 (with permit)](https://etherscan.io/tx/0x3f6d741addd047627a4176ffa0c855fcac878f39118d559d954cca3427fef30f)
+
+[Chicken Out bond id 2](https://etherscan.io/tx/0x7a5309f2e1e1a6bc9f0d8ad15d74d36407ccef527995fab1dd448dfcc83e627b)
+
+[Failed chicken In during bootstrap period](https://etherscan.io/tx/0x73876384ee74ab706db31df4fe65608836a2f5554e94ff02923f21298e4d103c)
+
+

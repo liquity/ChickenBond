@@ -105,8 +105,7 @@ deploy_contract() {
               --rpc-url $ETH_RPC_URL \
               ${PRIORITY_GAS_PRICE:+--priority-gas-price $PRIORITY_GAS_PRICE} \
               ${ETHERSCAN_API_KEY:+--etherscan-api-key $ETHERSCAN_API_KEY --verify} \
-              ${2:+--constructor-args $2}
-          )
+              ${2:+--constructor-args $2})
 
     DEPLOYED_ADDRESS=$(echo $RESULT | sed -nr 's/.* Deployed to: (0x\w+) .*$/\1/p')
     TX_HASH=$(echo $RESULT | sed -nr 's/.* Transaction hash: (0x\w+).*$/\1/p')
@@ -144,8 +143,7 @@ deploy_from_factory() {
     DEPLOYED_ADDRESS=$(
         cast call $1 $2 $3 \
              --rpc-url $ETH_RPC_URL \
-             --private-key $DEPLOYER_PRIVATE_KEY \
-                    )
+             --private-key $DEPLOYER_PRIVATE_KEY)
 
     [[ -z $DEPLOYED_ADDRESS ]] && { echo -e "\n${RED}Failed to deploy $5.";  exit 1; }
 
