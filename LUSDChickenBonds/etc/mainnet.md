@@ -47,4 +47,9 @@
 
 [Failed chicken In during bootstrap period](https://etherscan.io/tx/0x73876384ee74ab706db31df4fe65608836a2f5554e94ff02923f21298e4d103c)
 
+[Create bond using app.lqty.io frontend](https://etherscan.io/tx/0xd085581ffdc00f552ff8c4a3ee012697da2c23f0d6521bb7330209dc0760c00c)
+
+[Create bond using liquity.app frontend](https://etherscan.io/tx/0x37172895ee217288260bf96a4e8f5f72b1999ce7718206ec37c511bedc21ba73)
+
+[Create bond using imtbl.top frontend](https://etherscan.io/tx/0x15e51a8269d4e4008e4905b970c38e26ada6d78ebaaf6756c78d757dacf74276)
 
