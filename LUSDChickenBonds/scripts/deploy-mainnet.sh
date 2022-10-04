@@ -229,6 +229,11 @@ constructor_args="$BLUSD_NAME $BLUSD_SYMBOL"
 deploy_contract "BLUSDToken" "$constructor_args" "owner()(address)" "BLUSD_TOKEN_ADDRESS"
 
 BLUSD_TOKEN_ADDRESS=$DEPLOYED_ADDRESS
+cast_call_wrapper $BLUSD_TOKEN_ADDRESS "name()(string)" ""
+echo Name: $CALL_RESULT
+cast_call_wrapper $BLUSD_TOKEN_ADDRESS "symbol()(string)" ""
+echo Symbol: $CALL_RESULT
+echo ""
 
 # Deploy Egg NFT artwork
 deploy_contract "GenerativeEggArtwork" "" "" "BOND_NFT_INITIAL_ARTWORK_ADDRESS" "NFTArtwork/"
@@ -243,6 +248,11 @@ constructor_args="$BOND_NFT_NAME $BOND_NFT_SYMBOL $BOND_NFT_INITIAL_ARTWORK_ADDR
 deploy_contract "BondNFT" "$constructor_args" "owner()(address)" "BOND_NFT_ADDRESS"
 
 BOND_NFT_ADDRESS=$DEPLOYED_ADDRESS
+cast_call_wrapper $BOND_NFT_ADDRESS "name()(string)" ""
+echo Name: $CALL_RESULT
+cast_call_wrapper $BOND_NFT_ADDRESS "symbol()(string)" ""
+echo Symbol: $CALL_RESULT
+echo ""
 
 # Create bLUSD AMM pool
 deployment_arguments="$CURVE_V2_NAME $CURVE_V2_SYMBOL [$BLUSD_TOKEN_ADDRESS,$MAINNET_LUSD_3CRV_TOKEN_ADDRESS] \

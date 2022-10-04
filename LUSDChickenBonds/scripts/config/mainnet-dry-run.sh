@@ -27,7 +27,7 @@ BOND_NFT_SYMBOL="lbnn"
 BOND_NFT_LOCKOUT_PERIOD=86400                               # 1 day
 
 # bLUSD constructor arguments
-BLUSD_NAME="bl"
+BLUSD_NAME="bl_token"
 BLUSD_SYMBOL="bl"
 
 # Curve V2 internal bLUSD/LUSD params
