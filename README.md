@@ -316,3 +316,24 @@ https://docs.yearn.finance/partners/introduction
 _"any protocol that integrates yVaults can earn up to a 50% profit share from their contributed TVL."_
 
 We assume they will send us the fee share in LUSD from the Yearn governance address. `ChickenBondManager` has a `sendFeeShare` function, callable only by them, which transfers the LUSD and deposits it to the B.AMM SP vault in normal mode. It's disabled in migration mode, since harvests/fees will not occur.
+
+## Creating a bond from a Gnosis Safe
+
+Most Chicken Bonds front ends utilize the LUSD `permit` functionality for approvals. This historically does not play well with Gnosis Safe.
+
+If you want to create an LUSD bond from your Gnosis safe multi-sig, we recommend you use a standard two-transaction approval pattern. Please follow these steps in the Gnosis Safe UI:
+
+**1. Approve Chicken Bonds to use your LUSD** 
+- In Gnosis Safe, goto "New transaction" -> "Contract interaction"
+- Input the LUSD contract address: 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0
+- Choose the `approve` function from the dropdown list
+- In the `spender` field, input the ChickenBondManager contract address: 0x57619FE9C539f890b19c61812226F9703ce37137
+- In the `amount` field, input the amount with 18 zeros on the end. e.g. to approve 1234 LUSD, enter `1234000000000000000000`
+- Submit, sign and execute the transaction in Gnosis Safe
+
+**2. Create a bond with your LUSD**
+- In Gnosis Safe, goto "New transaction" -> "Contract interaction"
+- Input the ChickenBondManager contract address: 0x57619FE9C539f890b19c61812226F9703ce37137
+- Choose the `createBond` function from the dropdown list
+- In the `_lusdAmount` field, enter the amount with 18 zeros on the end, e.g. to bond 1234 LUSD, enter `1234000000000000000000`
+- Submit, sign and execute the transaction in Gnosis Safe
