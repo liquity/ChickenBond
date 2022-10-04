@@ -45,6 +45,8 @@ CURVE_V2_MA_HALF_TIME=600
 CURVE_V2_INITIAL_PRICE=769230769231000000                   # 0.769... (1/1.3)
 
 # ChickenBonds constructor arguments
+# See the whitepaper or this spreadsheet to get the initial accrual param:
+# https://docs.google.com/spreadsheets/d/128KLqzjtuFM1oXSg_njGoi4_-VfCtOe-7EItNbgCr2E/edit#gid=0
 INITIAL_ACCRUAL_PARAMETER=318667000000000000000000          # 3.6883 days * 1e18
 MINIMUM_ACCRUAL_PARAMETER=318667000000000000000             # 3.6883 days * 1e18 / 1000
 ACCRUAL_ADJUSTMENT_RATE=10000000000000000                   # 1e16 = 1%
@@ -60,5 +62,5 @@ SHIFTER_WINDOW=600                                          # 10 minutes
 MIN_BLUSD_SUPPLY=1000000000000000000                        # 1 bLUSD
 MIN_BOND_AMOUNT=100000000000000000000                       # 100 LUSD
 NFT_RANDOMNESS_DIVISOR=1000000000000000000000               # 1000
-REDEMPTION_FEE_BETA=115792089237316195423570985008687907853269984665640564039457584007913129639935  # max uint, will make division zero
+REDEMPTION_FEE_BETA=115792089237316195423570985008687907853269984665640564039457584007913129639935  # max uint, this will make the result of division by Beta equal to zero
 REDEMPTION_FEE_MINUTE_DECAY_FACTOR=0                        # decPow will always return 0 for base 0 => decayFactor = 0 => decayed base = 0
