@@ -118,7 +118,7 @@ For the global permanent and acquired buckets, the split is updated by shifter f
 
 `chickenOut:` Withdraws all of the bond’s LUSD from the B.AMM SP vault pending bucket
 
-`redeem(normal mode):` Pulls funds proportionally from the B.AMM SP vault acquired bucket and the Curve acquired bucket (sends yTokens, and does not unwrap to LUSD)
+`redeem(normal mode):` Pulls funds proportionally from the B.AMM SP vault acquired bucket and the Curve acquired bucket (sends yTokens, and does not unwrap to LUSD). Redemptions are disabled until 15 days after the first chicken in.
 
 `redeem(migration mode)`: Pulls redeemed funds proportionally from the B.AMM SP vault acquired bucket (as LUSD) and the Curve acquired bucket (as yTokens)
 
@@ -151,7 +151,7 @@ Special logic applies to the First Chicken In.  A "First Chicken In" is defined 
 
 The following extra logic applies to the first Chicken In:
 
-- It can only be performed after some initial bootstrap period has passed (length TBD)
+- It can only be performed after an initial bootstrap period of 15 days has passed
 - All yield that has accumulated in the acquired bucket is sent as rewards to the staking contract for bLUSD-LUSD AMM LPs.
 - B.Protocol must hold at least as much LUSD as the acquired bucket. This is to ensure that B.Protocol can fully cover the transfer of the acquired bucket to the staking contract. In most cases it will, though after heavy Liquity liquidations it may take some time for B.Protocol to convert the ETH liquidation gains back to LUSD.  In this case, Chicken Bond bonders will just need to wait until the LUSD in B.Protocol has replenished before a First Chicken In is possible.
 
@@ -183,7 +183,7 @@ The choice of thresholds ensures that shifting LUSD is profitable for the Chicke
 
 ### Additional shifter conditions
 
-- **Initial bootstrap period**. Both shifters are disabled for an initial period  post-launch (currently set to 90 days - the final value is TBD). As a result, all system funds remain in B.Protocol for this initial period.
+- **Initial bootstrap period**. Both shifters are disabled for an initial period of 45 days post-launch. As a result, all system funds remain in B.Protocol for this initial period.
 - **bLUSD supply must be > 0**. There must be a non-zero supply of bLUSD for shifters to work.  This ensures that all system funds remain deposited in B.Protocol before the first Chicken In.
 - **Funds deposited in Curve must never exceed the Permanent bucket size**. This guarantees that the system always offers a yield greater than that earned by a pure B.protocol deposit.
 
@@ -191,9 +191,9 @@ The choice of thresholds ensures that shifting LUSD is profitable for the Chicke
 
 It is not possible to shift funds without first starting a countdown. 
 
-In order to shift funds, someone must first start the countdown via the permissionless `startShifterCountdown` function. The countdown period is set to 1 hour (final value TBD). 
+In order to shift funds, someone must first start the countdown via the permissionless `startShifterCountdown` function. The countdown period is set to 1 hour. 
 
-When the countdown period ends, the "shifting window" opens: this period is 10 minutes (final value TBD). During the shifting window, anyone may shift funds (subject to the other shifting conditions).
+When the countdown period ends, the "shifting window" opens: this period is 10 minutes. During the shifting window, anyone may shift funds (subject to the other shifting conditions).
 
 A new countdown can only be started if the previous countdown period and subsequent shifting window have ended.
 
