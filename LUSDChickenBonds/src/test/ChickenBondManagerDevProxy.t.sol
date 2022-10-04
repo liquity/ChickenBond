@@ -99,9 +99,9 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
 
         // checks
         // fraction redeeemed: 1/2
-        // redemption fee: 1/4: decayed base is zero (as it’s the first one), so fee is fraction redeemed / BETA = 1/2 / 2 = 1/4.
-        // Therefore, fraction with fee applied: 1/2*(1 - 1/4) = 3/8
-        uint256 expectedLUSDBalance = accruedBLUSD * backingRatio / 1e18 * 3/8;
+        // redemption fee: 0
+        // Therefore, fraction with fee applied: 1/2
+        uint256 expectedLUSDBalance = accruedBLUSD * backingRatio / 1e18 / 2;
         assertEq(lusdToken.balanceOf(A), previousLUSDBalance + expectedLUSDBalance, "LUSD balance doesn't match");
         assertEq(yearnCurveVault.balanceOf(A), 0, "Curve yTokens balance doesn't match");
     }
@@ -134,9 +134,9 @@ contract ChickenBondManagerDevProxyTest is DevTestSetup {
 
         // checks
         // fraction redeeemed: 1/2
-        // redemption fee: 1/4: decayed base is zero (as it’s the first one), so fee is fraction redeemed / BETA = 1/2 / 2 = 1/4.
-        // Therefore, fraction with fee applied: 1/2*(1 - 1/4) = 3/8
-        uint256 expectedLUSDBalance = accruedBLUSD * backingRatio / 1e18 * 3/8;
+        // redemption fee: 0
+        // Therefore, fraction with fee applied: 1/2
+        uint256 expectedLUSDBalance = accruedBLUSD * backingRatio / 1e18 / 2;
         assertEq(lusdToken.balanceOf(A) - previousBalance, expectedLUSDBalance, "LUSD balance doesn't match");
     }
 }

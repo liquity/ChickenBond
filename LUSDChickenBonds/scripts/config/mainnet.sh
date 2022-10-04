@@ -42,23 +42,25 @@ CURVE_V2_FEE_GAMMA=230000000000000                          # 0.00023
 CURVE_V2_ADJUSTMENT_STEP=146000000000000                    # 0.000146
 CURVE_V2_ADMIN_FEE=5000000000                               # 50%
 CURVE_V2_MA_HALF_TIME=600
-CURVE_V2_INITIAL_PRICE=666666666666666600                   # 0.66.. (1/1.5)
+CURVE_V2_INITIAL_PRICE=769230769231000000                   # 0.769... (1/1.3)
 
 # ChickenBonds constructor arguments
-INITIAL_ACCRUAL_PARAMETER=216000000000000000000000          # 2.5 days * 1e18
-MINIMUM_ACCRUAL_PARAMETER=216000000000000000000             # 2.5 days * 1e18 / 1000
+# See the whitepaper or this spreadsheet to get the initial accrual param:
+# https://docs.google.com/spreadsheets/d/128KLqzjtuFM1oXSg_njGoi4_-VfCtOe-7EItNbgCr2E/edit#gid=0
+INITIAL_ACCRUAL_PARAMETER=318667000000000000000000          # 3.6883 days * 1e18
+MINIMUM_ACCRUAL_PARAMETER=318667000000000000000             # 3.6883 days * 1e18 / 1000
 ACCRUAL_ADJUSTMENT_RATE=10000000000000000                   # 1e16 = 1%
-TARGET_AVERAGE_AGE_SECONDS=2592000                          # 30 days
+TARGET_AVERAGE_AGE_SECONDS=1296000                          # 15 days => average CI will happen at ~30 days
 ACCRUAL_ADJUSTMENT_PERIOD_SECONDS=86400                     # 1 day
-CHICKEN_IN_AMM_FEE=10000000000000000                        # 1e16 = 1%
+CHICKEN_IN_AMM_FEE=30000000000000000                        # 3e16 = 3%
 CURVE_DEPOSIT_WITHDRAW_DYDX_THRESHOLD=1000400000000000000   # 10004e14 = 1.0004
-BOOTSTRAP_PERIOD_CHICKEN_IN=604800                          # 7 days
-BOOTSTRAP_PERIOD_REDEEM=604800                              # 7 days
-BOOTSTRAP_PERIOD_SHIFT=7776000                              # 90 days
+BOOTSTRAP_PERIOD_CHICKEN_IN=1296000                         # 15 days
+BOOTSTRAP_PERIOD_REDEEM=1296000                             # 15 days (since first CI)
+BOOTSTRAP_PERIOD_SHIFT=3888000                              # 45 days (since launch)
 SHIFTER_DELAY=3600                                          # 1 hour
 SHIFTER_WINDOW=600                                          # 10 minutes
 MIN_BLUSD_SUPPLY=1000000000000000000                        # 1 bLUSD
 MIN_BOND_AMOUNT=100000000000000000000                       # 100 LUSD
 NFT_RANDOMNESS_DIVISOR=1000000000000000000000               # 1000
-REDEMPTION_FEE_BETA=2
-REDEMPTION_FEE_MINUTE_DECAY_FACTOR=999037758833783000       # 12 hour half life
+REDEMPTION_FEE_BETA=115792089237316195423570985008687907853269984665640564039457584007913129639935  # max uint, this will make the result of division by Beta equal to zero
+REDEMPTION_FEE_MINUTE_DECAY_FACTOR=0                        # decPow will always return 0 for base 0 => decayFactor = 0 => decayed base = 0

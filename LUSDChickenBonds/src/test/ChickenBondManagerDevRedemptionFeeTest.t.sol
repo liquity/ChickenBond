@@ -36,7 +36,8 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
 
         decayedBaseRedemptionRate = 1e16;
         fractionOfBLUSDToRedeem = 2e16; // 2%
-        expectedRate = 2e16;
+        //expectedRate = 2e16;
+        expectedRate = 1e16;
         _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfBLUSDToRedeem, expectedRate);
 
         decayedBaseRedemptionRate = 1e18;
@@ -46,7 +47,8 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
 
         decayedBaseRedemptionRate = 1e16;
         fractionOfBLUSDToRedeem = 2e18;
-        expectedRate = 1e18;
+        //expectedRate = 1e18;
+        expectedRate = 1e16;
         _checkUpdateRedemptionRate(decayedBaseRedemptionRate, fractionOfBLUSDToRedeem, expectedRate);
     }
 
@@ -94,7 +96,7 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
         chickenBondManager.setBaseRedemptionRate(_baseRedemptionRate);
         //console.log("r:", chickenBondManager.calcRedemptionFeePercentage());
         //console.log("e:", _expectedRate);
-        assert(chickenBondManager.calcRedemptionFeePercentage(0) == _expectedRate);
+        assertEq(chickenBondManager.calcRedemptionFeePercentage(0), _expectedRate, "Rate mismatch");
     }
 
     function testCalcRedemptionFeePercentage() public {
@@ -118,12 +120,14 @@ contract ChickenBondManagerDevRedemptionFeeTest is DevTestSetup {
 
         lastRedemptionTime = currentTime - 60;
         baseRedemptionRate = 1e16;
-        expectedRate = 9990377588337830;
+        //expectedRate = 9990377588337830;
+        expectedRate = 0;
         checkCalcRedemptionFeePercentage(lastRedemptionTime, baseRedemptionRate, expectedRate);
 
         lastRedemptionTime = currentTime - 6000;
         baseRedemptionRate = 1e16;
-        expectedRate = 9082183626943678;
+        //expectedRate = 9082183626943678;
+        expectedRate = 0;
         checkCalcRedemptionFeePercentage(lastRedemptionTime, baseRedemptionRate, expectedRate);
     }
 
