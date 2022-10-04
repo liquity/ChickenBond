@@ -34,4 +34,12 @@
 
 [Add reward to LUSD-3CRV Gauge](https://etherscan.io/tx/0x443ddcd85aedc899ada4641c52689978d8db102dee5a62ed7976ff0e343b1d65)
 
-[Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/)
+[Failed bond creation before B.AMM connection](https://etherscan.io/tx/0x9f79ecdd0e2ebae55ccb1c0c3bc9c54fb9a6def515ef7b0723807a0af842937a)
+
+[Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/https://etherscan.io/tx/0x72cca31519be9561f75aeb1da1d21f6ac1822004454cbee02acaebb12bbb4be8)
+
+# Tests
+
+[Failed bond creation before B.AMM connection](https://etherscan.io/tx/0x9f79ecdd0e2ebae55ccb1c0c3bc9c54fb9a6def515ef7b0723807a0af842937a)
+
+[Create bond](https://etherscan.io/tx/0x858c2893de37d9ddf7973debb69cba11a0f9f529bd7848d1c9f39e4672efa232)
