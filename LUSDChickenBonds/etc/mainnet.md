@@ -27,8 +27,6 @@
 
 [CHICKEN_BOND_MANAGER](https://etherscan.io/tx/0x356cf19c225a795eb07ba89af273b1603cecd69909308933cc58695c6b1c90c0)
 
-
-
 [Connect BondNFT to ChickenBondManager](https://etherscan.io/tx/0x557f40e638945bdb9d95e71c6206142ec404d365e61c091ba7fbdd21501f7bbb)
 
 [Connect bLUSD to ChickenBondManager](https://etherscan.io/tx/0xf52b48cf1001d764af0375263524b6e3f789db3cb919945912127c34a458fa1b)
@@ -53,3 +51,6 @@
 
 [Create bond using imtbl.top frontend](https://etherscan.io/tx/0x15e51a8269d4e4008e4905b970c38e26ada6d78ebaaf6756c78d757dacf74276)
 
+[Failed shift from Curve to SP: bootstrap period](https://etherscan.io/tx/0x8b30a6a4c89122669fe87c300ede04de329c9ed6c4b8d89bcd1e3fad3622dc8b)
+
+[Failed shift from SP to Curve: bootstrap period](https://etherscan.io/tx/0xfeb4534a4e06bb9efdeb981934eb54ac8869cd2ca061a985e830106172a68918)
