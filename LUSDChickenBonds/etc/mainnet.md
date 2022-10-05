@@ -54,3 +54,6 @@
 [Failed shift from Curve to SP: bootstrap period](https://etherscan.io/tx/0x8b30a6a4c89122669fe87c300ede04de329c9ed6c4b8d89bcd1e3fad3622dc8b)
 
 [Failed shift from SP to Curve: bootstrap period](https://etherscan.io/tx/0xfeb4534a4e06bb9efdeb981934eb54ac8869cd2ca061a985e830106172a68918)
+
+[Failed NFT transfer during lockout period](https://etherscan.io/tx/0x6a2dd04458e4c00190d659a9f17be9dd26fc0c55780703908eab6bbefa43b7cf)
+
