@@ -3,7 +3,7 @@ pragma solidity ^0.8.10;
 
 import "./BaseTest.sol";
 import "./Interfaces/ICurveCryptoFactory.sol";
-import "./Interfaces/ICurveCryptoPool.sol";
+import "../../Interfaces/ICurveCryptoPool.sol";
 import "./Interfaces/ICurveGaugeManagerProxy.sol";
 import "../../Interfaces/ICurveLiquidityGaugeV5.sol";
 

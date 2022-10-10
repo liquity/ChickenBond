@@ -63,7 +63,7 @@ jobs:
         run: >-
           forge test
           -vvv
-          --match-contract ChickenBondManagerMainnet
+          --match-contract '(ChickenBondManagerMainnet|BLUSDLPZap)'
           --fork-url ${{ secrets.ETH_RPC_URL }}
 
   console-logs:

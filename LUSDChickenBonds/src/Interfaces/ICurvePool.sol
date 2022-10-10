@@ -6,6 +6,8 @@ import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 interface ICurvePool is IERC20 { 
     function add_liquidity(uint256[2] memory _amounts, uint256 _min_mint_amount) external returns (uint256 mint_amount);
 
+    function add_liquidity(uint256[2] memory _amounts, uint256 _min_mint_amount, address _receiver) external returns (uint256 mint_amount);
+
     function remove_liquidity(uint256 burn_amount, uint256[2] memory _min_amounts) external;
 
     function remove_liquidity_one_coin(uint256 _burn_amount, int128 i, uint256 _min_received) external;

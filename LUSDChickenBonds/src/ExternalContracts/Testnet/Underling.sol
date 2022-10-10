@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "../../Interfaces/IChickenBondManager.sol";
-import "../../test/TestContracts/Interfaces/ICurveCryptoPool.sol";
+import "../../Interfaces/ICurveCryptoPool.sol";
 import "./ERC20Faucet.sol";
 
 contract Underling {
