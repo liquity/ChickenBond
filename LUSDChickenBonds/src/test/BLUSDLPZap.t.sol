@@ -91,7 +91,7 @@ contract BLUSDLPZapTest is BaseTest {
     function testAddLiquidityGetsMinLPTokens() public {
         uint256 bLUSDAmount = 1000e18;
         uint256 lusdAmount = 1300e18;
-        uint256 minLPAmount = 1145e18;
+        uint256 minLPAmount = 1145e18 * 99 / 100; // add some safety thresholds, as mainnet state can vary
 
         uint256 initialbLUSDLUSD3CRVLPTokenBalance = bLUSDLUSD3CRVLPToken.balanceOf(A);
         _addLiquidity(bLUSDAmount, lusdAmount, minLPAmount);
@@ -103,7 +103,7 @@ contract BLUSDLPZapTest is BaseTest {
     function testAddLiquidityFailsIfNotMinLPTokens() public {
         uint256 bLUSDAmount = 1000e18;
         uint256 lusdAmount = 1300e18;
-        uint256 minLPAmount = 1146e18;
+        uint256 minLPAmount = 1146e18 * 101 / 100; // add some safety thresholds, as mainnet state can vary
 
         vm.startPrank(A);
         _dealAndApprove(bLUSDAmount, lusdAmount);
