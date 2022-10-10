@@ -1,6 +1,7 @@
 import SvgPath from "svgpath";
+import { round, viewBoxHeight, viewBoxWidth } from "./common";
 
-export const shellPath = Object.freeze(
+export const eggShellPath = Object.freeze(
   new SvgPath(
     [
       "M239.76",
@@ -23,7 +24,7 @@ export const shellPath = Object.freeze(
   )
 );
 
-export const highlightPath = Object.freeze(
+export const eggShellHighlightPath = Object.freeze(
   new SvgPath(
     [
       "M298.26",
@@ -49,7 +50,7 @@ export const highlightPath = Object.freeze(
   )
 );
 
-export const selfShadowPath = Object.freeze(
+export const eggShellSelfShadowPath = Object.freeze(
   new SvgPath(
     [
       "M443.61",
@@ -84,8 +85,6 @@ export const selfShadowPath = Object.freeze(
   )
 );
 
-const viewBoxWidth = 750;
-const viewBoxHeight = 1050;
 const transformOriginX = 0.5 * viewBoxWidth;
 const transformOriginY = 0.45 * viewBoxHeight;
 
@@ -96,9 +95,7 @@ export const scaleEggPath = (path: typeof SvgPath, s: number) =>
     .translate(transformOriginX, transformOriginY)
     .round(2);
 
-const round = (n: number) => Math.round(100 * n) / 100;
-
-export const scaleCastShadow = (s: number) => ({
+export const scaleEggCastShadow = (s: number) => ({
   cx: (375 - transformOriginX) * s + transformOriginX,
   cy: (618.75 - transformOriginY) * s + transformOriginY,
   rx: 100 * s,
