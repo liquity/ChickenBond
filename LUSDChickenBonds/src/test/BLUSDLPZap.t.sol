@@ -6,20 +6,46 @@ import "./TestContracts/BaseTest.sol";
 
 contract BLUSDLPZapTest is BaseTest {
     BLUSDLPZap bLUSDLPZap;
+    IERC20 lusd3CRVPool;
     IERC20 bLUSDLUSD3CRVLPToken;
     ICurveLiquidityGaugeV5 bLUSDGauge;
+
+    struct TokenBalances {
+        uint256 lusdBalance;
+        uint256 bLUSDBalance;
+        uint256 lusd3CRVPoolBalance;
+        uint256 bLUSDPoolBalance;
+        uint256 bLUSDGaugeBalance;
+    }
 
     function setUp() public {
         bLUSDLPZap = new BLUSDLPZap();
         lusdToken = IERC20Permit(address(bLUSDLPZap.lusdToken()));
         bLUSDToken = BLUSDToken(address(bLUSDLPZap.bLUSDToken()));
-        _3crvToken = IERC20(address(bLUSDLPZap.lusd3CRVPool()));
+        lusd3CRVPool = bLUSDLPZap.lusd3CRVPool();
         bLUSDLUSD3CRVLPToken = bLUSDLPZap.bLUSDLUSD3CRVLPToken();
         bLUSDGauge = bLUSDLPZap.bLUSDGauge();
 
         accounts = new Accounts();
         createAccounts();
         (A, B, C, D) = (accountsList[0], accountsList[1], accountsList[2], accountsList[3]);
+    }
+
+    // cache initial balances
+    function _getInitialBalances() internal view returns(TokenBalances memory tokenBalances) {
+        tokenBalances.lusdBalance = lusdToken.balanceOf(address(bLUSDLPZap));
+        tokenBalances.bLUSDBalance = bLUSDToken.balanceOf(address(bLUSDLPZap));
+        tokenBalances.lusd3CRVPoolBalance = lusd3CRVPool.balanceOf(address(bLUSDLPZap));
+        tokenBalances.bLUSDPoolBalance = bLUSDLUSD3CRVLPToken.balanceOf(address(bLUSDLPZap));
+        tokenBalances.bLUSDGaugeBalance = bLUSDGauge.balanceOf(address(bLUSDLPZap));
+    }
+
+    function _checkBalances(TokenBalances memory _tokenInitialBalances) internal view {
+        require(_tokenInitialBalances.lusdBalance == lusdToken.balanceOf(address(bLUSDLPZap)));
+        require(_tokenInitialBalances.bLUSDBalance == bLUSDToken.balanceOf(address(bLUSDLPZap)));
+        require(_tokenInitialBalances.lusd3CRVPoolBalance == lusd3CRVPool.balanceOf(address(bLUSDLPZap)));
+        require(_tokenInitialBalances.bLUSDPoolBalance == bLUSDLUSD3CRVLPToken.balanceOf(address(bLUSDLPZap)));
+        require(_tokenInitialBalances.bLUSDGaugeBalance == bLUSDGauge.balanceOf(address(bLUSDLPZap)));
     }
 
     function _dealAndApprove(uint256 bLUSDAmount, uint256 lusdAmount) internal {
@@ -38,21 +64,27 @@ contract BLUSDLPZapTest is BaseTest {
     function _addLiquidity(uint256 bLUSDAmount, uint256 lusdAmount, uint256 minLPAmount) internal {
         vm.startPrank(A);
         _dealAndApprove(bLUSDAmount, lusdAmount);
+
+        TokenBalances memory tokenInitialBalances = _getInitialBalances();
+
         // add liquidity
         bLUSDLPZap.addLiquidity(bLUSDAmount, lusdAmount, minLPAmount);
         vm.stopPrank();
+
+        // check no tokens are left in the contract
+        _checkBalances(tokenInitialBalances);
     }
 
     function testAddLiquidityGetsLPTokensNoMin() public {
         uint256 bLUSDAmount = 1000e18;
         uint256 lusdAmount = 1300e18;
 
-        uint256 initialLUSD3CRVBalance = _3crvToken.balanceOf(A);
+        uint256 initialLUSD3CRVBalance = lusd3CRVPool.balanceOf(A);
         uint256 initialbLUSDLUSD3CRVLPTokenBalance = bLUSDLUSD3CRVLPToken.balanceOf(A);
         _addLiquidity(bLUSDAmount, lusdAmount, 0);
 
         //console.log(bLUSDLUSD3CRVLPToken.balanceOf(A), "bLUSDLUSD3CRVLPToken.balanceOf(A)");
-        assertEq(_3crvToken.balanceOf(A) - initialLUSD3CRVBalance, 0, "User should not receive 3pool LP tokens");
+        assertEq(lusd3CRVPool.balanceOf(A) - initialLUSD3CRVBalance, 0, "User should not receive 3pool LP tokens");
         assertGt(bLUSDLUSD3CRVLPToken.balanceOf(A) - initialbLUSDLUSD3CRVLPTokenBalance, 0, "User should receive LP tokens");
     }
 
@@ -64,7 +96,7 @@ contract BLUSDLPZapTest is BaseTest {
         uint256 initialbLUSDLUSD3CRVLPTokenBalance = bLUSDLUSD3CRVLPToken.balanceOf(A);
         _addLiquidity(bLUSDAmount, lusdAmount, minLPAmount);
 
-        console.log(bLUSDLUSD3CRVLPToken.balanceOf(A), "bLUSDLUSD3CRVLPToken.balanceOf(A)");
+        //console.log(bLUSDLUSD3CRVLPToken.balanceOf(A), "bLUSDLUSD3CRVLPToken.balanceOf(A)");
         assertGt(bLUSDLUSD3CRVLPToken.balanceOf(A) - initialbLUSDLUSD3CRVLPTokenBalance, minLPAmount, "Not enough LP tokens received");
     }
 
@@ -134,11 +166,18 @@ contract BLUSDLPZapTest is BaseTest {
 
         uint256 initialbLUSDLUSD3CRVLPTokenBalance = bLUSDLUSD3CRVLPToken.balanceOf(A);
         uint256 initialbLUSDGaugeBalance = bLUSDGauge.balanceOf(A);
+
         vm.startPrank(A);
         _dealAndApprove(bLUSDAmount, lusdAmount);
+
+        TokenBalances memory tokenInitialBalances = _getInitialBalances();
+
         // add liquidity and stake
         bLUSDLPZap.addLiquidityAndStake(bLUSDAmount, lusdAmount, 0);
         vm.stopPrank();
+
+        // check no tokens are left in the contract
+        _checkBalances(tokenInitialBalances);
 
         //console.log(bLUSDLUSD3CRVLPToken.balanceOf(A), "bLUSDLUSD3CRVLPToken.balanceOf(A)");
         //console.log(bLUSDGauge.balanceOf(A), "bLUSDGauge.balanceOf(A)");

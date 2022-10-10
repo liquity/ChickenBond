@@ -22,31 +22,6 @@ contract BLUSDLPZap {
     IERC20 constant public bLUSDLUSD3CRVLPToken = IERC20(BLUSD_LUSD_3CRV_LP_TOKEN_ADDRESS);
     ICurveLiquidityGaugeV5 constant public bLUSDGauge = ICurveLiquidityGaugeV5(BLUSD_LUSD_3CRV_GAUGE_ADDRESS);
 
-    struct TokenBalances {
-        uint256 lusdBalance;
-        uint256 bLUSDBalance;
-        uint256 lusd3CRVPoolBalance;
-        uint256 bLUSDPoolBalance;
-        uint256 bLUSDGaugeBalance;
-    }
-
-    // cache initial balances
-    function _getInitialBalances() internal view returns(TokenBalances memory tokenBalances) {
-        tokenBalances.lusdBalance = lusdToken.balanceOf(address(this));
-        tokenBalances.bLUSDBalance = bLUSDToken.balanceOf(address(this));
-        tokenBalances.lusd3CRVPoolBalance = lusd3CRVPool.balanceOf(address(this));
-        tokenBalances.bLUSDPoolBalance = bLUSDLUSD3CRVLPToken.balanceOf(address(this));
-        tokenBalances.bLUSDGaugeBalance = bLUSDGauge.balanceOf(address(this));
-    }
-
-    function _checkBalances(TokenBalances memory _tokenInitialBalances) internal view {
-        require(_tokenInitialBalances.lusdBalance == lusdToken.balanceOf(address(this)));
-        require(_tokenInitialBalances.bLUSDBalance == bLUSDToken.balanceOf(address(this)));
-        require(_tokenInitialBalances.lusd3CRVPoolBalance == lusd3CRVPool.balanceOf(address(this)));
-        require(_tokenInitialBalances.bLUSDPoolBalance == bLUSDLUSD3CRVLPToken.balanceOf(address(this)));
-        require(_tokenInitialBalances.bLUSDGaugeBalance == bLUSDGauge.balanceOf(address(this)));
-    }
-
     // TODO: add permit version
     function _addLiquidity(
         uint256 _bLUSDAmount,
@@ -81,13 +56,8 @@ contract BLUSDLPZap {
     }
 
     function addLiquidity(uint256 _bLUSDAmount, uint256 _lusdAmount, uint256 _minLPTokens) external returns (uint256 bLUSDLUSD3CRVTokens) {
-        TokenBalances memory tokenInitialBalances = _getInitialBalances();
-
         // add liquidity
         bLUSDLUSD3CRVTokens = _addLiquidity(_bLUSDAmount, _lusdAmount, _minLPTokens, msg.sender);
-
-        // check no tokens are left in the contract
-        _checkBalances(tokenInitialBalances);
 
         return bLUSDLUSD3CRVTokens;
     }
@@ -100,8 +70,6 @@ contract BLUSDLPZap {
         external
         returns (uint256 bLUSDLUSD3CRVTokens)
     {
-        TokenBalances memory tokenInitialBalances = _getInitialBalances();
-
         // add liquidity
         bLUSDLUSD3CRVTokens = _addLiquidity(_bLUSDAmount, _lusdAmount, _minLPTokens, address(this));
 
@@ -110,9 +78,6 @@ contract BLUSDLPZap {
 
         // stake into gauge
         bLUSDGauge.deposit(bLUSDLUSD3CRVTokens, msg.sender, false); // make sure rewards are not claimed
-
-        // check no tokens are left in the contract
-        _checkBalances(tokenInitialBalances);
 
         return bLUSDLUSD3CRVTokens;
     }
