@@ -66,7 +66,7 @@ contract MainnetTestSetup is BaseTest {
         assertTrue(lusdToken.balanceOf(A) == 1e24);
         assertTrue(lusdToken.balanceOf(B) == 1e24);
         assertTrue(lusdToken.balanceOf(C) == 1e24);
-         assertTrue(lusdToken.balanceOf(D) == 1e24);
+        assertTrue(lusdToken.balanceOf(D) == 1e24);
 
         bammSPVault = IBAMM(
             deployCode(
