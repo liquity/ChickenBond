@@ -139,7 +139,7 @@ contract BLUSDLPZapTest is BaseTest {
 
         uint256 lusdAmount2 = lusdAmount / 10;
         uint256 initialbLUSDLUSD3CRVLPTokenBalance = bLUSDLUSD3CRVLPToken.balanceOf(A);
-        uint256 minLPAmount = bLUSDLPZap.getMinLPTokens(0, lusdAmount2) * 9995 / 10000; // TODO: there’s some rounding issue here with calc_token_amount?
+        uint256 minLPAmount = bLUSDLPZap.getMinLPTokens(0, lusdAmount2);
         //console.log(minLPAmount, "minLPAmount");
         _addLiquidity(0, lusdAmount2, minLPAmount);
 

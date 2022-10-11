@@ -15,6 +15,8 @@ contract BLUSDLPZap {
     address constant BLUSD_LUSD_3CRV_LP_TOKEN_ADDRESS = 0x5ca0313D44551e32e0d7a298EC024321c4BC59B4;
     address constant BLUSD_LUSD_3CRV_GAUGE_ADDRESS= 0xdA0DD1798BE66E17d5aB1Dc476302b56689C2DB4;
 
+    uint256 constant LUSD_3CRV_POOL_FEE_DENOMINATOR = 10 ** 10;
+
     IERC20 constant public lusdToken = IERC20(LUSD_TOKEN_ADDRESS);
     IERC20 constant public bLUSDToken = IERC20(BLUSD_TOKEN_ADDRESS);
     ICurvePool constant public lusd3CRVPool = ICurvePool(LUSD_3CRV_POOL_ADDRESS);
@@ -86,6 +88,8 @@ contract BLUSDLPZap {
         uint256 lusd3CRVAmount;
         if (_lusdAmount > 0) {
             lusd3CRVAmount = lusd3CRVPool.calc_token_amount([_lusdAmount, 0], true);
+            //Accounting for fees approximately
+            lusd3CRVAmount -= lusd3CRVAmount * lusd3CRVPool.fee() / LUSD_3CRV_POOL_FEE_DENOMINATOR;
         }
 
         bLUSDLUSD3CRVTokens = bLUSDLUSD3CRVPool.calc_token_amount([_bLUSDAmount, lusd3CRVAmount]);
