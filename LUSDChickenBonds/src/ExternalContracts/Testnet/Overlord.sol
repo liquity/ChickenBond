@@ -6,7 +6,7 @@ import "openzeppelin-contracts/contracts/proxy/Clones.sol";
 import "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../ChickenBondManager.sol";
 import "../../BondNFT.sol";
-import "../../test/TestContracts/Interfaces/ICurveCryptoPool.sol";
+import "../../Interfaces/ICurveCryptoPool.sol";
 import "./ERC20Faucet.sol";
 import "./Underling.sol";
 
