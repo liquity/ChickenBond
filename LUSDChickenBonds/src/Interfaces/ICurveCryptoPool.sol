@@ -17,4 +17,6 @@ interface ICurveCryptoPool {
     function add_liquidity(uint256[2] memory amounts, uint256 min_mint_amount) external returns (uint256);
     function add_liquidity(uint256[2] memory amounts, uint256 min_mint_amount, bool use_eth, address receiver) external returns (uint256 mint_amount);
     function remove_liquidity(uint256 burn_amount, uint256[2] memory min_amounts) external;
+    function remove_liquidity(uint256 burn_amount, uint256[2] memory min_amounts, bool use_eth, address receiver) external;
+    function remove_liquidity_one_coin(uint256 token_amount, uint256 i, uint256 min_amount, bool use_eth, address receiver) external;
 }
