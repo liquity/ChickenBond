@@ -119,6 +119,8 @@ contract BLUSDLPZap {
                 _minLUSD,
                 msg.sender
             );
+        } else {
+            require(_minLUSD == 0, "Min LUSD amount not reached");
         }
 
         // transfer BLUSD
