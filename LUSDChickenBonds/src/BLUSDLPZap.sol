@@ -24,6 +24,10 @@ contract BLUSDLPZap {
     IERC20 constant public bLUSDLUSD3CRVLPToken = IERC20(BLUSD_LUSD_3CRV_LP_TOKEN_ADDRESS);
     ICurveLiquidityGaugeV5 constant public bLUSDGauge = ICurveLiquidityGaugeV5(BLUSD_LUSD_3CRV_GAUGE_ADDRESS);
 
+    event BLusdLiquidityAdded(address indexed user, uint256 bLusdLpTokenAmountReceived);
+    event BalancedLiquidityRemoved(address indexed user, uint256 bLusdAmountReceived, uint256 lusdAmountReceived);
+    event SingleLiquidityRemoved(address indexed user, string token, uint256 amountReceived);
+
     // TODO: add permit version
     function _addLiquidity(
         uint256 _bLUSDAmount,
@@ -61,6 +65,8 @@ contract BLUSDLPZap {
         // add liquidity
         bLUSDLUSD3CRVTokens = _addLiquidity(_bLUSDAmount, _lusdAmount, _minLPTokens, msg.sender);
 
+        emit BLusdLiquidityAdded(msg.sender, bLUSDLUSD3CRVTokens);
+
         return bLUSDLUSD3CRVTokens;
     }
 
@@ -80,6 +86,8 @@ contract BLUSDLPZap {
 
         // stake into gauge
         bLUSDGauge.deposit(bLUSDLUSD3CRVTokens, msg.sender, false); // make sure rewards are not claimed
+
+        emit BLusdLiquidityAdded(msg.sender, bLUSDLUSD3CRVTokens);
 
         return bLUSDLUSD3CRVTokens;
     }
@@ -104,6 +112,7 @@ contract BLUSDLPZap {
         // All those balances should be zero, but just in case:
         uint256 initialLUSD3CRVBalance = lusd3CRVPool.balanceOf(address(this));
         uint256 initialBLUSDBalance = bLUSDToken.balanceOf(address(this));
+        uint256 initialLUSDBalance = lusdToken.balanceOf(address(this));
 
         // withdraw bLUSD/LUSD-3CRV
         bLUSDLUSD3CRVLPToken.approve(address(bLUSDLUSD3CRVPool), _lpAmount);
@@ -122,11 +131,15 @@ contract BLUSDLPZap {
         } else {
             require(_minLUSD == 0, "Min LUSD amount not reached");
         }
+        
+        uint256 lusdAmount = lusdToken.balanceOf(msg.sender) - initialLUSDBalance;
 
         // transfer BLUSD
         if (bLUSDAmount > 0) {
             bLUSDToken.transfer(msg.sender, bLUSDAmount);
         }
+    
+        emit BalancedLiquidityRemoved(msg.sender, bLUSDAmount, lusdAmount);
     }
 
     function removeLiquidityLUSD(uint256 _lpAmount, uint256 _minLUSD) external {
@@ -135,6 +148,7 @@ contract BLUSDLPZap {
 
         // All those balances should be zero, but just in case:
         uint256 initialLUSD3CRVBalance = lusd3CRVPool.balanceOf(address(this));
+        uint256 initialLUSDBalance = lusdToken.balanceOf(address(this));
 
         // withdraw bLUSD/LUSD-3CRV
         bLUSDLUSD3CRVLPToken.approve(address(bLUSDLUSD3CRVPool), _lpAmount);
@@ -147,6 +161,30 @@ contract BLUSDLPZap {
             _minLUSD,
             msg.sender
         );
+        uint256 lusdAmount = lusdToken.balanceOf(msg.sender) - initialLUSDBalance;
+        
+        emit SingleLiquidityRemoved(msg.sender, "LUSD", lusdAmount);
+    }
+
+    function removeLiquidityBLUSD(uint256 _lpAmount, uint256 _minBLUSD) external {
+        // pull LP tokens
+        bLUSDLUSD3CRVLPToken.transferFrom(msg.sender, address(this), _lpAmount);
+
+        // All those balances should be zero, but just in case:
+        uint256 initialBLUSDBalance = bLUSDToken.balanceOf(address(this));
+
+        // withdraw bLUSD single sided
+        bLUSDLUSD3CRVLPToken.approve(address(bLUSDLUSD3CRVPool), _lpAmount);
+        bLUSDLUSD3CRVPool.remove_liquidity_one_coin(_lpAmount, 0, _minBLUSD, false, address(this));
+
+        uint256 bLUSDAmount = bLUSDToken.balanceOf(address(this)) - initialBLUSDBalance;
+
+        // transfer BLUSD
+        if (bLUSDAmount > 0) {
+            bLUSDToken.transfer(msg.sender, bLUSDAmount);
+        }
+        
+        emit SingleLiquidityRemoved(msg.sender, "BLUSD", bLUSDAmount);
     }
 
     function getMinWithdrawBalanced(uint256 _lpAmount) external view returns (uint256 bLUSDAmount, uint256 lusdAmount) {
@@ -162,5 +200,11 @@ contract BLUSDLPZap {
         lusdAmount = lusd3CRVPool.calc_withdraw_one_coin(lusd3CRVAmount, 0);
 
         return lusdAmount;
+    }
+
+    function getMinWithdrawBLUSD(uint256 _lpAmount) external view returns (uint256 bLUSDAmount) {
+        bLUSDAmount = bLUSDLUSD3CRVPool.calc_withdraw_one_coin(_lpAmount, 0);
+
+        return bLUSDAmount;
     }
 }
