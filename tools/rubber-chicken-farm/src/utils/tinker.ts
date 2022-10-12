@@ -10,7 +10,6 @@ import {
   connectToContracts,
   CurveCryptoSwap2ETH,
   deployAndSetupContracts,
-  deployNFTArtwork,
   LUSDChickenBondContracts,
   LUSDChickenBondDeploymentManifest,
   LUSDChickenBondDeploymentResult
@@ -89,7 +88,6 @@ export interface LUSDChickenBondGlobalFunctions {
   redeem(amount: Decimalish): Promise<void>;
   redeemAll(): Promise<void>;
 
-  deployNFTArtwork(): Promise<unknown>;
   setNFTArtwork(address: string): Promise<void>;
   migrate(): Promise<void>;
 
@@ -391,8 +389,6 @@ export const getLUSDChickenBondGlobalFunctions = (
       )
     )();
   },
-
-  deployNFTArtwork: () => deployNFTArtwork(globalObj.user, { log: true }),
 
   async setNFTArtwork(address: string) {
     await receipt(() => globalObj.contracts.bondNFT.setArtworkAddress(address))();

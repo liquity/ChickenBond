@@ -3,7 +3,10 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 
 import bondNFT from "../artifacts/BondNFT.json";
+import bondNFTArtworkSwitcher from "../artifacts/BondNFTArtworkSwitcher.json";
 import generativeEggArtwork from "../artifacts/GenerativeEggArtwork.json";
+import chickenOutArtwork from "../artifacts/ChickenOutArtwork.json";
+import chickenInArtwork from "../artifacts/ChickenInArtwork.json";
 import chickenBondManager from "../artifacts/ChickenBondManager.json";
 import erc20Faucet from "../artifacts/ERC20Faucet.json";
 import testnetBAMM from "../artifacts/TestnetBAMM.json";
@@ -27,7 +30,10 @@ import curveToken from "../artifacts/CurveToken.json";
 
 import {
   BondNFTFactory,
+  BondNFTArtworkSwitcherFactory,
   GenerativeEggArtworkFactory,
+  ChickenOutArtworkFactory,
+  ChickenInArtworkFactory,
   ChickenBondManagerFactory,
   ERC20FaucetFactory,
   TestnetBAMMFactory,
@@ -64,8 +70,23 @@ export interface LUSDChickenBondContractFactories {
   };
 
   bondNFTArtwork: {
+    contractName: "BondNFTArtworkSwitcher";
+    factory: BondNFTArtworkSwitcherFactory;
+  };
+
+  eggArtwork: {
     contractName: "GenerativeEggArtwork";
     factory: GenerativeEggArtworkFactory;
+  };
+
+  chickenOutArtwork: {
+    contractName: "ChickenOutArtwork";
+    factory: ChickenOutArtworkFactory;
+  };
+
+  chickenInArtwork: {
+    contractName: "ChickenInArtwork";
+    factory: ChickenInArtworkFactory;
   };
 
   chickenBondManager: {
@@ -226,7 +247,10 @@ const checkArtifact = <T extends LUSDChickenBondContractName>(
 
 const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   bondNFT: checkArtifact("BondNFT", bondNFT),
-  bondNFTArtwork: checkArtifact("GenerativeEggArtwork", generativeEggArtwork),
+  bondNFTArtwork: checkArtifact("BondNFTArtworkSwitcher", bondNFTArtworkSwitcher),
+  eggArtwork: checkArtifact("GenerativeEggArtwork", generativeEggArtwork),
+  chickenOutArtwork: checkArtifact("ChickenOutArtwork", chickenOutArtwork),
+  chickenInArtwork: checkArtifact("ChickenInArtwork", chickenInArtwork),
   chickenBondManager: checkArtifact("ChickenBondManager", chickenBondManager),
   curvePool: checkArtifact("TestnetCurvePool", testnetCurvePool),
   curveBasePool: checkArtifact("TestnetCurveBasePool", testnetCurveBasePool),

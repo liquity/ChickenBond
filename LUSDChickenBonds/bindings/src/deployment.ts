@@ -201,7 +201,9 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const bondNFTArtwork = await this.deployContract(factories.bondNFTArtwork, overrides);
+    const eggArtwork = await this.deployContract(factories.eggArtwork, overrides);
+    const chickenOutArtwork = await this.deployContract(factories.chickenOutArtwork, overrides);
+    const chickenInArtwork = await this.deployContract(factories.chickenInArtwork, overrides);
 
     const troveManager = await this.deployContract(factories.troveManager, overrides);
 
@@ -237,7 +239,7 @@ class LUSDChickenBondDeployment {
       factories.bondNFT,
       "LUSDBondNFT",
       "LUSDBOND",
-      bondNFTArtwork.contract.address,
+      eggArtwork.contract.address,
       params.bondNFTTransferLockoutPeriodSeconds,
       {
         troveManagerAddress: troveManager.contract.address,
@@ -315,6 +317,15 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const bondNFTArtwork = await this.deployContract(
+      factories.bondNFTArtwork,
+      chickenBondManager.contract.address,
+      eggArtwork.contract.address,
+      chickenOutArtwork.contract.address,
+      chickenInArtwork.contract.address,
+      overrides
+    );
+
     const underlingPrototype = await this.deployContract(
       factories.underlingPrototype,
       chickenBondManager.contract.address,
@@ -354,6 +365,9 @@ class LUSDChickenBondDeployment {
       curveBasePool,
       bondNFT,
       bondNFTArtwork,
+      eggArtwork,
+      chickenOutArtwork,
+      chickenInArtwork,
       chickenBondManager,
       bLUSDToken,
       bLUSDCurveToken,
@@ -390,6 +404,12 @@ class LUSDChickenBondDeployment {
       () =>
         deployed.bLUSDToken.contract.setAddresses(
           deployed.chickenBondManager.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.bondNFT.contract.setArtworkAddress(
+          deployed.bondNFTArtwork.contract.address,
           overrides
         ),
 
@@ -447,10 +467,6 @@ class LUSDChickenBondDeployment {
       config: this.config
     };
   }
-
-  deployNFTArtwork() {
-    return this.deployContract(this.factories.bondNFTArtwork, this.overrides);
-  }
 }
 
 export const deployAndSetupContracts = async (
@@ -458,8 +474,3 @@ export const deployAndSetupContracts = async (
   params?: Readonly<Partial<LUSDChickenBondDeploymentParams>>
 ): Promise<LUSDChickenBondDeploymentResult> =>
   new LUSDChickenBondDeployment(deployer, params).deployAndSetupContracts();
-
-export const deployNFTArtwork = async (
-  deployer: Signer,
-  params?: Readonly<Partial<Omit<LUSDChickenBondDeploymentParams, "config">>>
-) => new LUSDChickenBondDeployment(deployer, params).deployNFTArtwork();

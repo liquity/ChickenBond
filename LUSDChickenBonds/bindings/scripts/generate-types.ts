@@ -4,7 +4,10 @@ import path from "path";
 import { Interface, JsonFragment, ParamType } from "@ethersproject/abi";
 
 import BondNFT from "../../out/BondNFT.sol/BondNFT.json";
+import BondNFTArtworkSwitcher from "../../out/BondNFTArtworkSwitcher.sol/BondNFTArtworkSwitcher.json";
 import GenerativeEggArtwork from "../../out/GenerativeEggArtwork.sol/GenerativeEggArtwork.json";
+import ChickenOutArtwork from "../../out/ChickenOutArtwork.sol/ChickenOutArtwork.json";
+import ChickenInArtwork from "../../out/ChickenInArtwork.sol/ChickenInArtwork.json";
 import ChickenBondManager from "../../out/ChickenBondManager.sol/ChickenBondManager.json";
 import ERC20Faucet from "../../out/ERC20Faucet.sol/ERC20Faucet.json";
 import TestnetBAMM from "../../out/TestnetBAMM.sol/TestnetBAMM.json";
@@ -171,7 +174,10 @@ const declareInterface = ({
 
 const contractArtifacts = Object.entries({
   BondNFT,
+  BondNFTArtworkSwitcher,
   GenerativeEggArtwork,
+  ChickenOutArtwork,
+  ChickenInArtwork,
   ChickenBondManager,
   ERC20Faucet,
   TestnetBAMM,
