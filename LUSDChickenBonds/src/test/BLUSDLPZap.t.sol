@@ -202,23 +202,25 @@ contract BLUSDLPZapTest is BaseTest {
         uint256 initialLUSDBalance = lusdToken.balanceOf(A);
 
         uint256 withdrawAmount = lpAmount * fractionToWithdraw / 1e18;
+        (uint256 expectedBLUSDAmount, uint256 expectedLUSDAmount) = bLUSDLPZap.getMinWithdrawBalanced(withdrawAmount);
+
         vm.startPrank(A);
         bLUSDLUSD3CRVLPToken.approve(address(bLUSDLPZap), withdrawAmount);
         bLUSDLPZap.removeLiquidityBalanced(withdrawAmount, 0, 0);
         vm.stopPrank();
 
-        //console.log(bLUSDToken.balanceOf(A) - initialBLUSDBalance, "bLUSDToken.balanceOf(A) - initialBLUSDBalance");
-        //console.log(lusdToken.balanceOf(A) - initialLUSDBalance, "lusdToken.balanceOf(A) - initialLUSDBalance");
+        //console.log(bLUSDToken.balanceOf(A) - initialBLUSDBalance, "received bLUSD");
+        //console.log(lusdToken.balanceOf(A) - initialLUSDBalance, "received LUSD");
         assertRelativeError(
             bLUSDToken.balanceOf(A) - initialBLUSDBalance,
-            bLUSDAmount * fractionToWithdraw / 1e18,
-            1000,
+            expectedBLUSDAmount,
+            10,
             "BLUSD balance mismatch"
         );
         assertRelativeError(
             lusdToken.balanceOf(A) - initialLUSDBalance,
-            lusdAmount * fractionToWithdraw / 1e18,
-            1e15,
+            expectedLUSDAmount,
+            10,
             "LUSD balance mismatch"
         );
 
@@ -231,11 +233,6 @@ contract BLUSDLPZapTest is BaseTest {
         uint256 lusdAmount = 1300e18;
         uint256 fractionToWithdraw = 50e16;
 
-        uint256 expectedBLUSDAmount = bLUSDAmount * fractionToWithdraw / 1e18 - 2; // rounding errors
-        uint256 expectedLUSDAmount = lusdAmount * fractionToWithdraw / 1e18 * 99925 / 100000; // rounding errors
-        //console.log(expectedBLUSDAmount, "expectedBLUSDAmount");
-        //console.log(expectedLUSDAmount, "expectedLUSDAmount");
-
         uint256 lpAmount = _addLiquidity(bLUSDAmount, lusdAmount, 0);
 
         TokenBalances memory tokenInitialBalances = _getInitialBalances();
@@ -244,21 +241,30 @@ contract BLUSDLPZapTest is BaseTest {
         uint256 initialLUSDBalance = lusdToken.balanceOf(A);
 
         uint256 withdrawAmount = lpAmount * fractionToWithdraw / 1e18;
+        (uint256 expectedBLUSDAmount, uint256 expectedLUSDAmount) = bLUSDLPZap.getMinWithdrawBalanced(withdrawAmount);
+        // rounding errors
+        expectedBLUSDAmount = expectedBLUSDAmount - 2;
+        expectedLUSDAmount = expectedLUSDAmount - 2;
+        //console.log(expectedBLUSDAmount, "expectedBLUSDAmount");
+        //console.log(expectedLUSDAmount, "expectedLUSDAmount");
+
         vm.startPrank(A);
         bLUSDLUSD3CRVLPToken.approve(address(bLUSDLPZap), withdrawAmount);
         bLUSDLPZap.removeLiquidityBalanced(withdrawAmount, expectedBLUSDAmount, expectedLUSDAmount);
         vm.stopPrank();
 
+        //console.log(bLUSDToken.balanceOf(A) - initialBLUSDBalance, "received bLUSD");
+        //console.log(lusdToken.balanceOf(A) - initialLUSDBalance, "received LUSD");
         assertRelativeError(
             bLUSDToken.balanceOf(A) - initialBLUSDBalance,
             expectedBLUSDAmount,
-            1000,
+            10,
             "BLUSD balance mismatch"
         );
         assertRelativeError(
             lusdToken.balanceOf(A) - initialLUSDBalance,
             expectedLUSDAmount,
-            1e15,
+            10,
             "LUSD balance mismatch"
         );
 
@@ -266,7 +272,7 @@ contract BLUSDLPZapTest is BaseTest {
         _checkBalances(tokenInitialBalances);
     }
 
-    function testRemoveLiqudityBalancedFailsIfNoMinBLUSD() public {
+    function testRemoveLiqudityBalancedFailsIfNoMinBLUSDReached() public {
         uint256 bLUSDAmount = 1000e18;
         uint256 lusdAmount = 1300e18;
         uint256 fractionToWithdraw = 50e16;
@@ -283,7 +289,7 @@ contract BLUSDLPZapTest is BaseTest {
         vm.stopPrank();
     }
 
-    function testRemoveLiqudityBalancedFailsIfNoMinLUSD() public {
+    function testRemoveLiqudityBalancedFailsIfNoMinLUSDReached() public {
         uint256 bLUSDAmount = 1000e18;
         uint256 lusdAmount = 1300e18;
         uint256 fractionToWithdraw = 50e16;
@@ -341,23 +347,21 @@ contract BLUSDLPZapTest is BaseTest {
 
         uint256 lpAmount = _addLiquidity(bLUSDAmount, lusdAmount, 0);
 
-        uint256 expectedLUSD = (
-            lusdAmount * fractionToWithdraw / 1e18 +
-            bLUSDLUSD3CRVPool.get_dy(0, 1, bLUSDAmount * fractionToWithdraw / 1e18)
-        ) * 9965 / 10000; // fees + rounding issues
-        //console.log(expectedLUSD, "expectedLUSD");
-
         TokenBalances memory tokenInitialBalances = _getInitialBalances();
 
         uint256 initialBLUSDBalance = bLUSDToken.balanceOf(A);
         uint256 initialLUSDBalance = lusdToken.balanceOf(A);
 
         uint256 withdrawAmount = lpAmount * fractionToWithdraw / 1e18;
+        uint256 expectedLUSD = bLUSDLPZap.getMinWithdrawLUSD(withdrawAmount);
+        //console.log(expectedLUSD, "expectedLUSD");
+
         vm.startPrank(A);
         bLUSDLUSD3CRVLPToken.approve(address(bLUSDLPZap), withdrawAmount);
         bLUSDLPZap.removeLiquidityLUSD(withdrawAmount, expectedLUSD);
         vm.stopPrank();
 
+        //console.log(lusdToken.balanceOf(A) - initialLUSDBalance, "lusdToken.balanceOf(A) - initialLUSDBalance");
         assertEq(bLUSDToken.balanceOf(A) - initialBLUSDBalance, 0, "BLUSD received should be zero");
         assertRelativeError(
             lusdToken.balanceOf(A) - initialLUSDBalance,
@@ -370,21 +374,21 @@ contract BLUSDLPZapTest is BaseTest {
         _checkBalances(tokenInitialBalances);
     }
 
-    function testRemoveLiqudityLUSDFailsIfNoMin() public {
+    function testRemoveLiqudityLUSDFailsIfNoMinReached() public {
         uint256 bLUSDAmount = 1000e18;
         uint256 lusdAmount = 1300e18;
         uint256 fractionToWithdraw = 1e16; // small fraction, to avoid too much slippage
 
         uint256 lpAmount = _addLiquidity(bLUSDAmount, lusdAmount, 0);
 
-        uint256 expectedLUSD = lusdAmount * fractionToWithdraw / 1e18 + bLUSDLUSD3CRVPool.get_dy(0, 1, bLUSDAmount * fractionToWithdraw / 1e18);
-        //console.log(expectedLUSD, "expectedLUSD");
-
         uint256 withdrawAmount = lpAmount * fractionToWithdraw / 1e18;
+        uint256 minLUSD = bLUSDLPZap.getMinWithdrawLUSD(withdrawAmount) + 1;
+        //console.log(minLUSD, "expectedLUSD");
+
         vm.startPrank(A);
         bLUSDLUSD3CRVLPToken.approve(address(bLUSDLPZap), withdrawAmount);
         vm.expectRevert();
-        bLUSDLPZap.removeLiquidityLUSD(withdrawAmount, expectedLUSD);
+        bLUSDLPZap.removeLiquidityLUSD(withdrawAmount, minLUSD);
         vm.stopPrank();
     }
 }

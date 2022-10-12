@@ -148,4 +148,19 @@ contract BLUSDLPZap {
             msg.sender
         );
     }
+
+    function getMinWithdrawBalanced(uint256 _lpAmount) external view returns (uint256 bLUSDAmount, uint256 lusdAmount) {
+        bLUSDAmount = _lpAmount * bLUSDLUSD3CRVPool.balances(0) / bLUSDLUSD3CRVLPToken.totalSupply();
+        uint256 lusd3CRVAmount = _lpAmount * bLUSDLUSD3CRVPool.balances(1) / bLUSDLUSD3CRVLPToken.totalSupply();
+        lusdAmount = lusd3CRVPool.calc_withdraw_one_coin(lusd3CRVAmount, 0);
+
+        return (bLUSDAmount, lusdAmount);
+    }
+
+    function getMinWithdrawLUSD(uint256 _lpAmount) external view returns (uint256 lusdAmount) {
+        uint256 lusd3CRVAmount = bLUSDLUSD3CRVPool.calc_withdraw_one_coin(_lpAmount, 1);
+        lusdAmount = lusd3CRVPool.calc_withdraw_one_coin(lusd3CRVAmount, 0);
+
+        return lusdAmount;
+    }
 }
