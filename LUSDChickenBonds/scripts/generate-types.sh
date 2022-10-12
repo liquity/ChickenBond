@@ -12,6 +12,7 @@ npx typechain --target ethers-v5 --out-dir ../types \
 '../out/BLUSDToken.sol/BLUSDToken.json' \
 '../out/ChickenBondManager.sol/ChickenBondManager.json' \
 '../out/ERC20Faucet.sol/ERC20Faucet.json' \
+'../out/BLUSDLPZap.sol/BLUSDLPZap.json' \
 
 # Running the command again for other directories to avoid unwanted nested directory structure output
 npx typechain --target ethers-v5 --out-dir ../types/external \
