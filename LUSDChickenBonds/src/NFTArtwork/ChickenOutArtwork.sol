@@ -2,8 +2,10 @@
 pragma solidity ^0.8.10;
 
 import "./BondNFTArtworkBase.sol";
+import "./ChickenOutTraitWeights.sol";
 
-contract ChickenOutArtwork is BondNFTArtworkBase {
+
+contract ChickenOutArtwork is BondNFTArtworkBase, ChickenOutTraitWeights {
     using Strings for uint256;
 
     struct ChickenOutData {
@@ -20,7 +22,7 @@ contract ChickenOutArtwork is BondNFTArtworkBase {
 
     function _tokenURIImplementation(CommonData memory _commonData)
         internal
-        pure
+        view
         virtual
         override
         returns (string memory)
@@ -39,21 +41,21 @@ contract ChickenOutArtwork is BondNFTArtworkBase {
     // Private functions //
     ///////////////////////
 
-    function _getChickenColor(uint256 _rand) private pure returns (ShellColor) {
-        // TODO
-        return ShellColor(_rand * 13 / 1e18);
-    }
-
     function _calcChickenOutData(
         CommonData memory _commonData,
         ChickenOutData memory _chickenOutData
     )
         private
-        pure
+        view
     {
         uint80 dna = _commonData.finalHalfDna;
 
-        _chickenOutData.chickenColor = _getChickenColor(_cutDNA(dna, 0, 80));
+        // inherited info
+        uint80 initialDna = _commonData.initialHalfDna;
+        BorderColor borderColor = _getBorderColor(_cutDNA(initialDna,  0, 26));
+        ShellColor shellColor  = _getShellColor (_cutDNA(initialDna, 53, 27), borderColor);
+
+        _chickenOutData.chickenColor = _getChickenColor(_cutDNA(dna, 0, 80), shellColor);
 
         _chickenOutData.darkMode = (
             _commonData.shellColor       == ShellColor.Luminous ||

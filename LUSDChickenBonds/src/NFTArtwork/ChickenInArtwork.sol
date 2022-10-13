@@ -60,9 +60,12 @@ contract ChickenInArtwork is BondNFTArtworkBase, ChickenInTraitWeights {
     {
         uint80 dna = _commonData.finalHalfDna;
 
+        // inherited info
         uint80 initialDna = _commonData.initialHalfDna;
         BorderColor borderColor = _getBorderColor(_cutDNA(initialDna,  0, 26));
         ShellColor shellColor  = _getShellColor (_cutDNA(initialDna, 53, 27), borderColor);
+
+        // extra data
         uint256 troveFactor = _commonData.troveSize * 1e18 / MAX_TROVE_SIZE;
 
         _chickenInData.chickenColor = _getChickenColor(_cutDNA(dna,  0, 16), shellColor, troveFactor);
