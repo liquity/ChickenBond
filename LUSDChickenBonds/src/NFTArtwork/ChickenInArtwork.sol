@@ -2,8 +2,12 @@
 pragma solidity ^0.8.10;
 
 import "./BondNFTArtworkBase.sol";
+import "./ChickenInTraitWeights.sol";
 
-contract ChickenInArtwork is BondNFTArtworkBase {
+
+contract ChickenInArtwork is BondNFTArtworkBase, ChickenInTraitWeights {
+    uint256 constant MAX_TROVE_SIZE = 10e24; // 10M
+
     using Strings for uint8;
     using Strings for uint256;
 
@@ -28,13 +32,13 @@ contract ChickenInArtwork is BondNFTArtworkBase {
 
     function _tokenURIImplementation(CommonData memory _commonData)
         internal
-        pure
+        view
         virtual
         override
         returns (string memory)
     {
         ChickenInData memory chickenInData;
-        _calcChickenOutData(_commonData, chickenInData);
+        _calcChickenInData(_commonData, chickenInData);
 
         return _getMetadataJSON(
             _commonData,
@@ -47,45 +51,25 @@ contract ChickenInArtwork is BondNFTArtworkBase {
     // Private functions //
     ///////////////////////
 
-    function _getChickenColor(uint256 _rand) private pure returns (ShellColor) {
-        // TODO
-        return ShellColor(_rand * 13 / 1e18);
-    }
-
-    function _getComb(uint256 _rand) private pure returns (uint8) {
-        // TODO
-        return 1 + uint8(_rand * 9 / 1e18);
-    }
-
-    function _getBeak(uint256 _rand) private pure returns (uint8) {
-        // TODO
-        return 1 + uint8(_rand * 4 / 1e18);
-    }
-
-    function _getTail(uint256 _rand) private pure returns (uint8) {
-        // TODO
-        return 1 + uint8(_rand * 9 / 1e18);
-    }
-
-    function _getWing(uint256 _rand) private pure returns (uint8) {
-        // TODO
-        return 1 + uint8(_rand * 3 / 1e18);
-    }
-
-    function _calcChickenOutData(
+    function _calcChickenInData(
         CommonData memory _commonData,
         ChickenInData memory _chickenInData
     )
         private
-        pure
+        view
     {
         uint80 dna = _commonData.finalHalfDna;
 
-        _chickenInData.chickenColor = _getChickenColor(_cutDNA(dna,  0, 16));
-        _chickenInData.comb =         _getComb        (_cutDNA(dna, 16, 16));
-        _chickenInData.beak =         _getBeak        (_cutDNA(dna, 32, 16));
-        _chickenInData.tail =         _getTail        (_cutDNA(dna, 48, 16));
-        _chickenInData.wing =         _getWing        (_cutDNA(dna, 64, 16));
+        uint80 initialDna = _commonData.initialHalfDna;
+        BorderColor borderColor = _getBorderColor(_cutDNA(initialDna,  0, 26));
+        ShellColor shellColor  = _getShellColor (_cutDNA(initialDna, 53, 27), borderColor);
+        uint256 troveFactor = _commonData.troveSize * 1e18 / MAX_TROVE_SIZE;
+
+        _chickenInData.chickenColor = _getChickenColor(_cutDNA(dna,  0, 16), shellColor, troveFactor);
+        _chickenInData.comb =         _getChickenComb (_cutDNA(dna, 16, 16), troveFactor);
+        _chickenInData.beak =         _getChickenBeak (_cutDNA(dna, 32, 16), troveFactor);
+        _chickenInData.tail =         _getChickenTail (_cutDNA(dna, 48, 16), troveFactor);
+        _chickenInData.wing =         _getChickenWing (_cutDNA(dna, 64, 16), troveFactor);
 
         _chickenInData.darkMode = _chickenInData.chickenColor == ShellColor.Luminous;
         // TODO hasLQTY, hasTrove, hasLlama

@@ -26,6 +26,8 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         uint80 initialHalfDna;
         uint80 finalHalfDna;
         uint8 status;
+        // extra data
+        uint256 troveSize;
 
         // Attributes derived from the DNA
         BorderColor borderColor;
@@ -58,6 +60,7 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         data.tokenID = _tokenID;
         data.initialHalfDna = _bondExtraData.initialHalfDna;
         data.finalHalfDna = _bondExtraData.finalHalfDna;
+        data.troveSize = uint256(_bondExtraData.troveSize);
 
         (
             data.lusdAmount,
@@ -79,7 +82,7 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
 
     function _tokenURIImplementation(CommonData memory _commonData)
         internal
-        pure
+        view
         virtual
         returns (string memory);
 
