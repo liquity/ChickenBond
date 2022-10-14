@@ -49,5 +49,7 @@ interface ICurveLiquidityGaugeV5 is IERC20 {
     function future_epoch_time() external view returns (uint256);
     function inflation_rate() external view returns (uint256);
 
+    function factory() external view returns (address);
+
     function version() external view returns (string memory);
 }

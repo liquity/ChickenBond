@@ -319,6 +319,8 @@ contract BLUSDLPZapTest is BaseTest {
         uint256 initialLUSDBalance = lusdToken.balanceOf(A);
 
         uint256 withdrawAmount = lpAmount * fractionToWithdraw / 1e18;
+        uint256 expectedLUSD = bLUSDLPZap.getMinWithdrawLUSD(withdrawAmount);
+
         vm.startPrank(A);
         bLUSDLUSD3CRVLPToken.approve(address(bLUSDLPZap), withdrawAmount);
         bLUSDLPZap.removeLiquidityLUSD(withdrawAmount, 0);
@@ -328,11 +330,12 @@ contract BLUSDLPZapTest is BaseTest {
         //console.log(lusdToken.balanceOf(A) - initialLUSDBalance, "lusdToken.balanceOf(A) - initialLUSDBalance");
         //console.log(lusdAmount * fractionToWithdraw / 1e18, "lusdAmount * fractionToWithdraw / 1e18");
         //console.log(bLUSDAmount * fractionToWithdraw / 1e18, "bLUSDAmount * fractionToWithdraw / 1e18");
+        //console.log(expectedLUSD, "expectedLUSD");
         //console.log(bLUSDLUSD3CRVPool.get_dy(0, 1, bLUSDAmount * fractionToWithdraw / 1e18), "bLUSDLUSD3CRVLPPool.get_dy(0, 1, bLUSDAmount * fractionToWithdraw / 1e18)");
         assertRelativeError(
             lusdToken.balanceOf(A) - initialLUSDBalance,
-            lusdAmount * fractionToWithdraw / 1e18 + bLUSDLUSD3CRVPool.get_dy(0, 1, bLUSDAmount * fractionToWithdraw / 1e18),
-            1e15,
+            expectedLUSD,
+            1e3,
             "LUSD balance mismatch"
         );
 
