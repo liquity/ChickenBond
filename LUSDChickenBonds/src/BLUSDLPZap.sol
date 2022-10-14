@@ -106,7 +106,6 @@ contract BLUSDLPZap {
         uint256 initialBLUSDBalance = bLUSDToken.balanceOf(address(this));
 
         // withdraw bLUSD/LUSD-3CRV
-        bLUSDLUSD3CRVLPToken.approve(address(bLUSDLUSD3CRVPool), _lpAmount);
         bLUSDLUSD3CRVPool.remove_liquidity(_lpAmount, [_minBLUSD, 0], false, address(this));
         uint256 bLUSDAmount = bLUSDToken.balanceOf(address(this)) - initialBLUSDBalance;
         uint256 lusd3CRVAmount = lusd3CRVPool.balanceOf(address(this)) - initialLUSD3CRVBalance;
@@ -137,7 +136,6 @@ contract BLUSDLPZap {
         uint256 initialLUSD3CRVBalance = lusd3CRVPool.balanceOf(address(this));
 
         // withdraw bLUSD/LUSD-3CRV
-        bLUSDLUSD3CRVLPToken.approve(address(bLUSDLUSD3CRVPool), _lpAmount);
         bLUSDLUSD3CRVPool.remove_liquidity_one_coin(_lpAmount, 1, 0, false, address(this));
 
         // withdraw LUSD from LUSD/3pool, and tranfer it to sender
