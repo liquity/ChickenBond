@@ -36,8 +36,6 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         // Further data derived from the attributes
         string solidBorderColor;
         string solidCardColor;
-        string solidShellColor;
-        bool isBlendedShell;
         bool hasCardGradient;
         string[2] cardGradient;
     }
@@ -139,7 +137,7 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         returns (bytes memory)
     {
         return abi.encodePacked(
-            _getSVGBorder(_commonData),
+            _getSVGBorder(_commonData, _darkMode),
             _getSVGCard(_commonData),
             _darkMode ? _getSVGCardRadialGradient(_commonData) : bytes(''),
             _getSVGText(_commonData, _subtitle)
@@ -162,6 +160,26 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
             _color == ShellColor.Gold          ? "Gold"           :
             _color == ShellColor.Rainbow       ? "Rainbow"        :
             _color == ShellColor.Luminous      ? "Luminous"       : ""
+        );
+    }
+
+    function _getSolidObjectColor(ShellColor _color)
+        internal
+        pure
+        returns (string memory)
+    {
+        return (
+            _color == ShellColor.OffWhite      ? "#fff1cb" :
+            _color == ShellColor.LightBlue     ? "#e5eff9" :
+            _color == ShellColor.DarkerBlue    ? "#aedfe2" :
+            _color == ShellColor.LighterOrange ? "#f6dac9" :
+            _color == ShellColor.LightOrange   ? "#f8d1b2" :
+            _color == ShellColor.DarkerOrange  ? "#fcba92" :
+            _color == ShellColor.LightGreen    ? "#c5e8d6" :
+            _color == ShellColor.DarkerGreen   ? "#e5daaa" :
+            _color == ShellColor.Bronze        ? "#cd7f32" :
+            _color == ShellColor.Silver        ? "#c0c0c0" :
+            _color == ShellColor.Gold          ? "#ffd700" : ""
         );
     }
 
@@ -208,32 +226,6 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         );
     }
 
-    function _getSolidShellColor(ShellColor _shell, CardColor _card)
-        private
-        pure
-        returns (string memory)
-    {
-        return (
-            _shell == ShellColor.OffWhite      ? "#fff1cb" :
-            _shell == ShellColor.LightBlue     ? "#e5eff9" :
-            _shell == ShellColor.DarkerBlue    ? "#aedfe2" :
-            _shell == ShellColor.LighterOrange ? "#f6dac9" :
-            _shell == ShellColor.LightOrange   ? "#f8d1b2" :
-            _shell == ShellColor.DarkerOrange  ? "#fcba92" :
-            _shell == ShellColor.LightGreen    ? "#c5e8d6" :
-            _shell == ShellColor.DarkerGreen   ? "#e5daaa" :
-            _shell == ShellColor.Bronze        ? "#cd7f32" :
-            _shell == ShellColor.Silver        ? "#c0c0c0" :
-            _shell == ShellColor.Gold          ? "#ffd700" :
-
-            _shell == ShellColor.Luminous ? (
-                _card == CardColor.Bronze ? "#cd7f32" :
-                _card == CardColor.Silver ? "#c0c0c0" :
-                _card == CardColor.Gold   ? "#ffd700" : ""
-            ) : ""
-        );
-    }
-
     function _getCardGradient(CardColor _color) private pure returns (bool, string[2] memory) {
         return (
             _color == CardColor.YellowPink ? (true, ["#ffd200", "#ff0087"]) :
@@ -249,15 +241,6 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
     function _calcDerivedData(CommonData memory _data) private pure {
         _data.solidBorderColor = _getSolidBorderColor(_data.borderColor);
         _data.solidCardColor = _getSolidCardColor(_data.cardColor);
-        _data.solidShellColor = _getSolidShellColor(_data.shellColor, _data.cardColor);
-
-        _data.isBlendedShell = _data.shellColor == ShellColor.Luminous && !(
-            _data.cardColor == CardColor.Bronze ||
-            _data.cardColor == CardColor.Silver ||
-            _data.cardColor == CardColor.Gold   ||
-            _data.cardColor == CardColor.Rainbow
-        );
-
         (_data.hasCardGradient, _data.cardGradient) = _getCardGradient(_data.cardColor);
     }
 
@@ -428,11 +411,12 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         );
     }
 
-    function _getSVGBorder(CommonData memory _data) private pure returns (bytes memory) {
-        if (
-            _data.shellColor == ShellColor.Luminous &&
-            _data.borderColor == BorderColor.Black
-        ) {
+    function _getSVGBorder(CommonData memory _data, bool _darkMode)
+        private
+        pure
+        returns (bytes memory)
+    {
+        if (_darkMode && _data.borderColor == BorderColor.Black) {
             // We will use the black radial gradient as border (covering the entire card)
             return bytes('');
         }
@@ -468,11 +452,11 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         );
     }
 
-    function _getSVGCardRadialGradient(CommonData memory _data) private pure returns (bytes memory) {
-        if (_data.shellColor != ShellColor.Luminous) {
-            return bytes('');
-        }
-
+    function _getSVGCardRadialGradient(CommonData memory _data)
+        private
+        pure
+        returns (bytes memory)
+    {
         return abi.encodePacked(
             '<rect ',
                 'style="fill: url(#cb-egg-', _data.tokenID.toString(), '-card-radial-gradient); mix-blend-mode: hard-light" ',
