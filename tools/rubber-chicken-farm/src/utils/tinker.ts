@@ -193,6 +193,7 @@ export const getLUSDChickenBondGlobalFunctions = (
     globalObj.deployment = await deployAndSetupContracts(deployer, {
       log: true,
       config: {
+        lusdFaucetTapAmount: BigNumber.from(Decimal.from(1000000000).hex),
         yearnGovernanceAddress: await deployer.getAddress() // let us play around with migration ;-)
       }
     });
