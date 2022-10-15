@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.10;
 
-import "./BondNFTArtworkBase.sol";
+import "./EggTraitWeights.sol";
 
 struct ChickenOutData {
     // Attributes derived from the DNA

@@ -4,46 +4,12 @@ pragma solidity ^0.8.10;
 import "openzeppelin-contracts/contracts/utils/Base64.sol";
 import "openzeppelin-contracts/contracts/utils/Strings.sol";
 import { BokkyPooBahsDateTimeLibrary as DateTime } from "datetime/contracts/BokkyPooBahsDateTimeLibrary.sol";
-import "./BondNFTArtworkSwitcher.sol";
+
+import "../Interfaces/IBondNFTArtwork.sol";
+import "../Interfaces/IChickenBondManager.sol";
+import { IChickenBondManagerGetter } from "./BondNFTArtworkSwitcher.sol";
 import "./EggTraitWeights.sol";
-
-enum Size {
-    Tiny,
-    Small,
-    Normal,
-    Big
-}
-
-struct CommonData {
-    uint256 tokenID;
-
-    // ChickenBondManager.BondData
-    uint256 lusdAmount;
-    uint256 claimedBLUSD;
-    uint256 startTime;
-    uint256 endTime;
-    uint8 status;
-
-    // IBondNFT.BondExtraData
-    uint80 initialHalfDna;
-    uint80 finalHalfDna;
-    uint32 troveSize;
-    uint32 lqtyAmount;
-    uint32 curveGaugeSlopes;
-
-    // Attributes derived from the DNA
-    EggTraitWeights.BorderColor borderColor;
-    EggTraitWeights.CardColor cardColor;
-    EggTraitWeights.ShellColor shellColor;
-    Size size;
-
-    // Further data derived from the attributes
-    string solidBorderColor;
-    string solidCardColor;
-    bool hasCardGradient;
-    string[2] cardGradient;
-    string tokenIDString;
-}
+import "./CommonData.sol";
 
 function _cutDNA(uint256 dna, uint8 startBit, uint8 numBits) pure returns (uint256) {
     uint256 ceil = 1 << numBits;
@@ -188,9 +154,23 @@ contract BondNFTArtworkCommon is EggTraitWeights {
 
     function _calcDerivedData(CommonData memory _data) private pure {
         _data.tokenIDString = _data.tokenID.toString();
-        _data.solidBorderColor = _getSolidBorderColor(_data.borderColor);
-        _data.solidCardColor = _getSolidCardColor(_data.cardColor);
         (_data.hasCardGradient, _data.cardGradient) = _getCardGradient(_data.cardColor);
+
+        _data.borderStyle = abi.encodePacked(
+            'fill:',
+            _data.borderColor == EggTraitWeights.BorderColor.Rainbow
+                ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-rainbow-gradient)')
+                : bytes(_getSolidBorderColor(_data.borderColor))
+        );
+
+        _data.cardStyle = abi.encodePacked(
+            'fill:',
+            _data.cardColor == EggTraitWeights.CardColor.Rainbow
+                ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-rainbow-gradient)')
+                : _data.hasCardGradient
+                ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-diagonal-gradient)')
+                : bytes(_getSolidCardColor(_data.cardColor))
+        );
     }
 
     function _getMetadataCommonDerivedAttributes(CommonData memory _data)
@@ -375,11 +355,7 @@ contract BondNFTArtworkCommon is EggTraitWeights {
         }
 
         return abi.encodePacked(
-            '<rect style="fill:',
-                _data.borderColor == EggTraitWeights.BorderColor.Rainbow
-                    ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-rainbow-gradient)')
-                    : bytes(_data.solidBorderColor),
-                '" width="100%" height="100%" rx="37.5"/>'
+            '<rect style="', _data.borderStyle, '" width="100%" height="100%" rx="37.5"/>'
         );
     }
 
@@ -388,13 +364,7 @@ contract BondNFTArtworkCommon is EggTraitWeights {
             _data.cardColor == EggTraitWeights.CardColor.Rainbow && _data.borderColor == EggTraitWeights.BorderColor.Rainbow
                 ? bytes('') // Rainbow gradient already placed by border
                 : abi.encodePacked(
-                    '<rect style="fill:',
-                        _data.cardColor == EggTraitWeights.CardColor.Rainbow
-                            ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-rainbow-gradient)')
-                            : _data.hasCardGradient
-                            ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-diagonal-gradient)')
-                            : bytes(_data.solidCardColor),
-                        '" x="30" y="30" width="690" height="990" rx="37.5"/>'
+                    '<rect style="', _data.cardStyle, '" x="30" y="30" width="690" height="990" rx="37.5"/>'
                 ),
 
             _data.cardColor == EggTraitWeights.CardColor.Rainbow
