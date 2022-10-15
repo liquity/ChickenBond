@@ -16,15 +16,20 @@ enum Size {
 
 struct CommonData {
     uint256 tokenID;
+
+    // ChickenBondManager.BondData
     uint256 lusdAmount;
     uint256 claimedBLUSD;
     uint256 startTime;
     uint256 endTime;
+    uint8 status;
+
+    // IBondNFT.BondExtraData
     uint80 initialHalfDna;
     uint80 finalHalfDna;
-    uint8 status;
-    // extra data
-    uint256 troveSize;
+    uint32 troveSize;
+    uint32 lqtyAmount;
+    uint32 curveGaugeSlopes;
 
     // Attributes derived from the DNA
     EggTraitWeights.BorderColor borderColor;
@@ -35,8 +40,6 @@ struct CommonData {
     // Further data derived from the attributes
     string solidBorderColor;
     string solidCardColor;
-    string solidShellColor;
-    bool isBlendedShell;
     bool hasCardGradient;
     string[2] cardGradient;
     string tokenIDString;
@@ -468,7 +471,9 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork {
         data.tokenID = _tokenID;
         data.initialHalfDna = _bondExtraData.initialHalfDna;
         data.finalHalfDna = _bondExtraData.finalHalfDna;
-        data.troveSize = uint256(_bondExtraData.troveSize);
+        data.troveSize = _bondExtraData.troveSize;
+        data.lqtyAmount = _bondExtraData.lqtyAmount;
+        data.curveGaugeSlopes = _bondExtraData.curveGaugeSlopes;
 
         (
             data.lusdAmount,

@@ -52,16 +52,9 @@ contract ChickenInArtwork is BondNFTArtworkBase, ChickenInGenerated, ChickenInTr
         view
     {
         uint80 dna = _commonData.finalHalfDna;
+        uint256 troveFactor = uint256(_commonData.troveSize) * 1e18 / MAX_TROVE_SIZE;
 
-        // inherited info
-        uint80 initialDna = _commonData.initialHalfDna;
-        BorderColor borderColor = _getBorderColor(_cutDNA(initialDna,  0, 26));
-        ShellColor shellColor  = _getShellColor (_cutDNA(initialDna, 53, 27), borderColor);
-
-        // extra data
-        uint256 troveFactor = _commonData.troveSize * 1e18 / MAX_TROVE_SIZE;
-
-        _chickenInData.chickenColor = _getChickenColor(_cutDNA(dna,  0, 16), shellColor, troveFactor);
+        _chickenInData.chickenColor = _getChickenColor(_cutDNA(dna,  0, 16), _commonData.shellColor, troveFactor);
         _chickenInData.comb =         _getChickenComb (_cutDNA(dna, 16, 16), troveFactor);
         _chickenInData.beak =         _getChickenBeak (_cutDNA(dna, 32, 16), troveFactor);
         _chickenInData.tail =         _getChickenTail (_cutDNA(dna, 48, 16), troveFactor);

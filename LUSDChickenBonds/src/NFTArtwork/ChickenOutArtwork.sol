@@ -84,12 +84,7 @@ contract ChickenOutArtwork is BondNFTArtworkBase, ChickenOutGenerated, ChickenOu
     {
         uint80 dna = _commonData.finalHalfDna;
 
-        // inherited info
-        uint80 initialDna = _commonData.initialHalfDna;
-        BorderColor borderColor = _getBorderColor(_cutDNA(initialDna,  0, 26));
-        ShellColor shellColor  = _getShellColor (_cutDNA(initialDna, 53, 27), borderColor);
-
-        _chickenOutData.chickenColor = _getChickenColor(_cutDNA(dna, 0, 80), shellColor);
+        _chickenOutData.chickenColor = _getChickenColor(_cutDNA(dna, 0, 80), _commonData.shellColor);
 
         _chickenOutData.darkMode = (
             _commonData.shellColor       == EggTraitWeights.ShellColor.Luminous ||
