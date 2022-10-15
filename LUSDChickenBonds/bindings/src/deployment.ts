@@ -202,8 +202,36 @@ class LUSDChickenBondDeployment {
     );
 
     const eggArtwork = await this.deployContract(factories.eggArtwork, overrides);
-    const chickenOutArtwork = await this.deployContract(factories.chickenOutArtwork, overrides);
-    const chickenInArtwork = await this.deployContract(factories.chickenInArtwork, overrides);
+
+    const bondNFTArtworkCommon = await this.deployContract(
+      factories.bondNFTArtworkCommon,
+      overrides
+    );
+
+    const chickenOutGenerated1 = await this.deployContract(
+      factories.chickenOutGenerated1,
+      overrides
+    );
+
+    const chickenOutArtwork = await this.deployContract(
+      factories.chickenOutArtwork,
+      bondNFTArtworkCommon.contract.address,
+      chickenOutGenerated1.contract.address,
+      overrides
+    );
+
+    const chickenInGenerated1 = await this.deployContract(factories.chickenInGenerated1, overrides);
+    const chickenInGenerated2 = await this.deployContract(factories.chickenInGenerated2, overrides);
+    const chickenInGenerated3 = await this.deployContract(factories.chickenInGenerated3, overrides);
+
+    const chickenInArtwork = await this.deployContract(
+      factories.chickenInArtwork,
+      bondNFTArtworkCommon.contract.address,
+      chickenInGenerated1.contract.address,
+      chickenInGenerated2.contract.address,
+      chickenInGenerated3.contract.address,
+      overrides
+    );
 
     const troveManager = await this.deployContract(factories.troveManager, overrides);
 
@@ -366,7 +394,12 @@ class LUSDChickenBondDeployment {
       bondNFT,
       bondNFTArtwork,
       eggArtwork,
+      bondNFTArtworkCommon,
+      chickenOutGenerated1,
       chickenOutArtwork,
+      chickenInGenerated1,
+      chickenInGenerated2,
+      chickenInGenerated3,
       chickenInArtwork,
       chickenBondManager,
       bLUSDToken,

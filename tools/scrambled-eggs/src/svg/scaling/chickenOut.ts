@@ -1,5 +1,5 @@
 import SvgPath from "svgpath";
-import { round, template, viewBoxHeight, viewBoxWidth } from "./common";
+import { round, roundDigits, template, viewBoxHeight, viewBoxWidth } from "./common";
 
 const transformOriginX = 0.5 * viewBoxWidth;
 const transformOriginY = 0.55 * viewBoxHeight;
@@ -11,15 +11,13 @@ const mul = (x: number) => (s: number) => round(x * s);
 const tokenID = "tokenID";
 const style = "style";
 
-export const chickenOutRunAnimation = template<[], { tokenID: number }>/*css*/ `
+export const chickenOutAnimations = template<[scale: number], { tokenID: number }>/*css*/ `
   #co-chicken-${tokenID} .co-chicken g,
   #co-chicken-${tokenID} .co-chicken path,
   #co-chicken-${tokenID} .co-chicken circle {
     animation: co-run 0.3s infinite ease-in-out alternate;
   }
-`;
 
-export const chickenOutLegAnimation = template<[scale: number], { tokenID: number }>/*css*/ `
   #co-chicken-${tokenID} .co-left-leg path {
     animation: co-left-leg 0.3s infinite ease-in-out alternate;
     transform-origin: ${scaleX(420)}px ${scaleY(525)}px;
@@ -29,16 +27,12 @@ export const chickenOutLegAnimation = template<[scale: number], { tokenID: numbe
     animation: co-right-leg 0.3s infinite ease-in-out alternate;
     transform-origin: ${scaleX(320)}px ${scaleY(525)}px;
   }
-`;
 
-export const chickenOutShadowAnimation = template<[scale: number], { tokenID: number }>/*css*/ `
   #co-chicken-${tokenID} .co-shadow {
     animation: co-shadow 0.3s infinite ease-in-out alternate;
     transform-origin: ${scaleX(375)}px ${scaleY(636)}px;
   }
-`;
 
-export const chickenOutKeyframes = template<[scale: number]>/*css*/ `
   @keyframes co-run {
     10% { transform: translateY(0); }
     100% { transform: translateY(${mul(88)}px); }
@@ -87,7 +81,7 @@ const scalePath = (p: string) => (s: number) =>
     .translate(-transformOriginX, -transformOriginY)
     .scale(s)
     .translate(transformOriginX, transformOriginY)
-    .round(2);
+    .round(roundDigits);
 
 export const chickenOutShadow = template<[scale: number]>/*svg*/ `
   <ellipse class="co-shadow" style="fill: #000; mix-blend-mode: overlay" ${scaleEllipseCoords(

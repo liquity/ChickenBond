@@ -1,142 +1,132 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.10;
 
-import "./ChickenOutBase.sol";
+import "./ChickenOutData.sol";
 
-abstract contract ChickenOutGenerated is ChickenOutBase {
-    using Strings for uint256;
-
-    function _getSVGRunAnimation(CommonData memory _commonData) internal pure returns (bytes memory) {
-        return abi.encodePacked(
-            '#co-chicken-',
-            _commonData.tokenID.toString(),
-            ' .co-chicken g, #co-chicken-',
-            _commonData.tokenID.toString(),
-            ' .co-chicken path, #co-chicken-',
-            _commonData.tokenID.toString(),
-            ' .co-chicken circle { animation: co-run 0.3s infinite ease-in-out alternate; } '
-        );
-    }
-
-    function _getSVGLegAnimation(CommonData memory _commonData) internal pure returns (bytes memory) {
-        string[4][4] memory p = [
-            ["404.7","414.6","424.5","434.4"],
-            ["542.85","531.3","519.75","508.2"],
-            ["338.7","326.6","314.5","302.4"],
-            ["542.85","531.3","519.75","508.2"]
+contract ChickenOutAnimations {
+    function getSVGAnimations(CommonData calldata _commonData) external pure returns (bytes memory) {
+        string[4][9] memory p = [
+            ['404.7', '414.6', '424.5', '434.4'],
+            ['542.9', '531.3', '519.8', '508.2'],
+            ['338.7', '326.6', '314.5', '302.4'],
+            ['542.9', '531.3', '519.8', '508.2'],
+            ['375', '375', '375', '375'],
+            ['616.1', '629', '641.9', '654.7'],
+            ['58.1', '77.4', '96.8', '116.2'],
+            ['79.2', '105.6', '132', '158.4'],
+            ['-79.2', '-105.6', '-132', '-158.4']
         ];
 
         return abi.encodePacked(
-            '#co-chicken-',
-            _commonData.tokenID.toString(),
-            ' .co-left-leg path { animation: co-left-leg 0.3s infinite ease-in-out alternate; transform-origin: ',
-            p[0][uint256(_commonData.size)],
-            'px ',
-            p[1][uint256(_commonData.size)],
-            'px; } #co-chicken-',
-            _commonData.tokenID.toString(),
-            ' .co-right-leg path { animation: co-right-leg 0.3s infinite ease-in-out alternate; transform-origin: ',
-            p[2][uint256(_commonData.size)],
-            'px ',
-            p[3][uint256(_commonData.size)],
-            'px; } '
+            abi.encodePacked(
+                '#co-chicken-',
+                _commonData.tokenIDString,
+                ' .co-chicken g,#co-chicken-',
+                _commonData.tokenIDString,
+                ' .co-chicken path,#co-chicken-',
+                _commonData.tokenIDString,
+                ' .co-chicken circle{animation:co-run 0.3s infinite ease-in-out alternate;}#co-chicken-',
+                _commonData.tokenIDString,
+                ' .co-left-leg path{animation:co-left-leg 0.3s infinite ease-in-out alternate;transform-origin:',
+                p[0][uint256(_commonData.size)],
+                'px ',
+                p[1][uint256(_commonData.size)],
+                'px;}#co-chicken-'
+            ),
+            abi.encodePacked(
+                _commonData.tokenIDString,
+                ' .co-right-leg path{animation:co-right-leg 0.3s infinite ease-in-out alternate;transform-origin:',
+                p[2][uint256(_commonData.size)],
+                'px ',
+                p[3][uint256(_commonData.size)],
+                'px;}#co-chicken-',
+                _commonData.tokenIDString,
+                ' .co-shadow{animation:co-shadow 0.3s infinite ease-in-out alternate;transform-origin:',
+                p[4][uint256(_commonData.size)],
+                'px ',
+                p[5][uint256(_commonData.size)],
+                'px;}@keyframes co-run{10%{transform:translateY(0);}100%{transform:translateY(',
+                p[6][uint256(_commonData.size)]
+            ),
+            abi.encodePacked(
+                'px);}}@keyframes co-left-leg{20%{transform:rotate(-0deg);}100%{transform:rotate(-75deg)translateX(',
+                p[7][uint256(_commonData.size)],
+                'px);}}@keyframes co-right-leg{0%{transform:rotate(5deg);}20%{transform:rotate(5deg);}100%{transform:rotate(70deg)translateX(',
+                p[8][uint256(_commonData.size)],
+                'px);}}@keyframes co-shadow{0%{transform:scale(60%);}100%{transform:scale(100%);}}'
+            )
         );
     }
+}
 
-    function _getSVGShadowAnimation(CommonData memory _commonData) internal pure returns (bytes memory) {
-        string[4][2] memory p = [
-            ["375","375","375","375"],
-            ["616.11","628.98","641.85","654.72"]
-        ];
-
-        return abi.encodePacked(
-            '#co-chicken-',
-            _commonData.tokenID.toString(),
-            ' .co-shadow { animation: co-shadow 0.3s infinite ease-in-out alternate; transform-origin: ',
-            p[0][uint256(_commonData.size)],
-            'px ',
-            p[1][uint256(_commonData.size)],
-            'px; } '
-        );
-    }
-
-    function _getSVGKeyframes(CommonData memory _commonData) internal pure returns (bytes memory) {
-        string[4][3] memory p = [
-            ["58.08","77.44","96.8","116.16"],
-            ["79.2","105.6","132","158.4"],
-            ["-79.2","-105.6","-132","-158.4"]
-        ];
-
-        return abi.encodePacked(
-            '@keyframes co-run { 10% { transform: translateY(0); } 100% { transform: translateY(',
-            p[0][uint256(_commonData.size)],
-            'px); } } @keyframes co-left-leg { 20% { transform: rotate(-0deg); } 100% { transform: rotate(-75deg) translateX(',
-            p[1][uint256(_commonData.size)],
-            'px); } } @keyframes co-right-leg { 0% { transform: rotate(5deg); } 20% { transform: rotate(5deg); } 100% { transform: rotate(70deg) translateX(',
-            p[2][uint256(_commonData.size)],
-            'px); } } @keyframes co-shadow { 0% { transform: scale(60%); } 100% { transform: scale(100%); } } '
-        );
-    }
-
-    function _getSVGShadow(CommonData memory _commonData) internal pure returns (bytes memory) {
+contract ChickenOutShadow {
+    function getSVGShadow(CommonData calldata _commonData) external pure returns (bytes memory) {
         string[4][1] memory p = [
-            ["cx=\"372.36\" cy=\"616.11\" rx=\"48.18\" ry=\"7.26\"","cx=\"371.48\" cy=\"628.98\" rx=\"64.24\" ry=\"9.68\"","cx=\"370.6\" cy=\"641.85\" rx=\"80.3\" ry=\"12.1\"","cx=\"369.72\" cy=\"654.72\" rx=\"96.36\" ry=\"14.52\""]
+            ['cx="372.4" cy="616.1" rx="48.2" ry="7.3"', 'cx="371.5" cy="629" rx="64.2" ry="9.7"', 'cx="370.6" cy="641.9" rx="80.3" ry="12.1"', 'cx="369.7" cy="654.7" rx="96.4" ry="14.5"']
         ];
 
         return abi.encodePacked(
-            '<ellipse class="co-shadow" style="fill: #000; mix-blend-mode: overlay" ',
+            '<ellipse class="co-shadow" style="fill:#000;mix-blend-mode:overlay" ',
             p[0][uint256(_commonData.size)],
-            '/> '
+            '/>'
         );
     }
+}
 
-    function _getSVGLeftLeg(CommonData memory _commonData) internal pure returns (bytes memory) {
+contract ChickenOutLeftLeg {
+    function getSVGLeftLeg(CommonData calldata _commonData) external pure returns (bytes memory) {
         string[4][2] memory p = [
-            ["M318.31 547.65c-1.32 0.54-2.82 0.06-3.3-1.06s0.28-2.49 1.63-3.03l23.28-9.35c1.32-0.53 2.82-0.06 3.3 1.07s-0.28 2.49-1.63 3.03Z","M299.42 537.71c-1.76 0.72-3.76 0.08-4.4-1.42s0.38-3.33 2.17-4.05l31.04-12.46c1.76-0.71 3.76-0.08 4.4 1.43s-0.38 3.33-2.18 4.04Z","M280.52 527.76c-2.2 0.9-4.7 0.1-5.5-1.77s0.47-4.16 2.72-5.06l38.79-15.58c2.2-0.89 4.7-0.1 5.5 1.78s-0.47 4.16-2.71 5.05Z","M261.63 517.81c-2.64 1.08-5.64 0.12-6.6-2.13s0.57-4.99 3.26-6.07l46.55-18.69c2.64-1.07 5.64-0.12 6.6 2.14s-0.57 4.99-3.26 6.06Z"],
-            ["M314.44 540.21l5.24 2.08a0.55 0.55 0 0 1 0.29 0.3l0.83 2.08a10.73 10.73 0 0 1 0.51 5.04l-0.91 4.89c-0.21 1.16-1.68 1.19-2.14 0.04l-5.14-12.82C312.56 540.4 313.15 539.68 314.44 540.21Z","M294.25 527.78l6.99 2.77a0.74 0.74 0 0 1 0.39 0.4l1.1 2.78a14.31 14.31 0 0 1 0.68 6.72l-1.2 6.52c-0.28 1.55-2.24 1.59-2.86 0.06l-6.86-17.1C291.74 528.04 292.54 527.07 294.25 527.78Z","M274.06 515.35l8.74 3.47a0.92 0.92 0 0 1 0.48 0.49l1.39 3.48a17.89 17.89 0 0 1 0.84 8.4l-1.5 8.15c-0.35 1.94-2.79 1.99-3.58 0.07l-8.57-21.38C270.93 515.67 271.92 514.46 274.06 515.35Z","M253.88 502.92l10.48 4.16a1.11 1.11 0 0 1 0.58 0.59l1.66 4.17a21.46 21.46 0 0 1 1.02 10.09l-1.81 9.78c-0.42 2.32-3.35 2.39-4.29 0.08l-10.28-25.65C250.11 503.3 251.3 501.85 253.88 502.92Z"]
+            ['M318.3 547.7c-1.3 0.5-2.8 0.1-3.3-1.1s0.3-2.5 1.6-3l23.3-9.4c1.3-0.5 2.8-0.1 3.3 1.1s-0.3 2.5-1.6 3Z', 'M299.4 537.7c-1.8 0.7-3.8 0.1-4.4-1.4s0.4-3.3 2.2-4.1l31-12.4c1.8-0.7 3.8-0.1 4.4 1.4s-0.4 3.3-2.1 4Z', 'M280.5 527.8c-2.2 0.9-4.7 0.1-5.5-1.8s0.5-4.2 2.7-5.1l38.8-15.5c2.2-0.9 4.7-0.1 5.5 1.7s-0.5 4.2-2.7 5.1Z', 'M261.6 517.8c-2.6 1.1-5.6 0.1-6.6-2.1s0.6-5 3.3-6.1l46.5-18.7c2.6-1.1 5.6-0.1 6.6 2.2s-0.6 5-3.2 6Z'],
+            ['M314.4 540.2l5.3 2.1a0.6 0.6 0 0 1 0.3 0.3l0.8 2.1a10.7 10.7 0 0 1 0.5 5l-0.9 4.9c-0.2 1.2-1.7 1.2-2.1 0l-5.2-12.8C312.6 540.4 313.2 539.7 314.4 540.2Z', 'M294.3 527.8l6.9 2.8a0.7 0.7 0 0 1 0.4 0.3l1.1 2.8a14.3 14.3 0 0 1 0.7 6.8l-1.2 6.5c-0.3 1.5-2.2 1.6-2.9 0l-6.8-17.1C291.7 528 292.5 527.1 294.3 527.8Z', 'M274.1 515.4l8.7 3.4a0.9 0.9 0 0 1 0.5 0.5l1.4 3.5a17.9 17.9 0 0 1 0.8 8.4l-1.5 8.1c-0.4 1.9-2.8 2-3.6 0.1l-8.5-21.4C270.9 515.7 271.9 514.5 274.1 515.4Z', 'M253.9 502.9l10.5 4.2a1.1 1.1 0 0 1 0.5 0.6l1.7 4.1a21.5 21.5 0 0 1 1 10.1l-1.8 9.8c-0.4 2.3-3.4 2.4-4.3 0.1l-10.3-25.7C250.1 503.3 251.3 501.9 253.9 502.9Z']
         ];
 
         return abi.encodePacked(
-            '<g class="co-left-leg"> <path style="fill: #352d20" d="',
+            '<g class="co-left-leg"><path style="fill:#352d20" d="',
             p[0][uint256(_commonData.size)],
-            '"/> <path style="fill: #352d20" d="',
+            '"/><path style="fill:#352d20" d="',
             p[1][uint256(_commonData.size)],
-            '"/> </g> '
+            '"/></g>'
         );
     }
+}
 
-    function _getSVGRightLeg(CommonData memory _commonData) internal pure returns (bytes memory) {
+contract ChickenOutRightLeg {
+    function getSVGRightLeg(CommonData calldata _commonData) external pure returns (bytes memory) {
         string[4][2] memory p = [
-            ["M422.83 548.68c1.12 0.93 1.39 2.46 0.61 3.39s-2.33 0.93-3.44 0l-19.23-16.11c-1.11-0.94-1.39-2.46-0.6-3.39s2.33-0.93 3.44 0Z","M438.77 539.08c1.49 1.24 1.85 3.27 0.81 4.51s-3.11 1.24-4.58 0l-25.64-21.48c-1.48-1.25-1.85-3.28-0.8-4.52s3.11-1.24 4.59 0Z","M454.72 529.47c1.86 1.55 2.31 4.09 1.01 5.65s-3.88 1.55-5.73 0l-32.05-26.85c-1.85-1.56-2.31-4.1-1-5.66s3.88-1.55 5.73 0Z","M470.66 519.87c2.23 1.86 2.77 4.91 1.21 6.77s-4.66 1.86-6.87 0l-38.45-32.22c-2.22-1.87-2.77-4.92-1.21-6.79s4.66-1.86 6.88 0Z"],
-            ["M418.08 555.63l-0.66-5.61a0.53 0.53 0 0 1 0.13-0.39l1.44-1.72a10.76 10.76 0 0 1 4.21-2.83l4.73-1.51c1.13-0.36 1.85 0.92 1.05 1.87l-8.88 10.56C419.15 557.18 418.24 557 418.08 555.63Z","M432.44 548.34l-0.88-7.47a0.7 0.7 0 0 1 0.17-0.53l1.92-2.3a14.35 14.35 0 0 1 5.62-3.77l6.31-2.01c1.5-0.48 2.46 1.22 1.4 2.5l-11.84 14.08C433.87 550.4 432.65 550.17 432.44 548.34Z","M446.8 541.05l-1.1-9.34a0.88 0.88 0 0 1 0.22-0.66l2.39-2.87a17.94 17.94 0 0 1 7.02-4.71l7.89-2.52c1.88-0.59 3.08 1.53 1.75 3.12l-14.8 17.6C448.59 543.63 447.06 543.33 446.8 541.05Z","M461.16 533.76l-1.32-11.21a1.06 1.06 0 0 1 0.26-0.79l2.88-3.45a21.53 21.53 0 0 1 8.42-5.65l9.46-3.02c2.26-0.71 3.7 1.83 2.1 3.75l-17.75 21.12C463.31 536.86 461.47 536.5 461.16 533.76Z"]
+            ['M422.8 548.7c1.1 0.9 1.4 2.5 0.6 3.4s-2.3 0.9-3.4 0l-19.2-16.1c-1.1-0.9-1.4-2.5-0.6-3.4s2.3-0.9 3.4 0Z', 'M438.8 539.1c1.5 1.2 1.8 3.3 0.8 4.5s-3.1 1.2-4.6 0l-25.6-21.5c-1.5-1.2-1.8-3.3-0.8-4.5s3.1-1.2 4.5 0Z', 'M454.7 529.5c1.9 1.6 2.3 4.1 1 5.6s-3.9 1.6-5.7 0l-32-26.8c-1.8-1.6-2.3-4.1-1-5.7s3.9-1.6 5.7 0Z', 'M470.7 519.9c2.2 1.9 2.8 4.9 1.2 6.7s-4.7 1.9-6.9 0l-38.5-32.2c-2.2-1.9-2.8-4.9-1.2-6.8s4.7-1.9 6.9 0Z'],
+            ['M418.1 555.6l-0.7-5.6a0.5 0.5 0 0 1 0.2-0.4l1.4-1.7a10.8 10.8 0 0 1 4.2-2.8l4.7-1.5c1.1-0.4 1.8 0.9 1.1 1.8l-8.9 10.6C419.2 557.2 418.2 557 418.1 555.6Z', 'M432.4 548.3l-0.8-7.4a0.7 0.7 0 0 1 0.1-0.6l2-2.3a14.4 14.4 0 0 1 5.6-3.7l6.3-2c1.5-0.5 2.5 1.2 1.4 2.5l-11.9 14C433.9 550.4 432.6 550.2 432.4 548.3Z', 'M446.8 541l-1.1-9.3a0.9 0.9 0 0 1 0.2-0.7l2.4-2.8a17.9 17.9 0 0 1 7-4.7l7.9-2.6c1.9-0.6 3.1 1.5 1.8 3.2l-14.8 17.6C448.6 543.6 447.1 543.3 446.8 541Z', 'M461.2 533.8l-1.4-11.3a1.1 1.1 0 0 1 0.3-0.7l2.9-3.5a21.5 21.5 0 0 1 8.4-5.6l9.5-3.1c2.3-0.7 3.7 1.8 2.1 3.8l-17.8 21.1C463.3 536.9 461.5 536.5 461.2 533.8Z']
         ];
 
         return abi.encodePacked(
-            '<g class="co-right-leg"> <path style="fill: #352d20" d="',
+            '<g class="co-right-leg"><path style="fill:#352d20" d="',
             p[0][uint256(_commonData.size)],
-            '"/> <path style="fill: #352d20" d="',
+            '"/><path style="fill:#352d20" d="',
             p[1][uint256(_commonData.size)],
-            '"/> </g> '
+            '"/></g>'
         );
     }
+}
 
-    function _getSVGBeak(CommonData memory _commonData) internal pure returns (bytes memory) {
+contract ChickenOutBeak {
+    function getSVGBeak(CommonData calldata _commonData) external pure returns (bytes memory) {
         string[4][1] memory p = [
-            ["M429.63 460.01l9.8 2.26a0.88 0.88 0 0 1 0.41 1.51l-7.31 6.86A0.88 0.88 0 0 1 431.1 470.25l-2.49-9.12A0.88 0.88 0 0 1 429.63 460.01Z","M447.85 420.85l13.06 3.01a1.18 1.18 0 0 1 0.54 2.01l-9.74 9.15A1.18 1.18 0 0 1 449.8 434.5l-3.32-12.16A1.18 1.18 0 0 1 447.85 420.85Z","M466.06 381.69l16.32 3.76a1.47 1.47 0 0 1 0.68 2.51l-12.17 11.44A1.47 1.47 0 0 1 468.5 398.75l-4.15-15.2A1.47 1.47 0 0 1 466.06 381.69Z","M484.27 342.53l19.59 4.51a1.77 1.77 0 0 1 0.82 3.01l-14.62 13.73A1.77 1.77 0 0 1 487.2 363l-4.98-18.24A1.77 1.77 0 0 1 484.27 342.53Z"]
+            ['M429.6 460l9.8 2.3a0.9 0.9 0 0 1 0.4 1.5l-7.3 6.8A0.9 0.9 0 0 1 431.1 470.3l-2.5-9.2A0.9 0.9 0 0 1 429.6 460Z', 'M447.8 420.9l13.1 3a1.2 1.2 0 0 1 0.6 2l-9.8 9.1A1.2 1.2 0 0 1 449.8 434.5l-3.3-12.2A1.2 1.2 0 0 1 447.8 420.9Z', 'M466.1 381.7l16.3 3.8a1.5 1.5 0 0 1 0.7 2.5l-12.2 11.4A1.5 1.5 0 0 1 468.5 398.8l-4.1-15.3A1.5 1.5 0 0 1 466.1 381.7Z', 'M484.3 342.5l19.6 4.5a1.8 1.8 0 0 1 0.8 3.1l-14.6 13.7A1.8 1.8 0 0 1 487.2 363l-5-18.2A1.8 1.8 0 0 1 484.3 342.5Z']
         ];
 
         return abi.encodePacked(
-            '<path style="fill: #f69222" d="',
+            '<path style="fill:#f69222" d="',
             p[0][uint256(_commonData.size)],
-            '"/> '
+            '"/>'
         );
     }
+}
 
-    function _getSVGChicken(CommonData memory _commonData, ChickenOutData memory _chickenOutData) internal pure returns (bytes memory) {
+contract ChickenOutChicken {
+    function getSVGChicken(CommonData calldata _commonData, ChickenOutData calldata _chickenOutData) external pure returns (bytes memory) {
         string[4][3] memory p = [
-            ["M417.83 446.49c-8.92-5.45-17.03-6.36-24.6-4.62-7.52 1.35-18.68 5.43-20.18 4.8-1.62-0.66 1.44 0.92 4.99 2.02-19.48 12.54-36.14 35.41-55.79 26.29-12.62-5.85-1.32 37.99 17.41 55.51s54.87 13.64 76.47-9.48S437.92 458.77 417.83 446.49Z","M432.1 402.82c-11.9-7.27-22.71-8.47-32.79-6.16-10.03 1.8-24.91 7.24-26.91 6.41-2.16-0.88 1.92 1.22 6.66 2.69-25.98 16.72-48.18 47.21-74.4 35.05-16.83-7.81-1.76 50.65 23.22 74.02s73.16 18.19 101.96-12.65S458.9 419.19 432.1 402.82Z","M446.38 359.15c-14.87-9.09-28.39-10.59-41-7.7-12.54 2.25-31.14 9.05-33.63 8.01-2.7-1.1 2.4 1.53 8.32 3.36-32.47 20.9-60.23 59.02-92.99 43.82-21.03-9.76-2.2 63.32 29.03 92.52s91.45 22.74 127.44-15.81S479.87 379.61 446.38 359.15Z","M460.65 315.48c-17.85-10.9-34.07-12.71-49.19-9.24-15.05 2.71-37.37 10.86-40.35 9.61-3.23-1.32 2.88 1.83 9.98 4.04-38.97 25.08-72.27 70.82-111.6 52.57-25.24-11.71-2.64 75.98 34.84 111.03s109.74 27.28 152.93-18.97S500.85 340.03 460.65 315.48Z"],
-            ["M431.14 466.21a37 37 0 0 1-9.64 25.67c-21.18 24.21-52.05 30.27-81.5 38.89 18.85 17.16 54.66 13.2 76.13-9.79C430.51 505.6 435.4 483.14 431.14 466.21Z","M449.85 429.11a49.33 49.33 0 0 1-12.85 34.23c-28.24 32.28-69.4 40.37-108.67 51.85 25.13 22.88 72.88 17.6 101.51-13.04C449.01 481.63 455.53 451.69 449.85 429.11Z","M468.57 392.02a61.67 61.67 0 0 1-16.08 42.78c-35.3 40.35-86.75 50.46-135.82 64.81 31.42 28.6 91.1 22 126.88-16.3C467.51 457.67 475.66 420.23 468.57 392.02Z","M487.28 354.92a74 74 0 0 1-19.29 51.34c-42.36 48.42-104.1 60.55-162.99 77.77 37.7 34.32 109.32 26.4 152.26-19.56C486.01 433.7 495.79 388.78 487.28 354.92Z"],
-            ["M417.83 446.49c-8.92-5.45-17.03-6.36-24.6-4.62-7.52 1.35-18.68 5.43-20.18 4.8-1.62-0.66 1.44 0.92 4.99 2.02-19.48 12.54-36.14 35.41-55.79 26.29-12.62-5.85-1.32 37.99 17.41 55.51s54.87 13.64 76.47-9.48S437.92 458.77 417.83 446.49Z","M432.1 402.82c-11.9-7.27-22.71-8.47-32.79-6.16-10.03 1.8-24.91 7.24-26.91 6.41-2.16-0.88 1.92 1.22 6.66 2.69-25.98 16.72-48.18 47.21-74.4 35.05-16.83-7.81-1.76 50.65 23.22 74.02s73.16 18.19 101.96-12.65S458.9 419.19 432.1 402.82Z","M446.38 359.15c-14.87-9.09-28.39-10.59-41-7.7-12.54 2.25-31.14 9.05-33.63 8.01-2.7-1.1 2.4 1.53 8.32 3.36-32.47 20.9-60.23 59.02-92.99 43.82-21.03-9.76-2.2 63.32 29.03 92.52s91.45 22.74 127.44-15.81S479.87 379.61 446.38 359.15Z","M460.65 315.48c-17.85-10.9-34.07-12.71-49.19-9.24-15.05 2.71-37.37 10.86-40.35 9.61-3.23-1.32 2.88 1.83 9.98 4.04-38.97 25.08-72.27 70.82-111.6 52.57-25.24-11.71-2.64 75.98 34.84 111.03s109.74 27.28 152.93-18.97S500.85 340.03 460.65 315.48Z"]
+            ['M417.8 446.5c-8.9-5.5-17-6.4-24.6-4.6-7.5 1.4-18.7 5.4-20.1 4.8-1.6-0.7 1.4 0.9 4.9 2-19.5 12.5-36.1 35.4-55.8 26.3-12.6-5.9-1.3 38 17.5 55.5s54.9 13.6 76.4-9.5S437.9 458.8 417.8 446.5Z', 'M432.1 402.8c-11.9-7.3-22.7-8.5-32.8-6.1-10 1.8-24.9 7.2-26.9 6.4-2.2-0.9 1.9 1.2 6.7 2.7-26 16.7-48.2 47.2-74.4 35-16.8-7.8-1.8 50.7 23.2 74s73.2 18.2 101.9-12.6S458.9 419.2 432.1 402.8Z', 'M446.4 359.2c-14.9-9.1-28.4-10.6-41-7.7-12.5 2.3-31.1 9.1-33.6 8-2.7-1.1 2.4 1.5 8.3 3.3-32.5 20.9-60.2 59-93 43.8-21-9.8-2.2 63.3 29 92.6s91.5 22.7 127.5-15.8S479.9 379.6 446.4 359.2Z', 'M460.7 315.5c-17.8-10.9-34.1-12.7-49.2-9.3-15 2.7-37.4 10.9-40.4 9.6-3.2-1.3 2.9 1.8 10 4.1-39 25.1-72.3 70.8-111.6 52.6-25.2-11.7-2.6 76 34.8 111s109.7 27.3 153-19S500.8 340 460.7 315.5Z'],
+            ['M431.1 466.2a37 37 0 0 1-9.6 25.7c-21.2 24.2-52 30.3-81.5 38.9 18.8 17.2 54.7 13.2 76.1-9.8C430.5 505.6 435.4 483.1 431.1 466.2Z', 'M449.9 429.1a49.3 49.3 0 0 1-12.9 34.2c-28.2 32.3-69.4 40.4-108.7 51.9 25.1 22.9 72.9 17.6 101.5-13.1C449 481.6 455.5 451.7 449.9 429.1Z', 'M468.6 392a61.7 61.7 0 0 1-16.1 42.8c-35.3 40.3-86.7 50.5-135.8 64.8 31.4 28.6 91.1 22 126.9-16.3C467.5 457.7 475.7 420.2 468.6 392Z', 'M487.3 354.9a74 74 0 0 1-19.3 51.4c-42.4 48.4-104.1 60.5-163 77.7 37.7 34.3 109.3 26.4 152.3-19.5C486 433.7 495.8 388.8 487.3 354.9Z'],
+            ['M417.8 446.5c-8.9-5.5-17-6.4-24.6-4.6-7.5 1.4-18.7 5.4-20.1 4.8-1.6-0.7 1.4 0.9 4.9 2-19.5 12.5-36.1 35.4-55.8 26.3-12.6-5.9-1.3 38 17.5 55.5s54.9 13.6 76.4-9.5S437.9 458.8 417.8 446.5Z', 'M432.1 402.8c-11.9-7.3-22.7-8.5-32.8-6.1-10 1.8-24.9 7.2-26.9 6.4-2.2-0.9 1.9 1.2 6.7 2.7-26 16.7-48.2 47.2-74.4 35-16.8-7.8-1.8 50.7 23.2 74s73.2 18.2 101.9-12.6S458.9 419.2 432.1 402.8Z', 'M446.4 359.2c-14.9-9.1-28.4-10.6-41-7.7-12.5 2.3-31.1 9.1-33.6 8-2.7-1.1 2.4 1.5 8.3 3.3-32.5 20.9-60.2 59-93 43.8-21-9.8-2.2 63.3 29 92.6s91.5 22.7 127.5-15.8S479.9 379.6 446.4 359.2Z', 'M460.7 315.5c-17.8-10.9-34.1-12.7-49.2-9.3-15 2.7-37.4 10.9-40.4 9.6-3.2-1.3 2.9 1.8 10 4.1-39 25.1-72.3 70.8-111.6 52.6-25.2-11.7-2.6 76 34.8 111s109.7 27.3 153-19S500.8 340 460.7 315.5Z']
         ];
 
         return abi.encodePacked(
@@ -144,33 +134,37 @@ abstract contract ChickenOutGenerated is ChickenOutBase {
             _chickenOutData.chickenStyle,
             '" d="',
             p[0][uint256(_commonData.size)],
-            '"/> <path style="fill: #000; mix-blend-mode: soft-light" d="',
+            '"/><path style="fill:#000;mix-blend-mode:soft-light" d="',
             p[1][uint256(_commonData.size)],
-            '"/> <path style="fill: #000; mix-blend-mode: soft-light" d="',
+            '"/><path style="fill:#000;mix-blend-mode:soft-light" d="',
             p[2][uint256(_commonData.size)],
-            '"/> '
+            '"/>'
         );
     }
+}
 
-    function _getSVGEye(CommonData memory _commonData) internal pure returns (bytes memory) {
+contract ChickenOutEye {
+    function getSVGEye(CommonData calldata _commonData) external pure returns (bytes memory) {
         string[4][2] memory p = [
-            ["cx=\"414.36\" cy=\"457.63\" r=\"5.49\"","cx=\"427.47\" cy=\"417.67\" r=\"7.32\"","cx=\"440.59\" cy=\"377.72\" r=\"9.15\"","cx=\"453.71\" cy=\"337.76\" r=\"10.98\""],
-            ["cx=\"414.36\" cy=\"457.63\" r=\"3.72\"","cx=\"427.48\" cy=\"417.67\" r=\"4.95\"","cx=\"440.6\" cy=\"377.72\" r=\"6.19\"","cx=\"453.72\" cy=\"337.76\" r=\"7.43\""]
+            ['cx="414.4" cy="457.6" r="5.5"', 'cx="427.5" cy="417.7" r="7.3"', 'cx="440.6" cy="377.7" r="9.2"', 'cx="453.7" cy="337.8" r="11"'],
+            ['cx="414.4" cy="457.6" r="3.7"', 'cx="427.5" cy="417.7" r="5"', 'cx="440.6" cy="377.7" r="6.2"', 'cx="453.7" cy="337.8" r="7.4"']
         ];
 
         return abi.encodePacked(
-            '<circle style="fill: #fff" ',
+            '<circle style="fill:#fff" ',
             p[0][uint256(_commonData.size)],
-            '/> <circle style="fill: #000" ',
+            '/><circle style="fill:#000" ',
             p[1][uint256(_commonData.size)],
-            '/> '
+            '/>'
         );
     }
+}
 
-    function _getSVGShell(CommonData memory _commonData, ChickenOutData memory _chickenOutData) internal pure returns (bytes memory) {
+contract ChickenOutShell {
+    function getSVGShell(CommonData calldata _commonData, ChickenOutData calldata _chickenOutData) external pure returns (bytes memory) {
         string[4][2] memory p = [
-            ["M409.24 512.03c-2.85-9.75-8.63-18.1-12.49-27.72-7.65 6.51-18.41 9.49-27.6 13.51-6.19-9.13-9.4-11.42-15.34-19.66-9.75 2.85-13.28 3.19-22.32 6.79-2.4-9.5-6.06-18.39-9.82-27.47a79.33 79.33 0 0 0-8.14 16.19c-11.56 32.59 5.23 68.28 37.49 79.71s67.78-5.71 79.33-38.28a81.64 81.64 0 0 0 3.78-15.99C426.51 504.57 417.83 507.94 409.24 512.03Z","M420.65 490.2c-3.8-13-11.5-24.14-16.65-36.96-10.2 8.69-24.54 12.65-36.81 18.02-8.25-12.18-12.53-15.22-20.45-26.21-13 3.8-17.71 4.26-29.75 9.05-3.2-12.66-8.08-24.53-13.09-36.63a105.78 105.78 0 0 0-10.85 21.59c-15.41 43.45 6.97 91.04 49.98 106.28s90.37-7.61 105.78-51.04a108.85 108.85 0 0 0 5.03-21.32C443.68 480.26 432.11 484.75 420.65 490.2Z","M432.07 468.38c-4.75-16.25-14.38-30.17-20.83-46.2-12.75 10.86-30.68 15.82-46 22.52-10.32-15.22-15.66-19.03-25.56-32.76-16.25 4.75-22.13 5.32-37.19 11.31-4-15.83-10.1-30.66-16.37-45.78a132.22 132.22 0 0 0-13.56 26.98c-19.26 54.32 8.71 113.8 62.48 132.86s112.96-9.52 132.22-63.8a136.06 136.06 0 0 0 6.29-26.66C460.86 455.95 446.39 461.56 432.07 468.38Z","M443.48 446.56c-5.7-19.5-17.25-36.21-24.99-55.44-15.3 13.03-36.81 18.98-55.2 27.02-12.38-18.27-18.8-22.84-30.68-39.31-19.5 5.7-26.56 6.39-44.62 13.57-4.8-18.99-12.12-36.79-19.65-54.94a158.66 158.66 0 0 0-16.27 32.38c-23.11 65.18 10.45 136.55 74.97 159.43s135.55-11.42 158.67-76.56a163.27 163.27 0 0 0 7.55-31.99C478.03 431.64 460.67 438.37 443.48 446.56Z"],
-            ["M409.24 512.03c-0.05-0.15-0.09-0.28-0.13-0.42-16.4 17.75-42.24 25.08-66.25 16.57a61.38 61.38 0 0 1-32.78-27.35 61.93 61.93 0 0 0 40.84 52.53c32.26 11.44 67.78-5.71 79.34-38.28a81.98 81.98 0 0 0 3.76-15.89C426.43 504.63 417.79 507.96 409.24 512.03Z","M420.65 490.2c-0.06-0.19-0.12-0.38-0.17-0.56-21.87 23.67-56.32 33.44-88.33 22.1a81.84 81.84 0 0 1-43.71-36.47 82.58 82.58 0 0 0 54.45 70.04c43.01 15.25 90.38-7.61 105.78-51.04a109.3 109.3 0 0 0 5.02-21.18C443.57 480.34 432.05 484.77 420.65 490.2Z","M432.07 468.38c-0.08-0.24-0.15-0.47-0.22-0.7-27.34 29.59-70.4 41.8-110.41 27.62a102.3 102.3 0 0 1-54.64-45.59 103.22 103.22 0 0 0 68.06 87.55c53.77 19.06 112.97-9.52 132.23-63.8a136.63 136.63 0 0 0 6.27-26.47C460.71 456.05 446.31 461.59 432.07 468.38Z","M443.48 446.56c-0.09-0.29-0.18-0.57-0.26-0.85-32.8 35.51-84.48 50.16-132.49 33.15a122.76 122.76 0 0 1-65.57-54.7 123.87 123.87 0 0 0 81.67 105.05c64.52 22.88 135.56-11.42 158.68-76.56a163.96 163.96 0 0 0 7.52-31.77C477.85 431.76 460.58 438.41 443.48 446.56Z"]
+            ['M409.2 512c-2.9-9.7-8.6-18.1-12.5-27.7-7.6 6.5-18.4 9.5-27.6 13.5-6.2-9.1-9.4-11.4-15.3-19.6-9.7 2.9-13.3 3.2-22.3 6.7-2.4-9.5-6.1-18.4-9.8-27.4a79.3 79.3 0 0 0-8.2 16.2c-11.6 32.6 5.2 68.3 37.5 79.7s67.8-5.7 79.4-38.3a81.6 81.6 0 0 0 3.7-16C426.5 504.6 417.8 507.9 409.2 512Z', 'M420.7 490.2c-3.8-13-11.5-24.1-16.7-37-10.2 8.7-24.5 12.7-36.8 18.1-8.3-12.2-12.5-15.2-20.5-26.2-13 3.8-17.7 4.3-29.7 9-3.2-12.7-8.1-24.5-13.1-36.6a105.8 105.8 0 0 0-10.9 21.6c-15.4 43.5 7 91 50 106.2s90.4-7.6 105.8-51a108.8 108.8 0 0 0 5-21.3C443.7 480.3 432.1 484.7 420.7 490.2Z', 'M432.1 468.4c-4.8-16.2-14.4-30.2-20.9-46.2-12.7 10.9-30.7 15.8-46 22.5-10.3-15.2-15.7-19-25.5-32.8-16.2 4.8-22.1 5.3-37.2 11.3-4-15.8-10.1-30.7-16.4-45.7a132.2 132.2 0 0 0-13.5 26.9c-19.3 54.3 8.7 113.8 62.4 132.9s113-9.5 132.3-63.8a136.1 136.1 0 0 0 6.2-26.6C460.9 456 446.4 461.6 432.1 468.4Z', 'M443.5 446.6c-5.7-19.5-17.3-36.2-25-55.5-15.3 13-36.8 19-55.2 27-12.4-18.3-18.8-22.8-30.7-39.3-19.5 5.7-26.6 6.4-44.6 13.6-4.8-19-12.1-36.8-19.7-54.9a158.7 158.7 0 0 0-16.2 32.3c-23.1 65.2 10.5 136.6 74.9 159.5s135.6-11.4 158.7-76.6a163.3 163.3 0 0 0 7.6-32C478 431.6 460.7 438.4 443.5 446.6Z'],
+            ['M409.2 512c0-0.1-0.1-0.3-0.1-0.4-16.4 17.8-42.2 25.1-66.2 16.6a61.4 61.4 0 0 1-32.8-27.4 61.9 61.9 0 0 0 40.8 52.6c32.3 11.4 67.8-5.7 79.4-38.3a82 82 0 0 0 3.7-15.9C426.4 504.6 417.8 508 409.2 512Z', 'M420.7 490.2c-0.1-0.2-0.1-0.4-0.2-0.6-21.9 23.7-56.3 33.4-88.3 22.1a81.8 81.8 0 0 1-43.8-36.4 82.6 82.6 0 0 0 54.5 70c43 15.3 90.4-7.6 105.8-51a109.3 109.3 0 0 0 5-21.2C443.6 480.3 432.1 484.8 420.7 490.2Z', 'M432.1 468.4c-0.1-0.2-0.2-0.5-0.3-0.7-27.3 29.6-70.4 41.8-110.4 27.6a102.3 102.3 0 0 1-54.6-45.6 103.2 103.2 0 0 0 68.1 87.6c53.8 19.1 113-9.5 132.2-63.8a136.6 136.6 0 0 0 6.3-26.5C460.7 456 446.3 461.6 432.1 468.4Z', 'M443.5 446.6c-0.1-0.3-0.2-0.6-0.3-0.9-32.8 35.5-84.5 50.2-132.5 33.2a122.8 122.8 0 0 1-65.5-54.7 123.9 123.9 0 0 0 81.6 105c64.5 22.9 135.6-11.4 158.7-76.5a164 164 0 0 0 7.5-31.8C477.9 431.8 460.6 438.4 443.5 446.6Z']
         ];
 
         return abi.encodePacked(
@@ -178,9 +172,60 @@ abstract contract ChickenOutGenerated is ChickenOutBase {
             _chickenOutData.shellStyle,
             '" d="',
             p[0][uint256(_commonData.size)],
-            '"/> <path style="fill: #000; mix-blend-mode: soft-light" d="',
+            '"/><path style="fill:#000;mix-blend-mode:soft-light" d="',
             p[1][uint256(_commonData.size)],
-            '"/> '
+            '"/>'
         );
+    }
+}
+
+contract ChickenOutGenerated1 is
+  ChickenOutAnimations,
+  ChickenOutShadow,
+  ChickenOutLeftLeg,
+  ChickenOutRightLeg,
+  ChickenOutBeak,
+  ChickenOutChicken,
+  ChickenOutEye,
+  ChickenOutShell
+{}
+
+contract ChickenOutGenerated {
+    ChickenOutGenerated1 public immutable g1;
+
+    constructor(ChickenOutGenerated1 _g1) {
+        g1 = _g1;
+    }
+
+    function _getSVGAnimations(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGAnimations(_commonData);
+    }
+
+    function _getSVGShadow(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGShadow(_commonData);
+    }
+
+    function _getSVGLeftLeg(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGLeftLeg(_commonData);
+    }
+
+    function _getSVGRightLeg(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGRightLeg(_commonData);
+    }
+
+    function _getSVGBeak(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGBeak(_commonData);
+    }
+
+    function _getSVGChicken(CommonData memory _commonData, ChickenOutData memory _chickenOutData) internal view returns (bytes memory) {
+        return g1.getSVGChicken(_commonData, _chickenOutData);
+    }
+
+    function _getSVGEye(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGEye(_commonData);
+    }
+
+    function _getSVGShell(CommonData memory _commonData, ChickenOutData memory _chickenOutData) internal view returns (bytes memory) {
+        return g1.getSVGShell(_commonData, _chickenOutData);
     }
 }

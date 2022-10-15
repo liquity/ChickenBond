@@ -3,8 +3,14 @@ pragma solidity ^0.8.10;
 
 import "./ChickenOutGenerated.sol";
 
-contract ChickenOutArtwork is ChickenOutGenerated {
-    using Strings for uint256;
+contract ChickenOutArtwork is BondNFTArtworkBase, ChickenOutGenerated {
+    constructor(
+        BondNFTArtworkCommon _common,
+        ChickenOutGenerated1 _g1
+    )
+        BondNFTArtworkBase(_common)
+        ChickenOutGenerated(_g1)
+    {}
 
     ///////////////////////////////////////
     // Abstract function implementations //
@@ -12,7 +18,7 @@ contract ChickenOutArtwork is ChickenOutGenerated {
 
     function _tokenURIImplementation(CommonData memory _commonData)
         internal
-        pure
+        view
         virtual
         override
         returns (string memory)
@@ -31,38 +37,45 @@ contract ChickenOutArtwork is ChickenOutGenerated {
     // Private functions //
     ///////////////////////
 
-    function _getChickenColor(uint256 _rand) private pure returns (ShellColor) {
+    function _getChickenColor(uint256 _rand) private pure returns (EggTraitWeights.ShellColor) {
         // TODO
-        return ShellColor(_rand * 13 / 1e18);
+        return EggTraitWeights.ShellColor(_rand * 13 / 1e18);
     }
 
-    function _getObjectRainbowGradientUrl(uint256 _tokenID) private pure returns (bytes memory) {
+    function _getObjectRainbowGradientUrl(string memory _tokenIDString)
+        private
+        pure
+        returns (bytes memory)
+    {
         return abi.encodePacked(
-            'url(#co-chicken-',_tokenID.toString(), '-object-rainbow-gradient)'
+            'url(#co-chicken-', _tokenIDString, '-object-rainbow-gradient)'
         );
     }
 
-    function _getObjectFill(ShellColor _color, uint256 _tokenID)
+    function _getObjectFill(EggTraitWeights.ShellColor _color, string memory _tokenIDString)
         private
         pure
         returns (bytes memory)
     {
         return (
-            _color == ShellColor.Rainbow  ? _getObjectRainbowGradientUrl(_tokenID) :
-            _color == ShellColor.Luminous ? bytes('#e5eff9')                       :
-                                            bytes(_getSolidObjectColor(_color))
+            _color == EggTraitWeights.ShellColor.Rainbow     ?
+                _getObjectRainbowGradientUrl(_tokenIDString) :
+            _color == EggTraitWeights.ShellColor.Luminous    ?
+                bytes('#e5eff9')                             :
+            // default
+                bytes(_getSolidObjectColor(_color))
         );
     }
 
-    function _getObjectStyle(ShellColor _color, uint256 _tokenID)
+    function _getObjectStyle(EggTraitWeights.ShellColor _color, string memory _tokenIDString)
         private
         pure
         returns (bytes memory)
     {
         return abi.encodePacked(
-            'fill: ',
-            _getObjectFill(_color, _tokenID),
-            _color == ShellColor.Luminous ? '; mix-blend-mode: luminosity' : ''
+            'fill:',
+            _getObjectFill(_color, _tokenIDString),
+            _color == EggTraitWeights.ShellColor.Luminous ? ';mix-blend-mode:luminosity' : ''
         );
     }
 
@@ -78,18 +91,18 @@ contract ChickenOutArtwork is ChickenOutGenerated {
         _chickenOutData.chickenColor = _getChickenColor(_cutDNA(dna, 0, 80));
 
         _chickenOutData.darkMode = (
-            _commonData.shellColor       == ShellColor.Luminous ||
-            _chickenOutData.chickenColor == ShellColor.Luminous
+            _commonData.shellColor       == EggTraitWeights.ShellColor.Luminous ||
+            _chickenOutData.chickenColor == EggTraitWeights.ShellColor.Luminous
         );
 
         _chickenOutData.shellStyle = _getObjectStyle(
             _commonData.shellColor,
-            _commonData.tokenID
+            _commonData.tokenIDString
         );
 
         _chickenOutData.chickenStyle = _getObjectStyle(
             _chickenOutData.chickenColor,
-            _commonData.tokenID
+            _commonData.tokenIDString
         );
     }
 
@@ -107,6 +120,14 @@ contract ChickenOutArtwork is ChickenOutGenerated {
         );
     }
 
+    function _getSVGStyle(CommonData memory _commonData) private view returns (bytes memory) {
+        return abi.encodePacked(
+            '<style>',
+                _getSVGAnimations(_commonData),
+            '</style>'
+        );
+    }
+
     function _getSVGObjectRainbowGradient(
         CommonData memory _commonData,
         ChickenOutData memory _chickenOutData
@@ -116,14 +137,14 @@ contract ChickenOutArtwork is ChickenOutGenerated {
         returns (bytes memory)
     {
         if (
-            _commonData.shellColor != ShellColor.Rainbow &&
-            _chickenOutData.chickenColor != ShellColor.Rainbow
+            _commonData.shellColor != EggTraitWeights.ShellColor.Rainbow &&
+            _chickenOutData.chickenColor != EggTraitWeights.ShellColor.Rainbow
         ) {
             return bytes('');
         }
 
         return abi.encodePacked(
-            '<linearGradient id="co-chicken-', _commonData.tokenID.toString(), '-object-rainbow-gradient" y1="100%" gradientUnits="objectBoundingBox">',
+            '<linearGradient id="co-chicken-', _commonData.tokenIDString, '-object-rainbow-gradient" y1="100%" gradientUnits="objectBoundingBox">',
                 '<stop offset="0" stop-color="#93278f"/>',
                 '<stop offset="0.2" stop-color="#662d91"/>',
                 '<stop offset="0.4" stop-color="#3395d4"/>',
@@ -137,7 +158,7 @@ contract ChickenOutArtwork is ChickenOutGenerated {
 
     function _getSVGDefs(CommonData memory _commonData, ChickenOutData memory _chickenOutData)
         private
-        pure
+        view
         returns (bytes memory)
     {
         return abi.encodePacked(
@@ -148,27 +169,16 @@ contract ChickenOutArtwork is ChickenOutGenerated {
         );
     }
 
-    function _getSVGStyle(CommonData memory _commonData) private pure returns (bytes memory) {
-        return abi.encodePacked(
-            '<style>',
-                _getSVGRunAnimation(_commonData),
-                _getSVGLegAnimation(_commonData),
-                _getSVGShadowAnimation(_commonData),
-                _getSVGKeyframes(_commonData),
-            '</style>'
-        );
-    }
-
     function _getSVGSpeedLines() private pure returns (bytes memory) {
         return abi.encodePacked(
-            '<line style="fill: none; mix-blend-mode: soft-light; stroke: #333; stroke-linecap: round; stroke-miterlimit: 10; stroke-width: 6px" x1="173" y1="460" x2="227" y2="460"/>',
-            '<line style="fill: none; mix-blend-mode: soft-light; stroke: #333; stroke-linecap: round; stroke-miterlimit: 10; stroke-width: 6px" x1="149" y1="500" x2="203" y2="500"/>'
+            '<line style="fill:none;mix-blend-mode:soft-light;stroke:#333;stroke-linecap:round;stroke-miterlimit:10;stroke-width:6px" x1="173" y1="460" x2="227" y2="460"/>',
+            '<line style="fill:none;mix-blend-mode:soft-light;stroke:#333;stroke-linecap:round;stroke-miterlimit:10;stroke-width:6px" x1="149" y1="500" x2="203" y2="500"/>'
         );
     }
 
     function _getSVGChickenOut(CommonData memory _commonData, ChickenOutData memory _chickenOutData)
         private
-        pure
+        view
         returns (bytes memory)
     {
         return abi.encodePacked(
@@ -188,15 +198,15 @@ contract ChickenOutArtwork is ChickenOutGenerated {
 
     function _getSVG(CommonData memory _commonData, ChickenOutData memory _chickenOutData)
         private
-        pure
+        view
         returns (bytes memory)
     {
         return abi.encodePacked(
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 1050">',
-                _getSVGDefs(_commonData, _chickenOutData),
                 _getSVGStyle(_commonData),
+                _getSVGDefs(_commonData, _chickenOutData),
 
-                '<g id="co-chicken-', _commonData.tokenID.toString(), '">',
+                '<g id="co-chicken-', _commonData.tokenIDString, '">',
                     _getSVGBase(_commonData, "CHICKEN OUT", _chickenOutData.darkMode),
                     _getSVGChickenOut(_commonData, _chickenOutData),
                 '</g>',

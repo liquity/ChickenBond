@@ -14,16 +14,13 @@ import { darkModeDefs, lightModeDefs } from "./common/defs";
 import { darkModeBorder, darkModeCard, lightModeBorder, lightModeCard, text } from "./common/parts";
 
 import {
+  chickenOutAnimations,
   chickenOutBeak,
   chickenOutChicken,
   chickenOutEye,
-  chickenOutKeyframes,
   chickenOutLeftLeg,
-  chickenOutLegAnimation,
   chickenOutRightLeg,
-  chickenOutRunAnimation,
   chickenOutShadow,
-  chickenOutShadowAnimation,
   chickenOutShell
 } from "./scaling/chickenOut";
 
@@ -59,10 +56,7 @@ export const generateChickenOutSVG = (params: ChickenOutArtworkParams) => {
   return /*svg*/ `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 1050">
   <style>
-    ${chickenOutRunAnimation.instantiate([], params)}
-    ${chickenOutLegAnimation.instantiate([scale], params)}
-    ${chickenOutShadowAnimation.instantiate([scale], params)}
-    ${chickenOutKeyframes.instantiate([scale], {})}
+    ${chickenOutAnimations.instantiate([scale], params)}
   </style>
 
   <defs>
@@ -115,73 +109,112 @@ export const chickenOutSolidity = () =>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.10;
 
-import "./ChickenOutBase.sol";
+import "./ChickenOutData.sol";
 
-abstract contract ChickenOutGenerated is ChickenOutBase {
-    using Strings for uint256;
-
-${chickenOutRunAnimation.solidity("_getSVGRunAnimation(CommonData memory _commonData)", [], {
-  tokenID: "_commonData.tokenID.toString()"
-})}
-
-${chickenOutLegAnimation.solidity(
-  "_getSVGLegAnimation(CommonData memory _commonData)",
+${chickenOutAnimations.solidity(
+  "ChickenOutAnimations",
+  "getSVGAnimations(CommonData calldata _commonData)",
   [["uint256(_commonData.size)", sizeRange]],
-  { tokenID: "_commonData.tokenID.toString()" }
-)}
-
-${chickenOutShadowAnimation.solidity(
-  "_getSVGShadowAnimation(CommonData memory _commonData)",
-  [["uint256(_commonData.size)", sizeRange]],
-  { tokenID: "_commonData.tokenID.toString()" }
-)}
-
-${chickenOutKeyframes.solidity(
-  "_getSVGKeyframes(CommonData memory _commonData)",
-  [["uint256(_commonData.size)", sizeRange]],
-  {}
+  { tokenID: "_commonData.tokenIDString" }
 )}
 
 ${chickenOutShadow.solidity(
-  "_getSVGShadow(CommonData memory _commonData)",
+  "ChickenOutShadow",
+  "getSVGShadow(CommonData calldata _commonData)",
   [["uint256(_commonData.size)", sizeRange]],
   {}
 )}
 
 ${chickenOutLeftLeg.solidity(
-  "_getSVGLeftLeg(CommonData memory _commonData)",
+  "ChickenOutLeftLeg",
+  "getSVGLeftLeg(CommonData calldata _commonData)",
   [["uint256(_commonData.size)", sizeRange]],
   {}
 )}
 
 ${chickenOutRightLeg.solidity(
-  "_getSVGRightLeg(CommonData memory _commonData)",
+  "ChickenOutRightLeg",
+  "getSVGRightLeg(CommonData calldata _commonData)",
   [["uint256(_commonData.size)", sizeRange]],
   {}
 )}
 
 ${chickenOutBeak.solidity(
-  "_getSVGBeak(CommonData memory _commonData)",
+  "ChickenOutBeak",
+  "getSVGBeak(CommonData calldata _commonData)",
   [["uint256(_commonData.size)", sizeRange]],
   {}
 )}
 
 ${chickenOutChicken.solidity(
-  "_getSVGChicken(CommonData memory _commonData, ChickenOutData memory _chickenOutData)",
+  "ChickenOutChicken",
+  "getSVGChicken(CommonData calldata _commonData, ChickenOutData calldata _chickenOutData)",
   [["uint256(_commonData.size)", sizeRange]],
   { style: "_chickenOutData.chickenStyle" }
 )}
 
 ${chickenOutEye.solidity(
-  "_getSVGEye(CommonData memory _commonData)",
+  "ChickenOutEye",
+  "getSVGEye(CommonData calldata _commonData)",
   [["uint256(_commonData.size)", sizeRange]],
   {}
 )}
 
 ${chickenOutShell.solidity(
-  "_getSVGShell(CommonData memory _commonData, ChickenOutData memory _chickenOutData)",
+  "ChickenOutShell",
+  "getSVGShell(CommonData calldata _commonData, ChickenOutData calldata _chickenOutData)",
   [["uint256(_commonData.size)", sizeRange]],
   { style: "_chickenOutData.shellStyle" }
 )}
+
+contract ChickenOutGenerated1 is
+  ChickenOutAnimations,
+  ChickenOutShadow,
+  ChickenOutLeftLeg,
+  ChickenOutRightLeg,
+  ChickenOutBeak,
+  ChickenOutChicken,
+  ChickenOutEye,
+  ChickenOutShell
+{}
+
+contract ChickenOutGenerated {
+    ChickenOutGenerated1 public immutable g1;
+
+    constructor(ChickenOutGenerated1 _g1) {
+        g1 = _g1;
+    }
+
+    function _getSVGAnimations(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGAnimations(_commonData);
+    }
+
+    function _getSVGShadow(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGShadow(_commonData);
+    }
+
+    function _getSVGLeftLeg(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGLeftLeg(_commonData);
+    }
+
+    function _getSVGRightLeg(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGRightLeg(_commonData);
+    }
+
+    function _getSVGBeak(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGBeak(_commonData);
+    }
+
+    function _getSVGChicken(CommonData memory _commonData, ChickenOutData memory _chickenOutData) internal view returns (bytes memory) {
+        return g1.getSVGChicken(_commonData, _chickenOutData);
+    }
+
+    function _getSVGEye(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGEye(_commonData);
+    }
+
+    function _getSVGShell(CommonData memory _commonData, ChickenOutData memory _chickenOutData) internal view returns (bytes memory) {
+        return g1.getSVGShell(_commonData, _chickenOutData);
+    }
 }
 `.trimStart();

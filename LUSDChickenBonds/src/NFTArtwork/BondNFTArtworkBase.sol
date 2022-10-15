@@ -7,97 +7,64 @@ import { BokkyPooBahsDateTimeLibrary as DateTime } from "datetime/contracts/Bokk
 import "./BondNFTArtworkSwitcher.sol";
 import "./EggTraitWeights.sol";
 
-abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
+enum Size {
+    Tiny,
+    Small,
+    Normal,
+    Big
+}
+
+struct CommonData {
+    uint256 tokenID;
+    uint256 lusdAmount;
+    uint256 claimedBLUSD;
+    uint256 startTime;
+    uint256 endTime;
+    uint80 initialHalfDna;
+    uint80 finalHalfDna;
+    uint8 status;
+
+    // Attributes derived from the DNA
+    EggTraitWeights.BorderColor borderColor;
+    EggTraitWeights.CardColor cardColor;
+    EggTraitWeights.ShellColor shellColor;
+    Size size;
+
+    // Further data derived from the attributes
+    string solidBorderColor;
+    string solidCardColor;
+    bool hasCardGradient;
+    string[2] cardGradient;
+    string tokenIDString;
+}
+
+function _cutDNA(uint256 dna, uint8 startBit, uint8 numBits) pure returns (uint256) {
+    uint256 ceil = 1 << numBits;
+    uint256 bits = (dna >> startBit) & (ceil - 1);
+
+    return bits * 1e18 / ceil; // scaled to [0,1) range
+}
+
+contract BondNFTArtworkCommon is EggTraitWeights {
     using Strings for uint256;
-
-    enum Size {
-        Tiny,
-        Small,
-        Normal,
-        Big
-    }
-
-    struct CommonData {
-        uint256 tokenID;
-        uint256 lusdAmount;
-        uint256 claimedBLUSD;
-        uint256 startTime;
-        uint256 endTime;
-        uint80 initialHalfDna;
-        uint80 finalHalfDna;
-        uint8 status;
-
-        // Attributes derived from the DNA
-        BorderColor borderColor;
-        CardColor cardColor;
-        ShellColor shellColor;
-        Size size;
-
-        // Further data derived from the attributes
-        string solidBorderColor;
-        string solidCardColor;
-        bool hasCardGradient;
-        string[2] cardGradient;
-    }
 
     ////////////////////////
     // External functions //
     ////////////////////////
 
-    function tokenURI(uint256 _tokenID, IBondNFT.BondExtraData calldata _bondExtraData)
-        external
-        view
-        returns (string memory)
-    {
-        IChickenBondManager chickenBondManager =
-            IChickenBondManagerGetter(msg.sender).chickenBondManager();
+    function calcData(CommonData memory _data) external view returns (CommonData memory) {
+        _calcAttributes(_data);
+        _calcDerivedData(_data);
 
-        CommonData memory data;
-        data.tokenID = _tokenID;
-        data.initialHalfDna = _bondExtraData.initialHalfDna;
-        data.finalHalfDna = _bondExtraData.finalHalfDna;
-
-        (
-            data.lusdAmount,
-            data.claimedBLUSD,
-            data.startTime,
-            data.endTime,
-            data.status
-        ) = chickenBondManager.getBondData(_tokenID);
-
-        _calcAttributes(data);
-        _calcDerivedData(data);
-
-        return _tokenURIImplementation(data);
+        return _data;
     }
 
-    //////////////////////////////////////////////////////////
-    // Abstract functions (to be implemented by subclasses) //
-    //////////////////////////////////////////////////////////
-
-    function _tokenURIImplementation(CommonData memory _commonData)
-        internal
-        pure
-        virtual
-        returns (string memory);
-
-    /////////////////////////////////////////////
-    // Internal functions (used by subclasses) //
-    /////////////////////////////////////////////
-
-    function _cutDNA(uint256 dna, uint8 startBit, uint8 numBits) internal pure returns (uint256) {
-        uint256 ceil = 1 << numBits;
-        uint256 bits = (dna >> startBit) & (ceil - 1);
-
-        return bits * 1e18 / ceil; // scaled to [0,1) range
-    }
-
-    function _getMetadataJSON(
-        CommonData memory _commonData,
-        bytes memory _svg,
-        bytes memory _extraAttributes
+    function getMetadataJSON(
+        CommonData calldata _data,
+        bytes calldata _svg,
+        bytes calldata _extraAttributes
     )
-        internal
+        external
         pure
         returns (string memory)
     {
@@ -107,11 +74,11 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
                 Base64.encode(
                     abi.encodePacked(
                         '{',
-                            '"name":"LUSD Chicken #', _commonData.tokenID.toString(), '",',
+                            '"name":"LUSD Chicken #', _data.tokenIDString, '",',
                             '"description":"LUSD Chicken Bonds",',
                             '"image":"data:image/svg+xml;base64,', Base64.encode(_svg), '",',
                             '"background_color":"0b112f",',
-                            _getMetadataAttributes(_commonData, _extraAttributes),
+                            _getMetadataAttributes(_data, _extraAttributes),
                         '}'
                     )
                 )
@@ -119,67 +86,28 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         );
     }
 
-    function _getSVGBaseDefs(CommonData memory _commonData, bool _darkMode)
-        internal
+    function getSVGBaseDefs(CommonData calldata _data, bool _darkMode)
+        external
         pure
         returns (bytes memory)
     {
         return abi.encodePacked(
-            _getSVGDefCardDiagonalGradient(_commonData),
-            _getSVGDefCardRainbowGradient(_commonData),
-            _darkMode ? _getSVGDefCardRadialGradient(_commonData) : bytes('')
+            _getSVGDefCardDiagonalGradient(_data),
+            _getSVGDefCardRainbowGradient(_data),
+            _darkMode ? _getSVGDefCardRadialGradient(_data) : bytes('')
         );
     }
 
-    function _getSVGBase(CommonData memory _commonData, string memory _subtitle, bool _darkMode)
-        internal
+    function getSVGBase(CommonData calldata _data, string memory _subtitle, bool _darkMode)
+        external
         pure
         returns (bytes memory)
     {
         return abi.encodePacked(
-            _getSVGBorder(_commonData, _darkMode),
-            _getSVGCard(_commonData),
-            _darkMode ? _getSVGCardRadialGradient(_commonData) : bytes(''),
-            _getSVGText(_commonData, _subtitle)
-        );
-    }
-
-    // Shell & chicken share the same color range, but it's no use renaming the enum at this point
-    function _getObjectColorName(ShellColor _color) internal pure returns (string memory) {
-        return (
-            _color == ShellColor.OffWhite      ? "Off-White"      :
-            _color == ShellColor.LightBlue     ? "Light Blue"     :
-            _color == ShellColor.DarkerBlue    ? "Darker Blue"    :
-            _color == ShellColor.LighterOrange ? "Lighter Orange" :
-            _color == ShellColor.LightOrange   ? "Light Orange"   :
-            _color == ShellColor.DarkerOrange  ? "Darker Orange"  :
-            _color == ShellColor.LightGreen    ? "Light Green"    :
-            _color == ShellColor.DarkerGreen   ? "Darker Green"   :
-            _color == ShellColor.Bronze        ? "Bronze"         :
-            _color == ShellColor.Silver        ? "Silver"         :
-            _color == ShellColor.Gold          ? "Gold"           :
-            _color == ShellColor.Rainbow       ? "Rainbow"        :
-            _color == ShellColor.Luminous      ? "Luminous"       : ""
-        );
-    }
-
-    function _getSolidObjectColor(ShellColor _color)
-        internal
-        pure
-        returns (string memory)
-    {
-        return (
-            _color == ShellColor.OffWhite      ? "#fff1cb" :
-            _color == ShellColor.LightBlue     ? "#e5eff9" :
-            _color == ShellColor.DarkerBlue    ? "#aedfe2" :
-            _color == ShellColor.LighterOrange ? "#f6dac9" :
-            _color == ShellColor.LightOrange   ? "#f8d1b2" :
-            _color == ShellColor.DarkerOrange  ? "#fcba92" :
-            _color == ShellColor.LightGreen    ? "#c5e8d6" :
-            _color == ShellColor.DarkerGreen   ? "#e5daaa" :
-            _color == ShellColor.Bronze        ? "#cd7f32" :
-            _color == ShellColor.Silver        ? "#c0c0c0" :
-            _color == ShellColor.Gold          ? "#ffd700" : ""
+            _getSVGBorder(_data, _darkMode),
+            _getSVGCard(_data),
+            _darkMode ? _getSVGCardRadialGradient(_data) : bytes(''),
+            _getSVGText(_data, _subtitle)
         );
     }
 
@@ -206,39 +134,53 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         _data.size = _getSize(_data.lusdAmount);
     }
 
-    function _getSolidBorderColor(BorderColor _color) private pure returns (string memory) {
+    function _getSolidBorderColor(EggTraitWeights.BorderColor _color)
+        private
+        pure
+        returns (string memory)
+    {
         return (
-            _color == BorderColor.White  ?    "#fff" :
-            _color == BorderColor.Black  ?    "#000" :
-            _color == BorderColor.Bronze ? "#cd7f32" :
-            _color == BorderColor.Silver ? "#c0c0c0" :
-            _color == BorderColor.Gold   ? "#ffd700" : ""
+            _color == EggTraitWeights.BorderColor.White  ?    "#fff" :
+            _color == EggTraitWeights.BorderColor.Black  ?    "#000" :
+            _color == EggTraitWeights.BorderColor.Bronze ? "#cd7f32" :
+            _color == EggTraitWeights.BorderColor.Silver ? "#c0c0c0" :
+            _color == EggTraitWeights.BorderColor.Gold   ? "#ffd700" : ""
         );
     }
 
-    function _getSolidCardColor(CardColor _color) private pure returns (string memory) {
+    function _getSolidCardColor(EggTraitWeights.CardColor _color)
+        private
+        pure
+        returns (string memory)
+    {
         return (
-            _color == CardColor.Red    ? "#ea394e" :
-            _color == CardColor.Green  ? "#5caa4b" :
-            _color == CardColor.Blue   ? "#008bf7" :
-            _color == CardColor.Purple ? "#9d34e8" :
-            _color == CardColor.Pink   ? "#e54cae" : ""
+            _color == EggTraitWeights.CardColor.Red    ? "#ea394e" :
+            _color == EggTraitWeights.CardColor.Green  ? "#5caa4b" :
+            _color == EggTraitWeights.CardColor.Blue   ? "#008bf7" :
+            _color == EggTraitWeights.CardColor.Purple ? "#9d34e8" :
+            _color == EggTraitWeights.CardColor.Pink   ? "#e54cae" : ""
         );
     }
 
-    function _getCardGradient(CardColor _color) private pure returns (bool, string[2] memory) {
+    function _getCardGradient(EggTraitWeights.CardColor _color)
+        private
+        pure
+        returns (bool, string[2] memory)
+    {
         return (
-            _color == CardColor.YellowPink ? (true, ["#ffd200", "#ff0087"]) :
-            _color == CardColor.BlueGreen  ? (true, ["#008bf7", "#58b448"]) :
-            _color == CardColor.PinkBlue   ? (true, ["#f900bd", "#00a7f6"]) :
-            _color == CardColor.RedPurple  ? (true, ["#ea394e", "#9d34e8"]) :
-            _color == CardColor.Bronze     ? (true, ["#804a00", "#cd7b26"]) :
-            _color == CardColor.Silver     ? (true, ["#71706e", "#b6b6b6"]) :
-            _color == CardColor.Gold       ? (true, ["#aa6c39", "#ffae00"]) : (false, ["", ""])
+            _color == EggTraitWeights.CardColor.YellowPink ? (true, ["#ffd200", "#ff0087"]) :
+            _color == EggTraitWeights.CardColor.BlueGreen  ? (true, ["#008bf7", "#58b448"]) :
+            _color == EggTraitWeights.CardColor.PinkBlue   ? (true, ["#f900bd", "#00a7f6"]) :
+            _color == EggTraitWeights.CardColor.RedPurple  ? (true, ["#ea394e", "#9d34e8"]) :
+            _color == EggTraitWeights.CardColor.Bronze     ? (true, ["#804a00", "#cd7b26"]) :
+            _color == EggTraitWeights.CardColor.Silver     ? (true, ["#71706e", "#b6b6b6"]) :
+            _color == EggTraitWeights.CardColor.Gold       ? (true, ["#aa6c39", "#ffae00"]) :
+                                                             (false, ["", ""])
         );
     }
 
     function _calcDerivedData(CommonData memory _data) private pure {
+        _data.tokenIDString = _data.tokenID.toString();
         _data.solidBorderColor = _getSolidBorderColor(_data.borderColor);
         _data.solidCardColor = _getSolidCardColor(_data.cardColor);
         (_data.hasCardGradient, _data.cardGradient) = _getCardGradient(_data.cardColor);
@@ -284,32 +226,36 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         );
     }
 
-    function _getBorderName(BorderColor _border) private pure returns (string memory) {
+    function _getBorderName(EggTraitWeights.BorderColor _border)
+        private
+        pure
+        returns (string memory)
+    {
         return (
-            _border == BorderColor.White    ? "White"   :
-            _border == BorderColor.Black    ? "Black"   :
-            _border == BorderColor.Bronze   ? "Bronze"  :
-            _border == BorderColor.Silver   ? "Silver"  :
-            _border == BorderColor.Gold     ? "Gold"    :
-            _border == BorderColor.Rainbow  ? "Rainbow" : ""
+            _border == EggTraitWeights.BorderColor.White    ? "White"   :
+            _border == EggTraitWeights.BorderColor.Black    ? "Black"   :
+            _border == EggTraitWeights.BorderColor.Bronze   ? "Bronze"  :
+            _border == EggTraitWeights.BorderColor.Silver   ? "Silver"  :
+            _border == EggTraitWeights.BorderColor.Gold     ? "Gold"    :
+            _border == EggTraitWeights.BorderColor.Rainbow  ? "Rainbow" : ""
         );
     }
 
-    function _getCardName(CardColor _card) private pure returns (string memory) {
+    function _getCardName(EggTraitWeights.CardColor _card) private pure returns (string memory) {
         return (
-            _card == CardColor.Red        ? "Red"         :
-            _card == CardColor.Green      ? "Green"       :
-            _card == CardColor.Blue       ? "Blue"        :
-            _card == CardColor.Purple     ? "Purple"      :
-            _card == CardColor.Pink       ? "Pink"        :
-            _card == CardColor.YellowPink ? "Yellow-Pink" :
-            _card == CardColor.BlueGreen  ? "Blue-Green"  :
-            _card == CardColor.PinkBlue   ? "Pink-Blue"   :
-            _card == CardColor.RedPurple  ? "Red-Purple"  :
-            _card == CardColor.Bronze     ? "Bronze"      :
-            _card == CardColor.Silver     ? "Silver"      :
-            _card == CardColor.Gold       ? "Gold"        :
-            _card == CardColor.Rainbow    ? "Rainbow"     : ""
+            _card == EggTraitWeights.CardColor.Red        ? "Red"         :
+            _card == EggTraitWeights.CardColor.Green      ? "Green"       :
+            _card == EggTraitWeights.CardColor.Blue       ? "Blue"        :
+            _card == EggTraitWeights.CardColor.Purple     ? "Purple"      :
+            _card == EggTraitWeights.CardColor.Pink       ? "Pink"        :
+            _card == EggTraitWeights.CardColor.YellowPink ? "Yellow-Pink" :
+            _card == EggTraitWeights.CardColor.BlueGreen  ? "Blue-Green"  :
+            _card == EggTraitWeights.CardColor.PinkBlue   ? "Pink-Blue"   :
+            _card == EggTraitWeights.CardColor.RedPurple  ? "Red-Purple"  :
+            _card == EggTraitWeights.CardColor.Bronze     ? "Bronze"      :
+            _card == EggTraitWeights.CardColor.Silver     ? "Silver"      :
+            _card == EggTraitWeights.CardColor.Gold       ? "Gold"        :
+            _card == EggTraitWeights.CardColor.Rainbow    ? "Rainbow"     : ""
         );
     }
 
@@ -365,7 +311,7 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         }
 
         return abi.encodePacked(
-            '<linearGradient id="cb-egg-', _data.tokenID.toString(), '-card-diagonal-gradient" y1="100%" gradientUnits="userSpaceOnUse">',
+            '<linearGradient id="cb-egg-', _data.tokenIDString, '-card-diagonal-gradient" y1="100%" gradientUnits="userSpaceOnUse">',
                 '<stop offset="0" stop-color="', _data.cardGradient[0], '"/>',
                 '<stop offset="1" stop-color="', _data.cardGradient[1], '"/>',
             '</linearGradient>'
@@ -378,14 +324,14 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         returns (bytes memory)
     {
         if (
-            _data.cardColor != CardColor.Rainbow &&
-            _data.borderColor != BorderColor.Rainbow
+            _data.cardColor != EggTraitWeights.CardColor.Rainbow &&
+            _data.borderColor != EggTraitWeights.BorderColor.Rainbow
         ) {
             return bytes('');
         }
 
         return abi.encodePacked(
-            '<linearGradient id="cb-egg-', _data.tokenID.toString(), '-card-rainbow-gradient" y1="100%" gradientUnits="userSpaceOnUse">',
+            '<linearGradient id="cb-egg-', _data.tokenIDString, '-card-rainbow-gradient" y1="100%" gradientUnits="userSpaceOnUse">',
                 '<stop offset="0" stop-color="#93278f"/>',
                 '<stop offset="0.2" stop-color="#662d91"/>',
                 '<stop offset="0.4" stop-color="#3395d4"/>',
@@ -403,7 +349,7 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         returns (bytes memory)
     {
         return abi.encodePacked(
-            '<radialGradient id="cb-egg-', _data.tokenID.toString(), '-card-radial-gradient" cx="50%" cy="45%" r="38%" gradientUnits="userSpaceOnUse">',
+            '<radialGradient id="cb-egg-', _data.tokenIDString, '-card-radial-gradient" cx="50%" cy="45%" r="38%" gradientUnits="userSpaceOnUse">',
                 '<stop offset="0" stop-opacity="0"/>',
                 '<stop offset="0.25" stop-opacity="0"/>',
                 '<stop offset="1" stop-color="#000" stop-opacity="1"/>',
@@ -416,37 +362,35 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         pure
         returns (bytes memory)
     {
-        if (_darkMode && _data.borderColor == BorderColor.Black) {
+        if (_darkMode && _data.borderColor == EggTraitWeights.BorderColor.Black) {
             // We will use the black radial gradient as border (covering the entire card)
             return bytes('');
         }
 
         return abi.encodePacked(
-            '<rect ',
-                _data.borderColor == BorderColor.Rainbow
-                    ? abi.encodePacked('style="fill: url(#cb-egg-', _data.tokenID.toString(), '-card-rainbow-gradient)" ')
-                    : abi.encodePacked('fill="', _data.solidBorderColor, '" '),
-                'width="100%" height="100%" rx="37.5"',
-            '/>'
+            '<rect style="fill:',
+                _data.borderColor == EggTraitWeights.BorderColor.Rainbow
+                    ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-rainbow-gradient)')
+                    : bytes(_data.solidBorderColor),
+                '" width="100%" height="100%" rx="37.5"/>'
         );
     }
 
     function _getSVGCard(CommonData memory _data) private pure returns (bytes memory) {
         return abi.encodePacked(
-            _data.cardColor == CardColor.Rainbow && _data.borderColor == BorderColor.Rainbow
+            _data.cardColor == EggTraitWeights.CardColor.Rainbow && _data.borderColor == EggTraitWeights.BorderColor.Rainbow
                 ? bytes('') // Rainbow gradient already placed by border
                 : abi.encodePacked(
-                    '<rect ',
-                        _data.cardColor == CardColor.Rainbow
-                            ? abi.encodePacked('style="fill: url(#cb-egg-', _data.tokenID.toString(), '-card-rainbow-gradient)" ')
+                    '<rect style="fill:',
+                        _data.cardColor == EggTraitWeights.CardColor.Rainbow
+                            ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-rainbow-gradient)')
                             : _data.hasCardGradient
-                            ? abi.encodePacked('style="fill: url(#cb-egg-', _data.tokenID.toString(), '-card-diagonal-gradient)" ')
-                            : abi.encodePacked('fill="', _data.solidCardColor, '" '),
-                        'x="30" y="30" width="690" height="990" rx="37.5"',
-                    '/>'
+                            ? abi.encodePacked('url(#cb-egg-', _data.tokenIDString, '-card-diagonal-gradient)')
+                            : bytes(_data.solidCardColor),
+                        '" x="30" y="30" width="690" height="990" rx="37.5"/>'
                 ),
 
-            _data.cardColor == CardColor.Rainbow
+            _data.cardColor == EggTraitWeights.CardColor.Rainbow
                 ? '<rect fill="#000" opacity="0.05" x="30" y="30" width="690" height="990" rx="37.5"/>'
                 : ''
         );
@@ -458,13 +402,11 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         returns (bytes memory)
     {
         return abi.encodePacked(
-            '<rect ',
-                'style="fill: url(#cb-egg-', _data.tokenID.toString(), '-card-radial-gradient); mix-blend-mode: hard-light" ',
-                _data.borderColor == BorderColor.Black
-                    ? 'width="100%" height="100%" '
-                    : 'x="30" y="30" width="690" height="990" ',
-                'rx="37.5"',
-            '/>'
+            '<rect style="fill:url(#cb-egg-', _data.tokenIDString, '-card-radial-gradient);mix-blend-mode:hard-light" ',
+                _data.borderColor == EggTraitWeights.BorderColor.Black
+                    ? 'width="100%" height="100%"'
+                    : 'x="30" y="30" width="690" height="990"',
+                ' rx="37.5"/>'
         );
     }
 
@@ -485,7 +427,7 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
         pure
         returns (bytes memory)
     {
-        string memory tokenID = string(abi.encodePacked('ID: ', _data.tokenID.toString()));
+        string memory tokenID = string(abi.encodePacked('ID: ', _data.tokenIDString));
         string memory lusdAmount = _formatDecimal(_data.lusdAmount);
         string memory startTime = _formatDate(_data.startTime);
 
@@ -495,6 +437,170 @@ abstract contract BondNFTArtworkBase is IBondNFTArtwork, EggTraitWeights {
             _getSVGTextTag(_subtitle,  'y="72%" font-size="40px"'),
             _getSVGTextTag(lusdAmount, 'y="81%" font-size="64px"'),
             _getSVGTextTag(startTime,  'y="91%" font-size="30px" opacity="0.6"')
+        );
+    }
+}
+
+abstract contract BondNFTArtworkBase is IBondNFTArtwork {
+    BondNFTArtworkCommon public immutable common;
+
+    constructor(BondNFTArtworkCommon _common) {
+        common = _common;
+    }
+
+    ////////////////////////
+    // External functions //
+    ////////////////////////
+
+    function tokenURI(uint256 _tokenID, IBondNFT.BondExtraData calldata _bondExtraData)
+        external
+        view
+        returns (string memory)
+    {
+        IChickenBondManager chickenBondManager =
+            IChickenBondManagerGetter(msg.sender).chickenBondManager();
+
+        CommonData memory data;
+        data.tokenID = _tokenID;
+        data.initialHalfDna = _bondExtraData.initialHalfDna;
+        data.finalHalfDna = _bondExtraData.finalHalfDna;
+
+        (
+            data.lusdAmount,
+            data.claimedBLUSD,
+            data.startTime,
+            data.endTime,
+            data.status
+        ) = chickenBondManager.getBondData(_tokenID);
+
+        return _tokenURIImplementation(common.calcData(data));
+    }
+
+    //////////////////////////////////////////////////////////
+    // Abstract functions (to be implemented by subclasses) //
+    //////////////////////////////////////////////////////////
+
+    function _tokenURIImplementation(CommonData memory _commonData)
+        internal
+        view
+        virtual
+        returns (string memory);
+
+    /////////////////////////////////////////////
+    // Internal functions (used by subclasses) //
+    /////////////////////////////////////////////
+
+    function _getMetadataJSON(
+        CommonData memory _commonData,
+        bytes memory _svg,
+        bytes memory _extraAttributes
+    )
+        internal
+        view
+        returns (string memory)
+    {
+        return common.getMetadataJSON(_commonData, _svg, _extraAttributes);
+    }
+
+    function _getSVGBaseDefs(CommonData memory _commonData, bool _darkMode)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return common.getSVGBaseDefs(_commonData, _darkMode);
+    }
+
+    function _getSVGBase(CommonData memory _commonData, string memory _subtitle, bool _darkMode)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return common.getSVGBase(_commonData, _subtitle, _darkMode);
+    }
+
+    // Shell & chicken share the same color range, but it's no use renaming the enum at this point
+    function _getObjectColorName(EggTraitWeights.ShellColor _color)
+        internal
+        pure
+        returns (string memory)
+    {
+        return (
+            _color == EggTraitWeights.ShellColor.OffWhite      ? "Off-White"      :
+            _color == EggTraitWeights.ShellColor.LightBlue     ? "Light Blue"     :
+            _color == EggTraitWeights.ShellColor.DarkerBlue    ? "Darker Blue"    :
+            _color == EggTraitWeights.ShellColor.LighterOrange ? "Lighter Orange" :
+            _color == EggTraitWeights.ShellColor.LightOrange   ? "Light Orange"   :
+            _color == EggTraitWeights.ShellColor.DarkerOrange  ? "Darker Orange"  :
+            _color == EggTraitWeights.ShellColor.LightGreen    ? "Light Green"    :
+            _color == EggTraitWeights.ShellColor.DarkerGreen   ? "Darker Green"   :
+            _color == EggTraitWeights.ShellColor.Bronze        ? "Bronze"         :
+            _color == EggTraitWeights.ShellColor.Silver        ? "Silver"         :
+            _color == EggTraitWeights.ShellColor.Gold          ? "Gold"           :
+            _color == EggTraitWeights.ShellColor.Rainbow       ? "Rainbow"        :
+            _color == EggTraitWeights.ShellColor.Luminous      ? "Luminous"       : ""
+        );
+    }
+
+    function _getSolidObjectColor(EggTraitWeights.ShellColor _color)
+        internal
+        pure
+        returns (string memory)
+    {
+        return (
+            _color == EggTraitWeights.ShellColor.OffWhite      ? "#fff1cb" :
+            _color == EggTraitWeights.ShellColor.LightBlue     ? "#e5eff9" :
+            _color == EggTraitWeights.ShellColor.DarkerBlue    ? "#aedfe2" :
+            _color == EggTraitWeights.ShellColor.LighterOrange ? "#f6dac9" :
+            _color == EggTraitWeights.ShellColor.LightOrange   ? "#f8d1b2" :
+            _color == EggTraitWeights.ShellColor.DarkerOrange  ? "#fcba92" :
+            _color == EggTraitWeights.ShellColor.LightGreen    ? "#c5e8d6" :
+            _color == EggTraitWeights.ShellColor.DarkerGreen   ? "#e5daaa" :
+            _color == EggTraitWeights.ShellColor.Bronze        ? "#cd7f32" :
+            _color == EggTraitWeights.ShellColor.Silver        ? "#c0c0c0" :
+            _color == EggTraitWeights.ShellColor.Gold          ? "#ffd700" : ""
+        );
+    }
+
+    function _isMetallicCardColor(EggTraitWeights.CardColor _color) internal pure returns (bool) {
+        return (
+            _color == EggTraitWeights.CardColor.Bronze ||
+            _color == EggTraitWeights.CardColor.Silver ||
+            _color == EggTraitWeights.CardColor.Gold
+        );
+    }
+
+    function _translateMetallicCardColorToObjectColor(EggTraitWeights.CardColor _color)
+        internal
+        pure
+        returns (EggTraitWeights.ShellColor)
+    {
+        return (
+            _color == EggTraitWeights.CardColor.Bronze ? EggTraitWeights.ShellColor.Bronze :
+            _color == EggTraitWeights.CardColor.Silver ? EggTraitWeights.ShellColor.Silver :
+                                                         EggTraitWeights.ShellColor.Gold
+        );
+    }
+
+    function _isMetallicObjectColor(EggTraitWeights.ShellColor _color)
+        internal
+        pure
+        returns (bool)
+    {
+        return (
+            _color == EggTraitWeights.ShellColor.Bronze ||
+            _color == EggTraitWeights.ShellColor.Silver ||
+            _color == EggTraitWeights.ShellColor.Gold
+        );
+    }
+
+    function _isLowContrastObjectColor(EggTraitWeights.ShellColor _color)
+        internal
+        pure
+        returns (bool)
+    {
+        return (
+            _color == EggTraitWeights.ShellColor.Bronze ||
+            _color == EggTraitWeights.ShellColor.Silver
         );
     }
 }

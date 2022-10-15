@@ -6,7 +6,12 @@ import { Interface, JsonFragment, ParamType } from "@ethersproject/abi";
 import BondNFT from "../../out/BondNFT.sol/BondNFT.json";
 import BondNFTArtworkSwitcher from "../../out/BondNFTArtworkSwitcher.sol/BondNFTArtworkSwitcher.json";
 import GenerativeEggArtwork from "../../out/GenerativeEggArtwork.sol/GenerativeEggArtwork.json";
+import BondNFTArtworkCommon from "../../out/BondNFTArtworkBase.sol/BondNFTArtworkCommon.json";
+import ChickenOutGenerated1 from "../../out/ChickenOutGenerated.sol/ChickenOutGenerated1.json";
 import ChickenOutArtwork from "../../out/ChickenOutArtwork.sol/ChickenOutArtwork.json";
+import ChickenInGenerated1 from "../../out/ChickenInGenerated.sol/ChickenInGenerated1.json";
+import ChickenInGenerated2 from "../../out/ChickenInGenerated.sol/ChickenInGenerated2.json";
+import ChickenInGenerated3 from "../../out/ChickenInGenerated.sol/ChickenInGenerated3.json";
 import ChickenInArtwork from "../../out/ChickenInArtwork.sol/ChickenInArtwork.json";
 import ChickenBondManager from "../../out/ChickenBondManager.sol/ChickenBondManager.json";
 import ERC20Faucet from "../../out/ERC20Faucet.sol/ERC20Faucet.json";
@@ -176,7 +181,12 @@ const contractArtifacts = Object.entries({
   BondNFT,
   BondNFTArtworkSwitcher,
   GenerativeEggArtwork,
+  BondNFTArtworkCommon,
+  ChickenOutGenerated1,
   ChickenOutArtwork,
+  ChickenInGenerated1,
+  ChickenInGenerated2,
+  ChickenInGenerated3,
   ChickenInArtwork,
   ChickenBondManager,
   ERC20Faucet,

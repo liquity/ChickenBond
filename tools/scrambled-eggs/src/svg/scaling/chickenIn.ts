@@ -1,13 +1,21 @@
 import SvgPath from "svgpath";
-import { round, viewBoxHeight, viewBoxWidth } from "./common";
+import { round, roundDigits, template, viewBoxHeight, viewBoxWidth } from "./common";
 
 const transformOriginX = 0.5 * viewBoxWidth;
 const transformOriginY = 0.45 * viewBoxHeight;
 
-const scaleX = (s: number, x: number) => round((x - transformOriginX) * s + transformOriginX);
-const scaleY = (s: number, y: number) => round((y - transformOriginY) * s + transformOriginY);
+const scaleX = (x: number) => (s: number) => round((x - transformOriginX) * s + transformOriginX);
+const scaleY = (y: number) => (s: number) => round((y - transformOriginY) * s + transformOriginY);
+const mul = (x: number) => (s: number) => round(x * s);
 
-export const chickenInAnimations = (tokenID: number, s: number) => /*css*/ `
+const tokenID = "tokenID";
+const style = "style";
+const bodyStyle = "bodyStyle";
+const wingStyle = "wingStyle";
+const shadeStyle = "shadeStyle";
+const tipStyle = "tipStyle";
+
+export const chickenInAnimations = template<[scale: number], { tokenID: number }>/*css*/ `
   #ci-chicken-${tokenID} .ci-breath path,
   #ci-chicken-${tokenID} .ci-breath ellipse {
     animation: ci-breath 0.4s infinite ease-in-out alternate;
@@ -15,72 +23,69 @@ export const chickenInAnimations = (tokenID: number, s: number) => /*css*/ `
 
   #ci-chicken-${tokenID} .ci-wing path {
     animation: ci-wing 3.2s infinite ease-in-out;
-    transform-origin: ${scaleX(s, 337.5)}px;
+    transform-origin: ${scaleX(337.5)}px;
   }
 
   @keyframes ci-breath {
-    0%   { transform: translateY(0);   }
-    100% { transform: translateY(${round(s * 5)}px); }
+    0% { transform: translateY(0); }
+    100% { transform: translateY(${mul(5)}px); }
   }
 
   @keyframes ci-wing {
     0% { transform: translateY(0); }
-    5% { transform: translateY(${round(s * 2)}px) rotate(-2deg); }
-    12.5% { transform: translateY(${round(s * 5)}px) rotate(1deg); }
-    15% { transform: translateY(${round(s * 4)}px) rotate(2deg); }
+    5% { transform: translateY(${mul(2)}px) rotate(-2deg); }
+    12.5% { transform: translateY(${mul(5)}px) rotate(1deg); }
+    15% { transform: translateY(${mul(4)}px) rotate(2deg); }
     25% { transform: translateY(0) rotate(-2deg); }
-    35% { transform: translateY(${round(s * 4)}px) rotate(2deg); }
-    37.5% { transform: translateY(${round(s * 5)}px) rotate(1deg); }
-    40% { transform: translateY(${round(s * 4)}px); }
+    35% { transform: translateY(${mul(4)}px) rotate(2deg); }
+    37.5% { transform: translateY(${mul(5)}px) rotate(1deg); }
+    40% { transform: translateY(${mul(4)}px); }
     50% { transform: translateY(0); }
-    62.5% { transform: translateY(${round(s * 5)}px); }
+    62.5% { transform: translateY(${mul(5)}px); }
     75% { transform: translateY(0); }
-    87.5% { transform: translateY(${round(s * 5)}px); }
+    87.5% { transform: translateY(${mul(5)}px); }
     100% { transform: translateY(0); }
   }
 `;
 
-const scaleEllipseCoords = (s: number, cx: number, cy: number, rx: number, ry: number) => ({
-  cx: scaleX(s, cx),
-  cy: scaleY(s, cy),
-  rx: round(s * rx),
-  ry: round(s * ry),
+const scaleEllipseCoords = (cx: number, cy: number, rx: number, ry: number) => (s: number) => ({
+  cx: scaleX(cx)(s),
+  cy: scaleY(cy)(s),
+  rx: mul(rx)(s),
+  ry: mul(ry)(s),
 
   toString() {
     return `cx="${this.cx}" cy="${this.cy}" rx="${this.rx}" ry="${this.ry}"`;
   }
 });
 
-const scaleRectCoords = (
-  s: number,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  rx: number
-) => ({
-  x: scaleX(s, x),
-  y: scaleY(s, y),
-  width: round(s * width),
-  height: round(s * height),
-  rx: round(s * rx),
+const scaleRectCoords =
+  (x: number, y: number, width: number, height: number, rx: number) => (s: number) => ({
+    x: scaleX(x)(s),
+    y: scaleY(y)(s),
+    width: mul(width)(s),
+    height: mul(height)(s),
+    rx: round(s * rx),
 
-  toString() {
-    return `x="${this.x}" y="${this.y}" width="${this.width}" height="${this.height}" rx="${this.rx}"`;
-  }
-});
+    toString() {
+      return `x="${this.x}" y="${this.y}" width="${this.width}" height="${this.height}" rx="${this.rx}"`;
+    }
+  });
 
-const scalePath = (s: number, p: string) =>
+const scalePath = (p: string) => (s: number) =>
   SvgPath.from(p)
     .translate(-transformOriginX, -transformOriginY)
     .scale(s)
     .translate(transformOriginX, transformOriginY)
-    .round(2);
+    .round(roundDigits);
+
+const scaleNthPath = (p: string[]) => (s: number, n: number) => scalePath(p[n - 1])(s);
 
 const shadowCoords: [number, number, number, number] = [373, 664, 110, 14];
 
-export const chickenInShadow = (s: number) =>
-  /*svg*/ `<ellipse style="mix-blend-mode: soft-light" ${scaleEllipseCoords(s, ...shadowCoords)}/>`;
+export const chickenInShadow = template<[scale: number]>/*svg*/ `
+  <ellipse style="mix-blend-mode: soft-light" ${scaleEllipseCoords(...shadowCoords)}/>
+`;
 
 const legCoords: [number, number, number, number, number][] = [
   [381.15, 597.44, 9.66, 66.38, 4],
@@ -92,14 +97,12 @@ const legPaths = [
   "M377.74,659.84l-8.48-9a1.21,1.21,0,0,0-.85-.34h-6.67a16.26,16.26,0,0,0-7.38,2.14l-10.68,6.76c-2.19,1.38-1.05,4.38,1.66,4.38h30.21C378.84,663.83,379.82,662,377.74,659.84Z"
 ];
 
-export const chickenInLegs = (style: string, s: number) => {
-  return /*svg*/ `
-    <rect style="${style}" ${scaleRectCoords(s, ...legCoords[0])}/>
-    <path style="${style}" d="${scalePath(s, legPaths[0])}"/>
-    <rect style="${style}" ${scaleRectCoords(s, ...legCoords[1])}/>
-    <path style="${style}" d="${scalePath(s, legPaths[1])}"/>
+export const chickenInLegs = template<[scale: number], { style: string }>/*svg*/ `
+    <rect style="${style}" ${scaleRectCoords(...legCoords[0])}/>
+    <path style="${style}" d="${scalePath(legPaths[0])}"/>
+    <rect style="${style}" ${scaleRectCoords(...legCoords[1])}/>
+    <path style="${style}" d="${scalePath(legPaths[1])}"/>
   `;
-};
 
 const combPaths = [
   "M306.53,319.87a.37.37,0,0,1-.27-.16c-3.42-5.89-3.49-13.15-2.73-19.93a43.65,43.65,0,0,1,4-15.06c4.05-7.92,11.72-13.55,20.05-16.68,7.29-2.74,15.09-3.75,22.89-4.19a1,1,0,0,1,.7,1.78,34.7,34.7,0,0,0-7.08,7.92,1,1,0,0,0,1.3,1.45,84,84,0,0,1,27.13-8.14,1,1,0,0,1,.9,1.65,51.88,51.88,0,0,0-5.66,8.08,1,1,0,0,0,1.32,1.39,70.69,70.69,0,0,1,23-6.53,1,1,0,0,1,.84,1.71,50,50,0,0,0-6.33,8.22,1,1,0,0,0,1.08,1.54c11-2.27,20.8-8.35,30.27-14.48a1,1,0,0,1,1.56.78c.22,4.67-1.74,9.29-3.66,13.62-3.26,7.36-6.6,14.85-11.91,20.9-9.91,11.28-25.23,16-40,18.92h-.08Z",
@@ -113,8 +116,8 @@ const combPaths = [
   "M312,310a45.13,45.13,0,0,1-7.31-18.33c-1.23-7.27-.27-15.75,5.5-20.34,3.38-2.68,7.89-3.57,12.2-3.37,8.69.41,17.69,6,19.43,14.48,4.25-9.69,17.57-14.06,26.74-8.77s12,19,5.78,27.54a17.14,17.14,0,0,1,16.23,24.21,10.68,10.68,0,0,1-5.35,5.67c-3.66,1.49-7.92-.09-11-2.58s-5.31-5.82-8.08-8.63c-6.7-6.75-16.2-10.14-25.66-11.15s-19.07.12-28.51,1.27"
 ];
 
-export const chickenInComb = (comb: number, style: string, s: number) => /*svg*/ `
-  <path style="${style}" d="${scalePath(s, combPaths[comb - 1])}"/>
+export const chickenInComb = template<[scale: number, comb: number], { style: string }>/*svg*/ `
+  <path style="${style}" d="${scaleNthPath(combPaths)}"/>
 `;
 
 const beakPaths = [
@@ -124,15 +127,15 @@ const beakPaths = [
   "M311.5,321.5c-6.61-1.94-14.52-4.35-21.55-6.45a1,1,0,0,0-1,1.7c3.13,2.85,6.45,6.47,9.95,8.85a1,1,0,0,1-.11,1.72c-4.72,2.35-9.32,4-13.76,6.8a1,1,0,0,0,.59,1.85l23.4-1.28a.88.88,0,0,0,1-1l1.14-12.15"
 ];
 
-export const chickenInBeak = (beak: number, style: string, s: number) => /*svg*/ `
-  <path style="${style}" d="${scalePath(s, beakPaths[beak - 1])}"/>
+export const chickenInBeak = template<[scale: number, beak: number], { style: string }>/*svg*/ `
+  <path style="${style}" d="${scaleNthPath(beakPaths)}"/>
 `;
 
 const wattlePath =
   "M306.43,334.36c5.32,5.13,8.13,13.17,7.81,20.55a38.94,38.94,0,0,1-1.54,8.68c-1.32,4.76-3.21,9.57-6.81,12.94-5.08,4.76-12.67,5.82-19.58,5.07-4.12-.45-8.52-1.67-11-5-2.31-3.15-2.32-7.41-1.89-11.29s1.24-7.81,3.78-10.69c3-3.41,7.73-4.58,12-6.24,7-2.75,12.42-8.23,17.24-14";
 
-export const chickenInWattle = (style: string, s: number) => /*svg*/ `
-  <path style="${style}" d="${scalePath(s, wattlePath)}"/>
+export const chickenInWattle = template<[scale: number], { style: string }>/*svg*/ `
+  <path style="${style}" d="${scalePath(wattlePath)}"/>
 `;
 
 const bodyPaths = [
@@ -141,10 +144,13 @@ const bodyPaths = [
   "M411.14,597.54a185.74,185.74,0,0,1-71-5.25L339,592c-18-5-33-13-49-22-33.37-18.54-60.71-49.11-72.49-86.13a125.89,125.89,0,0,0,7.11,33.63c23,66,81.6,90.5,118.48,99.51,4.53,7.85,12.31,13,21.15,13a22.68,22.68,0,0,0,10.87-2.79A22.61,22.61,0,0,0,386,630c7.72,0,14.64-3.95,19.28-10.18,45-7.2,68.78-30,82.66-51.21A171.79,171.79,0,0,1,411.14,597.54Z"
 ];
 
-export const chickenInBody = (bodyStyle: string, shadeStyle: string, s: number) => /*svg*/ `
-  <path style="${bodyStyle}" d="${scalePath(s, bodyPaths[0])}"/>
-  <path style="${shadeStyle}" d="${scalePath(s, bodyPaths[1])}"/>
-  <path style="${shadeStyle}" d="${scalePath(s, bodyPaths[2])}"/>
+export const chickenInBody = template<
+  [scale: number],
+  { bodyStyle: string; shadeStyle: string }
+>/*svg*/ `
+  <path style="${bodyStyle}" d="${scalePath(bodyPaths[0])}"/>
+  <path style="${shadeStyle}" d="${scalePath(bodyPaths[1])}"/>
+  <path style="${shadeStyle}" d="${scalePath(bodyPaths[2])}"/>
 `;
 
 const eyePaths = [
@@ -154,16 +160,16 @@ const eyePaths = [
 
 const eyeCoords: [number, number, number, number] = [334, 324, 3, 3];
 
-export const chickenInEye = (s: number) => /*svg*/ `
-  <path style="fill: #fff" d="${scalePath(s, eyePaths[0])}"/>
-  <path style="fill: #000" d="${scalePath(s, eyePaths[1])}"/>
-  <ellipse style="fill: #fff" ${scaleEllipseCoords(s, ...eyeCoords)}/>
+export const chickenInEye = template<[scale: number]>/*svg*/ `
+  <path style="fill: #fff" d="${scalePath(eyePaths[0])}"/>
+  <path style="fill: #000" d="${scalePath(eyePaths[1])}"/>
+  <ellipse style="fill: #fff" ${scaleEllipseCoords(...eyeCoords)}/>
 `;
 
 const cheekCoords: [number, number, number, number] = [331.5, 347, 18.5, 13];
 
-export const chickenInCheek = (style: string, s: number) => /*svg*/ `
-  <ellipse style="${style}" ${scaleEllipseCoords(s, ...cheekCoords)}/>
+export const chickenInCheek = template<[scale: number], { style: string }>/*svg*/ `
+  <ellipse style="${style}" ${scaleEllipseCoords(...cheekCoords)}/>
 `;
 
 const tailPaths = [
@@ -178,45 +184,54 @@ const tailPaths = [
   "M473.52,428.89C446,441,429.82,455,424.41,483s18.64,51.26,31.61,61.62S488,548,496,536s12.48-19.59,12.48-19.59,14.88,3.69,24.2-9.36a25.19,25.19,0,0,0,2.24-25.85s9.6,10.72,21.34,5.76,8.35-20.46,8.35-20.46,11,15.17,20.39,10.5c6-3,7-20-2.94-32.59S549.56,419.21,527,419C498.54,418.73,473.52,428.89,473.52,428.89Z"
 ];
 
-export const chickenInTail = (tail: number, style: string, s: number) => /*svg*/ `
-  <path style="${style}" d="${scalePath(s, tailPaths[tail - 1])}"/>
+export const chickenInTail = template<[scale: number, tail: number], { style: string }>/*svg*/ `
+  <path style="${style}" d="${scaleNthPath(tailPaths)}"/>
 `;
 
-const wingPaths = [
-  [
-    "M296.83,459.09c-10.81,23.72-5.49,49.18,4.94,73.81s31.29,43.74,54.91,50.29c5.7,1.58,11.78,2.44,17.25.38s10.08-7.75,9.77-14.24c20.23,15.67,47.25,17.5,70,8.6s41.38-27.43,55.5-49c7.71-11.79,14.39-27.19,8.86-40.81-3.8-9.35-12.66-15.24-21.63-17.41s-18.18-1.19-27.25-.44c-34.55,2.88-71.13,2-102-16.68-15.81-9.57-32.22-23.15-49.43-18.75-3.23.83-14.83,6.43-20.85,24.24",
-    "M518,488.13c-3.8-9.35-12.66-15.24-21.63-17.41a48.29,48.29,0,0,0-8.59-1.21c.81,15.1-3.86,30.95-7.93,44.75-16.69,51.85-67.94,30.09-106.21,24.21-9-1-14.62,8.59-22.08,11.8-13.59,4.26-27.94,2.9-41.42-1.87,11.43,17,28.14,29.69,46.52,34.79,5.7,1.58,11.78,2.44,17.25.38s10.08-7.75,9.77-14.24c20.23,15.67,47.25,17.5,70,8.6s41.38-27.43,55.5-49C516.87,517.15,523.55,501.75,518,488.13Z"
-  ],
-  [
-    "M375,582c5.66.4,10.16,9.36,8.19,14.68s-7.86,8.43-13.52,8.59-11.13-2.11-16.11-4.83c-20.62-11.24-36-30.58-45.79-51.94s-14.25-44.76-16.89-68.1c-.83-7.33-1.48-14.74-.75-22.08a34.56,34.56,0,0,1,3.55-12.9c3.58-6.72,10.18-11.44,17.29-14.18s14.75-3.68,22.33-4.43c12.45-1.22,25.1-1.95,37.38.4,15,2.87,28.76,10.18,42.87,16.1,30.3,12.71,64.49,19.18,96.2,10.56,3.27-.89,6.64-1.95,10-1.47,7.76,1.1,12.13,9.81,12.65,17.63.84,12.69-5.08,25.28-14.24,34.11s-21.27,14.15-33.7,16.85q10-1.47,20.14-2.23c3.65-.27,7.73-.34,10.48,2.07,2.6,2.28,3.18,6.25,2.19,9.56s-3.29,6.05-5.75,8.47c-10.68,10.5-25.32,16.45-40.2,18.08s-30-.86-44.23-5.51l15.46,10.28a15,15,0,0,1,5,4.52c2.11,3.56.86,8.37-1.95,11.41s-6.84,4.61-10.82,5.74c-19.34,5.45-39.92,2.17-59.73-1.14",
-    "M532.4,470c-.52-7.82-4.89-16.53-12.65-17.63-3.36-.48-6.73.58-10,1.47a114.72,114.72,0,0,1-26.63,3.87c-15.39,32-42.83,57.41-80.12,64.26a100.93,100.93,0,0,1-112.28-67.77c-.25,1.36-.45,2.72-.59,4.09-.73,7.34-.08,14.75.75,22.08,2.64,23.34,7.14,46.74,16.89,68.1s25.17,40.7,45.79,51.94c5,2.72,10.44,5,16.11,4.83s11.56-3.27,13.52-8.59c1.7-4.61-1.45-11.94-6-14.08l-2.15-.36,0-.24a6.07,6.07,0,0,1,2.18.6c19.15,3.18,38.94,6,57.58.78,4-1.13,8-2.71,10.82-5.74s4.06-7.85,1.95-11.41a15,15,0,0,0-5-4.52l-15.46-10.28c14.23,4.65,29.35,7.14,44.23,5.51s29.52-7.58,40.2-18.08c2.46-2.42,4.76-5.17,5.75-8.47s.41-7.28-2.19-9.56c-2.75-2.41-6.83-2.34-10.48-2.07q-10.11.76-20.14,2.23c12.43-2.7,24.53-8,33.7-16.85S533.24,482.72,532.4,470Z",
-    "M527.16,456.55C515.39,473.69,503.89,491.1,488,505c-32,26-71,41-112,41a163.75,163.75,0,0,1-76.21-19,166.48,166.48,0,0,0,8,21.49c9.76,21.36,25.17,40.7,45.79,51.94,5,2.72,10.44,5,16.11,4.83s11.56-3.27,13.52-8.59c1.7-4.61-1.45-11.94-6-14.08l-2.15-.36,0-.24a6.07,6.07,0,0,1,2.18.6c19.15,3.18,38.94,6,57.58.78,4-1.13,8-2.71,10.82-5.74s4.06-7.85,1.95-11.41a15,15,0,0,0-5-4.52l-15.46-10.28c14.23,4.65,29.35,7.14,44.23,5.51s29.52-7.58,40.2-18.08c2.46-2.42,4.76-5.17,5.75-8.47s.41-7.28-2.19-9.56c-2.75-2.41-6.83-2.34-10.48-2.07q-10.11.76-20.14,2.23c12.43-2.7,24.53-8,33.7-16.85S533.24,482.72,532.4,470A23.11,23.11,0,0,0,527.16,456.55Z"
-  ],
-  [
-    "M388,462c-33.32-74.53-83-17-89,1-10.81,32.42-2.07,136.28,121.7,134.09s83.34-129.48,59.76-141-1.72,24-9.32,20.64-3.39-15.55-22.9-22.25-2.95,9.41-8.17,9.75-12.92-15.09-23.36-16.35,4,8.17.33,24.51S396.82,481.73,388,462Z",
-    "M295.89,495.81c2.94,43,30.43,103,124.81,101.28,72.18-1.28,88.51-45.1,84.91-83.69C481.82,529.45,451.73,534.92,424,538,378.14,542.33,330.05,527.17,295.89,495.81Z",
-    "M339,559c-12-4.5-24-11.82-32.64-22,15.06,32.23,48.34,61.22,114.34,60.05,54.57-1,77.22-26.25,83.46-55.21C460.34,580.74,392.79,578.48,339,559Z",
-    "M453,478c13.3,10.45,32.92,14.57,45.13,3.81-5.13-13.14-11.91-22.87-17.67-25.67-23.59-11.47-1.72,24-9.32,20.64s-3.39-15.55-22.9-22.25-2.95,9.41-8.17,9.75-12.92-15.09-23.36-16.35,4,8.17.33,24.51c-.09.39-.19.75-.29,1.12,3.25,2,7.07,3.25,11.25,4.44C437,480,446,472,453,478Z"
-  ]
+const wing1Paths = [
+  "M296.83,459.09c-10.81,23.72-5.49,49.18,4.94,73.81s31.29,43.74,54.91,50.29c5.7,1.58,11.78,2.44,17.25.38s10.08-7.75,9.77-14.24c20.23,15.67,47.25,17.5,70,8.6s41.38-27.43,55.5-49c7.71-11.79,14.39-27.19,8.86-40.81-3.8-9.35-12.66-15.24-21.63-17.41s-18.18-1.19-27.25-.44c-34.55,2.88-71.13,2-102-16.68-15.81-9.57-32.22-23.15-49.43-18.75-3.23.83-14.83,6.43-20.85,24.24",
+  "M518,488.13c-3.8-9.35-12.66-15.24-21.63-17.41a48.29,48.29,0,0,0-8.59-1.21c.81,15.1-3.86,30.95-7.93,44.75-16.69,51.85-67.94,30.09-106.21,24.21-9-1-14.62,8.59-22.08,11.8-13.59,4.26-27.94,2.9-41.42-1.87,11.43,17,28.14,29.69,46.52,34.79,5.7,1.58,11.78,2.44,17.25.38s10.08-7.75,9.77-14.24c20.23,15.67,47.25,17.5,70,8.6s41.38-27.43,55.5-49C516.87,517.15,523.55,501.75,518,488.13Z"
 ];
 
-export const chickenInWing = (
-  wing: number,
-  wingStyle: string,
-  shadeStyle: string,
-  tipShadeStyle: string,
-  s: number
-) => {
-  const style = [wingStyle, shadeStyle, shadeStyle, tipShadeStyle];
+export const chickenInWing1 = template<
+  [scale: number],
+  { wingStyle: string; shadeStyle: string }
+>/*svg*/ `
+  <path style="${wingStyle}" d="${scalePath(wing1Paths[0])}"/>
+  <path style="${shadeStyle}" d="${scalePath(wing1Paths[1])}"/>
+`;
 
-  return wingPaths[wing - 1]
-    .map(
-      (p, i) => /*svg*/ `
-        <path style="${style[i]}" d="${scalePath(s, p)}"/>
-      `
-    )
-    .join("");
-};
+const wing2Paths = [
+  "M375,582c5.66.4,10.16,9.36,8.19,14.68s-7.86,8.43-13.52,8.59-11.13-2.11-16.11-4.83c-20.62-11.24-36-30.58-45.79-51.94s-14.25-44.76-16.89-68.1c-.83-7.33-1.48-14.74-.75-22.08a34.56,34.56,0,0,1,3.55-12.9c3.58-6.72,10.18-11.44,17.29-14.18s14.75-3.68,22.33-4.43c12.45-1.22,25.1-1.95,37.38.4,15,2.87,28.76,10.18,42.87,16.1,30.3,12.71,64.49,19.18,96.2,10.56,3.27-.89,6.64-1.95,10-1.47,7.76,1.1,12.13,9.81,12.65,17.63.84,12.69-5.08,25.28-14.24,34.11s-21.27,14.15-33.7,16.85q10-1.47,20.14-2.23c3.65-.27,7.73-.34,10.48,2.07,2.6,2.28,3.18,6.25,2.19,9.56s-3.29,6.05-5.75,8.47c-10.68,10.5-25.32,16.45-40.2,18.08s-30-.86-44.23-5.51l15.46,10.28a15,15,0,0,1,5,4.52c2.11,3.56.86,8.37-1.95,11.41s-6.84,4.61-10.82,5.74c-19.34,5.45-39.92,2.17-59.73-1.14",
+  "M532.4,470c-.52-7.82-4.89-16.53-12.65-17.63-3.36-.48-6.73.58-10,1.47a114.72,114.72,0,0,1-26.63,3.87c-15.39,32-42.83,57.41-80.12,64.26a100.93,100.93,0,0,1-112.28-67.77c-.25,1.36-.45,2.72-.59,4.09-.73,7.34-.08,14.75.75,22.08,2.64,23.34,7.14,46.74,16.89,68.1s25.17,40.7,45.79,51.94c5,2.72,10.44,5,16.11,4.83s11.56-3.27,13.52-8.59c1.7-4.61-1.45-11.94-6-14.08l-2.15-.36,0-.24a6.07,6.07,0,0,1,2.18.6c19.15,3.18,38.94,6,57.58.78,4-1.13,8-2.71,10.82-5.74s4.06-7.85,1.95-11.41a15,15,0,0,0-5-4.52l-15.46-10.28c14.23,4.65,29.35,7.14,44.23,5.51s29.52-7.58,40.2-18.08c2.46-2.42,4.76-5.17,5.75-8.47s.41-7.28-2.19-9.56c-2.75-2.41-6.83-2.34-10.48-2.07q-10.11.76-20.14,2.23c12.43-2.7,24.53-8,33.7-16.85S533.24,482.72,532.4,470Z",
+  "M527.16,456.55C515.39,473.69,503.89,491.1,488,505c-32,26-71,41-112,41a163.75,163.75,0,0,1-76.21-19,166.48,166.48,0,0,0,8,21.49c9.76,21.36,25.17,40.7,45.79,51.94,5,2.72,10.44,5,16.11,4.83s11.56-3.27,13.52-8.59c1.7-4.61-1.45-11.94-6-14.08l-2.15-.36,0-.24a6.07,6.07,0,0,1,2.18.6c19.15,3.18,38.94,6,57.58.78,4-1.13,8-2.71,10.82-5.74s4.06-7.85,1.95-11.41a15,15,0,0,0-5-4.52l-15.46-10.28c14.23,4.65,29.35,7.14,44.23,5.51s29.52-7.58,40.2-18.08c2.46-2.42,4.76-5.17,5.75-8.47s.41-7.28-2.19-9.56c-2.75-2.41-6.83-2.34-10.48-2.07q-10.11.76-20.14,2.23c12.43-2.7,24.53-8,33.7-16.85S533.24,482.72,532.4,470A23.11,23.11,0,0,0,527.16,456.55Z"
+];
+
+export const chickenInWing2 = template<
+  [scale: number],
+  { wingStyle: string; shadeStyle: string }
+>/*svg*/ `
+  <path style="${wingStyle}" d="${scalePath(wing2Paths[0])}"/>
+  <path style="${shadeStyle}" d="${scalePath(wing2Paths[1])}"/>
+  <path style="${shadeStyle}" d="${scalePath(wing2Paths[2])}"/>
+`;
+
+const wing3Paths = [
+  "M388,462c-33.32-74.53-83-17-89,1-10.81,32.42-2.07,136.28,121.7,134.09s83.34-129.48,59.76-141-1.72,24-9.32,20.64-3.39-15.55-22.9-22.25-2.95,9.41-8.17,9.75-12.92-15.09-23.36-16.35,4,8.17.33,24.51S396.82,481.73,388,462Z",
+  "M295.89,495.81c2.94,43,30.43,103,124.81,101.28,72.18-1.28,88.51-45.1,84.91-83.69C481.82,529.45,451.73,534.92,424,538,378.14,542.33,330.05,527.17,295.89,495.81Z",
+  "M339,559c-12-4.5-24-11.82-32.64-22,15.06,32.23,48.34,61.22,114.34,60.05,54.57-1,77.22-26.25,83.46-55.21C460.34,580.74,392.79,578.48,339,559Z",
+  "M453,478c13.3,10.45,32.92,14.57,45.13,3.81-5.13-13.14-11.91-22.87-17.67-25.67-23.59-11.47-1.72,24-9.32,20.64s-3.39-15.55-22.9-22.25-2.95,9.41-8.17,9.75-12.92-15.09-23.36-16.35,4,8.17.33,24.51c-.09.39-.19.75-.29,1.12,3.25,2,7.07,3.25,11.25,4.44C437,480,446,472,453,478Z"
+];
+
+export const chickenInWing3 = template<
+  [scale: number],
+  { wingStyle: string; shadeStyle: string; tipStyle: string }
+>/*svg*/ `
+  <path style="${wingStyle}" d="${scalePath(wing3Paths[0])}"/>
+  <path style="${shadeStyle}" d="${scalePath(wing3Paths[1])}"/>
+  <path style="${shadeStyle}" d="${scalePath(wing3Paths[2])}"/>
+  <path style="${tipStyle}" d="${scalePath(wing3Paths[3])}"/>
+`;
 
 const lqtyBandCoords: [number, number, number, number, number][] = [
   [377.33, 638, 17.3, 10, 2],
@@ -224,10 +239,8 @@ const lqtyBandCoords: [number, number, number, number, number][] = [
   [377.33, 641.22, 17.3, 3.57, 0]
 ];
 
-export const chickenInLQTYBand = (s: number) => {
-  return /*svg*/ `
-    <rect style="fill: #5bb2e4" ${scaleRectCoords(s, ...lqtyBandCoords[0])}/>
-    <rect style="fill: #705ed6" ${scaleRectCoords(s, ...lqtyBandCoords[1])}/>
-    <rect style="fill: #2241c4" ${scaleRectCoords(s, ...lqtyBandCoords[2])}/>
-  `;
-};
+export const chickenInLQTYBand = template<[scale: number]>/*svg*/ `
+  <rect style="fill: #5bb2e4" ${scaleRectCoords(...lqtyBandCoords[0])}/>
+  <rect style="fill: #705ed6" ${scaleRectCoords(...lqtyBandCoords[1])}/>
+  <rect style="fill: #2241c4" ${scaleRectCoords(...lqtyBandCoords[2])}/>
+`;
