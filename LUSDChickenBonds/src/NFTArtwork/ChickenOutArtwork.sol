@@ -2,8 +2,9 @@
 pragma solidity ^0.8.10;
 
 import "./ChickenOutGenerated.sol";
+import "./ChickenOutTraitWeights.sol";
 
-contract ChickenOutArtwork is BondNFTArtworkBase, ChickenOutGenerated {
+contract ChickenOutArtwork is BondNFTArtworkBase, ChickenOutGenerated, ChickenOutTraitWeights {
     constructor(
         BondNFTArtworkCommon _common,
         ChickenOutGenerated1 _g1
@@ -36,11 +37,6 @@ contract ChickenOutArtwork is BondNFTArtworkBase, ChickenOutGenerated {
     ///////////////////////
     // Private functions //
     ///////////////////////
-
-    function _getChickenColor(uint256 _rand) private pure returns (EggTraitWeights.ShellColor) {
-        // TODO
-        return EggTraitWeights.ShellColor(_rand * 13 / 1e18);
-    }
 
     function _getObjectRainbowGradientUrl(string memory _tokenIDString)
         private
@@ -84,11 +80,11 @@ contract ChickenOutArtwork is BondNFTArtworkBase, ChickenOutGenerated {
         ChickenOutData memory _chickenOutData
     )
         private
-        pure
+        view
     {
         uint80 dna = _commonData.finalHalfDna;
 
-        _chickenOutData.chickenColor = _getChickenColor(_cutDNA(dna, 0, 80));
+        _chickenOutData.chickenColor = _getChickenColor(_cutDNA(dna, 0, 80), _commonData.shellColor);
 
         _chickenOutData.darkMode = (
             _commonData.shellColor       == EggTraitWeights.ShellColor.Luminous ||
