@@ -96,4 +96,69 @@ contract BLUSDLPZap {
 
         return bLUSDLUSD3CRVTokens;
     }
+
+    function removeLiquidityBalanced(uint256 _lpAmount, uint256 _minBLUSD, uint256 _minLUSD) external {
+        // pull LP tokens
+        bLUSDLUSD3CRVLPToken.transferFrom(msg.sender, address(this), _lpAmount);
+
+        // All those balances should be zero, but just in case:
+        uint256 initialLUSD3CRVBalance = lusd3CRVPool.balanceOf(address(this));
+        uint256 initialBLUSDBalance = bLUSDToken.balanceOf(address(this));
+
+        // withdraw bLUSD/LUSD-3CRV
+        bLUSDLUSD3CRVPool.remove_liquidity(_lpAmount, [_minBLUSD, 0], false, address(this));
+        uint256 bLUSDAmount = bLUSDToken.balanceOf(address(this)) - initialBLUSDBalance;
+        uint256 lusd3CRVAmount = lusd3CRVPool.balanceOf(address(this)) - initialLUSD3CRVBalance;
+
+        // withdraw LUSD from LUSD/3pool, and tranfer it to sender
+        if (lusd3CRVAmount > 0) {
+            lusd3CRVPool.remove_liquidity_one_coin(
+                lusd3CRVAmount,
+                0,
+                _minLUSD,
+                msg.sender
+            );
+        } else {
+            require(_minLUSD == 0, "Min LUSD amount not reached");
+        }
+
+        // transfer BLUSD
+        if (bLUSDAmount > 0) {
+            bLUSDToken.transfer(msg.sender, bLUSDAmount);
+        }
+    }
+
+    function removeLiquidityLUSD(uint256 _lpAmount, uint256 _minLUSD) external {
+        // pull LP tokens
+        bLUSDLUSD3CRVLPToken.transferFrom(msg.sender, address(this), _lpAmount);
+
+        // All those balances should be zero, but just in case:
+        uint256 initialLUSD3CRVBalance = lusd3CRVPool.balanceOf(address(this));
+
+        // withdraw bLUSD/LUSD-3CRV
+        bLUSDLUSD3CRVPool.remove_liquidity_one_coin(_lpAmount, 1, 0, false, address(this));
+
+        // withdraw LUSD from LUSD/3pool, and tranfer it to sender
+        lusd3CRVPool.remove_liquidity_one_coin(
+            lusd3CRVPool.balanceOf(address(this)) - initialLUSD3CRVBalance,
+            0,
+            _minLUSD,
+            msg.sender
+        );
+    }
+
+    function getMinWithdrawBalanced(uint256 _lpAmount) external view returns (uint256 bLUSDAmount, uint256 lusdAmount) {
+        bLUSDAmount = _lpAmount * bLUSDLUSD3CRVPool.balances(0) / bLUSDLUSD3CRVLPToken.totalSupply();
+        uint256 lusd3CRVAmount = _lpAmount * bLUSDLUSD3CRVPool.balances(1) / bLUSDLUSD3CRVLPToken.totalSupply();
+        lusdAmount = lusd3CRVPool.calc_withdraw_one_coin(lusd3CRVAmount, 0);
+
+        return (bLUSDAmount, lusdAmount);
+    }
+
+    function getMinWithdrawLUSD(uint256 _lpAmount) external view returns (uint256 lusdAmount) {
+        uint256 lusd3CRVAmount = bLUSDLUSD3CRVPool.calc_withdraw_one_coin(_lpAmount, 1);
+        lusdAmount = lusd3CRVPool.calc_withdraw_one_coin(lusd3CRVAmount, 0);
+
+        return lusdAmount;
+    }
 }
