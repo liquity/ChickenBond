@@ -83,7 +83,7 @@ contract ChickenInArtwork is BondNFTArtworkBase, ChickenInGenerated, ChickenInTr
         _chickenInData.chickenStyle = abi.encodePacked(
             "fill:",
             _chickenInData.isRainbow
-                ? string(abi.encodePacked('url(#ci-chicken-', _commonData.tokenID, '-chicken-rainbow-gradient)'))
+                ? string(abi.encodePacked('url(#ci-chicken-', _commonData.tokenIDString, '-chicken-rainbow-gradient)'))
                 : _chickenInData.chickenColor == EggTraitWeights.ShellColor.Luminous && _isMetallicCardColor(_commonData.cardColor)
                 ? _getSolidObjectColor(_translateMetallicCardColorToObjectColor(_commonData.cardColor))
                 : _chickenInData.chickenColor == EggTraitWeights.ShellColor.Luminous
