@@ -500,6 +500,70 @@ class LUSDChickenBondDeployment {
       config: this.config
     };
   }
+
+  async deployNFTArtworkUpgrade(chickenBondManagerAddress: string) {
+    const { deployer, factories, overrides } = this;
+
+    const chickenBondManager = factories.chickenBondManager.factory
+      .connect(deployer)
+      .attach(chickenBondManagerAddress);
+
+    const bondNFT = factories.bondNFT.factory
+      .connect(deployer)
+      .attach(await chickenBondManager.bondNFT());
+
+    const existingArtworkAddress = await bondNFT.artwork();
+
+    const bondNFTArtworkCommon = await this.deployContract(
+      factories.bondNFTArtworkCommon,
+      overrides
+    );
+
+    const chickenOutGenerated1 = await this.deployContract(
+      factories.chickenOutGenerated1,
+      overrides
+    );
+
+    const chickenOutArtwork = await this.deployContract(
+      factories.chickenOutArtwork,
+      bondNFTArtworkCommon.contract.address,
+      chickenOutGenerated1.contract.address,
+      overrides
+    );
+
+    const chickenInGenerated1 = await this.deployContract(factories.chickenInGenerated1, overrides);
+    const chickenInGenerated2 = await this.deployContract(factories.chickenInGenerated2, overrides);
+    const chickenInGenerated3 = await this.deployContract(factories.chickenInGenerated3, overrides);
+
+    const chickenInArtwork = await this.deployContract(
+      factories.chickenInArtwork,
+      bondNFTArtworkCommon.contract.address,
+      chickenInGenerated1.contract.address,
+      chickenInGenerated2.contract.address,
+      chickenInGenerated3.contract.address,
+      overrides
+    );
+
+    const bondNFTArtwork = await this.deployContract(
+      factories.bondNFTArtwork,
+      chickenBondManagerAddress,
+      existingArtworkAddress,
+      chickenOutArtwork.contract.address,
+      chickenInArtwork.contract.address,
+      overrides
+    );
+
+    return {
+      bondNFTArtwork,
+      bondNFTArtworkCommon,
+      chickenOutGenerated1,
+      chickenOutArtwork,
+      chickenInGenerated1,
+      chickenInGenerated2,
+      chickenInGenerated3,
+      chickenInArtwork
+    };
+  }
 }
 
 export const deployAndSetupContracts = async (
@@ -507,3 +571,10 @@ export const deployAndSetupContracts = async (
   params?: Readonly<Partial<LUSDChickenBondDeploymentParams>>
 ): Promise<LUSDChickenBondDeploymentResult> =>
   new LUSDChickenBondDeployment(deployer, params).deployAndSetupContracts();
+
+export const deployNFTArtworkUpgrade = async (
+  deployer: Signer,
+  chickenBondManagerAddress: string,
+  params?: Readonly<Partial<Omit<LUSDChickenBondDeploymentParams, "config">>>
+) =>
+  new LUSDChickenBondDeployment(deployer, params).deployNFTArtworkUpgrade(chickenBondManagerAddress);
