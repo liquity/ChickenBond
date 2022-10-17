@@ -81,6 +81,42 @@ const main = async () => {
     );
 
     fs.writeFileSync(path.join(svgDir, `${bondID}-${fileSuffix}.svg`), svg);
+
+    return metadata;
+  };
+
+  const findAttributeValue = (metadata: any, attributeKey: string) => {
+    for (const attribute of metadata.attributes) {
+      if (attribute.trait_type === attributeKey) {
+        return attribute.value;
+      }
+    }
+    return null;
+  };
+
+  const checkAttribute = (eggMetadata: object, finalMetadata: object, attributeKey: string, optional: boolean = false) => {
+    const finalAttribute = findAttributeValue(finalMetadata, attributeKey);;
+    if (optional && !finalAttribute) { return true; }
+
+    const eggAttribute = findAttributeValue(eggMetadata, attributeKey);
+
+    if (eggAttribute === finalAttribute) {
+      return true;
+    }
+
+    console.log('eggAttribute:   ', eggAttribute)
+    console.log('finalAttribute: ', eggAttribute)
+    return false;
+  };
+
+  const checkMetadata = (eggMetadata: object, finalMetadata: object) => {
+    //const attributesToCheck = ["Border", "Card"]
+    // Border
+    assert(checkAttribute(eggMetadata, finalMetadata, "Border"));
+    // Card
+    assert(checkAttribute(eggMetadata, finalMetadata, "Card"));
+    // Shell
+    assert(checkAttribute(eggMetadata, finalMetadata, "Shell", true));
   };
 
   // Enable chicken-ins
@@ -103,11 +139,12 @@ const main = async () => {
     const amount = 100 + 120000 * Math.random();
     const bondID = await createBond(amount);
 
-    await writeEgg(bondID, "1-egg");
+    const eggMetadata = await writeEgg(bondID, "1-egg");
 
+    let finalMetadata;
     if (Math.random() < 0.33) {
       await chickenOut(bondID);
-      await writeEgg(bondID, "2-chicken-out");
+      finalMetadata = await writeEgg(bondID, "2-chicken-out");
     } else {
       await setMocks(
         Math.random() < 0.33 ? 0 : 1,
@@ -116,8 +153,10 @@ const main = async () => {
       );
 
       await chickenIn(bondID);
-      await writeEgg(bondID, "2-chicken-in");
+      finalMetadata = await writeEgg(bondID, "2-chicken-in");
     }
+
+    checkMetadata(eggMetadata, finalMetadata);
   }
 };
 
