@@ -201,7 +201,37 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const bondNFTArtwork = await this.deployContract(factories.bondNFTArtwork, overrides);
+    const eggArtwork = await this.deployContract(factories.eggArtwork, overrides);
+
+    const bondNFTArtworkCommon = await this.deployContract(
+      factories.bondNFTArtworkCommon,
+      overrides
+    );
+
+    const chickenOutGenerated1 = await this.deployContract(
+      factories.chickenOutGenerated1,
+      overrides
+    );
+
+    const chickenOutArtwork = await this.deployContract(
+      factories.chickenOutArtwork,
+      bondNFTArtworkCommon.contract.address,
+      chickenOutGenerated1.contract.address,
+      overrides
+    );
+
+    const chickenInGenerated1 = await this.deployContract(factories.chickenInGenerated1, overrides);
+    const chickenInGenerated2 = await this.deployContract(factories.chickenInGenerated2, overrides);
+    const chickenInGenerated3 = await this.deployContract(factories.chickenInGenerated3, overrides);
+
+    const chickenInArtwork = await this.deployContract(
+      factories.chickenInArtwork,
+      bondNFTArtworkCommon.contract.address,
+      chickenInGenerated1.contract.address,
+      chickenInGenerated2.contract.address,
+      chickenInGenerated3.contract.address,
+      overrides
+    );
 
     const troveManager = await this.deployContract(factories.troveManager, overrides);
 
@@ -237,7 +267,7 @@ class LUSDChickenBondDeployment {
       factories.bondNFT,
       "LUSDBondNFT",
       "LUSDBOND",
-      bondNFTArtwork.contract.address,
+      eggArtwork.contract.address,
       params.bondNFTTransferLockoutPeriodSeconds,
       {
         troveManagerAddress: troveManager.contract.address,
@@ -315,6 +345,15 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const bondNFTArtwork = await this.deployContract(
+      factories.bondNFTArtwork,
+      chickenBondManager.contract.address,
+      eggArtwork.contract.address,
+      chickenOutArtwork.contract.address,
+      chickenInArtwork.contract.address,
+      overrides
+    );
+
     const underlingPrototype = await this.deployContract(
       factories.underlingPrototype,
       chickenBondManager.contract.address,
@@ -354,6 +393,14 @@ class LUSDChickenBondDeployment {
       curveBasePool,
       bondNFT,
       bondNFTArtwork,
+      eggArtwork,
+      bondNFTArtworkCommon,
+      chickenOutGenerated1,
+      chickenOutArtwork,
+      chickenInGenerated1,
+      chickenInGenerated2,
+      chickenInGenerated3,
+      chickenInArtwork,
       chickenBondManager,
       bLUSDToken,
       bLUSDCurveToken,
@@ -390,6 +437,12 @@ class LUSDChickenBondDeployment {
       () =>
         deployed.bLUSDToken.contract.setAddresses(
           deployed.chickenBondManager.contract.address,
+          overrides
+        ),
+
+      () =>
+        deployed.bondNFT.contract.setArtworkAddress(
+          deployed.bondNFTArtwork.contract.address,
           overrides
         ),
 
@@ -448,8 +501,68 @@ class LUSDChickenBondDeployment {
     };
   }
 
-  deployNFTArtwork() {
-    return this.deployContract(this.factories.bondNFTArtwork, this.overrides);
+  async deployNFTArtworkUpgrade(chickenBondManagerAddress: string) {
+    const { deployer, factories, overrides } = this;
+
+    const chickenBondManager = factories.chickenBondManager.factory
+      .connect(deployer)
+      .attach(chickenBondManagerAddress);
+
+    const bondNFT = factories.bondNFT.factory
+      .connect(deployer)
+      .attach(await chickenBondManager.bondNFT());
+
+    const existingArtworkAddress = await bondNFT.artwork();
+
+    const bondNFTArtworkCommon = await this.deployContract(
+      factories.bondNFTArtworkCommon,
+      overrides
+    );
+
+    const chickenOutGenerated1 = await this.deployContract(
+      factories.chickenOutGenerated1,
+      overrides
+    );
+
+    const chickenOutArtwork = await this.deployContract(
+      factories.chickenOutArtwork,
+      bondNFTArtworkCommon.contract.address,
+      chickenOutGenerated1.contract.address,
+      overrides
+    );
+
+    const chickenInGenerated1 = await this.deployContract(factories.chickenInGenerated1, overrides);
+    const chickenInGenerated2 = await this.deployContract(factories.chickenInGenerated2, overrides);
+    const chickenInGenerated3 = await this.deployContract(factories.chickenInGenerated3, overrides);
+
+    const chickenInArtwork = await this.deployContract(
+      factories.chickenInArtwork,
+      bondNFTArtworkCommon.contract.address,
+      chickenInGenerated1.contract.address,
+      chickenInGenerated2.contract.address,
+      chickenInGenerated3.contract.address,
+      overrides
+    );
+
+    const bondNFTArtwork = await this.deployContract(
+      factories.bondNFTArtwork,
+      chickenBondManagerAddress,
+      existingArtworkAddress,
+      chickenOutArtwork.contract.address,
+      chickenInArtwork.contract.address,
+      overrides
+    );
+
+    return {
+      bondNFTArtwork,
+      bondNFTArtworkCommon,
+      chickenOutGenerated1,
+      chickenOutArtwork,
+      chickenInGenerated1,
+      chickenInGenerated2,
+      chickenInGenerated3,
+      chickenInArtwork
+    };
   }
 }
 
@@ -459,7 +572,9 @@ export const deployAndSetupContracts = async (
 ): Promise<LUSDChickenBondDeploymentResult> =>
   new LUSDChickenBondDeployment(deployer, params).deployAndSetupContracts();
 
-export const deployNFTArtwork = async (
+export const deployNFTArtworkUpgrade = async (
   deployer: Signer,
+  chickenBondManagerAddress: string,
   params?: Readonly<Partial<Omit<LUSDChickenBondDeploymentParams, "config">>>
-) => new LUSDChickenBondDeployment(deployer, params).deployNFTArtwork();
+) =>
+  new LUSDChickenBondDeployment(deployer, params).deployNFTArtworkUpgrade(chickenBondManagerAddress);

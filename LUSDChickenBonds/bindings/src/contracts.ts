@@ -3,7 +3,15 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 
 import bondNFT from "../artifacts/BondNFT.json";
+import bondNFTArtworkSwitcher from "../artifacts/BondNFTArtworkSwitcher.json";
 import generativeEggArtwork from "../artifacts/GenerativeEggArtwork.json";
+import bondNFTArtworkCommon from "../artifacts/BondNFTArtworkCommon.json";
+import chickenOutGenerated1 from "../artifacts/ChickenOutGenerated1.json";
+import chickenOutArtwork from "../artifacts/ChickenOutArtwork.json";
+import chickenInGenerated1 from "../artifacts/ChickenInGenerated1.json";
+import chickenInGenerated2 from "../artifacts/ChickenInGenerated2.json";
+import chickenInGenerated3 from "../artifacts/ChickenInGenerated3.json";
+import chickenInArtwork from "../artifacts/ChickenInArtwork.json";
 import chickenBondManager from "../artifacts/ChickenBondManager.json";
 import erc20Faucet from "../artifacts/ERC20Faucet.json";
 import testnetBAMM from "../artifacts/TestnetBAMM.json";
@@ -27,7 +35,15 @@ import curveToken from "../artifacts/CurveToken.json";
 
 import {
   BondNFTFactory,
+  BondNFTArtworkSwitcherFactory,
   GenerativeEggArtworkFactory,
+  BondNFTArtworkCommonFactory,
+  ChickenOutGenerated1Factory,
+  ChickenOutArtworkFactory,
+  ChickenInGenerated1Factory,
+  ChickenInGenerated2Factory,
+  ChickenInGenerated3Factory,
+  ChickenInArtworkFactory,
   ChickenBondManagerFactory,
   ERC20FaucetFactory,
   TestnetBAMMFactory,
@@ -64,8 +80,48 @@ export interface LUSDChickenBondContractFactories {
   };
 
   bondNFTArtwork: {
+    contractName: "BondNFTArtworkSwitcher";
+    factory: BondNFTArtworkSwitcherFactory;
+  };
+
+  eggArtwork: {
     contractName: "GenerativeEggArtwork";
     factory: GenerativeEggArtworkFactory;
+  };
+
+  bondNFTArtworkCommon: {
+    contractName: "BondNFTArtworkCommon";
+    factory: BondNFTArtworkCommonFactory;
+  };
+
+  chickenOutGenerated1: {
+    contractName: "ChickenOutGenerated1";
+    factory: ChickenOutGenerated1Factory;
+  };
+
+  chickenOutArtwork: {
+    contractName: "ChickenOutArtwork";
+    factory: ChickenOutArtworkFactory;
+  };
+
+  chickenInGenerated1: {
+    contractName: "ChickenInGenerated1";
+    factory: ChickenInGenerated1Factory;
+  };
+
+  chickenInGenerated2: {
+    contractName: "ChickenInGenerated2";
+    factory: ChickenInGenerated2Factory;
+  };
+
+  chickenInGenerated3: {
+    contractName: "ChickenInGenerated3";
+    factory: ChickenInGenerated3Factory;
+  };
+
+  chickenInArtwork: {
+    contractName: "ChickenInArtwork";
+    factory: ChickenInArtworkFactory;
   };
 
   chickenBondManager: {
@@ -226,7 +282,15 @@ const checkArtifact = <T extends LUSDChickenBondContractName>(
 
 const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   bondNFT: checkArtifact("BondNFT", bondNFT),
-  bondNFTArtwork: checkArtifact("GenerativeEggArtwork", generativeEggArtwork),
+  bondNFTArtwork: checkArtifact("BondNFTArtworkSwitcher", bondNFTArtworkSwitcher),
+  eggArtwork: checkArtifact("GenerativeEggArtwork", generativeEggArtwork),
+  bondNFTArtworkCommon: checkArtifact("BondNFTArtworkCommon", bondNFTArtworkCommon),
+  chickenOutGenerated1: checkArtifact("ChickenOutGenerated1", chickenOutGenerated1),
+  chickenOutArtwork: checkArtifact("ChickenOutArtwork", chickenOutArtwork),
+  chickenInGenerated1: checkArtifact("ChickenInGenerated1", chickenInGenerated1),
+  chickenInGenerated2: checkArtifact("ChickenInGenerated2", chickenInGenerated2),
+  chickenInGenerated3: checkArtifact("ChickenInGenerated3", chickenInGenerated3),
+  chickenInArtwork: checkArtifact("ChickenInArtwork", chickenInArtwork),
   chickenBondManager: checkArtifact("ChickenBondManager", chickenBondManager),
   curvePool: checkArtifact("TestnetCurvePool", testnetCurvePool),
   curveBasePool: checkArtifact("TestnetCurveBasePool", testnetCurveBasePool),
