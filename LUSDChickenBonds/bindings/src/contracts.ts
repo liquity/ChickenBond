@@ -12,6 +12,7 @@ import chickenInGenerated1 from "../artifacts/ChickenInGenerated1.json";
 import chickenInGenerated2 from "../artifacts/ChickenInGenerated2.json";
 import chickenInGenerated3 from "../artifacts/ChickenInGenerated3.json";
 import chickenInArtwork from "../artifacts/ChickenInArtwork.json";
+import bondNFTArtworkSwitcherTester from "../artifacts/BondNFTArtworkSwitcherTester.json";
 import chickenBondManager from "../artifacts/ChickenBondManager.json";
 import erc20Faucet from "../artifacts/ERC20Faucet.json";
 import testnetBAMM from "../artifacts/TestnetBAMM.json";
@@ -44,6 +45,7 @@ import {
   ChickenInGenerated2Factory,
   ChickenInGenerated3Factory,
   ChickenInArtworkFactory,
+  BondNFTArtworkSwitcherTesterFactory,
   ChickenBondManagerFactory,
   ERC20FaucetFactory,
   TestnetBAMMFactory,
@@ -122,6 +124,11 @@ export interface LUSDChickenBondContractFactories {
   chickenInArtwork: {
     contractName: "ChickenInArtwork";
     factory: ChickenInArtworkFactory;
+  };
+
+  bondNFTArtworkSwitcherTester: {
+    contractName: "BondNFTArtworkSwitcherTester";
+    factory: BondNFTArtworkSwitcherTesterFactory;
   };
 
   chickenBondManager: {
@@ -240,6 +247,53 @@ export interface LUSDChickenBondContractFactories {
   };
 }
 
+export interface LUSDChickenBondArtworkContractFactories {
+  bondNFTArtworkSwitcher: {
+    contractName: "BondNFTArtworkSwitcher";
+    factory: BondNFTArtworkSwitcherFactory;
+  };
+
+  bondNFTArtworkCommon: {
+    contractName: "BondNFTArtworkCommon";
+    factory: BondNFTArtworkCommonFactory;
+  };
+
+  chickenOutGenerated1: {
+    contractName: "ChickenOutGenerated1";
+    factory: ChickenOutGenerated1Factory;
+  };
+
+  chickenOutArtwork: {
+    contractName: "ChickenOutArtwork";
+    factory: ChickenOutArtworkFactory;
+  };
+
+  chickenInGenerated1: {
+    contractName: "ChickenInGenerated1";
+    factory: ChickenInGenerated1Factory;
+  };
+
+  chickenInGenerated2: {
+    contractName: "ChickenInGenerated2";
+    factory: ChickenInGenerated2Factory;
+  };
+
+  chickenInGenerated3: {
+    contractName: "ChickenInGenerated3";
+    factory: ChickenInGenerated3Factory;
+  };
+
+  chickenInArtwork: {
+    contractName: "ChickenInArtwork";
+    factory: ChickenInArtworkFactory;
+  };
+
+  bondNFTArtworkSwitcherTester: {
+    contractName: "BondNFTArtworkSwitcherTester";
+    factory: BondNFTArtworkSwitcherTesterFactory;
+  };
+}
+
 export type LUSDChickenBondContractArtifacts = {
   [P in keyof LUSDChickenBondContractFactories]: ContractArtifact<
     LUSDChickenBondContractFactories[P]["contractName"]
@@ -259,6 +313,17 @@ export type LUSDChickenBondContractName =
 
 export type LUSDChickenBondContractsKey = keyof LUSDChickenBondContractFactories;
 export type LUSDChickenBondContractAddresses = Record<LUSDChickenBondContractsKey, string>;
+
+export type LUSDChickenBondArtworkContracts = {
+  [P in keyof LUSDChickenBondArtworkContractFactories]: LUSDChickenBondArtworkContractFactories[P] extends {
+    factory: TypedContractFactory<infer T>;
+  }
+    ? T
+    : never;
+};
+
+export type LUSDChickenBondArtworkContractsKey = keyof LUSDChickenBondArtworkContractFactories;
+export type LUSDChickenBondArtworkContractAddresses = Record<LUSDChickenBondArtworkContractsKey, string>;
 
 export interface ContractArtifact<T extends string = string> {
   contractName: T;
@@ -291,6 +356,7 @@ const getContractArtifacts = (): LUSDChickenBondContractArtifacts => ({
   chickenInGenerated2: checkArtifact("ChickenInGenerated2", chickenInGenerated2),
   chickenInGenerated3: checkArtifact("ChickenInGenerated3", chickenInGenerated3),
   chickenInArtwork: checkArtifact("ChickenInArtwork", chickenInArtwork),
+  bondNFTArtworkSwitcherTester: checkArtifact("BondNFTArtworkSwitcherTester", bondNFTArtworkSwitcherTester),
   chickenBondManager: checkArtifact("ChickenBondManager", chickenBondManager),
   curvePool: checkArtifact("TestnetCurvePool", testnetCurvePool),
   curveBasePool: checkArtifact("TestnetCurveBasePool", testnetCurveBasePool),
@@ -348,3 +414,12 @@ export const getContractFactories = (deployer: Signer): LUSDChickenBondContractF
     factory: new ContractWithEventParsingFactory(abi, bytecode, deployer) as TypedContractFactory
   })) as LUSDChickenBondContractFactories;
 };
+
+export const mapArtworkContracts = <T, U>(
+  contracts: Record<LUSDChickenBondArtworkContractsKey, T>,
+  f: (t: T, key: LUSDChickenBondArtworkContractsKey) => U
+) =>
+  Object.fromEntries(
+    Object.entries(contracts).map(([key, t]) => [key, f(t, key as LUSDChickenBondArtworkContractsKey)])
+  ) as Record<LUSDChickenBondArtworkContractsKey, U>;
+
