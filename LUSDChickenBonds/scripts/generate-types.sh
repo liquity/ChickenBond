@@ -16,6 +16,7 @@ npx typechain --target ethers-v5 --out-dir ../types \
 
 # Running the command again for other directories to avoid unwanted nested directory structure output
 npx typechain --target ethers-v5 --out-dir ../types/external \
+'../external-abis/CurveLiquidityGaugeV5.json' \
 '../external-abis/CurveCryptoSwap2ETH.json' \
 '../external-abis/CurveRegistrySwaps.json' \
 
