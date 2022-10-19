@@ -60,28 +60,35 @@ const permute = (n: number) => {
 };
 
 const main = async () => {
-  const [actualNetwork, txCount, numUnderlings, sqrtEffLambda] = await Promise.all([
-    provider.getNetwork(),
-    harvester.getTransactionCount(),
-    prankster.numUnderlings(),
-    getSqrtEffLambda()
+  const [
+    actualNetwork
+    // txCount,
+    // numUnderlings,
+    // sqrtEffLambda
+  ] = await Promise.all([
+    provider.getNetwork()
+    // harvester.getTransactionCount(),
+    // prankster.numUnderlings(),
+    // getSqrtEffLambda()
   ]);
 
   if (actualNetwork.chainId !== testnet.chainId) {
     throw new Error(`Wrong network (got ${actualNetwork.chainId}, expected ${testnet.chainId})`);
   }
 
-  // Don't wait for inclusion, just broadcast both TXs
-  await prankster.whip(
-    permute(numUnderlings.toNumber()).slice(0, 10),
-    Decimal.from(sqrtEffLambda).hex,
-    {
-      gasLimit: 8000000,
-      nonce: txCount
-    }
-  );
+  // // Don't wait for inclusion, just broadcast both TXs
+  // await prankster.whip(
+  //   permute(numUnderlings.toNumber()).slice(0, 10),
+  //   Decimal.from(sqrtEffLambda).hex,
+  //   {
+  //     gasLimit: 8000000,
+  //     nonce: txCount
+  //   }
+  // );
 
-  await prankster.harvest({ nonce: txCount + 1 });
+  await prankster.harvest({
+    // nonce: txCount + 1
+  });
 };
 
 main().catch(err => {
