@@ -12,6 +12,7 @@ import {
   getContractFactories,
   LUSDChickenBondContractAddresses,
   LUSDChickenBondContracts,
+  LUSDChickenBondArtworkContracts,
   mapContracts
 } from "./contracts";
 
@@ -34,12 +35,17 @@ export interface LUSDChickenBondDeploymentManifest {
 }
 
 export interface DeployedContract<T extends TypedContract = TypedContract> {
+  contractName: string;
   contract: T;
   receipt: TransactionReceipt;
 }
 
 export type LUSDChickenBondDeployedContracts = {
   [P in keyof LUSDChickenBondContracts]: DeployedContract<LUSDChickenBondContracts[P]>;
+};
+
+export type LUSDChickenBondArtworkDeployedContracts = {
+  [P in keyof LUSDChickenBondArtworkContracts]: DeployedContract<LUSDChickenBondArtworkContracts[P]>;
 };
 
 export interface LUSDChickenBondDeploymentResult {
@@ -91,7 +97,7 @@ class LUSDChickenBondDeployment {
 
     log();
 
-    return { contract, receipt };
+    return { contractName, contract, receipt };
   }
 
   private async deployContractViaFactoryContract<T extends TypedContract>(
@@ -118,7 +124,7 @@ class LUSDChickenBondDeployment {
 
     log();
 
-    return { contract, receipt };
+    return { contractName, contract, receipt };
   }
 
   private async deployContracts(): Promise<LUSDChickenBondDeployedContracts> {
@@ -313,6 +319,7 @@ class LUSDChickenBondDeployment {
     ](...bLUSDCurvePoolCoins, overrides);
 
     const bLUSDCurvePool = {
+      contractName: "bLUSDCurvePool",
       contract: factories.bLUSDCurvePool.factory
         .connect(this.deployer)
         .attach(bLUSDCurvePoolAddress),
@@ -348,6 +355,15 @@ class LUSDChickenBondDeployment {
     const bondNFTArtwork = await this.deployContract(
       factories.bondNFTArtwork,
       chickenBondManager.contract.address,
+      eggArtwork.contract.address,
+      chickenOutArtwork.contract.address,
+      chickenInArtwork.contract.address,
+      overrides
+    );
+
+    const bondNFTArtworkSwitcherTester = await this.deployContract(
+      factories.bondNFTArtworkSwitcherTester,
+      bondNFT.contract.address,
       eggArtwork.contract.address,
       chickenOutArtwork.contract.address,
       chickenInArtwork.contract.address,
@@ -401,6 +417,7 @@ class LUSDChickenBondDeployment {
       chickenInGenerated2,
       chickenInGenerated3,
       chickenInArtwork,
+      bondNFTArtworkSwitcherTester,
       chickenBondManager,
       bLUSDToken,
       bLUSDCurveToken,
@@ -501,9 +518,8 @@ class LUSDChickenBondDeployment {
     };
   }
 
-  async deployNFTArtworkUpgrade(chickenBondManagerAddress: string) {
-    const { deployer, factories, overrides } = this;
-
+  async getBondNFT(chickenBondManagerAddress: string) {
+    const { deployer, factories } = this;
     const chickenBondManager = factories.chickenBondManager.factory
       .connect(deployer)
       .attach(chickenBondManagerAddress);
@@ -512,6 +528,13 @@ class LUSDChickenBondDeployment {
       .connect(deployer)
       .attach(await chickenBondManager.bondNFT());
 
+    return bondNFT;
+  }
+
+  async deployNFTArtworkUpgrade(chickenBondManagerAddress: string): Promise<LUSDChickenBondArtworkDeployedContracts> {
+    const { factories, overrides } = this;
+
+    const bondNFT = await this.getBondNFT(chickenBondManagerAddress);
     const existingArtworkAddress = await bondNFT.artwork();
 
     const bondNFTArtworkCommon = await this.deployContract(
@@ -544,7 +567,7 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
-    const bondNFTArtwork = await this.deployContract(
+    const bondNFTArtworkSwitcher = await this.deployContract(
       factories.bondNFTArtwork,
       chickenBondManagerAddress,
       existingArtworkAddress,
@@ -553,15 +576,25 @@ class LUSDChickenBondDeployment {
       overrides
     );
 
+    const bondNFTArtworkSwitcherTester = await this.deployContract(
+      factories.bondNFTArtworkSwitcherTester,
+      bondNFT.address,
+      existingArtworkAddress,
+      chickenOutArtwork.contract.address,
+      chickenInArtwork.contract.address,
+      overrides
+    );
+
     return {
-      bondNFTArtwork,
+      bondNFTArtworkSwitcher,
       bondNFTArtworkCommon,
       chickenOutGenerated1,
       chickenOutArtwork,
       chickenInGenerated1,
       chickenInGenerated2,
       chickenInGenerated3,
-      chickenInArtwork
+      chickenInArtwork,
+      bondNFTArtworkSwitcherTester
     };
   }
 }
@@ -578,3 +611,10 @@ export const deployNFTArtworkUpgrade = async (
   params?: Readonly<Partial<Omit<LUSDChickenBondDeploymentParams, "config">>>
 ) =>
   new LUSDChickenBondDeployment(deployer, params).deployNFTArtworkUpgrade(chickenBondManagerAddress);
+
+export const getBondNFT = async (
+  deployer: Signer,
+  chickenBondManagerAddress: string,
+  params?: Readonly<Partial<Omit<LUSDChickenBondDeploymentParams, "config">>>
+) =>
+  new LUSDChickenBondDeployment(deployer, params).getBondNFT(chickenBondManagerAddress);

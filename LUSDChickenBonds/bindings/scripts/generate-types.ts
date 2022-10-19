@@ -13,6 +13,7 @@ import ChickenInGenerated1 from "../../out/ChickenInGenerated.sol/ChickenInGener
 import ChickenInGenerated2 from "../../out/ChickenInGenerated.sol/ChickenInGenerated2.json";
 import ChickenInGenerated3 from "../../out/ChickenInGenerated.sol/ChickenInGenerated3.json";
 import ChickenInArtwork from "../../out/ChickenInArtwork.sol/ChickenInArtwork.json";
+import BondNFTArtworkSwitcherTester from "../../out/BondNFTArtworkSwitcherTester.sol/BondNFTArtworkSwitcherTester.json";
 import ChickenBondManager from "../../out/ChickenBondManager.sol/ChickenBondManager.json";
 import ERC20Faucet from "../../out/ERC20Faucet.sol/ERC20Faucet.json";
 import TestnetBAMM from "../../out/TestnetBAMM.sol/TestnetBAMM.json";
@@ -188,6 +189,7 @@ const contractArtifacts = Object.entries({
   ChickenInGenerated2,
   ChickenInGenerated3,
   ChickenInArtwork,
+  BondNFTArtworkSwitcherTester,
   ChickenBondManager,
   ERC20Faucet,
   TestnetBAMM,

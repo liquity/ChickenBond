@@ -35,6 +35,26 @@
 
 [Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/0x50eb4e127b2dd5a506b7ffaabcf85f40ca7e31dbce3a2f861b63ce3492e80d0d)
 
+[BondNFTArtworkSwitcher](https://etherscan.io/tx/0x56041bdc2f91e492738432ef09a2a110f1c0c5aa51dfdbb233502916a0b9f914)
+
+[BondNFTArtworkCommon](https://etherscan.io/tx/0x5e549307562b4c8c1fcc578644e03df96736e8aa5dae048af79a342c1e013f4c)
+
+[ChickenOutGenerated1](https://etherscan.io/tx/0x886e70f16204c4307772a4fe28e5753a0258cd58801c92d3f2b0e0b203414f95)
+
+[ChickenOutArtwork](https://etherscan.io/tx/0x33e20c7b5c8c471a84e5fb0a98df8deb0b81adc4f4863bcffac419d2153b920f)
+
+[ChickenInGenerated1](https://etherscan.io/tx/0xc826a6fa000201c48084866252e941c4523106f747b21e8d9a64848f8cb51f0a)
+
+[ChickenInGenerated2](https://etherscan.io/tx/0x882853e61b668cc4fce686f7edd1788af441d7da43700c4f96c488828aa063a1)
+
+[ChickenInGenerated3](https://etherscan.io/tx/0x19b564ec12c2ead225ef5aa1b0a89e57899d4ddd48489949835cc7be35f1aaab)
+
+[ChickenInArtwork](https://etherscan.io/tx/0x2681a447a76db7b096d9baf33f69b71415cfe41d8914546a861886b250b525ea)
+
+[BondNFTArtworkSwitcherTester](https://etherscan.io/tx/0x58d5168c53dd8619bad282951d77d7e541704f2e0dd899012e42bca57ec339ee)
+
+[Set final Artwork address](https://etherscan.io/tx/0xc0acfcfc90b84e0a4efed0314ab862a64db9bc584967cadd44391903034c0931)
+
 # Tests
 
 [Create bond 1](https://etherscan.io/tx/0xc4d2af59d1d0fe68cd269c208a4b97afde7d4b3a73dae04d0a03f67d913f9025)
