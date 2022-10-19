@@ -77,3 +77,7 @@
 
 [Failed NFT transfer during lockout period](https://etherscan.io/tx/0x6a2dd04458e4c00190d659a9f17be9dd26fc0c55780703908eab6bbefa43b7cf)
 
+[Harvest previous to first Chicken In](https://etherscan.io/tx/0x7564611b1d27e0a0280bc25ac635b7f0804b2fe53cc8a438f6eba25556c6498d)
+
+[First Chicken In, bond 1](https://etherscan.io/tx/0x4c7a8b762ff2e0e76f5fd6808a9da75bee29207c08e3ca82de508dac580a174b)
+
