@@ -38,6 +38,26 @@
 
 [bLUSD Curve Liquidity management Zap](https://etherscan.io/tx/0x9e8f2634d32616c3a6dfebc818c6cf78bf7baac85f021131a061aef7d4f80d14)
 
+[BondNFTArtworkSwitcher](https://etherscan.io/tx/0x56041bdc2f91e492738432ef09a2a110f1c0c5aa51dfdbb233502916a0b9f914)
+
+[BondNFTArtworkCommon](https://etherscan.io/tx/0x5e549307562b4c8c1fcc578644e03df96736e8aa5dae048af79a342c1e013f4c)
+
+[ChickenOutGenerated1](https://etherscan.io/tx/0x886e70f16204c4307772a4fe28e5753a0258cd58801c92d3f2b0e0b203414f95)
+
+[ChickenOutArtwork](https://etherscan.io/tx/0x33e20c7b5c8c471a84e5fb0a98df8deb0b81adc4f4863bcffac419d2153b920f)
+
+[ChickenInGenerated1](https://etherscan.io/tx/0xc826a6fa000201c48084866252e941c4523106f747b21e8d9a64848f8cb51f0a)
+
+[ChickenInGenerated2](https://etherscan.io/tx/0x882853e61b668cc4fce686f7edd1788af441d7da43700c4f96c488828aa063a1)
+
+[ChickenInGenerated3](https://etherscan.io/tx/0x19b564ec12c2ead225ef5aa1b0a89e57899d4ddd48489949835cc7be35f1aaab)
+
+[ChickenInArtwork](https://etherscan.io/tx/0x2681a447a76db7b096d9baf33f69b71415cfe41d8914546a861886b250b525ea)
+
+[BondNFTArtworkSwitcherTester](https://etherscan.io/tx/0x58d5168c53dd8619bad282951d77d7e541704f2e0dd899012e42bca57ec339ee)
+
+[Set final Artwork address](https://etherscan.io/tx/0xc0acfcfc90b84e0a4efed0314ab862a64db9bc584967cadd44391903034c0931)
+
 # Tests
 
 [Create bond 1](https://etherscan.io/tx/0xc4d2af59d1d0fe68cd269c208a4b97afde7d4b3a73dae04d0a03f67d913f9025)
@@ -59,4 +79,8 @@
 [Failed shift from SP to Curve: bootstrap period](https://etherscan.io/tx/0xfeb4534a4e06bb9efdeb981934eb54ac8869cd2ca061a985e830106172a68918)
 
 [Failed NFT transfer during lockout period](https://etherscan.io/tx/0x6a2dd04458e4c00190d659a9f17be9dd26fc0c55780703908eab6bbefa43b7cf)
+
+[Harvest previous to first Chicken In](https://etherscan.io/tx/0x7564611b1d27e0a0280bc25ac635b7f0804b2fe53cc8a438f6eba25556c6498d)
+
+[First Chicken In, bond 1](https://etherscan.io/tx/0x4c7a8b762ff2e0e76f5fd6808a9da75bee29207c08e3ca82de508dac580a174b)
 

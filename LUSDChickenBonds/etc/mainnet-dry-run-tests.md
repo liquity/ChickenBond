@@ -155,6 +155,28 @@ Earning rewards from Gauge:
 
 [Connect B.AMM to ChickenBondManager](https://etherscan.io/tx/0xe66acd86e0a36353a96951c511fc26e243223ab37964ecf9a0c584abce09a308)
 
+### Final Artwork
+
+[BondNFTArtworkSwitcher](https://etherscan.io/tx/0x5b88cc81bf4130d3afbeee913b68e61e9a453a2b19a49c2ed1b9799fb760175b)
+
+[BondNFTArtworkCommon](https://etherscan.io/tx/0xa5986a29252bff5652245d44e6b616ff40afcdffa1d6d35bbec2551fbe16ba8e)
+
+[ChickenOutGenerated1](https://etherscan.io/tx/0x074845224915e8a19ba12d38d405ac08017bec670c7ec075b05a430509c41a20)
+
+[ChickenOutArtwork](https://etherscan.io/tx/0x839932a0646b5323de8d48b6ff536f7ce3852dd655a8f77dbf034d2b12a1c24d)
+
+[ChickenInGenerated1](https://etherscan.io/tx/0x9a4111645ff43f22c86d5cfab0b4695af4b1a28beca181a6364096f51b830557)
+
+[ChickenInGenerated2](https://etherscan.io/tx/0x607385bf119bb3bced0cbd0e1766e6538a00b4fc984b85fd7de88fa96c3db6aa)
+
+[ChickenInGenerated3](https://etherscan.io/tx/0x41eb7e9895f2bd03f1ca64534d4f57b3c138a3aa1498d799c0f1e69e92fafa50)
+
+[ChickenInArtwork](https://etherscan.io/tx/0x9b7b0cd2343e461846789b91db68ee340fca0e30da8c412c30d65cba09196c70)
+
+[BondNFTArtworkSwitcherTester](https://etherscan.io/tx/0x0e6500e529b4afa987bd3501a088adb5619ac23d7d680c7a29ba21beedee53e3)
+
+[Set final Artwork address](https://etherscan.io/tx/0x8958edbbeb6fc50731b70cffb9a3e5a8a19a7f8f13df58cfb2f7050709392db6)
+
 ## Tests
 
 [Create bond 3](https://etherscan.io/tx/0x338a5522bbad1b05b073659febced58b4e1f6ed9c2c57191258aed880c4f66e1)

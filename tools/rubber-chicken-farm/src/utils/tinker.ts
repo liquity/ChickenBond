@@ -10,7 +10,7 @@ import {
   connectToContracts,
   CurveCryptoSwap2ETH,
   deployAndSetupContracts,
-  deployNFTArtwork,
+  deployNFTArtworkUpgrade,
   LUSDChickenBondContracts,
   LUSDChickenBondDeploymentManifest,
   LUSDChickenBondDeploymentResult
@@ -89,7 +89,7 @@ export interface LUSDChickenBondGlobalFunctions {
   redeem(amount: Decimalish): Promise<void>;
   redeemAll(): Promise<void>;
 
-  deployNFTArtwork(): Promise<unknown>;
+  deployNFTArtworkUpgrade(chickenBondManagerAddress: string): Promise<unknown>;
   setNFTArtwork(address: string): Promise<void>;
   migrate(): Promise<void>;
 
@@ -195,6 +195,7 @@ export const getLUSDChickenBondGlobalFunctions = (
     globalObj.deployment = await deployAndSetupContracts(deployer, {
       log: true,
       config: {
+        lusdFaucetTapAmount: BigNumber.from(Decimal.from(1000000000).hex),
         yearnGovernanceAddress: await deployer.getAddress() // let us play around with migration ;-)
       }
     });
@@ -392,9 +393,27 @@ export const getLUSDChickenBondGlobalFunctions = (
     )();
   },
 
-  deployNFTArtwork: () => deployNFTArtwork(globalObj.user, { log: true }),
+  async deployNFTArtworkUpgrade(chickenBondManagerAddress) {
+    const deployment = await deployNFTArtworkUpgrade(deployer, chickenBondManagerAddress, {
+      log: true
+    });
 
-  async setNFTArtwork(address: string) {
+    console.log("Deployment succeeded! Addresses:");
+
+    console.log(
+      JSON.stringify(
+        Object.fromEntries(
+          Object.entries(deployment).map(([name, deployed]) => [name, deployed.contract.address])
+        ),
+        null,
+        2
+      )
+    );
+
+    return deployment;
+  },
+
+  async setNFTArtwork(address) {
     await receipt(() => globalObj.contracts.bondNFT.setArtworkAddress(address))();
   },
 

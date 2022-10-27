@@ -1,11 +1,14 @@
 import {
+  beaks,
   ChickenInTraits,
+  combs,
   isLuminous,
   isMetallicColor,
   isRainbowColor,
   metallicColors,
   scales,
-  solidShellColors
+  solidShellColors,
+  tails
 } from "../traits";
 
 import { CommonArtworkParams } from "./common/types";
@@ -32,10 +35,15 @@ import {
   chickenInShadow,
   chickenInTail,
   chickenInWattle,
-  chickenInWing
+  chickenInWing1,
+  chickenInWing2,
+  chickenInWing3
 } from "./scaling/chickenIn";
 
 interface ChickenInArtworkParams extends CommonArtworkParams, ChickenInTraits {}
+
+const globalScale = 0.9;
+const sizeRange = Object.values(scales).map(s => s * globalScale);
 
 export const generateChickenInSVG = (params: ChickenInArtworkParams) => {
   const {
@@ -54,7 +62,7 @@ export const generateChickenInSVG = (params: ChickenInArtworkParams) => {
   } = params;
 
   const darkMode = isLuminous(chickenColor);
-  const scale = 0.9 * scales[size];
+  const scale = globalScale * scales[size];
 
   const chickenFill =
     isRainbowColor(chickenColor) || (isLuminous(chickenColor) && isRainbowColor(cardColor))
@@ -112,7 +120,7 @@ export const generateChickenInSVG = (params: ChickenInArtworkParams) => {
   return /*svg*/ `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 1050">
   <style>
-    ${chickenInAnimations(tokenID, scale)}
+    ${chickenInAnimations.instantiate([scale], { tokenID })}
   </style>
 
   <defs>
@@ -150,52 +158,80 @@ export const generateChickenInSVG = (params: ChickenInArtworkParams) => {
     ${darkMode ? darkModeBorder(params) : lightModeBorder(params)}
     ${darkMode ? darkModeCard(params) : lightModeCard(params)}
 
-    ${chickenInShadow(scale)}
-    ${chickenInLegs(legStyle, scale)}
+    ${chickenInShadow.instantiate([scale], {})}
+    ${chickenInLegs.instantiate([scale], { style: legStyle })}
 
     <g class="ci-breath">
-      ${chickenInComb(comb, caruncleStyle, scale)}
-      ${isMetallicColor(chickenColor) ? chickenInComb(comb, bodyShadeStyle, scale) : ""}
+      ${chickenInComb.instantiate([scale, comb], { style: caruncleStyle })}
+      ${
+        isMetallicColor(chickenColor)
+          ? chickenInComb.instantiate([scale, comb], { style: bodyShadeStyle })
+          : ""
+      }
       ${
         chickenColor === "bronze" || chickenColor === "silver"
-          ? chickenInComb(comb, bodyShadeStyle, scale)
+          ? chickenInComb.instantiate([scale, comb], { style: bodyShadeStyle })
           : ""
       }
 
-      ${chickenInBeak(beak, beakStyle, scale)}
-      ${isMetallicColor(chickenColor) ? chickenInBeak(beak, bodyShadeStyle, scale) : ""}
+      ${chickenInBeak.instantiate([scale, beak], { style: beakStyle })}
+      ${
+        isMetallicColor(chickenColor)
+          ? chickenInBeak.instantiate([scale, beak], { style: bodyShadeStyle })
+          : ""
+      }
       ${
         chickenColor === "bronze" || chickenColor === "silver"
-          ? chickenInBeak(beak, bodyShadeStyle, scale)
+          ? chickenInBeak.instantiate([scale, beak], { style: bodyShadeStyle })
           : ""
       }
 
-      ${chickenInWattle(caruncleStyle, scale)}
-      ${isMetallicColor(chickenColor) ? chickenInWattle(bodyShadeStyle, scale) : ""}
+      ${chickenInWattle.instantiate([scale], { style: caruncleStyle })}
+      ${
+        isMetallicColor(chickenColor)
+          ? chickenInWattle.instantiate([scale], { style: bodyShadeStyle })
+          : ""
+      }
       ${
         chickenColor === "bronze" || chickenColor === "silver"
-          ? chickenInWattle(bodyShadeStyle, scale)
+          ? chickenInWattle.instantiate([scale], { style: bodyShadeStyle })
           : ""
       }
 
-      ${chickenInBody(chickenStyle, bodyShadeStyle, scale)}
-      ${chickenInEye(scale)}
-      ${chickenInCheek(cheekStyle, scale)}
+      ${chickenInBody.instantiate([scale], { bodyStyle: chickenStyle, shadeStyle: bodyShadeStyle })}
+      ${chickenInEye.instantiate([scale], {})}
+      ${chickenInCheek.instantiate([scale], { style: cheekStyle })}
 
-      ${chickenInTail(tail, chickenStyle, scale)}
-      ${chickenInTail(tail, bodyShadeStyle, scale)}
+      ${chickenInTail.instantiate([scale, tail], { style: chickenStyle })}
+      ${chickenInTail.instantiate([scale, tail], { style: bodyShadeStyle })}
       ${
         chickenColor === "bronze" || chickenColor === "silver"
-          ? chickenInTail(tail, bodyShadeStyle, scale)
+          ? chickenInTail.instantiate([scale, tail], { style: bodyShadeStyle })
           : ""
       }
     </g>
 
     <g class="ci-wing">
-      ${chickenInWing(wing, chickenStyle, wingShadeStyle, wingTipShadeStyle, scale)}
+      ${
+        wing === 1
+          ? chickenInWing1.instantiate([scale], {
+              wingStyle: chickenStyle,
+              shadeStyle: wingShadeStyle
+            })
+          : wing === 2
+          ? chickenInWing2.instantiate([scale], {
+              wingStyle: chickenStyle,
+              shadeStyle: wingShadeStyle
+            })
+          : chickenInWing3.instantiate([scale], {
+              wingStyle: chickenStyle,
+              shadeStyle: wingShadeStyle,
+              tipStyle: wingTipShadeStyle
+            })
+      }
     </g>
-  
-    ${lqtyBand ? chickenInLQTYBand(scale) : ""}
+
+    ${lqtyBand ? chickenInLQTYBand.instantiate([scale], {}) : ""}
 
     ${
       trove
@@ -240,3 +276,230 @@ export const generateChickenInSVG = (params: ChickenInArtworkParams) => {
 </svg>
 `;
 };
+
+export const chickenInSolidity = () =>
+  `
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.10;
+
+import "./CommonData.sol";
+import "./ChickenInData.sol";
+
+${chickenInAnimations.solidity(
+  "ChickenInAnimations",
+  "getSVGAnimations(CommonData calldata _commonData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  { tokenID: "_commonData.tokenIDString" }
+)}
+
+${chickenInShadow.solidity(
+  "ChickenInShadow",
+  "getSVGShadow(CommonData calldata _commonData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  {}
+)}
+
+${chickenInLegs.solidity(
+  "ChickenInLegs",
+  "getSVGLegs(CommonData calldata _commonData, ChickenInData calldata _chickenInData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  { style: "_chickenInData.legStyle" }
+)}
+
+${chickenInBeak.solidity(
+  "ChickenInBeak",
+  "getSVGBeakPath(CommonData calldata _commonData, ChickenInData calldata _chickenInData, bytes calldata _style)",
+  [
+    ["uint256(_commonData.size)", sizeRange],
+    ["_chickenInData.beak - 1", beaks]
+  ],
+  { style: "_style" }
+)}
+
+${chickenInWattle.solidity(
+  "ChickenInWattle",
+  "getSVGWattlePath(CommonData calldata _commonData, bytes calldata _style)",
+  [["uint256(_commonData.size)", sizeRange]],
+  { style: "_style" }
+)}
+
+${chickenInBody.solidity(
+  "ChickenInBody",
+  "getSVGBody(CommonData calldata _commonData, ChickenInData calldata _chickenInData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  { bodyStyle: "_chickenInData.chickenStyle", shadeStyle: "_chickenInData.bodyShadeStyle" }
+)}
+
+${chickenInEye.solidity(
+  "ChickenInEye",
+  "getSVGEye(CommonData calldata _commonData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  {}
+)}
+
+${chickenInComb.solidity(
+  "ChickenInComb",
+  "getSVGCombPath(CommonData calldata _commonData, ChickenInData calldata _chickenInData, bytes calldata _style)",
+  [
+    ["uint256(_commonData.size)", sizeRange],
+    ["_chickenInData.comb - 1", combs]
+  ],
+  { style: "_style" }
+)}
+
+${chickenInCheek.solidity(
+  "ChickenInCheek",
+  "getSVGCheek(CommonData calldata _commonData, ChickenInData calldata _chickenInData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  { style: "_chickenInData.cheekStyle" }
+)}
+
+${chickenInTail.solidity(
+  "ChickenInTail",
+  "getSVGTailPath(CommonData calldata _commonData, ChickenInData calldata _chickenInData, bytes calldata _style)",
+  [
+    ["uint256(_commonData.size)", sizeRange],
+    ["_chickenInData.tail - 1", tails]
+  ],
+  { style: "_style" }
+)}
+
+${chickenInWing1.solidity(
+  "ChickenInWing1",
+  "getSVGWing1(CommonData calldata _commonData, ChickenInData calldata _chickenInData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  { wingStyle: "_chickenInData.chickenStyle", shadeStyle: "_chickenInData.wingShadeStyle" }
+)}
+
+${chickenInWing2.solidity(
+  "ChickenInWing2",
+  "getSVGWing2(CommonData calldata _commonData, ChickenInData calldata _chickenInData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  { wingStyle: "_chickenInData.chickenStyle", shadeStyle: "_chickenInData.wingShadeStyle" }
+)}
+
+${chickenInWing3.solidity(
+  "ChickenInWing3",
+  "getSVGWing3(CommonData calldata _commonData, ChickenInData calldata _chickenInData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  {
+    wingStyle: "_chickenInData.chickenStyle",
+    shadeStyle: "_chickenInData.wingShadeStyle",
+    tipStyle: "_chickenInData.wingTipShadeStyle"
+  }
+)}
+
+${chickenInLQTYBand.solidity(
+  "ChickenInLQTYBand",
+  "getSVGLQTYBand(CommonData calldata _commonData)",
+  [["uint256(_commonData.size)", sizeRange]],
+  {}
+)}
+
+contract ChickenInGenerated1 is
+  ChickenInShadow, // 0.894
+  ChickenInLegs, // 3.43
+  ChickenInBody, // 5.5
+  ChickenInComb, // 15.06
+  ChickenInCheek // 1.037
+{}
+
+contract ChickenInGenerated2 is
+  ChickenInBeak, // 4.024
+  ChickenInEye, // 2.052
+  ChickenInTail // 19.204
+{}
+
+contract ChickenInGenerated3 is
+  ChickenInAnimations, // 4.063
+  ChickenInWattle, // 1.705
+  ChickenInWing1, // 3.644
+  ChickenInWing2, // 8.576
+  ChickenInWing3, // 4.682
+  ChickenInLQTYBand // 1.865
+{}
+
+contract ChickenInGenerated {
+    ChickenInGenerated1 public immutable g1;
+    ChickenInGenerated2 public immutable g2;
+    ChickenInGenerated3 public immutable g3;
+
+    constructor(
+        ChickenInGenerated1 _g1,
+        ChickenInGenerated2 _g2,
+        ChickenInGenerated3 _g3
+      ) {
+        g1 = _g1;
+        g2 = _g2;
+        g3 = _g3;
+    }
+
+    //////////////////////////////////
+    //////////// Slice #1 ////////////
+    //////////////////////////////////
+
+    function _getSVGShadow(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g1.getSVGShadow(_commonData);
+    }
+
+    function _getSVGLegs(CommonData memory _commonData, ChickenInData memory _chickenInData) internal view returns (bytes memory) {
+        return g1.getSVGLegs(_commonData, _chickenInData);
+    }
+
+    function _getSVGBody(CommonData memory _commonData, ChickenInData memory _chickenInData) internal view returns (bytes memory) {
+        return g1.getSVGBody(_commonData, _chickenInData);
+    }
+
+    function _getSVGCombPath(CommonData memory _commonData, ChickenInData memory _chickenInData, bytes memory _style) internal view returns (bytes memory) {
+        return g1.getSVGCombPath(_commonData, _chickenInData, _style);
+    }
+
+    function _getSVGCheek(CommonData memory _commonData, ChickenInData memory _chickenInData) internal view returns (bytes memory) {
+        return g1.getSVGCheek(_commonData, _chickenInData);
+    }
+
+    //////////////////////////////////
+    //////////// Slice #2 ////////////
+    //////////////////////////////////
+
+    function _getSVGBeakPath(CommonData memory _commonData, ChickenInData memory _chickenInData, bytes memory _style) internal view returns (bytes memory) {
+        return g2.getSVGBeakPath(_commonData, _chickenInData, _style);
+    }
+
+    function _getSVGEye(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g2.getSVGEye(_commonData);
+    }
+
+    function _getSVGTailPath(CommonData memory _commonData, ChickenInData memory _chickenInData, bytes memory _style) internal view returns (bytes memory) {
+        return g2.getSVGTailPath(_commonData, _chickenInData, _style);
+    }
+
+    //////////////////////////////////
+    //////////// Slice #3 ////////////
+    //////////////////////////////////
+
+    function _getSVGAnimations(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g3.getSVGAnimations(_commonData);
+    }
+
+    function _getSVGWattlePath(CommonData memory _commonData, bytes memory _style) internal view returns (bytes memory) {
+        return g3.getSVGWattlePath(_commonData, _style);
+    }
+
+    function _getSVGWing1(CommonData memory _commonData, ChickenInData memory _chickenInData) internal view returns (bytes memory) {
+        return g3.getSVGWing1(_commonData, _chickenInData);
+    }
+
+    function _getSVGWing2(CommonData memory _commonData, ChickenInData memory _chickenInData) internal view returns (bytes memory) {
+        return g3.getSVGWing2(_commonData, _chickenInData);
+    }
+
+    function _getSVGWing3(CommonData memory _commonData, ChickenInData memory _chickenInData) internal view returns (bytes memory) {
+        return g3.getSVGWing3(_commonData, _chickenInData);
+    }
+
+    function _getSVGLQTYBand(CommonData memory _commonData) internal view returns (bytes memory) {
+        return g3.getSVGLQTYBand(_commonData);
+    }
+}
+`.trimStart();
