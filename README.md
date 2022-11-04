@@ -13,7 +13,7 @@ The core mechanics remain the same as outlined in the whitepaper. A user bonds L
 
 At any time they may **chicken out** and reclaim their entire principal, or **chicken in** and give up their principal in exchange for freshly minted bLUSD.
 
-bLUSD may always be redeemed for a proportional share of the system’s acquired LUSD.
+bLUSD may always be redeemed for a proportional share of the system’s reserve LUSD.
 
 However, LUSD Chicken Bonds contains additional functionality for the purposes of peg stabilization and migration. The funds held by the protocol are split across two yield-bearing vaults, referred to as the **B.AMM SP Vault** (from B.Protocol) and the **Yearn Curve Vault**. The former deposits funds to the Liquity Stability Pool, and the latter deposits funds into the Curve LUSD3CRV MetaPool and then [deposit LP tokens into Convex](https://yearn.finance/#/vault/0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6).
 
@@ -57,13 +57,13 @@ Core contracts are found in `src`, and tests are in `src/test/`
 
 ## Global Liquidity Buckets
 
-As per the whitepaper, LUSD Chicken Bonds utilizes 3 global LUSD buckets: the **pending** bucket, the **acquired** bucket, and the **permanent** bucket, all of which earn yield.
+As per the whitepaper, LUSD Chicken Bonds utilizes 3 global LUSD buckets: the **pending** bucket, the **reserve** bucket, and the **permanent** bucket, all of which earn yield.
 
 The **pending** bucket contains the LUSD of all open bonds. It is untouched by redemptions. 
 
 The **permanent** bucket contains all protocol-owned LUSD. It is untouched by redemptions, and remains permanently owned by the protocol in normal mode.
 
-The **acquired** bucket contains all LUSD held by the protocol which may be redeemed by burning bLUSD. 
+The **reserve** bucket contains all LUSD held by the protocol which may be redeemed by burning bLUSD. 
 
 
 
@@ -71,63 +71,63 @@ The **acquired** bucket contains all LUSD held by the protocol which may be rede
 
 The Chicken Bonds system deposits LUSD to external vaults - the B.AMM SP vault, and the Yearn Curve vault -  which generate yield.
 
-All funds held by the system (pending, acquired and permanent) are held inside one of the vaults and generate yield - all of which is added to the acquired bucket.
+All funds held by the system (pending, reserve and permanent) are held inside one of the vaults and generate yield - all of which is added to the reserve bucket.
 
 
 ### Individual Liquidity Buckets
 
-The global **permanent** and **acquired** buckets are split across both B.AMM SP vault and the Curve pool (with its LP tokens deposited to the Yearn Curve vault for yield generation).  
+The global **permanent** and **reserve** buckets are split across both B.AMM SP vault and the Curve pool (with its LP tokens deposited to the Yearn Curve vault for yield generation).  
 
 The **pending** bucket is held purely by the B.AMM SP vault.
 
 The buckets are split in the following manner in normal mode:
 
 - Pending LUSD in the B.AMM SP vault (constitutes all pending LUSD)
-- Acquired LUSD in the B.AMM SP vault
-- Acquired LUSD in Yearn Curve vault
+- Reserve LUSD in the B.AMM SP vault
+- Reserve LUSD in Yearn Curve vault
 - Permanent LUSD in the B.AMM SP Vault
 - Permanent LUSD in Yearn Curve vault
 
 In migration mode, no funds are permanent. The buckets are split in this manner:
 
 - Pending LUSD in the B.AMM SP Vault (constitutes all pending LUSD)
-- Acquired LUSD in the B.AMM SP Vault
-- Acquired LUSD in Yearn Curve vault
+- Reserve LUSD in the B.AMM SP Vault
+- Reserve LUSD in Yearn Curve vault
 
 ### Example buckets state
 
 ![Chicken bond buckets 2 drawio](https://user-images.githubusercontent.com/701095/181210047-91267f00-b0c4-4a9c-bcc6-15dce5c28dba.png)
 
-_This diagram shows an example state of the individual buckets in normal mode.  Exact quantities in each individual **acquired** and **permanent** bucket will vary over time - their sizes depend on the history of shift events and the magnitude and and timing of early chicken-ins._
+_This diagram shows an example state of the individual buckets in normal mode.  Exact quantities in each individual **reserve** and **permanent** bucket will vary over time - their sizes depend on the history of shift events and the magnitude and and timing of early chicken-ins._
 
 
 
 ### Flow of funds between individual buckets
 
-For the global permanent and acquired buckets, the split is updated by shifter functions which move funds between the SP vault and the Curve pool. Here is an outline of how funds flow between buckets due to various system operations:
+For the global permanent and reserve buckets, the split is updated by shifter functions which move funds between the SP vault and the Curve pool. Here is an outline of how funds flow between buckets due to various system operations:
 
 `createBond:` deposits the bonded LUSD to the B.AMM SP vault pending bucket
 
 `chickenIn (normal mode):`
-- Moves some portion of bond’s LUSD from B.AMM SP vault pending bucket to B.AMM SP vault acquired bucket
+- Moves some portion of bond’s LUSD from B.AMM SP vault pending bucket to B.AMM SP vault reserve bucket
 - Moves the remainder of bond’s LUSD from B.AMM SP vault pending bucket to B.AMM SP vault permanent bucket
 
 `chickenIn (migration mode):`
-- Moves some portion of bond’s LUSD from B.AMM SP vault pending bucket to B.AMM SP vault acquired bucket
+- Moves some portion of bond’s LUSD from B.AMM SP vault pending bucket to B.AMM SP vault reserve bucket
 - Refund the remainder of bond’s LUSD from B.AMM SP vault pending bucket to the caller
 
 `chickenOut:` Withdraws all of the bond’s LUSD from the B.AMM SP vault pending bucket
 
-`redeem(normal mode):` Pulls funds proportionally from the B.AMM SP vault acquired bucket and the Curve acquired bucket (sends yTokens, and does not unwrap to LUSD). Redemptions are disabled until 15 days after the first chicken in.
+`redeem(normal mode):` Pulls funds proportionally from the B.AMM SP vault reserve bucket and the Curve reserve bucket (sends yTokens, and does not unwrap to LUSD). Redemptions are disabled until 15 days after the first chicken in.
 
-`redeem(migration mode)`: Pulls redeemed funds proportionally from the B.AMM SP vault acquired bucket (as LUSD) and the Curve acquired bucket (as yTokens)
+`redeem(migration mode)`: Pulls redeemed funds proportionally from the B.AMM SP vault reserve bucket (as LUSD) and the Curve reserve bucket (as yTokens)
 
 `shiftLUSDFromSPToCurve`:
-- Moves some LUSD from the B.AMM SP vault acquired bucket to the Curve acquired bucket
+- Moves some LUSD from the B.AMM SP vault reserve bucket to the Curve reserve bucket
 - Moves some LUSD from the B.AMM SP vault permanent bucket to the Curve permanent bucket
 
 `shiftLUSDFromCurveToSP:`
-- Moves some LUSD from Curve acquired bucket to the B.AMM SP vault acquired bucket
+- Moves some LUSD from Curve reserve bucket to the B.AMM SP vault reserve bucket
 - Moves some LUSD from Curve permanent bucket to the B.AMM SP vault permanent bucket
 
 
@@ -139,9 +139,9 @@ The **pending** bucket and individual **permanent** buckets are tracked by state
 - `permanentLUSDInBAMMSPVault`
 - `permanentLUSDInYearnCurveVault`
 
-Individual **acquired** buckets are not explicitly tracked via state variables. Rather, the acquired LUSD in a given pool (B.AMM SP vault or Curve) is calculated based on the total funds held in the pool, minus any pending and permanent funds in that pool.  
+Individual **reserve** buckets are not explicitly tracked via state variables. Rather, the reserve LUSD in a given pool (B.AMM SP vault or Curve) is calculated based on the total funds held in the pool, minus any pending and permanent funds in that pool.  
 
-The following getter functions in the smart contract perform these calculations for individual acquired buckets:
+The following getter functions in the smart contract perform these calculations for individual reserve buckets:
 - `getAcquiredLUSDInSP()`
 - `getAcquiredLUSDInCurve()`
 
@@ -152,8 +152,8 @@ Special logic applies to the First Chicken In.  A "First Chicken In" is defined 
 The following extra logic applies to the first Chicken In:
 
 - It can only be performed after an initial bootstrap period of 15 days has passed
-- All yield that has accumulated in the acquired bucket is sent as rewards to the staking contract for bLUSD-LUSD AMM LPs.
-- B.Protocol must hold at least as much LUSD as the acquired bucket. This is to ensure that B.Protocol can fully cover the transfer of the acquired bucket to the staking contract. In most cases it will, though after heavy Liquity liquidations it may take some time for B.Protocol to convert the ETH liquidation gains back to LUSD.  In this case, Chicken Bond bonders will just need to wait until the LUSD in B.Protocol has replenished before a First Chicken In is possible.
+- All yield that has accumulated in the reserve bucket is sent as rewards to the staking contract for bLUSD-LUSD AMM LPs.
+- B.Protocol must hold at least as much LUSD as the reserve bucket. This is to ensure that B.Protocol can fully cover the transfer of the reserve bucket to the staking contract. In most cases it will, though after heavy Liquity liquidations it may take some time for B.Protocol to convert the ETH liquidation gains back to LUSD.  In this case, Chicken Bond bonders will just need to wait until the LUSD in B.Protocol has replenished before a First Chicken In is possible.
 
 The special First Chicken In logic only applies in Normal Mode. In Migration Mode, a First Chicken In is no different from a normal Chicken In.
 
@@ -240,15 +240,15 @@ Yearn Curve vault is periodically manually harvested by the Yearn team in order 
 
 - `chickenIn(bondID):` removes the given bond from the system and burns the bond NFT. Makes a portion of the bonded LUSD “acquired” and redeemable, and the remainder of the bonded LUSD permanently protocol-owned.  The split between these two quantities is determined such that the global system backing ratio remains constant.
 
-- `redeem(_bLUSDAmount, _minLUSDFromBAMMSPVault):` Burns the provided bLUSD, and pulls funds from the system’s acquired LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the B.AMM SP and Curve vaults and sent to the redeemer. Takes a `_minLUSDFromBAMMSPVault` parameter which allows the user to specify the minimum LUSD that should be redeemed from the B.AMM (useful in case there is temporarily not enough LUSD in the B.AMM SP vault to fulfil a proportional redemption request, and the user simply wants to redeem as much LUSD as possible). Funds coming from the Yearn Curve vault are not unwrapped, so the user would receive yTokens instead of LUSD.  A redemption can not deplete the total bLUSD supply below 1 LUSD.
+- `redeem(_bLUSDAmount, _minLUSDFromBAMMSPVault):` Burns the provided bLUSD, and pulls funds from the system’s reserve LUSD in an amount proportional to the fraction of total bLUSD burned.  Funds are drawn proportionally from the B.AMM SP and Curve vaults and sent to the redeemer. Takes a `_minLUSDFromBAMMSPVault` parameter which allows the user to specify the minimum LUSD that should be redeemed from the B.AMM (useful in case there is temporarily not enough LUSD in the B.AMM SP vault to fulfil a proportional redemption request, and the user simply wants to redeem as much LUSD as possible). Funds coming from the Yearn Curve vault are not unwrapped, so the user would receive yTokens instead of LUSD.  A redemption can not deplete the total bLUSD supply below 1 LUSD.
 
-- `shiftLUSDFromSPToCurve(_maxLUSDToShift):` Shifts up to the given LUSD amount from the B.AMM SP vault to Curve, and deposits the received LP tokens to the Curve vault. Pulls funds from the acquired and permanent buckes in the SP vault, and moves them to the acquired and permanent buckets in the Curve vault, respectively. Only succeeds if the shift improves the LUSD peg.
+- `shiftLUSDFromSPToCurve(_maxLUSDToShift):` Shifts up to the given LUSD amount from the B.AMM SP vault to Curve, and deposits the received LP tokens to the Curve vault. Pulls funds from the reserve and permanent buckes in the SP vault, and moves them to the reserve and permanent buckets in the Curve vault, respectively. Only succeeds if the shift improves the LUSD peg.
 
-- `shiftLUSDFromCurveToSP(_maxLUSDToShift):` Shifts up to the given LUSD amount from the Curve to the B.AMM SP vault. Pulls funds from the Curve acquired and permanent buckets, and moves them to the acquired and permanent buckets in the SP vault, respectively. Only succeeds if the shift improves the LUSD peg.
+- `shiftLUSDFromCurveToSP(_maxLUSDToShift):` Shifts up to the given LUSD amount from the Curve to the B.AMM SP vault. Pulls funds from the Curve reserve and permanent buckets, and moves them to the reserve and permanent buckets in the SP vault, respectively. Only succeeds if the shift improves the LUSD peg.
 
 - `sendFeeShare(_lusdAmount):` Callable only by Yearn Governance. Transfers the provided LUSD to the ChickenBondManager contract, and deposits it to the B.AMM SP vault.
 
-- `activateMigration():` Callable only by Yearn Governance. Moves all funds in permanent buckets to their corresponding acquired buckets, thus making all system funds (except for the pending bucket) redeemable.
+- `activateMigration():` Callable only by Yearn Governance. Moves all funds in permanent buckets to their corresponding reserve buckets, thus making all system funds (except for the pending bucket) redeemable.
 
 - `startShifterCountdown()`: Permissionless function that starts a new shifter countdown to a shifting window, if the previous countdown and subsequent shifting window have both ended.
 
@@ -289,7 +289,7 @@ For better trust minimization we instead opted for a "wind down" approach where 
 The `ChickenBondManager` contract contains a function `activateMigration`, callable one-time and only by Yearn Governance. Yearn have agreed to call this function when they deprecate the v2 vaults that Chicken Bonds is connected to. `activateMigration` does the following:
 
 - Raise a `migration` mode flag
-- Move all permanent LUSD from permanent bucket to acquired bucket (thus making it redeemable)
+- Move all permanent LUSD from permanent bucket to reserve bucket (thus making it redeemable)
 
 ### Post-migration logic
 
@@ -306,7 +306,7 @@ Migration mode activation triggers the following logic changes:
 - Instead, refunds the surplus LUSD to the bonder
 - No first-chicken-in yield and no chicken-in fee is sent to AMM rewards. Reasoning: no need to maintain AMM LP incentives in migration mode. It's fine and desirable for LPs to pull funds and redeem their bLUSD.
 
-`redeem`: pulls funds proportionally from the B.AMM SP acquired bucket (as LUSD) and the Curve acquired bucket (as yTokens for the Yearn Curve vault)
+`redeem`: pulls funds proportionally from the B.AMM SP reserve bucket (as LUSD) and the Curve reserve bucket (as yTokens for the Yearn Curve vault)
 
 ## Fee share functionality
 
