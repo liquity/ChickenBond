@@ -14,6 +14,8 @@ const CRYPTOSWAP_ADDRESS = '0x74ED5d42203806c8CDCf2F04Ca5F60DC777b901c'
 const CRYPTOSWAP_ABI = require('../abi/cryptoswap-abi.json')
 const ERC20_ABI = require('../abi/erc20-abi.json')
 const CRYPTOSWAP_LP_ADDRESS = '0x5ca0313D44551e32e0d7a298EC024321c4BC59B4'
+const LUSD_3CRV_ADDRESS = '0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA';
+const LUSD_3CRV_ABI = require('../abi/lusd3crv-abi.json')
 const START_BLOCK = 15674054 // bLUSD AMM creation
 const envRpcUrl = process.env.ETH_RPC_URL ?? "";
 const web3 = new Web3(envRpcUrl)
@@ -22,7 +24,7 @@ main()
 
 async function main() {
   let startBlock = START_BLOCK
-  const fileHeaders = ['block', 'timestamp', 'date', 'price_scale', 'price_oracle', 'price_effective', 'balances_blusd', 'balances_lusd_3crv', 'lp_supply', 'xcp_profit', 'virtual_price', 'fee', 'volume', 'sold_id', 'tokens_sold', 'bought_id', 'tokens_bought']
+  const fileHeaders = ['block', 'timestamp', 'date', 'price_scale', 'price_oracle', 'price_effective', 'price_lusd3crv', 'balances_blusd', 'balances_lusd_3crv', 'lp_supply', 'xcp_profit', 'virtual_price', 'fee', 'volume', 'sold_id', 'tokens_sold', 'bought_id', 'tokens_bought']
 
   const dataDir = `${__dirname}/../data/`;
   const dataFile = `${dataDir}${DATA_FILENAME}`;
@@ -60,6 +62,7 @@ async function main() {
 async function runBatch(fromBlock: number, toBlock: number) {
   const contract = new web3.eth.Contract(CRYPTOSWAP_ABI, CRYPTOSWAP_ADDRESS)
   const lp = new web3.eth.Contract(ERC20_ABI, CRYPTOSWAP_LP_ADDRESS)
+  const lusd3crv = new web3.eth.Contract(LUSD_3CRV_ABI, LUSD_3CRV_ADDRESS)
 
   let trades = await contract.getPastEvents('TokenExchange', {
     fromBlock: fromBlock,
@@ -83,6 +86,8 @@ async function runBatch(fromBlock: number, toBlock: number) {
     let balance_1 = (await contract.methods.balances(1).call({}, block)) / 1e18
     let lp_supply = (await lp.methods.totalSupply().call({}, block)) / 1e18
 
+    const price_lusd3crv = (await lusd3crv.methods.calc_withdraw_one_coin('1000000000000000000', 0).call({}, block)) / 1e18;
+
     let volume = t.returnValues.sold_id == 0 ? t.returnValues.tokens_sold / 1e18 / scale
       : t.returnValues.sold_id == 1 ? t.returnValues.tokens_sold / 1e18 : 0
 
@@ -95,6 +100,7 @@ async function runBatch(fromBlock: number, toBlock: number) {
       price_scale: scale,
       price_oracle: oracle,
       price_effective: price_effective,
+      price_lusd3crv: price_lusd3crv,
       xcp_profit: xcp_profit,
       virtual_price: virtual_price,
       fee: fee,
@@ -119,7 +125,7 @@ async function runBatch(fromBlock: number, toBlock: number) {
 function writeData(filename: string, result: any) {
   fs.writeFileSync(
     `${__dirname}/../data/${filename}`,
-    `${result.block},${result.timestamp},${result.date},${result.price_scale},${result.price_oracle},${result.price_effective},${result.balances[0]},${result.balances[1]},${result.lp_supply},${result.xcp_profit},${result.virtual_price},${result.fee},${result.volume},${result.sold_id},${result.tokens_sold},${result.bought_id},${result.tokens_bought}\n`,
+    `${result.block},${result.timestamp},${result.date},${result.price_scale},${result.price_oracle},${result.price_effective},${result.price_lusd3crv},${result.balances[0]},${result.balances[1]},${result.lp_supply},${result.xcp_profit},${result.virtual_price},${result.fee},${result.volume},${result.sold_id},${result.tokens_sold},${result.bought_id},${result.tokens_bought}\n`,
     { flag: 'a+' }
   )
 }
