@@ -7,6 +7,7 @@ import Web3 from 'web3'
 import _, { toInteger } from 'lodash'
 import { sleep } from '../src/sleep'
 import fs from 'fs'
+const {parse} = require('csv-parse/sync');
 import pThrottle from '../src/p-throttle'
 const DATA_FILENAME='curve_repegs.csv'
 const CRYPTOSWAP_ADDRESS = '0x74ED5d42203806c8CDCf2F04Ca5F60DC777b901c'
@@ -20,19 +21,30 @@ const web3 = new Web3(envRpcUrl)
 main()
 
 async function main() {
+  let startBlock = START_BLOCK
+  const fileHeaders = ['block', 'timestamp', 'date', 'price_scale', 'price_oracle', 'price_effective', 'balances_blusd', 'balances_lusd_3crv', 'lp_supply', 'xcp_profit', 'virtual_price', 'fee', 'volume', 'sold_id', 'tokens_sold', 'bought_id', 'tokens_bought']
+
   const dataDir = `${__dirname}/../data/`;
   const dataFile = `${dataDir}${DATA_FILENAME}`;
   fs.mkdirSync(dataDir, { recursive: true });
-  if (fs.existsSync(dataFile)) { fs.rmSync(dataFile); }
+  if (!fs.existsSync(dataFile)) {
+    fs.writeFileSync(
+      dataFile,
+      `${fileHeaders.join(",")}\n`
+    )
+  } else {
+    const fileContent = fs.readFileSync(dataFile, "utf8");
+    const fileData = parse(fileContent, {
+      delimiter: ',',
+      columns: fileHeaders,
+    });
+    startBlock = Number(fileData[fileData.length - 1]['block']) + 1;
+    //console.log('startBlock: ', startBlock)
+  }
 
-  fs.writeFileSync(
-    dataFile,
-    `block,timestamp,date,price_scale,price_oracle,price_effective,balances_blusd,balances_lusd_3crv,lp_supply,xcp_profit,virtual_price,fee,volume,sold_id,tokens_sold,bought_id,tokens_bought\n`
-  )
-
-  let startBlock = START_BLOCK
   let endBlock = await web3.eth.getBlockNumber()
-  //console.log('endBlock: ', endBlock)
+  //console.log('startBlock: ', startBlock)
+  //console.log('endBlock:   ', endBlock)
   //let endBlock = startBlock + 1000
   let batchSize = 100
   let numBatches = Math.ceil((endBlock - startBlock) / batchSize)
@@ -110,5 +122,4 @@ function writeData(filename: string, result: any) {
     `${result.block},${result.timestamp},${result.date},${result.price_scale},${result.price_oracle},${result.price_effective},${result.balances[0]},${result.balances[1]},${result.lp_supply},${result.xcp_profit},${result.virtual_price},${result.fee},${result.volume},${result.sold_id},${result.tokens_sold},${result.bought_id},${result.tokens_bought}\n`,
     { flag: 'a+' }
   )
-
 }
