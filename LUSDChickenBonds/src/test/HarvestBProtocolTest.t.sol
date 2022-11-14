@@ -94,6 +94,7 @@ contract HarvestBProtocolTest is Test {
         );
         emit log_named_decimal_uint("ETH amount", ethAmount, 18);
         emit log_named_decimal_uint("Uniswap LQTY/ETH effective price", ethAmount * 1e18 / bammLQTYBalance, 18);
+        emit log_named_decimal_uint("Uniswap ETH/LQTY effective price", bammLQTYBalance * 1e18 / ethAmount, 18);
 
         uint usdtAmount = threeCrypto.get_dy(2, 0, ethAmount);
         uint lusdAmount = lusdCrv.get_dy_underlying(3, 0, usdtAmount);
@@ -104,6 +105,7 @@ contract HarvestBProtocolTest is Test {
         uint256 gem2ethPrice = gemSeller.fetchGem2EthPrice();
         emit log_named_decimal_uint("GemSeller ETH price (Chainlink)", eth2usdPrice, 18);
         emit log_named_decimal_uint("GemSeller LQTY/ETH price (Chainlink)", gem2ethPrice, 18);
+        emit log_named_decimal_uint("GemSeller ETH/LQTY price (Chainlink)", 1e36 / gem2ethPrice, 18);
 
         uint gemUsdValue = gemSeller.gemToUSD(bammLQTYBalance, gem2ethPrice, eth2usdPrice);
         emit log_named_decimal_uint("GemSeller LQTY $ value", gemUsdValue, 18);
