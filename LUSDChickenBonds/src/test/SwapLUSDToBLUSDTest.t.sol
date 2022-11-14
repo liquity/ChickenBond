@@ -34,6 +34,8 @@ contract SwapLUSDToBLUSDTest is Test {
         accounts = new Accounts();
         accountA = vm.addr(uint256(accounts.accountsPks(0)));
         initialBLUSDPrice = bLUSDPool.get_dy(0, 1, 1e18) * lusdCrv.calc_withdraw_one_coin(1e18, 0) / 1e18;
+        emit log_named_decimal_uint("bLUSD pool price", bLUSDPool.get_dy(0, 1, 1e18), 18);
+        emit log_named_decimal_uint("LUSD3CRV price  ", lusdCrv.calc_withdraw_one_coin(1e18, 0), 18);
         emit log_named_decimal_uint("Current bLUSD price", initialBLUSDPrice, 18);
         console.log();
     }
@@ -54,11 +56,16 @@ contract SwapLUSDToBLUSDTest is Test {
         lusdCrv.add_liquidity([swapAmount, 0], 0);
         // swap LUSD-3CRV to bLUSD
         uint256 lusd3CRVSwapAmount = lusd3CRVLPToken.balanceOf(accountA) - lusd3CRVBalanceBefore;
+        //emit log_named_decimal_uint("lusd3CRVBalanceBefore", lusd3CRVBalanceBefore, 18);
+        //emit log_named_decimal_uint("lusd3CRVBalanceAfter ", lusd3CRVLPToken.balanceOf(accountA), 18);
+        emit log_named_decimal_uint("lusd3CRVSwapAmount", lusd3CRVSwapAmount, 18);
         lusd3CRVLPToken.approve(address(bLUSDPool), lusd3CRVSwapAmount);
         bLUSDPool.exchange(1, 0, lusd3CRVSwapAmount, 0);
         vm.stopPrank();
 
         uint256 finalBLUSDPrice = bLUSDPool.get_dy(0, 1, 1e18) * lusdCrv.calc_withdraw_one_coin(1e18, 0) / 1e18;
+        emit log_named_decimal_uint("bLUSD pool price", bLUSDPool.get_dy(0, 1, 1e18), 18);
+        emit log_named_decimal_uint("LUSD3CRV price  ", lusdCrv.calc_withdraw_one_coin(1e18, 0), 18);
         emit log_named_decimal_uint("Final bLUSD price", finalBLUSDPrice, 18);
         emit log_named_decimal_uint("bLUSD price increase %", finalBLUSDPrice * 1e20 / initialBLUSDPrice - 1e20, 18);
         console.log();
