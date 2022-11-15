@@ -2,17 +2,8 @@
 pragma solidity ^0.8.14;
 
 import "./Gelato/OpsReady.sol";
+import "../Tools/Interfaces/IUniswapReserve.sol";
 
-
-interface UniswapReserve {
-    function swap(
-        address recipient,
-        bool zeroForOne,
-        int256 amountSpecified,
-        uint160 sqrtPriceLimitX96,
-        bytes calldata data
-    ) external returns (int256 amount0, int256 amount1);
-}
 
 interface ERC20Like {
     function approve(address spender, uint value) external returns(bool);
@@ -41,7 +32,7 @@ contract GelatoLQTYArb is OpsReady {
     address constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
     address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    UniswapReserve constant LQTYETH = UniswapReserve(0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E);
+    IUniswapReserve constant LQTYETH = IUniswapReserve(0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E);
     uint160 constant MAX_SQRT_RATIO = 1461446703485210103287273052203988822378723970342;
     uint160 constant MIN_SQRT_RATIO = 4295128739;
 
