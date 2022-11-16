@@ -114,7 +114,7 @@ contract GelatoLQTYWBTCArb is OpsReady {
         WBTCWETH.swap(address(this), true, int256(wbtcFeeAmount), MIN_SQRT_RATIO + 1, new bytes(0));
         WethLike(WETH).withdraw(fee);
         uint totalEthBal = address(this).balance;
-        require(totalEthBal > fee, "Fee > ETH received");
+        require(totalEthBal >= fee, "Fee > ETH received");
         _transfer(fee, feeToken);
 
         // wbtc => usdt => lusd => lqty
