@@ -33,7 +33,7 @@ contract DepositLUSDIntoCurveTest is Test {
 
     function _testDepositIntoCurve(uint256 _depositAmount) internal {
         console.log();
-        emit log_named_decimal_uint("Depositing (M):", _depositAmount / 1e21, 3);
+        emit log_named_decimal_uint("Depositing (M)", _depositAmount / 1e21, 3);
 
         uint256 depositAmount = _depositAmount - lastDeposit;
         lastDeposit = _depositAmount;
@@ -53,6 +53,7 @@ contract DepositLUSDIntoCurveTest is Test {
 
     function testDepositIntoCurve() external {
         _testDepositIntoCurve(300e21); // 300k
+        _testDepositIntoCurve(500e21); // 500k
         _testDepositIntoCurve(1e24);   // 1M
         _testDepositIntoCurve(2e24);   // 2M
         _testDepositIntoCurve(3e24);   // 3M
