@@ -14,6 +14,7 @@ interface ICurve {
 interface ICurve2 {
     function get_dy(uint256 i, uint256 j, uint256 dx) external view returns(uint256);
     function exchange(uint256 i, uint256 j, uint256 dx, uint256 min_dy) external;
+    function price_scale() external returns (uint256);
 }
 
 
@@ -61,10 +62,12 @@ contract SwapLUSDToBLUSDTest is Test {
         //emit log_named_decimal_uint("lusd3CRVBalanceBefore", lusd3CRVBalanceBefore, 18);
         //emit log_named_decimal_uint("lusd3CRVBalanceAfter ", lusd3CRVLPToken.balanceOf(accountA), 18);
         lusd3CRVLPToken.approve(address(bLUSDPool), lusd3CRVSwapAmount);
+        emit log_named_decimal_uint("price scale before        ", bLUSDPool.price_scale(), 18);
         bLUSDPool.exchange(1, 0, lusd3CRVSwapAmount, 0);
         vm.stopPrank();
 
         uint256 finalBLUSDPrice = bLUSDPool.get_dy(0, 1, 1e18) * lusdCrv.calc_withdraw_one_coin(1e18, 0) / 1e18;
+        emit log_named_decimal_uint("price scale after         ", bLUSDPool.price_scale(), 18);
         emit log_named_decimal_uint("--> Final bLUSD/LUSD price", finalBLUSDPrice, 18);
         emit log_named_decimal_int("bLUSD price increase %    ", int256(finalBLUSDPrice * 1e20) / int256(initialBLUSDPrice) - int256(1e20), 18);
         emit log_named_decimal_uint("bLUSD/LUSD3CRV pool price ", bLUSDPool.get_dy(0, 1, 1e18), 18);
