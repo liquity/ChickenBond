@@ -106,3 +106,6 @@
 
 [First Chicken In, bond 1](https://etherscan.io/tx/0x4c7a8b762ff2e0e76f5fd6808a9da75bee29207c08e3ca82de508dac580a174b)
 
+[Start shift counter](https://etherscan.io/tx/0xdf545a6bee86f10ca5d688ef3a5f25b0b8764bfc1ed9c1c15d05878f1d647924)
+
+[First shift from SP to Curve](https://etherscan.io/tx/0xaf3abc815e662594e25c3c7ded8afee2dd57d5267caf72a0706151b3bd6b084f)
