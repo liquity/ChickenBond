@@ -67,9 +67,9 @@ contract SwapLUSDToBLUSDTest is Test {
         uint256 finalBLUSDPrice = bLUSDPool.get_dy(0, 1, 1e18) * lusdCrv.calc_withdraw_one_coin(1e18, 0) / 1e18;
         emit log_named_decimal_uint("--> Final bLUSD/LUSD price", finalBLUSDPrice, 18);
         emit log_named_decimal_int("bLUSD price increase %    ", int256(finalBLUSDPrice * 1e20) / int256(initialBLUSDPrice) - int256(1e20), 18);
-        emit log_named_decimal_uint("bLUSD/LUSD3CRV pool price ", bLUSDPool.get_dy(0, 1, 1e18), 18);
-        emit log_named_decimal_uint("LUSD3CRV price            ", lusdCrv.calc_withdraw_one_coin(1e18, 0), 18);
-        emit log_named_decimal_uint("lusd3CRVSwapAmount        ", lusd3CRVSwapAmount, 18);
+        //emit log_named_decimal_uint("bLUSD/LUSD3CRV pool price ", bLUSDPool.get_dy(0, 1, 1e18), 18);
+        //emit log_named_decimal_uint("LUSD3CRV price            ", lusdCrv.calc_withdraw_one_coin(1e18, 0), 18);
+        //emit log_named_decimal_uint("lusd3CRVSwapAmount        ", lusd3CRVSwapAmount, 18);
         console.log();
     }
 
